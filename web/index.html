@@ -615,7 +615,7 @@ function showOk() {
 }
 
 // EquityWatch monitoring subscription (paid)
-const MONITOR_CHECKOUT_URL = "";   // paste a Stripe Payment Link for the $5.99/mo plan
+const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // paste a Stripe Payment Link for the $5.99/mo plan
 function buyMonitor() {
   if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
   const f = document.getElementById("mo-form");
