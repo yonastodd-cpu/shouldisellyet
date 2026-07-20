@@ -12,7 +12,9 @@
       "photo": "img/naomi.jpg",
       "email": "naomi@shouldisellyet.com",
       "phone": "",
-      "url": ""
+      "url": "",
+      "blurb": "Naomi is NTRealty's Montgomery County specialist. She'll give you a straight answer about your specific home and street — what it's worth today, and whether selling makes sense for you. The conversation is free and there's no obligation.",
+      "chips": ["Pricing & timing strategy", "Free home-value analysis", "Germantown · Silver Spring · Rockville"]
     }
   }
 }
