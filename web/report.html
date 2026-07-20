@@ -44,6 +44,15 @@
   .r-body{padding:36px 40px 40px}
   @media(max-width:640px){ .r-body{padding:26px 20px 30px} }
 
+  /* Alert-triggered band */
+  .alertband{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:linear-gradient(90deg,#fdf3dd,#fbecc9);border-bottom:1px solid #f1dfb7;padding:16px 40px}
+  @media(max-width:640px){ .alertband{padding:14px 20px} }
+  .alertband .ring{flex:none;width:38px;height:38px;border-radius:50%;background:#e8a317;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 5px rgba(232,163,23,.22);animation:ringpulse 2.2s infinite}
+  @keyframes ringpulse{50%{box-shadow:0 0 0 9px rgba(232,163,23,.10)}}
+  .alertband .at-copy{flex:1;min-width:240px;font-size:13.5px;color:#7a5a10;line-height:1.5}
+  .alertband .at-copy b{color:#5c430b}
+  .alertband .at-change{font-weight:800;white-space:nowrap;font-size:13px;color:#5c430b;background:#fff;border:1px solid #f1dfb7;padding:6px 12px;border-radius:999px}
+
   .sec{margin-bottom:38px}
   .sec-title{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:4px}
   .sec-title .num{font-family:'Inter';font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
@@ -157,15 +166,20 @@
       </div>
     </div>
 
+    <div class="alertband">
+      <div class="ring">🔔</div>
+      <div class="at-copy"><b>Automated alert — July 14, 2026, 9:02 AM.</b> EquityWatch monitoring detected a change in 20906 and generated this report the same morning. This is what subscribers receive the moment their market moves — not weeks later.</div>
+      <div class="at-change">🟢 HOLD → 🟡 WATCH</div>
+    </div>
     <div class="r-body">
 
       <!-- 1. Verdict -->
       <div class="sec">
-        <div class="sec-title"><span class="num">1</span> Your verdict this month</div>
-        <p class="sec-sub">One answer, backed by every indicator below.</p>
+        <div class="sec-title"><span class="num">1</span> What changed — and your new verdict</div>
+        <p class="sec-sub">Your ZIP was rated 🟢 HOLD for 9 months. On July 14, the year-over-year price signal crossed its danger line, tripping the verdict to 🟡 WATCH.</p>
         <div class="v-banner">
           <div class="v-word">WATCH</div>
-          <div class="v-copy"><b>Your ZIP is flashing one meaningful warning.</b> The headline price decline in 20906 is real but overstated by condo-mix effects. Your home isn't losing value yet — but this is the moment to know your numbers and have a plan, not six months from now.</div>
+          <div class="v-copy"><b>Why the alert fired:</b> median prices in 20906 crossed from flat to –7.1% year-over-year in the latest data. As the sections below show, condo-mix effects overstate the decline — your home isn't losing value yet. But this is exactly the moment to know your numbers and have a plan, not six months from now.</div>
           <div class="v-score"><div class="vs-num">3<span style="font-size:16px;color:var(--muted)">/8</span></div><div class="vs-lab">Warning score</div></div>
         </div>
       </div>
@@ -340,8 +354,8 @@
 
 <script>
 // Paste Stripe Payment Links here when ready, e.g. "https://buy.stripe.com/xxxx"
-const CHECKOUT_URL = "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01";           // one-time $5.99 report
-const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // $5.99/mo monitoring
+const CHECKOUT_URL = "";           // one-time $5.99 report
+const MONITOR_CHECKOUT_URL = "";   // $5.99/mo monitoring
 function buyReport(){
   if (CHECKOUT_URL) { window.location.href = CHECKOUT_URL; return false; }
   window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +

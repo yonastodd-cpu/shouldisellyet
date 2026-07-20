@@ -65,7 +65,7 @@
   .trust b{color:var(--ink-2);font-weight:600}
 
   /* Verdict card */
-  .verdict{display:none;max-width:600px;margin:44px auto 0;background:var(--card);border-radius:24px;padding:40px 38px 32px;box-shadow:var(--shadow-lg);text-align:center;border:1px solid var(--line);position:relative;animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
+  .verdict{display:none;scroll-margin-top:78px;max-width:600px;margin:44px auto 0;background:var(--card);border-radius:24px;padding:40px 38px 32px;box-shadow:var(--shadow-lg);text-align:center;border:1px solid var(--line);position:relative;animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
   @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
   .verdict .lamp{margin:0 auto 18px}
   .verdict .word{font-family:'Fraunces',serif;font-weight:900;font-size:54px;letter-spacing:-.01em;line-height:1}
@@ -159,7 +159,7 @@
   .verdict .fineprint{font-size:12px;color:#98a2b3;margin-top:18px;line-height:1.5}
 
   /* Waitlist */
-  .waitlist{display:none;max-width:600px;margin:44px auto 0;background:linear-gradient(160deg,#1b2c47,var(--navy));color:#fff;border-radius:24px;padding:40px 38px;text-align:center;box-shadow:var(--shadow-lg);animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
+  .waitlist{display:none;scroll-margin-top:78px;max-width:600px;margin:44px auto 0;background:linear-gradient(160deg,#1b2c47,var(--navy));color:#fff;border-radius:24px;padding:40px 38px;text-align:center;box-shadow:var(--shadow-lg);animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
   .waitlist h3{font-family:'Fraunces',serif;font-size:26px;font-weight:700;margin-bottom:10px}
   .waitlist p{color:#b6c6d9;font-size:15px;margin-bottom:24px;max-width:420px;margin-left:auto;margin-right:auto}
   .waitlist form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
@@ -572,13 +572,13 @@ async function check() {
       META.attribution + ". Updated when new data publishes. Not financial advice — talk to a professional before making big moves.";
     v.style.display = "block"; w.style.display = "none";
     lastVerdict = { zip, word: t.word, level: d.l };
-    v.scrollIntoView({ behavior: "smooth", block: "center" });
+    v.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
     w.style.display = "block"; v.style.display = "none";
     document.getElementById("wl-title").textContent = "We're not watching " + zip + " yet";
     document.getElementById("wl-ok").style.display = "none";
     document.getElementById("wl-form").style.display = "flex";
-    w.scrollIntoView({ behavior: "smooth", block: "center" });
+    w.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
