@@ -63,6 +63,28 @@ def test_20906_style_mix_shift_is_yellow_not_red():
     assert v.level == "yellow"
 
 
+def test_uppercase_headers_like_real_redfin_file(tmp_path):
+    """Regression: Redfin ships UPPERCASE column names (found in production)."""
+    import fetch_data
+    header = ("PERIOD_BEGIN\tPERIOD_END\tREGION\tSTATE_CODE\tIS_SEASONALLY_ADJUSTED\t"
+              "PROPERTY_TYPE\tMEDIAN_SALE_PRICE_YOY\tHOMES_SOLD\tINVENTORY\t"
+              "INVENTORY_YOY\tMONTHS_OF_SUPPLY\tMEDIAN_DOM\tMEDIAN_DOM_YOY\tPRICE_DROPS\n")
+    rows = ("2026-05-01\t2026-05-31\tZip Code: 60616\tIL\tfalse\tAll Residential\t"
+            "0.01\t40\t120\t0.1\t3.0\t30\t0.05\t0.2\n"
+            # seasonally adjusted duplicate must be ignored
+            "2026-05-01\t2026-05-31\tZip Code: 60616\tIL\ttrue\tAll Residential\t"
+            "0.99\t40\t120\t0.1\t9.9\t30\t0.05\t0.2\n"
+            # non-residential property type must be ignored
+            "2026-05-01\t2026-05-31\tZip Code: 60616\tIL\tfalse\tTownhouse\t"
+            "0.99\t40\t120\t0.1\t9.9\t30\t0.05\t0.2\n")
+    f = tmp_path / "upper.tsv"
+    f.write_text(header + rows)
+    best = fetch_data.latest_by_zip(fetch_data.load_rows(str(f)))
+    assert list(best) == ["60616"]
+    m = fetch_data.row_to_metrics("60616", *best["60616"][0:2], best["60616"][2])
+    assert m.months_of_supply == 3.0 and m.state == "IL"
+
+
 # ——— Pipeline on fixture TSV ———
 
 FIXTURE_HEADER = (
