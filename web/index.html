@@ -77,6 +77,16 @@
   .dot.amber{background:var(--amber);box-shadow:0 0 0 4px rgba(232,163,23,.14)}
   .dot.green{background:var(--green);box-shadow:0 0 0 4px rgba(18,161,80,.12)}
   .dot.info{background:#98a2b3;box-shadow:0 0 0 4px rgba(152,162,179,.14)}
+  /* Report upsell */
+  .upsell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#131e30,var(--navy));border-radius:16px;padding:20px 22px;margin:0 0 22px}
+  .upsell .up-copy{flex:1;min-width:230px;font-size:13.5px;color:#b6c6d9;line-height:1.55}
+  .upsell .up-copy b{color:#fff}
+  .upsell .up-ctas{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+  .upsell .up-btn{white-space:nowrap;text-align:center;font-size:14px;font-weight:700;color:#0b2b26;background:linear-gradient(180deg,#7dead0,#4fd6b4);padding:12px 20px;border-radius:12px;text-decoration:none;box-shadow:var(--shadow-sm);transition:.15s}
+  .upsell .up-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .upsell .up-link{font-size:12.5px;font-weight:600;color:#8fd8ca;text-decoration:none;text-align:center}
+  .upsell .up-link:hover{color:#b8ece2}
+
   /* Local expert — integrated "what now" step of the report */
   .sponsor{margin:2px 0 28px;text-align:left;border-top:1px solid var(--line);padding-top:22px}
   .sponsor .sp-kicker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:16px}
@@ -194,6 +204,13 @@
       <div class="word" id="word"></div>
       <div class="zipline" id="vzip"></div>
       <ul id="reasons"></ul>
+      <div class="upsell" id="upsell">
+        <div class="up-copy"><b>Want the full picture for your home?</b> The EquityWatch report shows your equity, all five indicators, and your exact walk-away number if you sold today.</div>
+        <div class="up-ctas">
+          <a class="up-btn" id="up-buy" href="report.html#buy">Get my full report · $19</a>
+          <a class="up-link" href="report.html">See a sample report →</a>
+        </div>
+      </div>
       <div id="sponsor"></div>
       <button class="share" onclick="share()">Share this verdict</button>
       <div class="fineprint" id="fineprint">Updated when new market data is published. Not financial advice — talk to a professional before making big moves.</div>
@@ -357,8 +374,10 @@ function sponsorHTML(s, level, zip) {
   const kicker = level === "red" ? "Your next step" : "Get a second opinion";
   const subject = encodeURIComponent(`Free consult — ZIP ${zip} rated ${THEME[level].word} on ShouldISellYet`);
   const body = encodeURIComponent(`Hi ${s.name},\n\nMy ZIP (${zip}) is rated ${THEME[level].word} on ShouldISellYet.com and I'd like a free consultation about my home.\n\nMy address:\nBest time to reach me:`);
+  const phoneDisplay = s.phoneDisplay ||
+    (s.phone ? s.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
   const ctas = [
-    s.phone ? `<a class="sp-btn primary" href="tel:${s.phone}">Call ${s.name} now</a>` : "",
+    s.phone ? `<a class="sp-btn primary" href="tel:${s.phone}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px;margin-right:7px"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z" fill="currentColor"/></svg>Call ${s.name} ${phoneDisplay}</a>` : "",
     `<a class="sp-btn ${s.phone ? "ghost" : "primary"}" href="mailto:${s.email}?subject=${subject}&body=${body}">Request a free consult</a>`,
     s.url ? `<a class="sp-btn ghost" href="${s.url}" target="_blank" rel="noopener">${s.brokerage} →</a>` : ""
   ].join("");
