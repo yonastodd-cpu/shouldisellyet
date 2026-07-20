@@ -1,48 +1,73 @@
-name: Monthly data refresh & deploy
+name: Data refresh & deploy (when new data is published)
 
 on:
   schedule:
-    - cron: "0 12 20 * *"   # 20th of every month, 12:00 UTC
-  workflow_dispatch: {}      # manual "Run workflow" button
+    - cron: "0 13 * * 1,4"   # Mon & Thu 13:00 UTC — cheap check, full run only if data changed
+  workflow_dispatch: {}       # manual run always rebuilds
 
 permissions:
   contents: write
   pages: write
   id-token: write
 
+env:
+  DATA_URL: https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/zip_code_market_tracker.tsv000.gz
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check whether Redfin published new data
+        id: check
+        run: |
+          ETAG=$(curl -sI "$DATA_URL" | tr -d '\r' | awk -F'"' 'tolower($0) ~ /^etag:/ {print $2}')
+          KNOWN=$(cat .redfin-etag 2>/dev/null || echo "none")
+          echo "remote=$ETAG known=$KNOWN"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$ETAG" != "$KNOWN" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "$ETAG" > .redfin-etag
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new data — skipping rebuild."
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.check.outputs.changed == 'true'
         with:
           python-version: "3.12"
 
       - name: Run pipeline (all states)
+        if: steps.check.outputs.changed == 'true'
         run: python pipeline/fetch_data.py
 
       - name: Run tests
+        if: steps.check.outputs.changed == 'true'
         run: |
           pip install pytest
           pytest pipeline/ -q
 
       - name: Commit refreshed data
+        if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add web/data
-          git diff --cached --quiet || git commit -m "Data refresh $(date +%Y-%m)"
+          git add web/data .redfin-etag
+          git diff --cached --quiet || git commit -m "Data refresh $(date +%Y-%m-%d)"
           git push
 
       - name: Upload site
+        if: steps.check.outputs.changed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: web
 
   deploy:
     needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
