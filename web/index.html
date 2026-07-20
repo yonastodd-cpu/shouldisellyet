@@ -358,8 +358,8 @@
 // ————— Backend config —————
 // Paste your Supabase project values (Settings → API). The anon key is safe to
 // publish: row-level security only allows INSERT into `subscribers`.
-const SUPABASE_URL = "";        // e.g. "https://abcd1234.supabase.co"
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";        // e.g. "https://abcd1234.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
 
 async function saveSignup(rec) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
