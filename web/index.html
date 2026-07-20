@@ -70,13 +70,49 @@
   .verdict .lamp{margin:0 auto 18px}
   .verdict .word{font-family:'Fraunces',serif;font-weight:900;font-size:54px;letter-spacing:-.01em;line-height:1}
   .verdict .zipline{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin:10px 0 24px}
-  .verdict ul{list-style:none;text-align:left;margin:0 0 26px;border-top:1px solid var(--line)}
-  .verdict li{display:flex;gap:12px;align-items:flex-start;padding:13px 2px;border-bottom:1px solid var(--line);font-size:15.5px;color:var(--ink-2)}
-  .dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:7px}
-  .dot.red{background:var(--red);box-shadow:0 0 0 4px rgba(224,62,54,.12)}
-  .dot.amber{background:var(--amber);box-shadow:0 0 0 4px rgba(232,163,23,.14)}
-  .dot.green{background:var(--green);box-shadow:0 0 0 4px rgba(18,161,80,.12)}
-  .dot.info{background:#98a2b3;box-shadow:0 0 0 4px rgba(152,162,179,.14)}
+  .verdict .v-caption{font-size:14px;color:var(--ink-2);line-height:1.55;max-width:440px;margin:0 auto 20px}
+
+  /* Warning score bar */
+  .scorebar{margin:0 auto 26px;max-width:420px;text-align:left}
+  .scorebar .sb-track{position:relative;display:flex;gap:3px;height:10px}
+  .scorebar .sb-seg{flex:1;border-radius:4px;background:#efede7}
+  .scorebar .sb-seg.on-g{background:var(--green)} .scorebar .sb-seg.on-a{background:var(--amber)} .scorebar .sb-seg.on-r{background:var(--red)}
+  .scorebar .sb-cap{display:flex;justify-content:space-between;font-size:10.5px;font-weight:600;color:#98a2b3;margin-top:6px;letter-spacing:.03em}
+  .scorebar .sb-label{text-align:center;font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:8px}
+
+  /* Signal gauges */
+  .meters{text-align:left;border-top:1px solid var(--line);margin:0 0 24px}
+  .mrow{padding:15px 2px 17px;border-bottom:1px solid var(--line)}
+  .mrow .m-top{display:flex;justify-content:space-between;align-items:baseline}
+  .mrow .m-name{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .mrow .m-val{font-family:'Fraunces',serif;font-size:19px;font-weight:900}
+  .mrow .m-note{font-size:12px;color:var(--muted);margin:1px 0 11px}
+  .meter{position:relative;height:8px;border-radius:6px;background:linear-gradient(90deg,#d9f2e3 0%,#fdeeca 62%,#f9d9d4 100%)}
+  .meter.rev{background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)}
+  .meter .pin{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(16,24,40,.35);transform:translateX(-8px)}
+  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#667085;border-radius:2px}
+  .meter-cap{display:flex;justify-content:space-between;font-size:10px;color:#98a2b3;margin-top:6px;letter-spacing:.02em}
+  .pin.g{background:var(--green)} .pin.a{background:var(--amber)} .pin.r{background:var(--red)} .pin.i{background:#98a2b3}
+  .m-chip{font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:999px;vertical-align:2px;margin-left:7px}
+  .m-chip.g{color:var(--green);background:#e7f6ed} .m-chip.a{color:#b07f0e;background:#fdf3dd} .m-chip.r{color:var(--red);background:#fdeae9} .m-chip.i{color:#667085;background:#f2f4f7}
+  .m-info{padding:13px 2px;font-size:13.5px;color:var(--muted);border-bottom:1px solid var(--line)}
+
+  /* Guided steps */
+  .stepk{display:flex;align-items:center;gap:10px;text-align:left;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#98a2b3;margin:0 0 10px}
+  .stepk b{color:var(--accent-ink)}
+  .stepk::after{content:"";flex:1;height:1px;background:var(--line)}
+  .stepk .sp-tag{font-size:10px;font-weight:700;letter-spacing:.05em;color:#98a2b3;border:1px solid var(--line);padding:2px 8px;border-radius:999px;text-transform:none}
+
+  /* Free alert signup */
+  .alertbox{text-align:left;background:linear-gradient(160deg,#f4faf8,#eef6f3);border:1px solid #d5eae6;border-radius:16px;padding:18px 20px;margin:0 0 22px}
+  .alertbox .ab-copy{font-size:13.5px;color:var(--ink-2);margin-bottom:12px}
+  .alertbox .ab-copy b{color:var(--ink)}
+  .alertbox form{display:flex;gap:8px;flex-wrap:wrap}
+  .alertbox input{flex:1;min-width:170px;font-size:14px;padding:11px 14px;border:1.5px solid #cfe0db;border-radius:11px;outline:none;background:#fff}
+  .alertbox input:focus{border-color:var(--accent)}
+  .alertbox button{font-size:14px;font-weight:700;padding:11px 18px;border:none;border-radius:11px;background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;cursor:pointer;transition:.15s}
+  .alertbox button:hover{transform:translateY(-1px)}
+  .alertbox .ab-ok{display:none;font-size:14px;font-weight:700;color:var(--accent-ink)}
   /* Report upsell */
   .upsell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#131e30,var(--navy));border-radius:16px;padding:20px 22px;margin:0 0 22px}
   .upsell .up-copy{flex:1;min-width:230px;font-size:13.5px;color:#b6c6d9;line-height:1.55}
@@ -203,7 +239,21 @@
       <div class="lamp" id="lamp"></div>
       <div class="word" id="word"></div>
       <div class="zipline" id="vzip"></div>
-      <ul id="reasons"></ul>
+      <div class="v-caption" id="vcaption"></div>
+      <div class="scorebar" id="scorebar"></div>
+      <div class="meters" id="meters"></div>
+
+      <div class="stepk"><b>Step 1</b> Stay informed — free</div>
+      <div class="alertbox" id="alertbox">
+        <div class="ab-copy"><b>Get alerted the moment <span id="ab-zip"></span> changes color.</b> One email when the verdict moves — nothing else, ever.</div>
+        <form id="ab-form" onsubmit="return setAlert(event)">
+          <input id="ab-email" type="email" required placeholder="you@email.com" aria-label="Email for alerts">
+          <button type="submit">🔔 Alert me</button>
+        </form>
+        <div class="ab-ok" id="ab-ok">✓ Alert set. We'll email you when this ZIP's verdict changes.</div>
+      </div>
+
+      <div class="stepk"><b>Step 2</b> Know your exact numbers</div>
       <div class="upsell" id="upsell">
         <div class="up-copy"><b>Want the full picture for your home?</b> The EquityWatch report shows your equity, all five indicators, and your exact walk-away number if you sold today.</div>
         <div class="up-ctas">
@@ -326,23 +376,78 @@ async function lookup(zip) {
   return DEMO[zip] || null;
 }
 
-// ————— Presentation —————
-const pct = x => Math.round(Math.abs(x) * 100) + "%";
-function buildReasons(d) {
-  const out = [], m = d.m || {}, codes = new Set((d.r || []).map(x => x[0]));
-  if (codes.has("supply_severe")) out.push(["red", m.mos.toFixed(1) + " months of supply — far above the 4-month danger line"]);
-  else if (codes.has("supply_high")) out.push(["amber", m.mos.toFixed(1) + " months of supply — above the 4-month danger line"]);
-  if (codes.has("price_falling_fast")) out.push(["red", "Prices down " + pct(m.spy) + " vs. last year"]);
-  else if (codes.has("price_falling")) out.push(["amber", "Prices down " + pct(m.spy) + " vs. last year"]);
-  if (codes.has("price_cuts_widespread")) out.push(["amber", pct(m.pd) + " of listings have cut their price"]);
-  if (codes.has("dom_stretching")) out.push(["amber", "Homes taking about " + Math.round(m.domy) + " more days to sell than a year ago"]);
-  if (codes.has("inventory_surge")) out.push(["amber", "Listings up " + pct(m.invy) + " vs. last year"]);
-  if (codes.has("insufficient_data")) out.push(["info", "Limited sales data in this ZIP — verdict based on partial signals"]);
-  if (out.length < 3 && m.mos != null && m.mos <= 4) out.push(["green", m.mos.toFixed(1) + " months of supply — below the 4-month danger line"]);
-  if (out.length < 3 && m.spy != null && m.spy >= 0) out.push(["green", "Prices up " + pct(m.spy) + " vs. last year"]);
-  if (out.length < 3 && m.pd != null && m.pd <= 0.35) out.push(["green", "Price cuts still in the normal range (" + pct(m.pd) + " of listings)"]);
-  if (out.length < 3 && m.dom != null) out.push(["info", "Typical home here sells in about " + Math.round(m.dom) + " days"]);
-  return out.slice(0, 3);
+// ————— Presentation: signal gauges —————
+const clampPct = x => Math.max(2, Math.min(98, x));
+const SEV = { r: 3, a: 2, g: 1, i: 0 };
+
+function meterRow(o) {
+  return `<div class="mrow">
+    <div class="m-top"><span class="m-name">${o.name}<span class="m-chip ${o.tone}">${o.chip}</span></span>
+    <span class="m-val" style="color:${o.tone === 'r' ? 'var(--red)' : o.tone === 'a' ? '#b07f0e' : 'var(--ink)'}">${o.val}</span></div>
+    <div class="m-note">${o.note}</div>
+    <div class="meter ${o.rev ? 'rev' : ''}"><span class="th" style="left:${o.th}%"></span><span class="pin ${o.tone}" style="left:${o.pin}%"></span></div>
+    <div class="meter-cap"><span>${o.caps[0]}</span><span>${o.caps[1]}</span><span>${o.caps[2]}</span></div>
+  </div>`;
+}
+
+function buildMeters(d) {
+  const m = d.m || {}, codes = new Set((d.r || []).map(x => x[0]));
+  if (codes.has("insufficient_data"))
+    return `<div class="m-info">ℹ️ Limited sales data in this ZIP — smaller markets report fewer transactions, so we hold the verdict at HOLD until signals are reliable.</div>`;
+  const rows = [];
+  if (m.mos != null) {
+    const t = m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g";
+    rows.push({ name: "Months of supply", tone: t, chip: t === "g" ? "HEALTHY" : t === "a" ? "TRIPPED" : "SEVERE",
+      val: m.mos.toFixed(1) + " mo",
+      note: t === "g" ? "Below the 4-month danger line — sellers still hold the pricing power." : "Above the 4-month danger line — buyers are gaining the upper hand.",
+      pin: clampPct(m.mos / 8 * 100), th: 50, rev: false, caps: ["0", "4.0 danger line", "8+"] });
+  }
+  if (m.spy != null) {
+    const t = m.spy < -0.05 ? "r" : m.spy < -0.02 ? "a" : "g";
+    rows.push({ name: "Prices vs. last year", tone: t, chip: t === "g" ? "HEALTHY" : "TRIPPED",
+      val: (m.spy >= 0 ? "+" : "–") + Math.abs(m.spy * 100).toFixed(1) + "%",
+      note: t === "g" ? "The typical sale price is holding or rising." : t === "a" ? "A mild decline is underway — worth watching closely." : "A meaningful decline vs. a year ago.",
+      pin: clampPct((m.spy * 100 + 12) / 24 * 100), th: 41.7, rev: true, caps: ["–12%", "–2% danger line", "+12%"] });
+  }
+  if (m.dom != null && m.domy != null) {
+    const prior = m.dom - m.domy, p = prior > 0 ? m.domy / prior : 0;
+    const t = p > 0.4 ? "a" : "g";
+    rows.push({ name: "Time to sell", tone: t, chip: t === "g" ? "NORMAL" : "SLOWING",
+      val: (m.domy > 0 ? "+" : "") + Math.round(m.domy) + " days",
+      note: m.domy <= 0 ? "Homes are selling as fast or faster than last year." : "Homes take " + Math.round(m.dom) + " days now vs. " + Math.round(prior) + " a year ago.",
+      pin: clampPct((p * 100 + 50) / 150 * 100), th: 60, rev: false, caps: ["faster", "+40% danger line", "much slower"] });
+  }
+  if (m.invy != null) {
+    const t = m.invy > 0.5 ? "a" : "g";
+    rows.push({ name: "Homes for sale", tone: t, chip: t === "g" ? "NORMAL" : "SURGING",
+      val: (m.invy >= 0 ? "+" : "–") + Math.abs(m.invy * 100).toFixed(0) + "%",
+      note: t === "g" ? "Inventory growth is within the normal range." : "A wave of new listings means more competition for sellers.",
+      pin: clampPct((m.invy * 100 + 20) / 120 * 100), th: 58.3, rev: false, caps: ["falling", "+50% danger line", "+100%"] });
+  }
+  if (m.pd != null) {
+    const t = m.pd > 0.35 ? "a" : "g";
+    rows.push({ name: "Listings with price cuts", tone: t, chip: t === "g" ? "NORMAL" : "WIDESPREAD",
+      val: Math.round(m.pd * 100) + "%",
+      note: t === "g" ? "Price cutting is within the normal range." : "Over a third of sellers are cutting — capitulation is spreading.",
+      pin: clampPct(m.pd / 0.7 * 100), th: 50, rev: false, caps: ["0%", "35% danger line", "70%+"] });
+  }
+  rows.sort((a, b) => SEV[b.tone] - SEV[a.tone]);
+  return rows.slice(0, 4).map(meterRow).join("");
+}
+
+const CAPTIONS = {
+  red: "Multiple sell-signals have tripped in this ZIP. If selling was already on your mind, the data says make a plan now — not next spring.",
+  yellow: "One meaningful warning is flashing. No reason to panic — but this is the moment to watch closely and know your numbers.",
+  green: "No danger signals tripped. This market isn't putting pressure on your equity right now."
+};
+
+function scorebarHTML(score, level) {
+  const cls = level === "red" ? "on-r" : level === "yellow" ? "on-a" : "on-g";
+  let segs = "";
+  for (let i = 0; i < 8; i++) segs += `<span class="sb-seg ${i < score ? cls : ""}"></span>`;
+  return `<div class="sb-label">Warning score: ${score} of 8</div>
+    <div class="sb-track">${segs}</div>
+    <div class="sb-cap"><span>0 · calm</span><span>8 · full alarm</span></div>`;
 }
 
 const THEME = {
@@ -371,7 +476,7 @@ function sponsorFor(zip) {
 }
 
 function sponsorHTML(s, level, zip) {
-  const kicker = level === "red" ? "Your next step" : "Get a second opinion";
+  const kicker = level === "red" ? "Talk it through with a pro" : "Get a second opinion";
   const subject = encodeURIComponent(`Free consult — ZIP ${zip} rated ${THEME[level].word} on ShouldISellYet`);
   const body = encodeURIComponent(`Hi ${s.name},\n\nMy ZIP (${zip}) is rated ${THEME[level].word} on ShouldISellYet.com and I'd like a free consultation about my home.\n\nMy address:\nBest time to reach me:`);
   const phoneDisplay = s.phoneDisplay ||
@@ -383,7 +488,7 @@ function sponsorHTML(s, level, zip) {
   ].join("");
   const chips = (s.chips || []).map(c => `<span class="sp-chip">${c}</span>`).join("");
   return `<div class="sponsor">
-    <div class="sp-kicker">${kicker} <span class="sp-tag">Licensed local partner</span></div>
+    <div class="stepk" style="border:none;padding:0"><b>Step 3</b> ${kicker} <span class="sp-tag">Licensed local partner</span></div>
     <div class="sp-row">
       <img class="sp-photo" src="${s.photo}" alt="${s.name}, ${s.brokerage}" onerror="this.onerror=null;this.src='${AVATAR_FALLBACK}'">
       <div>
@@ -412,8 +517,12 @@ async function check() {
     word.style.color = t.color;
     document.getElementById("vzip").textContent =
       zip + (d.st ? " · " + d.st : "") + (META ? " · data through " + META.period : "");
-    document.getElementById("reasons").innerHTML = buildReasons(d)
-      .map(([tone, text]) => `<li><span class="dot ${tone}"></span><span>${text}</span></li>`).join("");
+    document.getElementById("vcaption").textContent = CAPTIONS[d.l];
+    document.getElementById("scorebar").innerHTML = scorebarHTML(d.s || 0, d.l);
+    document.getElementById("meters").innerHTML = buildMeters(d);
+    document.getElementById("ab-zip").textContent = zip;
+    document.getElementById("ab-form").style.display = "flex";
+    document.getElementById("ab-ok").style.display = "none";
     const sp = sponsorFor(zip);
     document.getElementById("sponsor").innerHTML =
       (sp && d.l !== "green") ? sponsorHTML(sp, d.l, zip) : "";
@@ -465,6 +574,30 @@ function joinWaitlist(e) {
 function showOk() {
   document.getElementById("wl-form").style.display = "none";
   document.getElementById("wl-ok").style.display = "block";
+}
+
+// Free verdict-change alert (covered ZIPs)
+function setAlert(e) {
+  e.preventDefault();
+  const email = document.getElementById("ab-email").value;
+  const zip = document.getElementById("zip").value.trim();
+  const done = () => {
+    document.getElementById("ab-form").style.display = "none";
+    document.getElementById("ab-ok").style.display = "block";
+  };
+  if (FORM_ENDPOINT) {
+    fetch(FORM_ENDPOINT, {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ email, zip, source: "verdict-alert" })
+    }).then(done).catch(done);
+  } else {
+    window.location.href = "mailto:" + FALLBACK_EMAIL +
+      "?subject=" + encodeURIComponent("Verdict alert: ZIP " + zip) +
+      "&body=" + encodeURIComponent("Please alert me when this ZIP's verdict changes.\nZIP: " + zip + "\nEmail: " + email);
+    done();
+  }
+  return false;
 }
 document.getElementById("zip").addEventListener("keydown", e => { if (e.key === "Enter") check(); });
 </script>
