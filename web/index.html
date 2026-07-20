@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- ShouldISellYet v1.2 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -78,21 +77,26 @@
   .dot.amber{background:var(--amber);box-shadow:0 0 0 4px rgba(232,163,23,.14)}
   .dot.green{background:var(--green);box-shadow:0 0 0 4px rgba(18,161,80,.12)}
   .dot.info{background:#98a2b3;box-shadow:0 0 0 4px rgba(152,162,179,.14)}
-  /* Sponsor / local expert */
-  .sponsor{margin:0 0 26px;text-align:left;background:linear-gradient(160deg,#f4faf8,#eef6f3);border:1px solid #d5eae6;border-radius:16px;padding:20px 20px 18px;position:relative}
-  .sponsor .sp-tag{position:absolute;top:-9px;right:16px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:#fff;border:1px solid #d5eae6;color:var(--accent-ink);padding:3px 10px;border-radius:999px}
-  .sponsor .sp-head{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px}
-  .sponsor .sp-row{display:flex;gap:14px;align-items:center}
-  .sponsor .sp-photo{flex:none;width:60px;height:60px;border-radius:50%;object-fit:cover;border:2.5px solid #fff;box-shadow:var(--shadow-md);background:var(--navy)}
-  .sponsor .sp-name{font-weight:800;font-size:16px}
-  .sponsor .sp-name small{font-weight:600;color:var(--accent-ink)}
-  .sponsor .sp-brok{font-size:13px;color:var(--muted)}
-  .sponsor .sp-ctas{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .sponsor .sp-btn{font-size:13.5px;font-weight:700;padding:9px 18px;border-radius:999px;text-decoration:none;transition:.15s}
-  .sponsor .sp-btn.primary{background:var(--accent);color:#fff}
-  .sponsor .sp-btn.primary:hover{background:var(--accent-ink)}
-  .sponsor .sp-btn.ghost{border:1.5px solid var(--accent-ink);color:var(--accent-ink)}
-  .sponsor .sp-btn.ghost:hover{background:#fff}
+  /* Local expert — integrated "what now" step of the report */
+  .sponsor{margin:2px 0 28px;text-align:left;border-top:1px solid var(--line);padding-top:22px}
+  .sponsor .sp-kicker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:16px}
+  .sponsor .sp-kicker::after{content:"";flex:1;height:1px;background:var(--line)}
+  .sponsor .sp-kicker .sp-tag{font-size:10px;font-weight:700;letter-spacing:.06em;color:#98a2b3;border:1px solid var(--line);padding:2px 8px;border-radius:999px;text-transform:none}
+  .sponsor .sp-row{display:flex;gap:16px;align-items:flex-start}
+  .sponsor .sp-photo{flex:none;width:76px;height:76px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent),var(--shadow-md);background:var(--navy)}
+  .sponsor .sp-name{font-family:'Fraunces',serif;font-weight:700;font-size:19px;letter-spacing:-.01em}
+  .sponsor .sp-name small{font-family:'Inter';font-weight:600;font-size:13px;color:var(--muted)}
+  .sponsor .sp-brok{font-size:13px;font-weight:600;color:var(--accent-ink);margin-top:1px}
+  .sponsor .sp-blurb{font-size:14.5px;color:var(--ink-2);line-height:1.6;margin-top:10px}
+  .sponsor .sp-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .sponsor .sp-chip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
+  .sponsor .sp-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .sponsor .sp-btn{flex:1;min-width:150px;text-align:center;font-size:14.5px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;transition:.15s}
+  .sponsor .sp-btn.primary{background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;box-shadow:var(--shadow-sm)}
+  .sponsor .sp-btn.primary:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .sponsor .sp-btn.ghost{border:1.5px solid var(--line);color:var(--ink);background:#fff}
+  .sponsor .sp-btn.ghost:hover{border-color:var(--ink)}
+  @media(max-width:560px){ .sponsor .sp-row{flex-direction:column;align-items:center;text-align:center} .sponsor .sp-chips{justify-content:center} }
   .verdict .share{font-size:15px;font-weight:700;background:var(--paper);border:1.5px solid var(--ink);color:var(--ink);padding:12px 26px;border-radius:999px;cursor:pointer;transition:.18s}
   .verdict .share:hover{background:var(--ink);color:#fff}
   .verdict .fineprint{font-size:12px;color:#98a2b3;margin-top:18px;line-height:1.5}
@@ -341,7 +345,7 @@ function lampSVG(level) {
 }
 
 const AVATAR_FALLBACK = "data:image/svg+xml," + encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='#16243a'/><text x='50' y='64' font-family='Georgia,serif' font-size='42' font-weight='700' fill='#6fe3c2' text-anchor='middle'>N</text></svg>`);
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#1b2c47'/><stop offset='1' stop-color='#16243a'/></linearGradient></defs><rect width='100' height='100' rx='50' fill='url(%23g)'/><circle cx='50' cy='40' r='16' fill='#6fe3c2' opacity='.9'/><path d='M22 88c4-18 15-26 28-26s24 8 28 26' fill='#6fe3c2' opacity='.9'/></svg>`);
 
 function sponsorFor(zip) {
   if (!SPONSORS) return null;
@@ -350,24 +354,24 @@ function sponsorFor(zip) {
 }
 
 function sponsorHTML(s, level, zip) {
-  const head = level === "red"
-    ? "A market like this rewards moving quickly — and moving smart. Talk to a local expert:"
-    : "Want a professional read on your exact home? It's free, no strings:";
+  const kicker = level === "red" ? "Your next step" : "Get a second opinion";
   const subject = encodeURIComponent(`Free consult — ZIP ${zip} rated ${THEME[level].word} on ShouldISellYet`);
   const body = encodeURIComponent(`Hi ${s.name},\n\nMy ZIP (${zip}) is rated ${THEME[level].word} on ShouldISellYet.com and I'd like a free consultation about my home.\n\nMy address:\nBest time to reach me:`);
   const ctas = [
-    `<a class="sp-btn primary" href="mailto:${s.email}?subject=${subject}&body=${body}">Get a free consult</a>`,
-    s.phone ? `<a class="sp-btn ghost" href="tel:${s.phone}">Call ${s.name}</a>` : "",
-    s.url ? `<a class="sp-btn ghost" href="${s.url}" target="_blank" rel="noopener">Visit ${s.brokerage}</a>` : ""
+    s.phone ? `<a class="sp-btn primary" href="tel:${s.phone}">Call ${s.name} now</a>` : "",
+    `<a class="sp-btn ${s.phone ? "ghost" : "primary"}" href="mailto:${s.email}?subject=${subject}&body=${body}">Request a free consult</a>`,
+    s.url ? `<a class="sp-btn ghost" href="${s.url}" target="_blank" rel="noopener">${s.brokerage} →</a>` : ""
   ].join("");
+  const chips = (s.chips || []).map(c => `<span class="sp-chip">${c}</span>`).join("");
   return `<div class="sponsor">
-    <span class="sp-tag">Local partner</span>
-    <div class="sp-head">${head}</div>
+    <div class="sp-kicker">${kicker} <span class="sp-tag">Licensed local partner</span></div>
     <div class="sp-row">
-      <img class="sp-photo" src="${s.photo}" alt="${s.name}, ${s.brokerage}" onerror="this.src='${AVATAR_FALLBACK}'">
+      <img class="sp-photo" src="${s.photo}" alt="${s.name}, ${s.brokerage}" onerror="this.onerror=null;this.src='${AVATAR_FALLBACK}'">
       <div>
-        <div class="sp-name">${s.name} <small>· ${s.title}</small></div>
-        <div class="sp-brok">${s.brokerage} · ${s.area}</div>
+        <div class="sp-name">${s.name} <small>${s.title} · ${s.area}</small></div>
+        <div class="sp-brok">${s.brokerage}</div>
+        ${s.blurb ? `<div class="sp-blurb">${s.blurb}</div>` : ""}
+        ${chips ? `<div class="sp-chips">${chips}</div>` : ""}
       </div>
     </div>
     <div class="sp-ctas">${ctas}</div>
