@@ -53,8 +53,12 @@ def _checks(m: ZipMetrics):
             out.append(("price_falling", 2, m.median_sale_price_yoy))
     if m.price_drop_share is not None and m.price_drop_share > 0.35:
         out.append(("price_cuts_widespread", 1, m.price_drop_share))
-    if m.median_dom_yoy is not None and m.median_dom_yoy > 0.40:
-        out.append(("dom_stretching", 1, m.median_dom_yoy))
+    # Redfin's MEDIAN_DOM_YOY is an absolute change in DAYS, not a fraction.
+    # Flag when time-to-sell grew >40% vs. last year (needs current DOM to compute).
+    if m.median_dom_yoy is not None and m.median_dom is not None:
+        prior_dom = m.median_dom - m.median_dom_yoy
+        if prior_dom > 0 and (m.median_dom_yoy / prior_dom) > 0.40:
+            out.append(("dom_stretching", 1, m.median_dom_yoy))
     if m.inventory_yoy is not None and m.inventory_yoy > 0.50:
         out.append(("inventory_surge", 1, m.inventory_yoy))
     return out

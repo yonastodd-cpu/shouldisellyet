@@ -63,6 +63,21 @@ def test_20906_style_mix_shift_is_yellow_not_red():
     assert v.level == "yellow"
 
 
+def test_dom_yoy_is_days_not_fraction():
+    """Regression: Redfin MEDIAN_DOM_YOY is days (found in production: 46 dom, +12 days)."""
+    # 34 → 46 days = +35% — should NOT flag
+    v = evaluate(ZipMetrics("20906", months_of_supply=1.0,
+                            median_sale_price_yoy=-0.071,
+                            median_dom=46.0, median_dom_yoy=12.0))
+    assert not any(c == "dom_stretching" for c, _, _ in v.reasons)
+    assert v.level == "yellow"          # price alone = 3 points
+    # 30 → 50 days = +67% — SHOULD flag
+    v2 = evaluate(ZipMetrics("00007", months_of_supply=1.0,
+                             median_sale_price_yoy=0.0,
+                             median_dom=50.0, median_dom_yoy=20.0))
+    assert any(c == "dom_stretching" for c, _, _ in v2.reasons)
+
+
 def test_uppercase_headers_like_real_redfin_file(tmp_path):
     """Regression: Redfin ships UPPERCASE column names (found in production)."""
     import fetch_data

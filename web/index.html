@@ -296,7 +296,7 @@ function buildReasons(d) {
   if (codes.has("price_falling_fast")) out.push(["red", "Prices down " + pct(m.spy) + " vs. last year"]);
   else if (codes.has("price_falling")) out.push(["amber", "Prices down " + pct(m.spy) + " vs. last year"]);
   if (codes.has("price_cuts_widespread")) out.push(["amber", pct(m.pd) + " of listings have cut their price"]);
-  if (codes.has("dom_stretching")) out.push(["amber", "Homes taking " + pct(m.domy) + " longer to sell than a year ago"]);
+  if (codes.has("dom_stretching")) out.push(["amber", "Homes taking about " + Math.round(m.domy) + " more days to sell than a year ago"]);
   if (codes.has("inventory_surge")) out.push(["amber", "Listings up " + pct(m.invy) + " vs. last year"]);
   if (codes.has("insufficient_data")) out.push(["info", "Limited sales data in this ZIP — verdict based on partial signals"]);
   if (out.length < 3 && m.mos != null && m.mos <= 4) out.push(["green", m.mos.toFixed(1) + " months of supply — below the 4-month danger line"]);
