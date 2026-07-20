@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Should I Sell Yet? — Free Home Equity Warning System</title>
+<meta name="description" content="Enter your ZIP code. Get a plain-English verdict on whether your home equity is at risk — free, every month.">
+<style>
+  :root{
+    --ink:#141a24; --paper:#faf7f0; --card:#ffffff;
+    --green:#1f9d55; --yellow:#e0a800; --red:#d64541;
+    --teal:#2a9d8f; --navy:#1b3a5c; --muted:#6b7280;
+    --radius:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6}
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px}
+  header{padding:64px 0 48px;text-align:center}
+  .logo{font-size:15px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+  h1{font-size:clamp(38px,7vw,64px);font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:16px 0 8px}
+  h1 .q{color:var(--red)}
+  .sub{font-size:clamp(17px,2.5vw,21px);color:var(--muted);max-width:620px;margin:0 auto 36px}
+  .checker{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .checker input{font-size:24px;font-weight:700;letter-spacing:.08em;text-align:center;width:190px;padding:16px 18px;border:3px solid var(--ink);border-radius:var(--radius);background:var(--card);outline:none}
+  .checker input:focus{border-color:var(--teal)}
+  .checker button{font-size:18px;font-weight:800;padding:16px 28px;border:none;border-radius:var(--radius);background:var(--ink);color:#fff;cursor:pointer;transition:transform .1s}
+  .checker button:hover{transform:translateY(-2px)}
+  .hint{font-size:13px;color:var(--muted);margin-top:12px}
+  .verdict{display:none;max-width:560px;margin:36px auto 0;background:var(--card);border-radius:20px;padding:34px 30px;box-shadow:0 12px 40px rgba(20,26,36,.12);text-align:center;border-top:10px solid var(--vcolor,#ccc)}
+  .verdict .lights{font-size:15px;letter-spacing:.35em;margin-bottom:10px}
+  .verdict .word{font-size:46px;font-weight:900;letter-spacing:.02em;color:var(--vcolor)}
+  .verdict .zip{font-size:15px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
+  .verdict ul{list-style:none;text-align:left;margin:18px 0 22px}
+  .verdict li{padding:9px 0;border-bottom:1px solid #f0ede6;font-size:16px}
+  .verdict li:last-child{border-bottom:none}
+  .verdict .share{font-size:15px;font-weight:700;background:var(--paper);border:2px solid var(--ink);color:var(--ink);padding:11px 22px;border-radius:12px;cursor:pointer}
+  .verdict .fineprint{font-size:12px;color:var(--muted);margin-top:16px}
+  .waitlist{display:none;max-width:560px;margin:36px auto 0;background:var(--navy);color:#fff;border-radius:20px;padding:34px 30px;text-align:center}
+  .waitlist h3{font-size:24px;font-weight:800;margin-bottom:8px}
+  .waitlist p{color:#cfe8e4;font-size:15px;margin-bottom:20px}
+  .waitlist form{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .waitlist input{flex:1;min-width:220px;font-size:16px;padding:13px 16px;border:none;border-radius:12px}
+  .waitlist button{font-size:16px;font-weight:800;padding:13px 22px;border:none;border-radius:12px;background:var(--teal);color:#fff;cursor:pointer}
+  .waitlist .ok{display:none;font-size:17px;font-weight:700;color:#7be3c9;margin-top:14px}
+  section{padding:56px 0}
+  h2{font-size:clamp(26px,4vw,34px);font-weight:900;text-align:center;margin-bottom:8px}
+  .lede{text-align:center;color:var(--muted);max-width:560px;margin:0 auto 40px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .tile{background:var(--card);border-radius:var(--radius);padding:26px 24px;box-shadow:0 4px 18px rgba(20,26,36,.06)}
+  .tile .n{display:inline-block;font-weight:900;font-size:14px;background:var(--ink);color:#fff;border-radius:999px;width:28px;height:28px;line-height:28px;text-align:center;margin-bottom:12px}
+  .tile h3{font-size:18px;font-weight:800;margin-bottom:6px}
+  .tile p{font-size:15px;color:var(--muted)}
+  .signals{background:var(--ink);color:#fff;border-radius:24px;padding:40px 34px}
+  .signals h2{color:#fff}
+  .signals .lede{color:#9aa3b2}
+  .sig-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:8px}
+  .sig{background:rgba(255,255,255,.07);border-radius:14px;padding:18px 16px}
+  .sig b{display:block;font-size:15px;margin-bottom:4px;color:#7be3c9}
+  .sig span{font-size:13.5px;color:#c3c9d4}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;align-items:stretch}
+  .plan{background:var(--card);border-radius:var(--radius);padding:28px 26px;box-shadow:0 4px 18px rgba(20,26,36,.06);display:flex;flex-direction:column}
+  .plan.hot{border:3px solid var(--teal)}
+  .plan .tag{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+  .plan .price{font-size:38px;font-weight:900;margin:6px 0 2px}
+  .plan .per{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .plan ul{list-style:none;font-size:15px;flex:1}
+  .plan li{padding:7px 0;border-bottom:1px solid #f0ede6}
+  .plan li:last-child{border:none}
+  footer{padding:44px 0 60px;text-align:center;font-size:13px;color:var(--muted)}
+  footer .disc{max-width:640px;margin:12px auto 0}
+  @media(max-width:520px){ .verdict .word{font-size:38px} }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="logo">🚦 ShouldISellYet.com</div>
+  <h1>Should I sell yet<span class="q">?</span></h1>
+  <p class="sub">Your home is probably your biggest asset. We watch the early-warning data for your ZIP code every month and give you one plain-English answer — before your equity is at risk.</p>
+
+  <div class="checker">
+    <input id="zip" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP code" aria-label="ZIP code">
+    <button onclick="check()">Check my ZIP →</button>
+  </div>
+  <p class="hint" id="coverage">Free. No account needed.</p>
+
+  <div class="verdict" id="verdict">
+    <div class="lights" id="lights"></div>
+    <div class="word" id="word"></div>
+    <div class="zip" id="vzip"></div>
+    <ul id="reasons"></ul>
+    <button class="share" onclick="share()">📤 Share this verdict</button>
+    <div class="fineprint" id="fineprint">Updated monthly from public market data. Not financial advice — talk to a professional before making big moves.</div>
+  </div>
+
+  <div class="waitlist" id="waitlist">
+    <h3 id="wl-title">We're not watching your ZIP yet 👀</h3>
+    <p id="wl-sub">Drop your email and we'll alert you the moment your ZIP code goes live — and every time its warning level changes.</p>
+    <form id="wl-form" onsubmit="return joinWaitlist(event)">
+      <input id="wl-email" type="email" required placeholder="you@email.com" aria-label="Email">
+      <button type="submit">Watch my ZIP</button>
+    </form>
+    <div class="ok" id="wl-ok">✅ You're on the list. We'll email you when your ZIP goes live.</div>
+  </div>
+</header>
+
+<section class="wrap">
+  <h2>How it works</h2>
+  <p class="lede">The same early-warning signals professionals watch, translated into a traffic light anyone can read.</p>
+  <div class="grid">
+    <div class="tile"><span class="n">1</span><h3>We watch the data</h3><p>Every month we pull inventory, price cuts, days on market, and local job numbers for your ZIP code from public sources.</p></div>
+    <div class="tile"><span class="n">2</span><h3>We check the thresholds</h3><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
+    <div class="tile"><span class="n">3</span><h3>You get one answer</h3><p>🟢 Hold. 🟡 Watch. 🔴 Act. Plus the reasons why, in plain English — no spreadsheets, no jargon.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="signals">
+    <h2>What we watch</h2>
+    <p class="lede">Prices are the last thing to fall. These move first:</p>
+    <div class="sig-row">
+      <div class="sig"><b>Months of supply</b><span>Above 4 months, sellers lose pricing power. It's the single best early signal.</span></div>
+      <div class="sig"><b>Price cuts</b><span>When over a third of listings cut their price, the market is telling you something.</span></div>
+      <div class="sig"><b>Days on market</b><span>Homes sitting longer is the first visible crack — months before prices move.</span></div>
+      <div class="sig"><b>Inventory surges</b><span>A wave of new listings means more competition when you sell. We track the trend.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Simple pricing</h2>
+  <p class="lede">Checking your ZIP is free, forever. Upgrade when you want us watching <em>your</em> home.</p>
+  <div class="plans">
+    <div class="plan">
+      <div class="tag">Free</div>
+      <div class="price">$0</div>
+      <div class="per">forever</div>
+      <ul><li>Monthly ZIP-code verdict</li><li>Traffic-light warning level</li><li>Email when your ZIP changes color</li></ul>
+    </div>
+    <div class="plan hot">
+      <div class="tag">Equity Watch</div>
+      <div class="price">$5.99</div>
+      <div class="per">per month · or $59/year</div>
+      <ul><li>Track your actual address</li><li>Instant alerts when thresholds trip</li><li>Your estimated equity, updated monthly</li><li>"What selling nets you today" breakdown</li></ul>
+    </div>
+    <div class="plan">
+      <div class="tag">For Agents</div>
+      <div class="price">$39</div>
+      <div class="per">per ZIP per month · exclusive</div>
+      <ul><li>Your branding on every alert in your ZIP</li><li>Monthly leads from worried homeowners</li><li>Done-for-you market snapshot reports</li></ul>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div>© 2026 ShouldISellYet.com</div>
+  <div class="disc" id="attribution">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
+</footer>
+
+<script>
+// ————— Data layer —————
+// Live mode: fetches data/index.json (ZIP prefix → state), then data/zips/{ST}.json.
+// Fallback demo mode (e.g. opened as a local file): built-in sample ZIPs.
+const DEMO = {
+  "20874": {l:"green", st:"MD", m:{mos:2.6, spy:0.02, dom:47, domy:0.38, pd:0.25}, r:[]},
+  "20906": {l:"yellow", st:"MD", m:{mos:2.8, spy:-0.072, dom:43, pd:0.22}, r:[["price_falling_fast",-0.072]]}
+};
+let INDEX = null, META = null, live = false;
+const stateCache = {};
+
+fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
+  if (j) { INDEX = j; live = true; }
+  return fetch("data/meta.json").then(r => r.ok ? r.json() : null);
+}).then(m => {
+  if (m) {
+    META = m;
+    document.getElementById("coverage").textContent =
+      "Free. No account needed. Data through " + m.period + ".";
+  }
+}).catch(() => {});
+
+async function lookup(zip) {
+  if (live && INDEX) {
+    const st = INDEX[zip.slice(0, 3)];
+    if (!st) return null;
+    if (!stateCache[st]) {
+      const r = await fetch("data/zips/" + st + ".json");
+      if (!r.ok) return null;
+      stateCache[st] = await r.json();
+    }
+    return stateCache[st][zip] || null;
+  }
+  return DEMO[zip] || null;
+}
+
+// ————— Reason rendering —————
+const pct = x => Math.round(Math.abs(x) * 100) + "%";
+function buildReasons(d) {
+  const out = [], m = d.m || {}, codes = new Set((d.r || []).map(x => x[0]));
+  // warnings first
+  if (codes.has("supply_severe")) out.push("🔴 " + m.mos.toFixed(1) + " months of supply — far above the 4-month danger line");
+  else if (codes.has("supply_high")) out.push("🟡 " + m.mos.toFixed(1) + " months of supply — above the 4-month danger line");
+  if (codes.has("price_falling_fast")) out.push("🔴 Prices down " + pct(m.spy) + " vs. last year");
+  else if (codes.has("price_falling")) out.push("🟡 Prices down " + pct(m.spy) + " vs. last year");
+  if (codes.has("price_cuts_widespread")) out.push("🟡 " + pct(m.pd) + " of listings have cut their price");
+  if (codes.has("dom_stretching")) out.push("🟡 Homes taking " + pct(m.domy) + " longer to sell than a year ago");
+  if (codes.has("inventory_surge")) out.push("🟡 Listings up " + pct(m.invy) + " vs. last year");
+  if (codes.has("insufficient_data")) out.push("ℹ️ Limited sales data in this ZIP — verdict based on partial signals");
+  // then reassurance, up to 3 lines total
+  if (out.length < 3 && m.mos != null && m.mos <= 4) out.push("🟢 " + m.mos.toFixed(1) + " months of supply — below the 4-month danger line");
+  if (out.length < 3 && m.spy != null && m.spy >= 0) out.push("🟢 Prices up " + pct(m.spy) + " vs. last year");
+  if (out.length < 3 && m.pd != null && m.pd <= 0.35) out.push("🟢 Price cuts still normal (" + pct(m.pd) + " of listings)");
+  if (out.length < 3 && m.dom != null) out.push("ℹ️ Typical home sells in about " + Math.round(m.dom) + " days");
+  return out.slice(0, 3);
+}
+
+const COLORS = { green:"var(--green)", yellow:"var(--yellow)", red:"var(--red)" };
+const LIGHTS = { green:"🟢⚪⚪", yellow:"⚪🟡⚪", red:"⚪⚪🔴" };
+const WORDS  = { green:"HOLD", yellow:"WATCH", red:"ACT" };
+let lastVerdict = null;
+
+async function check() {
+  const zip = document.getElementById("zip").value.trim();
+  const v = document.getElementById("verdict"), w = document.getElementById("waitlist");
+  if (!/^\d{5}$/.test(zip)) { document.getElementById("zip").focus(); return; }
+  const d = await lookup(zip);
+  if (d) {
+    v.style.setProperty("--vcolor", COLORS[d.l]);
+    document.getElementById("lights").textContent = LIGHTS[d.l];
+    const word = document.getElementById("word");
+    word.textContent = WORDS[d.l];
+    word.style.color = COLORS[d.l];
+    document.getElementById("vzip").textContent =
+      zip + (d.st ? " · " + d.st : "") + (META ? " · data through " + META.period : "");
+    document.getElementById("reasons").innerHTML =
+      buildReasons(d).map(r => "<li>" + r + "</li>").join("");
+    if (META) document.getElementById("fineprint").textContent =
+      META.attribution + ". Updated monthly. Not financial advice — talk to a professional before making big moves.";
+    v.style.display = "block"; w.style.display = "none";
+    lastVerdict = { zip, word: WORDS[d.l], level: d.l };
+    v.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else {
+    w.style.display = "block"; v.style.display = "none";
+    document.getElementById("wl-title").textContent = "We're not watching " + zip + " yet 👀";
+    document.getElementById("wl-ok").style.display = "none";
+    document.getElementById("wl-form").style.display = "flex";
+    w.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+function share() {
+  if (!lastVerdict) return;
+  const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
+  const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.word +
+    " this month on ShouldISellYet.com — check yours free.";
+  if (navigator.share) { navigator.share({ text }); }
+  else { navigator.clipboard.writeText(text).then(() => alert("Copied! Paste it anywhere.")); }
+}
+
+// ————— Email capture —————
+// Create a free form at https://formspree.io and paste the endpoint below.
+const FORM_ENDPOINT = "";
+const FALLBACK_EMAIL = "naomi@shouldisellyet.com";
+
+function joinWaitlist(e) {
+  e.preventDefault();
+  const email = document.getElementById("wl-email").value;
+  const zip = document.getElementById("zip").value.trim();
+  if (FORM_ENDPOINT) {
+    fetch(FORM_ENDPOINT, {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ email, zip, source: "waitlist" })
+    }).then(() => showOk()).catch(() => showOk());
+  } else {
+    window.location.href = "mailto:" + FALLBACK_EMAIL +
+      "?subject=" + encodeURIComponent("Watch my ZIP: " + zip) +
+      "&body=" + encodeURIComponent("Please add me to the ShouldISellYet waitlist.\nZIP: " + zip + "\nEmail: " + email);
+    showOk();
+  }
+  return false;
+}
+function showOk() {
+  document.getElementById("wl-form").style.display = "none";
+  document.getElementById("wl-ok").style.display = "block";
+}
+document.getElementById("zip").addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+period_begin	period_end	region	state_code	property_type	median_sale_price	median_sale_price_yoy	homes_sold	inventory	inventory_yoy	months_of_supply	median_dom	median_dom_yoy	price_drops
+2026-06-01	2026-06-30	Zip Code: 20874	MD	All Residential	465000	0.02	55	143	0.18	2.6	47	0.38	0.25
+2026-06-01	2026-06-30	Zip Code: 20906	MD	All Residential	357000	-0.072	48	134	0.15	2.8	43	0.10	0.22
