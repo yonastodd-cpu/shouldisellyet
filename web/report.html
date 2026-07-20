@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquityWatch Report — Sample | ShouldISellYet</title>
+<meta name="description" content="A sample EquityWatch property report: your home's warning level, equity position, and net-proceeds breakdown — in one infographic.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%23101828'/><circle cx='50' cy='26' r='11' fill='%23e03e36'/><circle cx='50' cy='50' r='11' fill='%23e8a317'/><circle cx='50' cy='74' r='11' fill='%2312a150'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101828; --ink-2:#344054; --muted:#667085;
+    --paper:#fbfaf7; --card:#fff; --line:#eceae4;
+    --green:#12a150; --amber:#e8a317; --red:#e03e36;
+    --accent:#0e8a7d; --accent-ink:#0b6e64; --navy:#16243a;
+    --shadow-md:0 6px 16px -4px rgba(16,24,40,.10);
+    --shadow-lg:0 24px 48px -12px rgba(16,24,40,.16);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .serif{font-family:'Fraunces',serif}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
+
+  .topbar{background:var(--navy);color:#fff;font-size:13px;font-weight:600;text-align:center;padding:9px 16px}
+  .topbar a{color:#6fe3c2}
+
+  nav{background:#fff;border-bottom:1px solid var(--line)}
+  .nav-in{max-width:860px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;color:var(--ink);text-decoration:none}
+  .sample-pill{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);border:1.5px solid var(--amber);padding:4px 12px;border-radius:999px}
+
+  .report{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow-lg);margin:34px auto 26px;overflow:hidden}
+
+  /* Report header */
+  .r-head{background:linear-gradient(165deg,#131e30,var(--navy));color:#fff;padding:38px 40px 34px;position:relative}
+  .r-head .rh-label{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#6fe3c2;margin-bottom:10px}
+  .r-head h1{font-family:'Fraunces',serif;font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+  .r-head .rh-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#94a8c0}
+  .r-head .lamp{position:absolute;right:38px;top:50%;transform:translateY(-50%)}
+  @media(max-width:640px){ .r-head .lamp{display:none} .r-head{padding:30px 24px} }
+
+  .r-body{padding:36px 40px 40px}
+  @media(max-width:640px){ .r-body{padding:26px 20px 30px} }
+
+  .sec{margin-bottom:38px}
+  .sec-title{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:4px}
+  .sec-title .num{font-family:'Inter';font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+  .sec-sub{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+
+  /* Verdict banner */
+  .v-banner{display:flex;align-items:center;gap:20px;background:linear-gradient(160deg,#fdf6e8,#fbf1da);border:1px solid #f1dfb7;border-radius:18px;padding:22px 26px;flex-wrap:wrap}
+  .v-word{font-family:'Fraunces',serif;font-size:44px;font-weight:900;color:var(--amber);line-height:1}
+  .v-copy{flex:1;min-width:220px;font-size:14.5px;color:var(--ink-2)}
+  .v-score{text-align:center}
+  .v-score .vs-num{font-family:'Fraunces',serif;font-size:30px;font-weight:900}
+  .v-score .vs-lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+  /* Equity blocks */
+  .eq-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){ .eq-grid{grid-template-columns:1fr} }
+  .eq-card{border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8)}
+  .eq-card .label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .eq-card .big{font-family:'Fraunces',serif;font-size:34px;font-weight:900;letter-spacing:-.01em;margin:4px 0 2px}
+  .eq-card .delta{font-size:13px;font-weight:600}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
+  .eq-bar{height:14px;border-radius:8px;background:#f1efe9;overflow:hidden;display:flex;margin-top:14px}
+  .eq-bar .seg-loan{background:#c9c5ba;height:100%}
+  .eq-bar .seg-equity{background:linear-gradient(90deg,var(--accent),#12a394);height:100%}
+  .eq-legend{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--muted)}
+  .eq-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+
+  /* Indicator dashboard */
+  .ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){ .ind-grid{grid-template-columns:1fr} }
+  .ind{border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px}
+  .ind .i-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+  .ind .i-name{font-size:13.5px;font-weight:700}
+  .ind .i-val{font-family:'Fraunces',serif;font-size:22px;font-weight:900}
+  .ind .i-note{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+  .meter{position:relative;height:8px;border-radius:6px;background:linear-gradient(90deg,#d9f2e3 0%,#fdeeca 62%,#f9d9d4 100%)}
+  .meter .pin{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(16,24,40,.35);transform:translateX(-8px)}
+  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#98a2b3;border-radius:2px}
+  .meter-cap{display:flex;justify-content:space-between;font-size:10.5px;color:#98a2b3;margin-top:7px;letter-spacing:.02em}
+  .pin.g{background:var(--green)} .pin.a{background:var(--amber)} .pin.r{background:var(--red)}
+  .i-status{font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
+  .i-status.g{color:var(--green);background:#e7f6ed} .i-status.a{color:#b07f0e;background:#fdf3dd} .i-status.r{color:var(--red);background:#fdeae9}
+
+  /* Trend chart */
+  .chart-card{border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .chart-card svg{width:100%;height:auto;display:block}
+
+  /* Proceeds */
+  .pr-table{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .pr-row{display:flex;justify-content:space-between;align-items:center;padding:13px 22px;font-size:14.5px;border-bottom:1px solid var(--line);background:#fff}
+  .pr-row.minus .amt{color:var(--red)}
+  .pr-row.total{background:linear-gradient(160deg,#f0faf7,#e8f5f1);border:none}
+  .pr-row.total .lbl{font-weight:800}
+  .pr-row.total .amt{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:var(--accent-ink)}
+  .pr-row .amt{font-weight:700;font-variant-numeric:tabular-nums}
+  .pr-note{font-size:12px;color:#98a2b3;margin-top:10px}
+
+  /* What now / partner */
+  .say{border-left:3px solid var(--accent);background:#f7fbfa;border-radius:0 14px 14px 0;padding:18px 22px;font-size:14.5px;color:var(--ink-2)}
+  .say b{color:var(--ink)}
+
+  .partner{display:flex;gap:18px;align-items:flex-start;border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:18px;background:linear-gradient(180deg,#fff,#fbfaf7)}
+  .partner img{flex:none;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent),var(--shadow-md);background:var(--navy)}
+  .partner .p-name{font-family:'Fraunces',serif;font-size:18px;font-weight:700}
+  .partner .p-name small{font-family:'Inter';font-size:12.5px;font-weight:600;color:var(--muted)}
+  .partner .p-brok{font-size:13px;font-weight:600;color:var(--accent-ink)}
+  .partner p{font-size:13.5px;color:var(--ink-2);margin-top:8px}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:12px;text-decoration:none;transition:.15s;border:none;cursor:pointer}
+  .btn.primary{background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;box-shadow:var(--shadow-md)}
+  .btn.primary:hover{transform:translateY(-1px)}
+  .btn.dark{background:linear-gradient(180deg,#1d2939,#101828);color:#fff}
+  .btn.dark:hover{transform:translateY(-1px)}
+  .btn.ghost{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--ink)}
+
+  /* Purchase band */
+  .buy{background:linear-gradient(165deg,#131e30,var(--navy));color:#fff;border-radius:22px;padding:40px 38px;text-align:center;margin:8px auto 40px;box-shadow:var(--shadow-lg)}
+  .buy h2{font-family:'Fraunces',serif;font-size:clamp(22px,3.5vw,30px);font-weight:700;margin-bottom:8px}
+  .buy p{color:#94a8c0;font-size:14.5px;max-width:520px;margin:0 auto 22px}
+  .buy .price{font-family:'Fraunces',serif;font-size:44px;font-weight:900;color:#6fe3c2}
+  .buy .price small{font-family:'Inter';font-size:13px;font-weight:600;color:#94a8c0}
+  .buy .btn-row{justify-content:center;margin-top:18px}
+
+  footer{padding:30px 0 56px;text-align:center;font-size:12px;color:#98a2b3}
+  footer .disc{max-width:660px;margin:0 auto;line-height:1.6}
+  .watermark{position:fixed;bottom:18px;right:18px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--amber);padding:6px 14px;border-radius:999px;box-shadow:var(--shadow-md);z-index:60}
+</style>
+</head>
+<body>
+
+<div class="topbar">This is a <b>sample</b> EquityWatch report with illustrative numbers — <a href="index.html">get one for your home →</a></div>
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="index.html">
+      <svg width="20" height="27" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#101828"/><circle cx="50" cy="34" r="15" fill="#e03e36"/><circle cx="50" cy="70" r="15" fill="#e8a317"/><circle cx="50" cy="106" r="15" fill="#12a150"/></svg>
+      EquityWatch <span style="color:var(--muted);font-weight:600;font-size:13px">by ShouldISellYet</span>
+    </a>
+    <span class="sample-pill">Sample</span>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="report">
+    <div class="r-head">
+      <div class="rh-label">EquityWatch™ Property Report</div>
+      <h1>1234 Aspen Knolls Way<br>Silver Spring, MD 20906</h1>
+      <div class="rh-meta"><span>Report date: July 2026</span><span>Market data through: May 2026</span><span>Report #SAMPLE-0001</span></div>
+      <div class="lamp">
+        <svg width="58" height="80" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="rgba(255,255,255,.12)"/><circle cx="50" cy="34" r="15" fill="#3a4459"/><circle cx="50" cy="70" r="15" fill="#e8a317" style="filter:drop-shadow(0 0 12px #e8a317aa)"/><circle cx="50" cy="106" r="15" fill="#3a4459"/></svg>
+      </div>
+    </div>
+
+    <div class="r-body">
+
+      <!-- 1. Verdict -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">1</span> Your verdict this month</div>
+        <p class="sec-sub">One answer, backed by every indicator below.</p>
+        <div class="v-banner">
+          <div class="v-word">WATCH</div>
+          <div class="v-copy"><b>Your ZIP is flashing one meaningful warning.</b> The headline price decline in 20906 is real but overstated by condo-mix effects. Your home isn't losing value yet — but this is the moment to know your numbers and have a plan, not six months from now.</div>
+          <div class="v-score"><div class="vs-num">3<span style="font-size:16px;color:var(--muted)">/8</span></div><div class="vs-lab">Warning score</div></div>
+        </div>
+      </div>
+
+      <!-- 2. Equity -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">2</span> Your equity position</div>
+        <p class="sec-sub">Estimated from your home's value trend and typical loan amortization. Connect your actual mortgage balance for precision.</p>
+        <div class="eq-grid">
+          <div class="eq-card">
+            <div class="label">Estimated home value</div>
+            <div class="big">$412,000</div>
+            <div class="delta down">▾ $9,300 (–2.2%) vs. 12 months ago</div>
+          </div>
+          <div class="eq-card">
+            <div class="label">Estimated equity</div>
+            <div class="big" style="color:var(--accent-ink)">$144,000</div>
+            <div class="delta flat">Mortgage balance ≈ $268,000</div>
+            <div class="eq-bar"><div class="seg-loan" style="width:65%"></div><div class="seg-equity" style="width:35%"></div></div>
+            <div class="eq-legend"><span><i style="background:#c9c5ba"></i>Loan 65%</span><span><i style="background:var(--accent)"></i>Your equity 35%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Value trend -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">3</span> 24-month value trend</div>
+        <p class="sec-sub">Your home's estimated value against the 20906 ZIP median.</p>
+        <div class="chart-card">
+          <svg viewBox="0 0 720 220" role="img" aria-label="Value trend chart">
+            <defs>
+              <linearGradient id="fillA" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#0e8a7d" stop-opacity=".18"/><stop offset="1" stop-color="#0e8a7d" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g stroke="#eceae4" stroke-width="1">
+              <line x1="50" y1="30" x2="700" y2="30"/><line x1="50" y1="80" x2="700" y2="80"/>
+              <line x1="50" y1="130" x2="700" y2="130"/><line x1="50" y1="180" x2="700" y2="180"/>
+            </g>
+            <g font-family="Inter" font-size="11" fill="#98a2b3">
+              <text x="8" y="34">$430K</text><text x="8" y="84">$415K</text><text x="8" y="134">$400K</text><text x="8" y="184">$385K</text>
+              <text x="52" y="205">Jul '24</text><text x="215" y="205">Jan '25</text><text x="380" y="205">Jul '25</text><text x="545" y="205">Jan '26</text><text x="660" y="205">May '26</text>
+            </g>
+            <!-- ZIP median (muted) -->
+            <path d="M50,120 C120,112 180,104 250,100 C330,96 390,92 460,98 C540,104 620,118 700,128" fill="none" stroke="#c9c5ba" stroke-width="2.5" stroke-dasharray="5 5"/>
+            <!-- Your home -->
+            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101 L700,180 L50,180 Z" fill="url(#fillA)"/>
+            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101" fill="none" stroke="#0e8a7d" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="700" cy="101" r="6" fill="#0e8a7d" stroke="#fff" stroke-width="2.5"/>
+            <g font-family="Inter" font-size="11.5" font-weight="600">
+              <text x="500" y="52" fill="#0b6e64">Your home (est.)</text>
+              <text x="560" y="150" fill="#98a2b3">ZIP 20906 median</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 4. Indicators -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">4</span> The five warning indicators</div>
+        <p class="sec-sub">Each dot is your ZIP today. The tick mark is the danger threshold — trouble starts when dots cross ticks.</p>
+        <div class="ind-grid">
+          <div class="ind">
+            <div class="i-top"><span class="i-name">Months of supply</span><span class="i-val">2.8</span></div>
+            <div class="i-note">Danger line: 4.0 — sellers still hold the pricing power here.</div>
+            <div class="meter"><span class="th" style="left:62%"></span><span class="pin g" style="left:34%"></span></div>
+            <div class="meter-cap"><span>0</span><span>4.0 threshold</span><span>8+</span></div>
+            <div style="margin-top:10px"><span class="i-status g">HEALTHY</span></div>
+          </div>
+          <div class="ind">
+            <div class="i-top"><span class="i-name">Median price, year over year</span><span class="i-val" style="color:var(--red)">–7.1%</span></div>
+            <div class="i-note">Tripped — but see section 5: mostly condo-mix, not house-value decline.</div>
+            <div class="meter" style="background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)"><span class="th" style="left:38%"></span><span class="pin r" style="left:14%"></span></div>
+            <div class="meter-cap"><span>–10%</span><span>–2% threshold</span><span>+10%</span></div>
+            <div style="margin-top:10px"><span class="i-status r">TRIPPED</span></div>
+          </div>
+          <div class="ind">
+            <div class="i-top"><span class="i-name">Price per square foot, YoY</span><span class="i-val" style="color:var(--green)">+8.6%</span></div>
+            <div class="i-note">What buyers pay for the home itself — still rising in 20906.</div>
+            <div class="meter" style="background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)"><span class="th" style="left:38%"></span><span class="pin g" style="left:84%"></span></div>
+            <div class="meter-cap"><span>–10%</span><span>0%</span><span>+10%</span></div>
+            <div style="margin-top:10px"><span class="i-status g">STRONG</span></div>
+          </div>
+          <div class="ind">
+            <div class="i-top"><span class="i-name">Days on market</span><span class="i-val">46</span></div>
+            <div class="i-note">Up 12 days vs. last year (+35%). Flags at +40% — close, worth watching.</div>
+            <div class="meter"><span class="th" style="left:66%"></span><span class="pin a" style="left:58%"></span></div>
+            <div class="meter-cap"><span>faster</span><span>+40% threshold</span><span>slower</span></div>
+            <div style="margin-top:10px"><span class="i-status a">WATCH</span></div>
+          </div>
+          <div class="ind">
+            <div class="i-top"><span class="i-name">Active listings, YoY</span><span class="i-val">+31%</span></div>
+            <div class="i-note">More competition is coming to market. Flags at +50%.</div>
+            <div class="meter"><span class="th" style="left:70%"></span><span class="pin a" style="left:46%"></span></div>
+            <div class="meter-cap"><span>0%</span><span>+50% threshold</span><span>+100%</span></div>
+            <div style="margin-top:10px"><span class="i-status a">RISING</span></div>
+          </div>
+          <div class="ind" style="display:flex;flex-direction:column;justify-content:center;background:#f7fbfa;border-color:#d5eae6">
+            <div style="font-size:13px;color:var(--ink-2)"><b>Reading the board:</b> one red, two ambers, two greens. That's a market losing steam, not one falling apart. The verdict stays WATCH until a second indicator trips red.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. What it means -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">5</span> What this actually means for you</div>
+        <p class="sec-sub">Plain English, no hedging.</p>
+        <div class="say">
+          <b>The –7.1% headline is mostly an illusion for houses like yours.</b> 20906 includes a large stock of condos (especially around Leisure World), and more of them sold this year — dragging the ZIP's "typical price" down while price per square foot rose 8.6%. A single-family home in good condition is not down 7%.<br><br>
+          <b>But three things deserve your attention:</b> homes take ~12 more days to sell than last year, listings are up 31%, and the DC region's federal job losses are still working through the market. If you're thinking of selling in the next 12–18 months, the data says sooner beats later — and pricing correctly on day one matters more than any year since 2019.
+        </div>
+      </div>
+
+      <!-- 6. Net proceeds -->
+      <div class="sec">
+        <div class="sec-title"><span class="num">6</span> If you sold today: your net</div>
+        <p class="sec-sub">Estimated walk-away cash at the current market value.</p>
+        <div class="pr-table">
+          <div class="pr-row"><span class="lbl">Estimated sale price</span><span class="amt">$412,000</span></div>
+          <div class="pr-row minus"><span class="lbl">Agent commissions (~5%)</span><span class="amt">– $20,600</span></div>
+          <div class="pr-row minus"><span class="lbl">Closing costs & transfer taxes (~2%)</span><span class="amt">– $8,240</span></div>
+          <div class="pr-row minus"><span class="lbl">Mortgage payoff</span><span class="amt">– $268,000</span></div>
+          <div class="pr-row minus"><span class="lbl">Prep & moving (typical)</span><span class="amt">– $6,000</span></div>
+          <div class="pr-row total"><span class="lbl">Estimated net proceeds</span><span class="amt">$109,160</span></div>
+        </div>
+        <p class="pr-note">Every month the verdict holds at WATCH, history says this number moves by roughly ±$2–4K. That's what we monitor for you.</p>
+      </div>
+
+      <!-- 7. Next step / partner -->
+      <div class="sec" style="margin-bottom:0">
+        <div class="sec-title"><span class="num">7</span> Your next step</div>
+        <p class="sec-sub">A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month.</p>
+        <div class="partner">
+          <img src="img/naomi.jpg" alt="Naomi, NTRealty" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%2316243a%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2216%22 fill=%22%236fe3c2%22 opacity=%22.9%22/%3E%3Cpath d=%22M22 88c4-18 15-26 28-26s24 8 28 26%22 fill=%22%236fe3c2%22 opacity=%22.9%22/%3E%3C/svg%3E'">
+          <div style="flex:1">
+            <div class="p-name">Naomi <small>Realtor® · Montgomery County, MD</small></div>
+            <div class="p-brok">NTRealty</div>
+            <p>Naomi will walk through this report with you, pull real comparable sales for your street, and give you a straight answer on timing — free, no obligation.</p>
+            <div class="btn-row">
+              <a class="btn primary" href="tel:+12404772110">📞&nbsp;Call Naomi (240) 477-2110</a>
+              <a class="btn ghost" href="mailto:naomi@shouldisellyet.com?subject=EquityWatch%20report%20consult">Email Naomi</a>
+              <a class="btn ghost" href="https://www.ntrealtyhomes.com" target="_blank" rel="noopener">ntrealtyhomes.com →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Purchase -->
+  <div class="buy" id="buy">
+    <h2>Get this report for <em style="color:#6fe3c2">your</em> home</h2>
+    <p>Your address, your equity, your net-proceeds number — refreshed and monitored every month, with an instant alert the moment your verdict changes color.</p>
+    <div class="price">$19 <small>one-time report</small> &nbsp;·&nbsp; $5.99<small>/mo with monitoring</small></div>
+    <div class="btn-row">
+      <a class="btn primary" id="buy-btn" href="#" onclick="return buyReport()">Get my EquityWatch report</a>
+      <a class="btn ghost" style="background:transparent;color:#cfe8e4;border-color:rgba(255,255,255,.25)" href="index.html">← Back to the free ZIP check</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="disc">Sample report with illustrative figures for demonstration. EquityWatch estimates are computed from public market data (Data from Redfin, a national real estate brokerage — redfin.com) and standard assumptions; they are not an appraisal. Not financial, legal, or real-estate advice. Consult licensed professionals before making decisions.</div>
+  </footer>
+</div>
+
+<div class="watermark">Sample report</div>
+
+<script>
+// Paste a Stripe Payment Link here when ready, e.g. "https://buy.stripe.com/xxxx"
+const CHECKOUT_URL = "";
+function buyReport(){
+  if (CHECKOUT_URL) { window.location.href = CHECKOUT_URL; return false; }
+  window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +
+    encodeURIComponent("EquityWatch full report — purchase request") +
+    "&body=" + encodeURIComponent("I'd like the full EquityWatch report for my home.\n\nProperty address:\nEmail for delivery:\n\n(Checkout is launching soon — we'll reply with a payment link and your report within 1 business day.)");
+  return false;
+}
+</script>
+</body>
+</html>
