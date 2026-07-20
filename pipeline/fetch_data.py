@@ -64,21 +64,38 @@ def load_rows(source: str):
 
 
 def latest_by_zip(rows, states=None):
-    """Keep the newest 'All Residential' row per ZIP."""
+    """Keep the newest 'All Residential' row per ZIP. Prints diagnostics."""
     best = {}
+    skipped = {"property_type": 0, "bad_zip": 0, "state_filter": 0}
+    first_row_shown = False
+    seen_ptypes = {}
     for row in rows:
-        if row.get("property_type", "") not in ("All Residential", ""):
+        if not first_row_shown:
+            print("COLUMNS:", list(row.keys()))
+            print("SAMPLE ROW:", {k: row[k] for k in list(row)[:14]})
+            first_row_shown = True
+        pt = (row.get("property_type") or "").strip().lower()
+        seen_ptypes[pt] = seen_ptypes.get(pt, 0) + 1
+        if pt and "all residential" not in pt:
+            skipped["property_type"] += 1
             continue
         region = row.get("region", "")           # "Zip Code: 20874"
         zip_code = region.split(":")[-1].strip() if ":" in region else region.strip()
         if not (zip_code.isdigit() and len(zip_code) == 5):
+            skipped["bad_zip"] += 1
             continue
-        state = (row.get("state_code") or row.get("state") or "").strip()
+        state = (row.get("state_code") or row.get("state") or "").strip().upper()
+        if len(state) > 2:  # full state name → keep last resort mapping simple
+            state = state[:2].upper()
         if states and state not in states:
+            skipped["state_filter"] += 1
             continue
         period = row.get("period_end", "")
         if zip_code not in best or period > best[zip_code][0]:
             best[zip_code] = (period, state, row)
+    print("skipped:", skipped)
+    print("property_type values seen:",
+          dict(sorted(seen_ptypes.items(), key=lambda x: -x[1])[:8]))
     return best
 
 
@@ -113,6 +130,11 @@ def main():
     print(f"Loading {args.input} …")
     best = latest_by_zip(load_rows(args.input), states)
     print(f"{len(best)} ZIPs with data")
+    if len(best) < 100 and args.input.startswith("http"):
+        sys.exit(
+            f"FATAL: only {len(best)} ZIPs parsed — refusing to publish. "
+            "Check the COLUMNS/SAMPLE ROW diagnostics above for a schema mismatch."
+        )
 
     by_state = defaultdict(dict)
     prefix_state = {}
