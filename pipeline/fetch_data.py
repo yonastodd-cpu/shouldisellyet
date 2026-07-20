@@ -60,7 +60,10 @@ def load_rows(source: str):
     else:
         stream = open(source, "rb")
     text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace")
-    return csv.DictReader(text, delimiter="\t")
+    reader = csv.DictReader(text, delimiter="\t")
+    # Redfin ships UPPERCASE headers; normalize so lookups are case-proof.
+    reader.fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+    return reader
 
 
 def latest_by_zip(rows, states=None):
@@ -74,6 +77,8 @@ def latest_by_zip(rows, states=None):
             print("COLUMNS:", list(row.keys()))
             print("SAMPLE ROW:", {k: row[k] for k in list(row)[:14]})
             first_row_shown = True
+        if (row.get("is_seasonally_adjusted") or "").strip().lower() == "true":
+            continue
         pt = (row.get("property_type") or "").strip().lower()
         seen_ptypes[pt] = seen_ptypes.get(pt, 0) + 1
         if pt and "all residential" not in pt:
