@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 13 * * 1,4"   # Mon & Thu 13:00 UTC — cheap check, full run only if data changed
   workflow_dispatch: {}       # manual run always rebuilds
+  push:
+    branches: [main]
+    paths: ["web/**"]         # site-only changes deploy without re-running the pipeline
 
 permissions:
   contents: write
@@ -17,21 +20,29 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.check.outputs.changed }}
+      deploy: ${{ steps.check.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check whether Redfin published new data
+      - name: Decide rebuild vs deploy-only
         id: check
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Site edit: deploy as-is, don't re-run the pipeline
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "deploy=true"  >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           ETAG=$(curl -sI "$DATA_URL" | tr -d '\r' | awk -F'"' 'tolower($0) ~ /^etag:/ {print $2}')
           KNOWN=$(cat .redfin-etag 2>/dev/null || echo "none")
           echo "remote=$ETAG known=$KNOWN"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$ETAG" != "$KNOWN" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "deploy=true"  >> "$GITHUB_OUTPUT"
             echo "$ETAG" > .redfin-etag
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
             echo "No new data — skipping rebuild."
           fi
 
@@ -60,14 +71,14 @@ jobs:
           git push
 
       - name: Upload site
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: web
 
   deploy:
     needs: refresh
-    if: needs.refresh.outputs.changed == 'true'
+    if: needs.refresh.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
