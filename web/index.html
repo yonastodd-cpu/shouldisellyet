@@ -121,6 +121,9 @@
   .monitor .mo-form input:focus{border-color:#8df0d6;background:rgba(255,255,255,.18)}
   .monitor .mo-form button{font-size:14px;font-weight:800;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(180deg,#8df0d6,#4fd6b4);color:#0b2b26;cursor:pointer}
   .monitor .mo-ok{display:none;font-size:14px;font-weight:700;color:#8df0d6;margin-top:14px}
+  .monitor .mo-tos{flex-basis:100%;display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#c6e9e1;line-height:1.5;cursor:pointer}
+  .monitor .mo-tos input{flex:none;width:15px;height:15px;min-width:0;margin-top:2px;accent-color:#8df0d6;cursor:pointer}
+  .monitor .mo-tos a{color:#fff;text-decoration:underline}
   /* Report upsell */
   .upsell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#131e30,var(--navy));border-radius:16px;padding:20px 22px;margin:0 0 22px}
   .upsell .up-copy{flex:1;min-width:230px;font-size:13.5px;color:#b6c6d9;line-height:1.55}
@@ -264,6 +267,7 @@
         <form class="mo-form" id="mo-form" onsubmit="return subMonitor(event)">
           <input id="mo-email" type="email" required placeholder="you@email.com" aria-label="Email">
           <input id="mo-address" type="text" placeholder="Property address (optional)" aria-label="Address">
+          <label class="mo-tos"><input type="checkbox" id="mo-tos" required> I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and the <a href="refunds.html" target="_blank">cancellation policy</a> (no refunds; cancel anytime to stop future charges).</label>
           <button type="submit">Activate my monitoring</button>
         </form>
         <div class="mo-ok" id="mo-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
@@ -359,8 +363,8 @@
 // ————— Backend config —————
 // Paste your Supabase project values (Settings → API). The anon key is safe to
 // publish: row-level security only allows INSERT into `subscribers`.
-const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";        // e.g. "https://abcd1234.supabase.co"
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
+const SUPABASE_URL = "";        // e.g. "https://abcd1234.supabase.co"
+const SUPABASE_ANON_KEY = "";
 
 async function saveSignup(rec) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
@@ -616,7 +620,7 @@ function showOk() {
 }
 
 // EquityWatch monitoring subscription (paid)
-const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // paste a Stripe Payment Link for the $5.99/mo plan
+const MONITOR_CHECKOUT_URL = "";   // paste a Stripe Payment Link for the $5.99/mo plan
 function buyMonitor() {
   if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
   const f = document.getElementById("mo-form");
