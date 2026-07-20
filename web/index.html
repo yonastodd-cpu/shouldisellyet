@@ -169,7 +169,7 @@ let INDEX = null, META = null, live = false;
 const stateCache = {};
 
 fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
-  if (j) { INDEX = j; live = true; }
+  if (j && Object.keys(j).length > 0) { INDEX = j; live = true; }
   return fetch("data/meta.json").then(r => r.ok ? r.json() : null);
 }).then(m => {
   if (m) {
