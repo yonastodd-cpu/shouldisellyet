@@ -51,9 +51,21 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Snapshot previous verdicts
+        if: steps.check.outputs.changed == 'true'
+        run: cp -r web/data/zips /tmp/old_zips 2>/dev/null || mkdir -p /tmp/old_zips
+
       - name: Run pipeline (all states)
         if: steps.check.outputs.changed == 'true'
         run: python pipeline/fetch_data.py
+
+      - name: Send verdict-change alerts (Supabase + Resend)
+        if: steps.check.outputs.changed == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python pipeline/notify_changes.py --old /tmp/old_zips --new web/data/zips
 
       - name: Run tests
         if: steps.check.outputs.changed == 'true'

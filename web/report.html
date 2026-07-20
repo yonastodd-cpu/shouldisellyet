@@ -319,11 +319,13 @@
   <!-- Purchase -->
   <div class="buy" id="buy">
     <h2>Get this report for <em style="color:#6fe3c2">your</em> home</h2>
-    <p>Your address, your equity, your net-proceeds number — refreshed and monitored every month, with an instant alert the moment your verdict changes color.</p>
-    <div class="price">$19 <small>one-time report</small> &nbsp;·&nbsp; $5.99<small>/mo with monitoring</small></div>
+    <p>Both options cost $5.99. Only one of them taps you on the shoulder the moment your market turns — that's the one that protects your equity.</p>
+    <div class="price">$5.99<small>/mo · EquityWatch monitoring</small> &nbsp;·&nbsp; $5.99 <small>one-time report</small></div>
+    <p style="margin-top:6px;font-size:13px;color:#6fe3c2">Monitoring includes this full report, refreshed monthly, plus instant alerts when conditions change.</p>
     <div class="btn-row">
-      <a class="btn primary" id="buy-btn" href="#" onclick="return buyReport()">Get my EquityWatch report</a>
-      <a class="btn ghost" style="background:transparent;color:#cfe8e4;border-color:rgba(255,255,255,.25)" href="index.html">← Back to the free ZIP check</a>
+      <a class="btn primary" href="#" onclick="return buyMonitor()">🔔 Start monitoring · $5.99/mo</a>
+      <a class="btn ghost" style="background:#fff" id="buy-btn" href="#" onclick="return buyReport()">Just this report · $5.99</a>
+      <a class="btn ghost" style="background:transparent;color:#cfe8e4;border-color:rgba(255,255,255,.25)" href="index.html">← Free ZIP check</a>
     </div>
   </div>
 
@@ -335,13 +337,21 @@
 <div class="watermark">Sample report</div>
 
 <script>
-// Paste a Stripe Payment Link here when ready, e.g. "https://buy.stripe.com/xxxx"
-const CHECKOUT_URL = "";
+// Paste Stripe Payment Links here when ready, e.g. "https://buy.stripe.com/xxxx"
+const CHECKOUT_URL = "";           // one-time $5.99 report
+const MONITOR_CHECKOUT_URL = "";   // $5.99/mo monitoring
 function buyReport(){
   if (CHECKOUT_URL) { window.location.href = CHECKOUT_URL; return false; }
   window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +
-    encodeURIComponent("EquityWatch full report — purchase request") +
-    "&body=" + encodeURIComponent("I'd like the full EquityWatch report for my home.\n\nProperty address:\nEmail for delivery:\n\n(Checkout is launching soon — we'll reply with a payment link and your report within 1 business day.)");
+    encodeURIComponent("EquityWatch one-time report ($5.99) — purchase request") +
+    "&body=" + encodeURIComponent("I'd like the one-time EquityWatch report ($5.99) for my home.\n\nProperty address:\nEmail for delivery:\n\n(Checkout is launching soon — we'll reply with a payment link and your report within 1 business day.)");
+  return false;
+}
+function buyMonitor(){
+  if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
+  window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +
+    encodeURIComponent("EquityWatch monitoring ($5.99/mo) — signup request") +
+    "&body=" + encodeURIComponent("I'd like EquityWatch monitoring ($5.99/mo) with instant alerts.\n\nProperty address:\nEmail for alerts:\n\n(Checkout is launching soon — we'll reply with your activation and payment link.)");
   return false;
 }
 </script>

@@ -47,10 +47,33 @@ back to built-in demo ZIPs (20874, 20906) so it always works.
 
 Point your domain (e.g. shouldisellyet.com) at GitHub Pages in Settings → Pages → Custom domain.
 
-## Email capture
+## Backend: Supabase (signups) + Resend (alerts)
 
-In `web/index.html`, set `FORM_ENDPOINT` to a free [Formspree](https://formspree.io)
-endpoint. Until then, waitlist submissions fall back to a pre-filled mailto.
+**Supabase — subscriber storage (one-time setup):**
+1. Supabase dashboard → SQL Editor → paste and run `supabase/schema.sql`.
+2. Settings → API: copy the Project URL and the `anon` public key.
+3. Paste both into `web/index.html` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+   The anon key is safe to publish — RLS only permits INSERTs into `subscribers`.
+   All signups (monitoring, waitlist) then land in the `subscribers` table.
+
+**Resend — verdict-change alert emails:**
+1. resend.com → Domains → add `shouldisellyet.com` and add the DNS records it
+   shows (SPF/DKIM on a subdomain — these do NOT conflict with Titan email MX).
+2. Create an API key.
+
+**GitHub Actions secrets** (repo → Settings → Secrets and variables → Actions):
+- `SUPABASE_URL` — the project URL
+- `SUPABASE_SERVICE_KEY` — the service-role key (server-side only)
+- `RESEND_API_KEY`
+
+On every data refresh, `pipeline/notify_changes.py` diffs old vs. new verdicts
+and emails each `monitor`-plan subscriber whose ZIP changed color. If secrets
+aren't configured it dry-runs (prints what it would send) and never fails the build.
+
+**Billing:** create two Stripe Payment Links ($5.99 one-time, $5.99/mo) and paste
+them into `CHECKOUT_URL` / `MONITOR_CHECKOUT_URL` in `web/report.html` and
+`MONITOR_CHECKOUT_URL` in `web/index.html`. Until then, signups are captured as
+`status='pending'` in Supabase for manual follow-up.
 
 ## Verdict thresholds (pipeline/verdict.py)
 
