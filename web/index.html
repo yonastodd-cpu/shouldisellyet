@@ -115,6 +115,12 @@
   .monitor .mo-btn{white-space:nowrap;font-size:14.5px;font-weight:800;color:#0b2b26;background:linear-gradient(180deg,#8df0d6,#4fd6b4);padding:13px 22px;border-radius:12px;text-decoration:none;box-shadow:var(--shadow-sm);transition:.15s}
   .monitor .mo-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
   .monitor .mo-sub{font-size:11.5px;color:#a8ded4}
+  .monitor .mo-form{display:none;margin-top:16px;gap:8px;flex-wrap:wrap}
+  .monitor .mo-form input{flex:1;min-width:180px;font-size:14px;padding:12px 15px;border:1px solid rgba(255,255,255,.25);border-radius:11px;background:rgba(255,255,255,.12);color:#fff;outline:none}
+  .monitor .mo-form input::placeholder{color:#9dd6ca}
+  .monitor .mo-form input:focus{border-color:#8df0d6;background:rgba(255,255,255,.18)}
+  .monitor .mo-form button{font-size:14px;font-weight:800;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(180deg,#8df0d6,#4fd6b4);color:#0b2b26;cursor:pointer}
+  .monitor .mo-ok{display:none;font-size:14px;font-weight:700;color:#8df0d6;margin-top:14px}
   /* Report upsell */
   .upsell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#131e30,var(--navy));border-radius:16px;padding:20px 22px;margin:0 0 22px}
   .upsell .up-copy{flex:1;min-width:230px;font-size:13.5px;color:#b6c6d9;line-height:1.55}
@@ -255,13 +261,19 @@
             <div class="mo-sub">Cancel anytime · full report included</div>
           </div>
         </div>
+        <form class="mo-form" id="mo-form" onsubmit="return subMonitor(event)">
+          <input id="mo-email" type="email" required placeholder="you@email.com" aria-label="Email">
+          <input id="mo-address" type="text" placeholder="Property address (optional)" aria-label="Address">
+          <button type="submit">Activate my monitoring</button>
+        </form>
+        <div class="mo-ok" id="mo-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
       </div>
 
       <div class="steph"><span class="num">2</span><div><div class="st-t">Or take one deep look</div><div class="st-s">A single full report on your property — no subscription.</div></div></div>
       <div class="upsell" id="upsell">
-        <div class="up-copy"><b>Want the full picture for your home?</b> The EquityWatch report shows your equity, all five indicators, and your exact walk-away number if you sold today.</div>
+        <div class="up-copy"><b>One deep look at your home — $5.99.</b> Your equity, all five indicators, and your exact walk-away number if you sold today. Same price as a month of monitoring — but the report only knows about today. Monitoring never stops watching.</div>
         <div class="up-ctas">
-          <a class="up-btn" id="up-buy" href="report.html#buy">Get my full report · $19</a>
+          <a class="up-btn" id="up-buy" href="report.html#buy">Get my full report · $5.99</a>
           <a class="up-link" href="report.html">See a sample report →</a>
         </div>
       </div>
@@ -343,6 +355,29 @@
 </footer>
 
 <script>
+// ————— Backend config —————
+// Paste your Supabase project values (Settings → API). The anon key is safe to
+// publish: row-level security only allows INSERT into `subscribers`.
+const SUPABASE_URL = "";        // e.g. "https://abcd1234.supabase.co"
+const SUPABASE_ANON_KEY = "";
+
+async function saveSignup(rec) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(rec)
+    });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
 // ————— Data layer —————
 const DEMO = {
   "20874": {l:"green", st:"MD", m:{mos:2.6, spy:0.02, dom:47, domy:0.38, pd:0.25}, r:[]},
@@ -555,10 +590,11 @@ function share() {
 const FORM_ENDPOINT = "";                    // paste your Formspree endpoint here
 const FALLBACK_EMAIL = "naomi@shouldisellyet.com";
 
-function joinWaitlist(e) {
+async function joinWaitlist(e) {
   e.preventDefault();
   const email = document.getElementById("wl-email").value;
   const zip = document.getElementById("zip").value.trim();
+  if (await saveSignup({ email, zip, plan: "waitlist", source: "waitlist" })) { showOk(); return false; }
   if (FORM_ENDPOINT) {
     fetch(FORM_ENDPOINT, {
       method: "POST",
@@ -581,11 +617,28 @@ function showOk() {
 // EquityWatch monitoring subscription (paid)
 const MONITOR_CHECKOUT_URL = "";   // paste a Stripe Payment Link for the $5.99/mo plan
 function buyMonitor() {
-  const zip = document.getElementById("zip").value.trim();
   if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
+  const f = document.getElementById("mo-form");
+  f.style.display = "flex";
+  document.getElementById("mo-email").focus();
+  return false;
+}
+
+async function subMonitor(e) {
+  e.preventDefault();
+  const email = document.getElementById("mo-email").value;
+  const address = document.getElementById("mo-address").value;
+  const zip = document.getElementById("zip").value.trim();
+  const done = () => {
+    document.getElementById("mo-form").style.display = "none";
+    document.getElementById("mo-ok").style.display = "block";
+  };
+  const stored = await saveSignup({ email, zip, address, plan: "monitor", source: "verdict-card" });
+  if (stored) { done(); return false; }
   window.location.href = "mailto:" + FALLBACK_EMAIL +
     "?subject=" + encodeURIComponent("Start EquityWatch monitoring — ZIP " + zip) +
-    "&body=" + encodeURIComponent("I'd like to start EquityWatch monitoring ($5.99/mo).\n\nZIP: " + zip + "\nProperty address:\nEmail for alerts:\n\n(Checkout is launching soon — we'll reply with a payment link and activate your monitoring.)");
+    "&body=" + encodeURIComponent("I'd like EquityWatch monitoring ($5.99/mo).\nZIP: " + zip + "\nAddress: " + address + "\nEmail: " + email);
+  done();
   return false;
 }
 document.getElementById("zip").addEventListener("keydown", e => { if (e.key === "Enter") check(); });
