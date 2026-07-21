@@ -75,6 +75,36 @@ them into `CHECKOUT_URL` / `MONITOR_CHECKOUT_URL` in `web/report.html` and
 `MONITOR_CHECKOUT_URL` in `web/index.html`. Until then, signups are captured as
 `status='pending'` in Supabase for manual follow-up.
 
+## Stripe webhook — automatic activation (no manual steps after payment)
+
+`supabase/functions/stripe-webhook/index.ts` activates subscribers the moment
+Stripe payment completes, and sends the welcome email via Resend:
+
+- `checkout.session.completed` → finds the customer's pending signup by email
+  and flips it to `active` (or inserts a new active row), pulling ZIP + address
+  from Stripe's collected billing address. Sends a monitoring welcome or a
+  report-purchase email depending on whether the checkout was a subscription.
+- `customer.subscription.deleted` → marks the subscriber `canceled`.
+
+**Setup (one time):**
+1. Run `supabase/schema-v2.sql` in the Supabase SQL Editor.
+2. Deploy the function — either `supabase functions deploy stripe-webhook`
+   (CLI) or Supabase dashboard → Edge Functions → New function → name it
+   `stripe-webhook` → paste `index.ts`. In the function's settings, disable
+   "Enforce JWT verification" (Stripe can't send a Supabase JWT).
+3. Add secrets (dashboard → Edge Functions → Secrets):
+   `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, optional `ALERT_FROM`.
+4. In Stripe: Developers → Webhooks → **Add endpoint** →
+   URL `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` →
+   select events `checkout.session.completed` and
+   `customer.subscription.deleted` → create, then copy the **Signing secret**
+   (whsec_…) into the `STRIPE_WEBHOOK_SECRET` secret from step 3.
+5. On both Payment Links, make sure "Collect customers' addresses" is ON —
+   that's where the webhook gets the ZIP code.
+6. Test: Stripe webhook page → "Send test event" → `checkout.session.completed`;
+   confirm a row appears/activates in the `subscribers` table and the function
+   logs show `activated …`.
+
 ## Verdict thresholds (pipeline/verdict.py)
 
 | Signal | Yellow-ish | Red-ish | Points |
