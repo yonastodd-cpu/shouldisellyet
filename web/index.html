@@ -305,8 +305,8 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 // Stripe Payment Links: paste and the buttons go straight to checkout.
 const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // $5.99/mo EquityWatch
 // Supabase (Settings → API). Anon key is publish-safe: RLS allows INSERT only.
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
 
 async function saveSignup(rec) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
