@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your EquityWatch Report — ShouldISellYet</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
+  --hairline:#e7e2d8; --hairline2:#f0ebe0; --navy:#1f3a5f; --navy-dark:#172d4b; --gold:#8a7a55; --track:#efe9dc;
+  --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
+  --green-soft:#e9f4ee; --amber-soft:#faf1dd; --red-soft:#fbe9e9;
+  --green-line:#bcdcc9; --amber-line:#e8d5a8; --red-line:#ecc3c3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+a{color:var(--navy);text-decoration:none}
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:'Newsreader',serif}
+input:focus{outline:none;border-color:var(--navy)!important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px 60px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline);max-width:860px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px}
+.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
+.btn{display:inline-block;background:var(--navy);color:#faf8f4!important;padding:10px 18px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:14.5px;font-family:inherit}
+.btn:hover{background:var(--navy-dark)}
+.btn-outline{background:none;border:1.5px solid var(--navy);color:var(--navy)!important;border-radius:6px;padding:10px 18px;font-weight:600;cursor:pointer;font-size:14.5px;font-family:inherit}
+.paidband{display:none;background:var(--green-soft);border:1px solid var(--green-line);color:#1e6b3f;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:600;margin:20px 0 0}
+.card{border:1px solid var(--hairline);border-radius:12px;background:#fff}
+.setup{padding:26px;margin-top:24px}
+.setup h1{font-family:'Newsreader',serif;font-weight:500;font-size:30px;margin:0 0 6px}
+.setup .lede{font-size:14.5px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.f label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
+.f input{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit}
+.f .hint{font-size:11.5px;color:var(--fainter);margin-top:5px}
+.report{display:none;animation:fadeUp .35s ease;margin-top:26px}
+.r-head{display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:12px 12px 0 0;flex-wrap:wrap}
+.v-dot{width:14px;height:14px;border-radius:50%;flex:none}
+.v-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.16em}
+.v-title{font-family:'Newsreader',serif;font-size:21px;font-weight:600}
+.r-addr{width:100%;font-size:13px;color:var(--muted)}
+.sec{padding:22px 24px;border-top:1px solid var(--hairline2)}
+.sec .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:12px}
+.sec p{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
+.metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center;margin-bottom:12px}
+.metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
+.metric .val{font-size:14px;font-weight:650}
+.metric .track{height:6px;border-radius:3px;background:var(--track);position:relative}
+.metric .fill{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.metric .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#9a9384;border-radius:1px}
+.metric .note{font-size:11px;color:var(--fainter)}
+.eqgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.eqcard{border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7)}
+.eqcard .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)}
+.eqcard .big{font-family:'Newsreader',serif;font-size:30px;font-weight:600;margin:4px 0 2px}
+.eqcard .sub2{font-size:12.5px;color:var(--muted)}
+.eqbar{height:12px;border-radius:6px;background:var(--track);overflow:hidden;display:flex;margin-top:12px}
+.eqbar .loan{background:#cfc8b8;height:100%}
+.eqbar .eq{background:var(--navy);height:100%}
+.eqlegend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.eqlegend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.prtable{border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.prrow{display:flex;justify-content:space-between;padding:11px 18px;font-size:14px;border-bottom:1px solid var(--hairline2);background:#fff}
+.prrow.minus span:last-child{color:var(--red)}
+.prrow.total{background:#f4f7fb;border:none}
+.prrow.total span:first-child{font-weight:700}
+.prrow.total span:last-child{font-family:'Newsreader',serif;font-size:21px;font-weight:600;color:var(--navy)}
+.prrow span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.prnote{font-size:11.5px;color:var(--fainter);margin-top:8px}
+.say{border-left:3px solid var(--navy);background:#f4f6fa;border-radius:0 10px 10px 0;padding:16px 20px;font-size:14px;line-height:1.6;color:#3a4450}
+.partner{display:none;gap:14px;align-items:flex-start}
+.partner img{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold)}
+.partner .p-name{font-family:'Newsreader',serif;font-size:16px;font-weight:600}
+.partner .p-name small{font-family:system-ui;font-weight:400;font-size:12px;color:var(--faint)}
+.partner .p-blurb{font-size:12.5px;line-height:1.55;color:var(--muted);margin:4px 0 8px}
+.partner .p-ctas{display:flex;gap:8px;flex-wrap:wrap}
+.partner .p-ctas a{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:6px}
+.stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
+.actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.err{display:none;color:var(--red);font-size:13.5px;font-weight:600;margin-top:10px}
+@media(max-width:640px){
+  .frow{grid-template-columns:1fr}
+  .eqgrid{grid-template-columns:1fr}
+  .metric{grid-template-columns:130px 58px 1fr;gap:8px}
+  .metric .note{display:none}
+}
+@media print{
+  nav,.setup,.actions,.paidband{display:none!important}
+  body{background:#fff}
+  .report{margin-top:0}
+  .card{border-color:#ddd}
+}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="index.html">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+  </a>
+  <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">EQUITYWATCH™ PROPERTY REPORT</span>
+</nav>
+
+<div class="wrap">
+  <div class="paidband" id="paidband">✓ Payment received — thank you. Build your report below; bookmark this page to regenerate it anytime.</div>
+
+  <div class="card setup" id="setup">
+    <h1>Your report, in 20 seconds</h1>
+    <p class="lede">Three inputs. We combine them with the latest market data for your ZIP to compute your warning level, your equity position, and your walk-away number if you sold today. Nothing you type here leaves your browser.</p>
+    <div class="frow">
+      <div class="f" style="grid-column:1/-1">
+        <label>PROPERTY ADDRESS</label>
+        <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD">
+      </div>
+    </div>
+    <div class="frow">
+      <div class="f">
+        <label>ZIP CODE</label>
+        <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="20906">
+      </div>
+      <div class="f">
+        <label>ESTIMATED HOME VALUE ($)</label>
+        <input id="in-val" inputmode="numeric" placeholder="412000">
+        <div class="hint">Your best estimate — a recent Zillow/Redfin figure or your agent's number.</div>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="f">
+        <label>MORTGAGE BALANCE ($)</label>
+        <input id="in-bal" inputmode="numeric" placeholder="268000">
+        <div class="hint">Approximate is fine. Enter 0 if paid off.</div>
+      </div>
+      <div class="f" style="display:flex;align-items:flex-end">
+        <button class="btn" style="width:100%" onclick="generate()">Generate my report →</button>
+      </div>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card report" id="report">
+    <div class="r-head" id="r-head">
+      <span class="v-dot" id="v-dot"></span>
+      <span class="v-tag" id="v-tag"></span>
+      <span class="v-title" id="v-title"></span>
+      <span class="r-addr" id="r-addr"></span>
+    </div>
+
+    <div class="sec">
+      <div class="k">01 · MARKET SIGNALS IN YOUR ZIP</div>
+      <div id="metrics"></div>
+      <p id="v-sub" style="margin-top:6px"></p>
+    </div>
+
+    <div class="sec">
+      <div class="k">02 · YOUR EQUITY POSITION</div>
+      <div class="eqgrid">
+        <div class="eqcard">
+          <div class="label">ESTIMATED VALUE (YOUR INPUT)</div>
+          <div class="big" id="eq-val"></div>
+          <div class="sub2" id="eq-trend"></div>
+        </div>
+        <div class="eqcard">
+          <div class="label">YOUR EQUITY</div>
+          <div class="big" id="eq-eq" style="color:var(--navy)"></div>
+          <div class="sub2" id="eq-balline"></div>
+          <div class="eqbar"><div class="loan" id="bar-loan"></div><div class="eq" id="bar-eq"></div></div>
+          <div class="eqlegend"><span><i style="background:#cfc8b8"></i>Loan <b id="lg-loan"></b></span><span><i style="background:var(--navy)"></i>Equity <b id="lg-eq"></b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="k">03 · IF YOU SOLD TODAY — YOUR NET</div>
+      <div class="prtable" id="prtable"></div>
+      <div class="prnote">Assumes ~5% agent commissions, ~2% closing costs &amp; transfer taxes, and $6,000 typical prep &amp; moving. Your actual costs will vary — a local agent can tighten these numbers for free.</div>
+    </div>
+
+    <div class="sec">
+      <div class="k">04 · WHAT THIS MEANS</div>
+      <div class="say" id="meaning"></div>
+    </div>
+
+    <div class="sec">
+      <div class="k">05 · YOUR NEXT STEP</div>
+      <div class="partner" id="partner"></div>
+      <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
+    </div>
+
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn" onclick="window.print()">Print / save as PDF</button>
+    <button class="btn-outline" onclick="document.getElementById('setup').scrollIntoView({behavior:'smooth'})">Edit inputs</button>
+    <a class="btn-outline" href="index.html" style="text-decoration:none;display:inline-block">← Back to the free check</a>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
+let INDEX = null, META = null, SPONSORS = null;
+const stateCache = {};
+const DEMO = {
+  "20874": {l:"green", st:"MD", m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
+  "20906": {l:"yellow", st:"MD", m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
+};
+fetch("data/index.json").then(r=>r.ok?r.json():null).then(j=>{ if(j&&Object.keys(j).length) INDEX=j; });
+fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{ META=m; });
+fetch("sponsors.json").then(r=>r.ok?r.json():null).then(j=>{ SPONSORS=j; });
+
+async function lookup(zip){
+  if (INDEX){
+    const st = INDEX[zip.slice(0,3)];
+    if (!st) return null;
+    if (!stateCache[st]){
+      const r = await fetch("data/zips/"+st+".json");
+      if (!r.ok) return null;
+      stateCache[st] = await r.json();
+    }
+    return stateCache[st][zip] || null;
+  }
+  return DEMO[zip] || null;
+}
+function sponsorFor(zip){
+  if (!SPONSORS) return null;
+  const k = SPONSORS.prefixes[zip.slice(0,3)];
+  return k ? SPONSORS.sponsors[k] : null;
+}
+
+const KINDS = {
+  green:{tag:"HOLD",hex:"#2e9e5b",soft:"#e9f4ee",line:"#bcdcc9",title:"No warning signs in {zip}",
+    sub:"Nothing in the current data says this market is turning. Your equity isn't under pressure from market conditions right now.",
+    meaning:"The market is not a reason to sell today. If you're considering selling, it should be about your plans — a move, an upgrade, a life change — not about beating a downturn. We'll keep watching; the moment that changes, the verdict changes."},
+  yellow:{tag:"WATCH",hex:"#c8891f",soft:"#faf1dd",line:"#e8d5a8",title:"Early signals moving in {zip}",
+    sub:"A warning signal has tripped. Not a crisis — but this is how turns start, months before prices move.",
+    meaning:"This is the moment to know your numbers — which is exactly what this report gives you. If selling within the next 12–18 months was already on your mind, the data says sooner beats later, and pricing correctly on day one matters more than any year in recent memory. If you're staying put, no action needed — just stay alert."},
+  red:{tag:"ACT",hex:"#d64545",soft:"#fbe9e9",line:"#ecc3c3",title:"Danger lines crossed in {zip}",
+    sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power.",
+    meaning:"If selling was already on your mind, the data says act on a plan now — not next spring. Markets like this reward sellers who move early and price right the first time. Talk to a local professional this week, get real comparable sales for your street, and decide with numbers instead of nerves."}
+};
+const clampPct = x => Math.max(3, Math.min(97, x));
+const tcol = t => t==="r" ? "#d64545" : t==="a" ? "#c8891f" : "#2e9e5b";
+
+function buildMetricRows(d){
+  const m = d.m || {}, rows = [];
+  if (m.mos != null){ const t = m.mos>6?"r":m.mos>4?"a":"g";
+    rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:50, note:t==="g"?"line: 4.0 mo":"past the line"}); }
+  if (m.spy != null){ const t = m.spy<-0.05?"r":m.spy<-0.02?"a":"g";
+    rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:58.3, note:t==="g"?"holding or rising":"line: −2% y/y"}); }
+  if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0; const t=p>0.4?"a":"g";
+    rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:60, note:m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"}); }
+  if (m.pd != null){ const t=m.pd>0.35?"a":"g";
+    rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:50, note:t==="g"?"line: 35%":"past the line"}); }
+  if (m.invy != null){ const t=m.invy>0.5?"a":"g";
+    rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging"}); }
+  return rows.slice(0,4);
+}
+function renderMetrics(rows){
+  return rows.map(r =>
+    '<div class="metric"><span class="name">'+r.name+'</span>'+
+    '<span class="val" style="color:'+tcol(r.t)+'">'+r.val+'</span>'+
+    '<span class="track"><span class="fill" style="width:'+r.fill+'%;background:'+tcol(r.t)+'"></span><span class="th" style="left:'+r.th+'%"></span></span>'+
+    '<span class="note">'+r.note+'</span></div>').join("");
+}
+
+async function generate(){
+  const zip = $("in-zip").value.trim();
+  const val = parseFloat(($("in-val").value||"").replace(/[^0-9.]/g,""));
+  const bal = parseFloat(($("in-bal").value||"0").replace(/[^0-9.]/g,"")) || 0;
+  const addr = $("in-addr").value.trim();
+  const err = $("err"); err.style.display = "none";
+  if (!/^\d{5}$/.test(zip)) { err.textContent="Please enter a 5-digit ZIP code."; err.style.display="block"; return; }
+  if (!(val > 10000)) { err.textContent="Please enter your estimated home value in dollars (e.g. 412000)."; err.style.display="block"; return; }
+  if (bal < 0 || bal > val * 3) { err.textContent="That mortgage balance doesn't look right — please check it."; err.style.display="block"; return; }
+  const d = await lookup(zip);
+  if (!d) { err.textContent="We're not scoring "+zip+" yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display="block"; return; }
+
+  const k = KINDS[d.l], m = d.m || {};
+  $("r-head").style.background = k.soft;
+  $("report").style.borderColor = k.line;
+  $("v-dot").style.background = k.hex;
+  $("v-dot").style.boxShadow = "0 0 0 4px "+k.soft+",0 0 0 5px "+k.hex;
+  $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
+  $("v-title").textContent = k.title.replace("{zip}", zip);
+  $("r-addr").textContent = (addr ? addr + " · " : "") + zip + (d.st ? ", " + d.st : "") + " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
+  $("metrics").innerHTML = renderMetrics(buildMetricRows(d));
+  $("v-sub").textContent = k.sub;
+
+  // equity
+  const equity = Math.max(0, val - bal);
+  $("eq-val").textContent = fmt(val);
+  if (m.spy != null) {
+    const yearAgo = val / (1 + m.spy);
+    const dir = m.spy >= 0 ? "up" : "down";
+    $("eq-trend").textContent = "If your home tracked the ZIP median, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
+  } else $("eq-trend").textContent = "";
+  $("eq-eq").textContent = fmt(equity);
+  $("eq-balline").textContent = "Mortgage balance: " + fmt(bal);
+  const eqPct = val > 0 ? Math.round(equity / val * 100) : 0;
+  $("bar-loan").style.width = (100 - eqPct) + "%";
+  $("bar-eq").style.width = eqPct + "%";
+  $("lg-loan").textContent = (100 - eqPct) + "%";
+  $("lg-eq").textContent = eqPct + "%";
+
+  // net proceeds
+  const commission = val * 0.05, closing = val * 0.02, prep = 6000;
+  const net = val - commission - closing - bal - prep;
+  $("prtable").innerHTML =
+    '<div class="prrow"><span>Estimated sale price (your input)</span><span>'+fmt(val)+'</span></div>'+
+    '<div class="prrow minus"><span>Agent commissions (~5%)</span><span>− '+fmt(commission)+'</span></div>'+
+    '<div class="prrow minus"><span>Closing costs &amp; transfer taxes (~2%)</span><span>− '+fmt(closing)+'</span></div>'+
+    '<div class="prrow minus"><span>Mortgage payoff</span><span>− '+fmt(bal)+'</span></div>'+
+    '<div class="prrow minus"><span>Prep &amp; moving (typical)</span><span>− '+fmt(prep)+'</span></div>'+
+    '<div class="prrow total"><span>Estimated net proceeds</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
+
+  $("meaning").textContent = k.meaning;
+
+  // partner / next step
+  const sp = sponsorFor(zip), pt = $("partner");
+  if (sp) {
+    const phone = sp.phoneDisplay || (sp.phone ? sp.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
+    pt.innerHTML = '<img src="'+sp.photo+'" alt="'+sp.name+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'">'+
+      '<div><div class="p-name">'+sp.name+' <small>'+sp.title+' · '+sp.brokerage+' · licensed local partner</small></div>'+
+      '<div class="p-blurb">'+(sp.blurb||"")+'</div><div class="p-ctas">'+
+      (sp.phone ? '<a class="btn" href="tel:'+sp.phone+'">Call '+sp.name+' '+phone+'</a>' : "")+
+      '<a class="btn-outline" href="mailto:'+sp.email+'?subject='+encodeURIComponent("EquityWatch report consult — "+zip)+'">Request a free consult</a></div></div>';
+    pt.style.display = "flex";
+    $("nextstep-generic").style.display = "none";
+  } else {
+    pt.style.display = "none";
+    $("nextstep-generic").style.display = "block";
+  }
+
+  $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
+    " · " + (META ? META.attribution : "public market data") +
+    "<br>Equity and proceeds are computed from the value and balance you provided — this is not an appraisal. Not financial, legal, or real-estate advice. Consult licensed professionals before making decisions.";
+
+  $("report").style.display = "block";
+  $("actions").style.display = "flex";
+  $("report").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// prefills
+const q = new URLSearchParams(location.search);
+if (q.get("paid") || q.get("checkout")) $("paidband").style.display = "block";
+if (q.get("zip")) $("in-zip").value = q.get("zip").slice(0,5);
+$("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
+["in-val","in-bal"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/[^0-9]/g,""); }));
+</script>
+</body>
+</html>
