@@ -61,8 +61,8 @@ function welcomeMonitorEmail(zip: string) {
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch</p>
   <h1 style="font-size:26px;margin:6px 0 12px">Monitoring is on.</h1>
   <p style="font-size:16px;line-height:1.6">From now on, we watch the early-warning data for <b>${zip}</b> continuously — supply, prices, price cuts, time to sell. The moment your ZIP's verdict changes color, you'll get an email like this one. No news is good news.</p>
-  <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included — reply with your property address and current mortgage balance (approximate is fine) and we'll deliver it within 1 business day.</p>
-  <p style="margin:24px 0"><a href="${SITE}" style="background:#101828;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Check your ZIP anytime →</a></p>
+  <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included — generate it right now with your address, home value estimate, and mortgage balance. It takes 20 seconds and you can save it as a PDF.</p>
+  <p style="margin:24px 0"><a href="${SITE}/my-report.html?zip=${zip}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Generate my report →</a></p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5">Cancel anytime — just reply "cancel" or use the link in any Stripe billing email. Data from Redfin, a national real estate brokerage (redfin.com). Not financial advice.</p>
 </div>`,
   };
@@ -75,7 +75,8 @@ function welcomeReportEmail(zip: string) {
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch</p>
   <h1 style="font-size:26px;margin:6px 0 12px">Got it — one report coming up.</h1>
-  <p style="font-size:16px;line-height:1.6">To build your report we need two things: your <b>property address</b> and your <b>approximate mortgage balance</b>. Reply to this email with both and your report arrives within 1 business day.</p>
+  <p style="font-size:16px;line-height:1.6">Generate it right now — enter your address, your home value estimate, and your approximate mortgage balance, and your report appears in 20 seconds. Save it as a PDF, regenerate it anytime.</p>
+  <p style="margin:24px 0"><a href="${SITE}/my-report.html?paid=1&zip=${zip}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Generate my report →</a></p>
   <p style="font-size:16px;line-height:1.6">Want us to keep watching after this report? EquityWatch monitoring is the same price monthly and alerts you the moment ${zip} changes color.</p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5">All sales final per our refund policy. Data from Redfin, a national real estate brokerage (redfin.com). Not financial advice.</p>
 </div>`,
