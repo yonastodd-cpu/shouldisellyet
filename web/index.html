@@ -43,6 +43,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
 .btn-outline{background:none;border:1.5px solid var(--navy);color:var(--navy)!important}
 .btn-outline:hover{background:#f1eee6}
 .hero{display:grid;grid-template-columns:1.02fr 1fr;gap:52px;padding:64px 56px 56px}
+.hero>div{min-width:0}
 .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}
 h1{font-family:'Newsreader',serif;font-weight:500;font-size:52px;line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1 em{font-style:italic;color:var(--navy)}
@@ -100,12 +101,12 @@ h1 em{font-style:italic;color:var(--navy)}
 .waitcard input{flex:1;min-width:200px;font-size:14px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:7px}
 .waitcard .ok{display:none;font-size:13.5px;font-weight:600;color:var(--green)}
 
-.mapcard{border:1px solid var(--hairline);border-radius:12px;background:#fff;overflow:hidden}
-.maphead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--hairline2)}
+.mapcard{border:none;border-radius:0;background:transparent;overflow:visible;min-width:0}
+.maphead{display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;border-bottom:none}
 .legend{display:flex;gap:14px;font-size:11px;color:var(--faint)}
 .legend span{display:flex;align-items:center;gap:5px}
 .legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
-.mapfeed{height:40px;padding:0 20px;display:flex;align-items:center;border-top:1px solid var(--hairline2);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapfeed{height:36px;padding:0 4px;display:flex;align-items:center;border-top:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mapfeed span{opacity:1;transition:opacity .45s ease}
 #map{aspect-ratio:560/360;width:100%;height:auto;display:block}
 section.band{padding:52px 56px;border-top:1px solid var(--hairline)}
@@ -574,12 +575,21 @@ async function initMap(){
   const states = topojson.feature(topo, topo.objects.states);
   const cv = document.getElementById("map"), W = 560, H = 360, dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = W * dpr; cv.height = H * dpr;
-  const proj = d3.geoAlbersUsa().fitExtent([[16,16],[W-16,H-16]], states);
+  const proj = d3.geoAlbersUsa().fitExtent([[20,8],[W-20,H-40]], states);
   const path = d3.geoPath(proj);
   const base = document.createElement("canvas"); base.width = W * dpr; base.height = H * dpr;
   const b = base.getContext("2d"); b.setTransform(dpr,0,0,dpr,0,0);
-  b.beginPath(); path.context(b)(states); b.fillStyle = "#ece7db"; b.fill();
-  b.strokeStyle = "#faf8f4"; b.lineWidth = 1; b.stroke();
+  // extruded underside — the map's "thickness"
+  b.save(); b.translate(0, 5);
+  b.beginPath(); path.context(b)(states); b.fillStyle = "#ddd5c4"; b.fill();
+  b.restore();
+  // top surface, floating on a soft shadow
+  b.save();
+  b.shadowColor = "rgba(31,42,63,0.22)"; b.shadowBlur = 26; b.shadowOffsetY = 14;
+  b.beginPath(); path.context(b)(states); b.fillStyle = "#fffdf8"; b.fill();
+  b.restore();
+  b.beginPath(); path.context(b)(states);
+  b.strokeStyle = "#e9e3d6"; b.lineWidth = 1; b.stroke();
   const cols = ["#2e9e5b", "#d99a26", "#d64545"];
   const pts = METROS.map((m,i) => ({ p: proj(m), c: cols[mstatus(i)], i })).filter(x => x.p);
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
