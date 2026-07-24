@@ -59,7 +59,7 @@ h1 em{font-style:italic;color:var(--navy)}
 .verdict{border-radius:10px;background:#fff;overflow:hidden;animation:fadeUp .35s ease;border:1px solid var(--hairline)}
 .verdict-head{display:flex;align-items:center;gap:14px;padding:18px 22px;flex-wrap:wrap}
 .verdict-dot{width:14px;height:14px;border-radius:50%;flex:none}
-.verdict-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.16em}
+.verdict-tag{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;letter-spacing:.14em;line-height:1}
 .verdict-title{font-family:'Newsreader',serif;font-size:20px;font-weight:600}
 .verdict-body{padding:16px 22px 20px;display:flex;flex-direction:column;gap:12px}
 .verdict-body p{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
@@ -197,14 +197,14 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
         <div class="datastamp" id="v-stamp"></div>
 
         <div class="v-ctas">
-          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Watch this ZIP — $5.99/mo</a>
+          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Set up an alert for this ZIP — $5.99/mo</a>
           <a class="linkbtn" href="report.html" style="text-decoration:underline">See a sample EquityWatch report →</a>
           <button class="linkbtn" id="share-btn">Share</button>
           <button class="linkbtn" id="again">Check another ZIP</button>
         </div>
 
         <div class="mform" id="mform">
-          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — we watch this ZIP continuously and alert you the moment its verdict changes. <b>$5.99/mo, cancel anytime.</b></div>
+          <div style="font-size:13px;color:var(--muted)">EquityWatch alerts — get an email the moment this ZIP’s verdict changes color. Your area, your alert, on your terms. <b>$5.99/mo, cancel anytime.</b></div>
           <input type="email" id="mf-email" placeholder="you@email.com" required>
           <input type="text" id="mf-address" placeholder="Property address (optional)">
           <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a> and the <a href="refunds.html" target="_blank">no-refund cancellation policy</a> (cancel anytime to stop future charges).</label>
@@ -233,7 +233,7 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
       <div class="maphead">
         <div style="display:flex;align-items:center;gap:9px">
           <span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite"></span>
-          <span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--muted)">WATCHING 24,000+ ZIP MARKETS</span>
+          <span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--muted)">TRACKING 24,000+ ZIP MARKETS</span>
         </div>
         <div class="legend">
           <span><i style="background:var(--green)"></i>hold</span>
@@ -263,15 +263,15 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 
 <section class="band" id="how">
   <div class="steps">
-    <div class="step"><div class="num">1</div><div class="t">We watch the data</div><p>Whenever new figures publish, we pull inventory, price cuts, days on market and sales for your ZIP from public sources.</p></div>
-    <div class="step"><div class="num">2</div><div class="t">We test the thresholds</div><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
+    <div class="step"><div class="num">1</div><div class="t">Fresh data flows in</div><p>Whenever new figures publish, the latest inventory, price cuts, days on market and sales for your ZIP are pulled in automatically from public sources.</p></div>
+    <div class="step"><div class="num">2</div><div class="t">The thresholds get tested</div><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
     <div class="step"><div class="num">3</div><div class="t">You get one answer</div><p>Hold, watch, or act — with the exact numbers behind it, in plain English. No spreadsheets, no jargon.</p></div>
   </div>
 </section>
 
 <section class="band" id="pricing">
   <h2>Checking is free, forever.</h2>
-  <p style="margin:6px 0 28px;font-size:14.5px;color:var(--muted)">Pay only if you want us watching your home continuously — and telling you the moment conditions change.</p>
+  <p style="margin:6px 0 28px;font-size:14.5px;color:var(--muted)">Set up an alert for your area if you want to hear the moment conditions change — no checking back required.</p>
   <div class="pricing">
     <div class="price-card">
       <div style="font-size:14px;font-weight:650">Free check</div>
@@ -281,10 +281,10 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
     </div>
     <div class="price-card featured">
       <div class="price-badge">EQUITYWATCH</div>
-      <div style="font-size:14px;font-weight:650">We watch your home for you</div>
+      <div style="font-size:14px;font-weight:650">Alerts for your area</div>
       <div class="price">$5.99 <small>/mo · cancel anytime</small></div>
       <div class="price-feats">Instant alert the moment your ZIP's verdict changes · your estimated equity, updated monthly · your walk-away number if you sold today · full report included</div>
-      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Start monitoring</a>
+      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Set up my alert</a>
     </div>
   </div>
   <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b>$5.99 one-time</b>. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
