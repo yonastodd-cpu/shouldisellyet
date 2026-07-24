@@ -8,23 +8,23 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%23101828'/><circle cx='50' cy='26' r='11' fill='%23e03e36'/><circle cx='50' cy='50' r='11' fill='%23e8a317'/><circle cx='50' cy='74' r='11' fill='%2312a150'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#101828; --ink-2:#344054; --muted:#667085;
-    --paper:#fbfaf7; --card:#fff; --line:#eceae4;
-    --green:#12a150; --amber:#e8a317; --red:#e03e36;
-    --accent:#0e8a7d; --accent-ink:#0b6e64; --navy:#16243a;
+    --ink:#1c2430; --ink-2:#3a4450; --muted:#5c6673;
+    --paper:#faf8f4; --card:#fff; --line:#e7e2d8;
+    --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
+    --accent:#1f3a5f; --accent-ink:#172d4b; --navy:#1f3a5f;
     --shadow-md:0 6px 16px -4px rgba(16,24,40,.10);
     --shadow-lg:0 24px 48px -12px rgba(16,24,40,.16);
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
-  .serif{font-family:'Fraunces',serif}
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .serif{font-family:'Newsreader',serif}
   .wrap{max-width:860px;margin:0 auto;padding:0 20px}
 
   .topbar{background:var(--navy);color:#fff;font-size:13px;font-weight:600;text-align:center;padding:9px 16px}
-  .topbar a{color:#6fe3c2}
+  .topbar a{color:#bcd2ec}
 
   nav{background:#fff;border-bottom:1px solid var(--line)}
   .nav-in{max-width:860px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
@@ -34,9 +34,9 @@
   .report{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow-lg);margin:34px auto 26px;overflow:hidden}
 
   /* Report header */
-  .r-head{background:linear-gradient(165deg,#131e30,var(--navy));color:#fff;padding:38px 40px 34px;position:relative}
-  .r-head .rh-label{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#6fe3c2;margin-bottom:10px}
-  .r-head h1{font-family:'Fraunces',serif;font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+  .r-head{background:linear-gradient(165deg,#182c47,var(--navy));color:#fff;padding:38px 40px 34px;position:relative}
+  .r-head .rh-label{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#bcd2ec;margin-bottom:10px}
+  .r-head h1{font-family:'Newsreader',serif;font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
   .r-head .rh-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#94a8c0}
   .r-head .lamp{position:absolute;right:38px;top:50%;transform:translateY(-50%)}
   @media(max-width:640px){ .r-head .lamp{display:none} .r-head{padding:30px 24px} }
@@ -47,23 +47,23 @@
   /* Alert-triggered band */
   .alertband{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:linear-gradient(90deg,#fdf3dd,#fbecc9);border-bottom:1px solid #f1dfb7;padding:16px 40px}
   @media(max-width:640px){ .alertband{padding:14px 20px} }
-  .alertband .ring{flex:none;width:38px;height:38px;border-radius:50%;background:#e8a317;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 5px rgba(232,163,23,.22);animation:ringpulse 2.2s infinite}
+  .alertband .ring{flex:none;width:38px;height:38px;border-radius:50%;background:#c8891f;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 5px rgba(232,163,23,.22);animation:ringpulse 2.2s infinite}
   @keyframes ringpulse{50%{box-shadow:0 0 0 9px rgba(232,163,23,.10)}}
   .alertband .at-copy{flex:1;min-width:240px;font-size:13.5px;color:#7a5a10;line-height:1.5}
   .alertband .at-copy b{color:#5c430b}
   .alertband .at-change{font-weight:800;white-space:nowrap;font-size:13px;color:#5c430b;background:#fff;border:1px solid #f1dfb7;padding:6px 12px;border-radius:999px}
 
   .sec{margin-bottom:38px}
-  .sec-title{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:4px}
-  .sec-title .num{font-family:'Inter';font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+  .sec-title{display:flex;align-items:center;gap:10px;font-family:'Newsreader',serif;font-size:20px;font-weight:700;margin-bottom:4px}
+  .sec-title .num{font-family:system-ui;font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
   .sec-sub{font-size:13.5px;color:var(--muted);margin-bottom:20px}
 
   /* Verdict banner */
   .v-banner{display:flex;align-items:center;gap:20px;background:linear-gradient(160deg,#fdf6e8,#fbf1da);border:1px solid #f1dfb7;border-radius:18px;padding:22px 26px;flex-wrap:wrap}
-  .v-word{font-family:'Fraunces',serif;font-size:44px;font-weight:900;color:var(--amber);line-height:1}
+  .v-word{font-family:'Newsreader',serif;font-size:44px;font-weight:900;color:var(--amber);line-height:1}
   .v-copy{flex:1;min-width:220px;font-size:14.5px;color:var(--ink-2)}
   .v-score{text-align:center}
-  .v-score .vs-num{font-family:'Fraunces',serif;font-size:30px;font-weight:900}
+  .v-score .vs-num{font-family:'Newsreader',serif;font-size:30px;font-weight:900}
   .v-score .vs-lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 
   /* Equity blocks */
@@ -71,7 +71,7 @@
   @media(max-width:640px){ .eq-grid{grid-template-columns:1fr} }
   .eq-card{border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8)}
   .eq-card .label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .eq-card .big{font-family:'Fraunces',serif;font-size:34px;font-weight:900;letter-spacing:-.01em;margin:4px 0 2px}
+  .eq-card .big{font-family:'Newsreader',serif;font-size:34px;font-weight:900;letter-spacing:-.01em;margin:4px 0 2px}
   .eq-card .delta{font-size:13px;font-weight:600}
   .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
   .eq-bar{height:14px;border-radius:8px;background:#f1efe9;overflow:hidden;display:flex;margin-top:14px}
@@ -86,12 +86,12 @@
   .ind{border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px}
   .ind .i-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
   .ind .i-name{font-size:13.5px;font-weight:700}
-  .ind .i-val{font-family:'Fraunces',serif;font-size:22px;font-weight:900}
+  .ind .i-val{font-family:'Newsreader',serif;font-size:22px;font-weight:900}
   .ind .i-note{font-size:12.5px;color:var(--muted);margin-bottom:12px}
   .meter{position:relative;height:8px;border-radius:6px;background:linear-gradient(90deg,#d9f2e3 0%,#fdeeca 62%,#f9d9d4 100%)}
   .meter .pin{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(16,24,40,.35);transform:translateX(-8px)}
-  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#98a2b3;border-radius:2px}
-  .meter-cap{display:flex;justify-content:space-between;font-size:10.5px;color:#98a2b3;margin-top:7px;letter-spacing:.02em}
+  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#a49d8d;border-radius:2px}
+  .meter-cap{display:flex;justify-content:space-between;font-size:10.5px;color:#a49d8d;margin-top:7px;letter-spacing:.02em}
   .pin.g{background:var(--green)} .pin.a{background:var(--amber)} .pin.r{background:var(--red)}
   .i-status{font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
   .i-status.g{color:var(--green);background:#e7f6ed} .i-status.a{color:#b07f0e;background:#fdf3dd} .i-status.r{color:var(--red);background:#fdeae9}
@@ -106,38 +106,38 @@
   .pr-row.minus .amt{color:var(--red)}
   .pr-row.total{background:linear-gradient(160deg,#f0faf7,#e8f5f1);border:none}
   .pr-row.total .lbl{font-weight:800}
-  .pr-row.total .amt{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:var(--accent-ink)}
+  .pr-row.total .amt{font-family:'Newsreader',serif;font-size:24px;font-weight:900;color:var(--accent-ink)}
   .pr-row .amt{font-weight:700;font-variant-numeric:tabular-nums}
-  .pr-note{font-size:12px;color:#98a2b3;margin-top:10px}
+  .pr-note{font-size:12px;color:#a49d8d;margin-top:10px}
 
   /* What now / partner */
   .say{border-left:3px solid var(--accent);background:#f7fbfa;border-radius:0 14px 14px 0;padding:18px 22px;font-size:14.5px;color:var(--ink-2)}
   .say b{color:var(--ink)}
 
-  .partner{display:flex;gap:18px;align-items:flex-start;border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:18px;background:linear-gradient(180deg,#fff,#fbfaf7)}
+  .partner{display:flex;gap:18px;align-items:flex-start;border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:18px;background:linear-gradient(180deg,#fff,#faf8f4)}
   .partner img{flex:none;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent),var(--shadow-md);background:var(--navy)}
-  .partner .p-name{font-family:'Fraunces',serif;font-size:18px;font-weight:700}
-  .partner .p-name small{font-family:'Inter';font-size:12.5px;font-weight:600;color:var(--muted)}
+  .partner .p-name{font-family:'Newsreader',serif;font-size:18px;font-weight:700}
+  .partner .p-name small{font-family:system-ui;font-size:12.5px;font-weight:600;color:var(--muted)}
   .partner .p-brok{font-size:13px;font-weight:600;color:var(--accent-ink)}
   .partner p{font-size:13.5px;color:var(--ink-2);margin-top:8px}
   .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:12px;text-decoration:none;transition:.15s;border:none;cursor:pointer}
   .btn.primary{background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;box-shadow:var(--shadow-md)}
   .btn.primary:hover{transform:translateY(-1px)}
-  .btn.dark{background:linear-gradient(180deg,#1d2939,#101828);color:#fff}
+  .btn.dark{background:linear-gradient(180deg,#1d2939,#1c2430);color:#fff}
   .btn.dark:hover{transform:translateY(-1px)}
   .btn.ghost{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
   .btn.ghost:hover{border-color:var(--ink)}
 
   /* Purchase band */
-  .buy{background:linear-gradient(165deg,#131e30,var(--navy));color:#fff;border-radius:22px;padding:40px 38px;text-align:center;margin:8px auto 40px;box-shadow:var(--shadow-lg)}
-  .buy h2{font-family:'Fraunces',serif;font-size:clamp(22px,3.5vw,30px);font-weight:700;margin-bottom:8px}
+  .buy{background:linear-gradient(165deg,#182c47,var(--navy));color:#fff;border-radius:22px;padding:40px 38px;text-align:center;margin:8px auto 40px;box-shadow:var(--shadow-lg)}
+  .buy h2{font-family:'Newsreader',serif;font-size:clamp(22px,3.5vw,30px);font-weight:700;margin-bottom:8px}
   .buy p{color:#94a8c0;font-size:14.5px;max-width:520px;margin:0 auto 22px}
-  .buy .price{font-family:'Fraunces',serif;font-size:44px;font-weight:900;color:#6fe3c2}
-  .buy .price small{font-family:'Inter';font-size:13px;font-weight:600;color:#94a8c0}
+  .buy .price{font-family:'Newsreader',serif;font-size:44px;font-weight:900;color:#bcd2ec}
+  .buy .price small{font-family:system-ui;font-size:13px;font-weight:600;color:#94a8c0}
   .buy .btn-row{justify-content:center;margin-top:18px}
 
-  footer{padding:30px 0 56px;text-align:center;font-size:12px;color:#98a2b3}
+  footer{padding:30px 0 56px;text-align:center;font-size:12px;color:#a49d8d}
   footer .disc{max-width:660px;margin:0 auto;line-height:1.6}
   .watermark{position:fixed;bottom:18px;right:18px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--amber);padding:6px 14px;border-radius:999px;box-shadow:var(--shadow-md);z-index:60}
 
@@ -169,7 +169,7 @@
 <nav>
   <div class="nav-in">
     <a class="brand" href="index.html">
-      <svg width="20" height="27" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#101828"/><circle cx="50" cy="34" r="15" fill="#e03e36"/><circle cx="50" cy="70" r="15" fill="#e8a317"/><circle cx="50" cy="106" r="15" fill="#12a150"/></svg>
+      <svg width="20" height="27" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#1c2430"/><circle cx="50" cy="34" r="15" fill="#d64545"/><circle cx="50" cy="70" r="15" fill="#c8891f"/><circle cx="50" cy="106" r="15" fill="#2e9e5b"/></svg>
       EquityWatch <span style="color:var(--muted);font-weight:600;font-size:13px">by ShouldISellYet</span>
     </a>
     <span class="sample-pill">Sample</span>
@@ -183,7 +183,7 @@
       <h1>1234 Aspen Knolls Way<br>Silver Spring, MD 20906</h1>
       <div class="rh-meta"><span>Report date: July 2026</span><span>Market data through: May 2026</span><span>Report #SAMPLE-0001</span></div>
       <div class="lamp">
-        <svg width="58" height="80" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="rgba(255,255,255,.12)"/><circle cx="50" cy="34" r="15" fill="#3a4459"/><circle cx="50" cy="70" r="15" fill="#e8a317" style="filter:drop-shadow(0 0 12px #e8a317aa)"/><circle cx="50" cy="106" r="15" fill="#3a4459"/></svg>
+        <svg width="58" height="80" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="rgba(255,255,255,.12)"/><circle cx="50" cy="34" r="15" fill="#3a4459"/><circle cx="50" cy="70" r="15" fill="#c8891f" style="filter:drop-shadow(0 0 12px #c8891faa)"/><circle cx="50" cy="106" r="15" fill="#3a4459"/></svg>
       </div>
     </div>
 
@@ -233,14 +233,14 @@
           <svg viewBox="0 0 720 220" role="img" aria-label="Value trend chart">
             <defs>
               <linearGradient id="fillA" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#0e8a7d" stop-opacity=".18"/><stop offset="1" stop-color="#0e8a7d" stop-opacity="0"/>
+                <stop offset="0" stop-color="#1f3a5f" stop-opacity=".18"/><stop offset="1" stop-color="#1f3a5f" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <g stroke="#eceae4" stroke-width="1">
+            <g stroke="#e7e2d8" stroke-width="1">
               <line x1="50" y1="30" x2="700" y2="30"/><line x1="50" y1="80" x2="700" y2="80"/>
               <line x1="50" y1="130" x2="700" y2="130"/><line x1="50" y1="180" x2="700" y2="180"/>
             </g>
-            <g font-family="Inter" font-size="11" fill="#98a2b3">
+            <g font-family="Inter" font-size="11" fill="#a49d8d">
               <text x="8" y="34">$430K</text><text x="8" y="84">$415K</text><text x="8" y="134">$400K</text><text x="8" y="184">$385K</text>
               <text x="52" y="205">Jul '24</text><text x="215" y="205">Jan '25</text><text x="380" y="205">Jul '25</text><text x="545" y="205">Jan '26</text><text x="660" y="205">May '26</text>
             </g>
@@ -248,11 +248,11 @@
             <path d="M50,120 C120,112 180,104 250,100 C330,96 390,92 460,98 C540,104 620,118 700,128" fill="none" stroke="#c9c5ba" stroke-width="2.5" stroke-dasharray="5 5"/>
             <!-- Your home -->
             <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101 L700,180 L50,180 Z" fill="url(#fillA)"/>
-            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101" fill="none" stroke="#0e8a7d" stroke-width="3.5" stroke-linecap="round"/>
-            <circle cx="700" cy="101" r="6" fill="#0e8a7d" stroke="#fff" stroke-width="2.5"/>
+            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101" fill="none" stroke="#1f3a5f" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="700" cy="101" r="6" fill="#1f3a5f" stroke="#fff" stroke-width="2.5"/>
             <g font-family="Inter" font-size="11.5" font-weight="600">
-              <text x="500" y="52" fill="#0b6e64">Your home (est.)</text>
-              <text x="560" y="150" fill="#98a2b3">ZIP 20906 median</text>
+              <text x="500" y="52" fill="#172d4b">Your home (est.)</text>
+              <text x="560" y="150" fill="#a49d8d">ZIP 20906 median</text>
             </g>
           </svg>
         </div>
@@ -353,10 +353,10 @@
 
   <!-- Purchase -->
   <div class="buy" id="buy">
-    <h2>Get this report for <em style="color:#6fe3c2">your</em> home</h2>
+    <h2>Get this report for <em style="color:#bcd2ec">your</em> home</h2>
     <p>Both options cost $5.99. Only one of them taps you on the shoulder the moment your market turns — that's the one that protects your equity.</p>
     <div class="price">$5.99<small>/mo · EquityWatch monitoring</small> &nbsp;·&nbsp; $5.99 <small>one-time report</small></div>
-    <p style="margin-top:6px;font-size:13px;color:#6fe3c2">Monitoring includes this full report, refreshed monthly, plus instant alerts when conditions change.</p>
+    <p style="margin-top:6px;font-size:13px;color:#bcd2ec">Monitoring includes this full report, refreshed monthly, plus instant alerts when conditions change.</p>
     <div class="btn-row">
       <a class="btn primary" href="#" onclick="return buyMonitor()">🔔 Start monitoring · $5.99/mo</a>
       <a class="btn ghost" style="background:#fff" id="buy-btn" href="#" onclick="return buyReport()">Just this report · $5.99</a>
@@ -379,16 +379,12 @@ const CHECKOUT_URL = "";           // one-time $5.99 report
 const MONITOR_CHECKOUT_URL = "";   // $5.99/mo monitoring
 function buyReport(){
   if (CHECKOUT_URL) { window.location.href = CHECKOUT_URL; return false; }
-  window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +
-    encodeURIComponent("EquityWatch one-time report ($5.99) — purchase request") +
-    "&body=" + encodeURIComponent("I'd like the one-time EquityWatch report ($5.99) for my home.\n\nProperty address:\nEmail for delivery:\n\n(Checkout is launching soon — we'll reply with a payment link and your report within 1 business day.)");
+  window.location.href = "index.html#pricing";   // checkout launching — signup lives on the homepage
   return false;
 }
 function buyMonitor(){
   if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
-  window.location.href = "mailto:naomi@shouldisellyet.com?subject=" +
-    encodeURIComponent("EquityWatch monitoring ($5.99/mo) — signup request") +
-    "&body=" + encodeURIComponent("I'd like EquityWatch monitoring ($5.99/mo) with instant alerts.\n\nProperty address:\nEmail for alerts:\n\n(Checkout is launching soon — we'll reply with your activation and payment link.)");
+  window.location.href = "index.html#pricing";
   return false;
 }
 </script>

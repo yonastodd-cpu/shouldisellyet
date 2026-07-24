@@ -6,386 +6,306 @@
 <title>Should I Sell Yet? — Know before your home equity is at risk</title>
 <meta name="description" content="Enter your ZIP code. Get a plain-English verdict on whether your home equity is at risk — free, updated whenever new market data is published.">
 <meta property="og:title" content="Should I Sell Yet?">
-<meta property="og:description" content="The free early-warning system for your home equity. Check your ZIP in seconds.">
+<meta property="og:description" content="The home equity early-warning system. Check your ZIP in 15 seconds — free.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%23101828'/><circle cx='50' cy='26' r='11' fill='%23e03e36'/><circle cx='50' cy='50' r='11' fill='%23e8a317'/><circle cx='50' cy='74' r='11' fill='%2312a150'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
 <style>
-  :root{
-    --ink:#101828; --ink-2:#344054; --muted:#667085;
-    --paper:#fbfaf7; --card:#ffffff; --line:#eceae4;
-    --green:#12a150; --amber:#e8a317; --red:#e03e36;
-    --accent:#0e8a7d; --accent-ink:#0b6e64; --navy:#16243a;
-    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
-    --shadow-md:0 6px 16px -4px rgba(16,24,40,.10);
-    --shadow-lg:0 24px 48px -12px rgba(16,24,40,.18);
-    --r:18px;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{font-family:'Inter',-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
-  .serif{font-family:'Fraunces',Georgia,serif}
-  .wrap{max-width:1020px;margin:0 auto;padding:0 24px}
+:root{
+  --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
+  --hairline:#e7e2d8; --hairline2:#f0ebe0; --navy:#1f3a5f; --navy-dark:#172d4b;
+  --gold:#8a7a55; --track:#efe9dc;
+  --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
+  --green-soft:#e9f4ee; --amber-soft:#faf1dd; --red-soft:#fbe9e9;
+  --green-line:#bcdcc9; --amber-line:#e8d5a8; --red-line:#ecc3c3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+a{color:var(--navy);text-decoration:none}a:hover{color:var(--navy-dark)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:'Newsreader',serif}
+input::placeholder{opacity:.38;color:inherit}
+input:focus{outline:none;border-color:var(--navy)!important}
+@keyframes shimmer{0%{background-position:-360px 0}100%{background-position:360px 0}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.wrap{max-width:1240px;margin:0 auto}
+nav{display:flex;align-items:center;justify-content:space-between;padding:18px 56px;border-bottom:1px solid var(--hairline)}
+.logo{display:flex;align-items:center;gap:10px}
+.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
+.navlinks{display:flex;align-items:center;gap:28px;font-size:13.5px}
+.navlinks a{color:var(--muted)}
+.btn{display:inline-block;background:var(--navy);color:#faf8f4!important;padding:9px 18px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:15px;font-family:inherit}
+.btn:hover{background:var(--navy-dark)}
+.btn-outline{background:none;border:1.5px solid var(--navy);color:var(--navy)!important}
+.btn-outline:hover{background:#f1eee6}
+.hero{display:grid;grid-template-columns:1.02fr 1fr;gap:52px;padding:64px 56px 56px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}
+h1{font-family:'Newsreader',serif;font-weight:500;font-size:52px;line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 em{font-style:italic;color:var(--navy)}
+.sub{font-size:16.5px;line-height:1.6;color:var(--muted);margin:0;max-width:52ch}
+.zipform{display:flex;gap:10px;max-width:460px}
+.zipform input{flex:1;font-size:18px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;padding:14px 18px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;color:var(--ink)}
+.fineprint{font-size:12.5px;color:#98917f}
+.card{border:1px solid var(--hairline);border-radius:10px;background:#fff}
+.crunch{padding:20px 22px;display:flex;flex-direction:column;gap:13px;animation:fadeUp .3s ease}
+.crunch-row{display:flex;align-items:center;gap:12px}
+.crunch-dot{width:7px;height:7px;border-radius:50%;background:var(--navy);animation:blink 1.1s infinite;flex:none}
+.crunch-row span:nth-child(2){font-size:13.5px;color:#3a4450;width:250px;flex:none}
+.crunch-bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#efe9dc 25%,#dcd4c2 50%,#efe9dc 75%);background-size:360px 100%;animation:shimmer 1.2s linear infinite}
+.verdict{border-radius:10px;background:#fff;overflow:hidden;animation:fadeUp .35s ease;border:1px solid var(--hairline)}
+.verdict-head{display:flex;align-items:center;gap:14px;padding:18px 22px;flex-wrap:wrap}
+.verdict-dot{width:14px;height:14px;border-radius:50%;flex:none}
+.verdict-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.16em}
+.verdict-title{font-family:'Newsreader',serif;font-size:20px;font-weight:600}
+.verdict-body{padding:16px 22px 20px;display:flex;flex-direction:column;gap:12px}
+.verdict-body p{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center}
+.metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
+.metric .val{font-size:14px;font-weight:650}
+.metric .track{height:6px;border-radius:3px;background:var(--track);position:relative}
+.metric .fill{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.metric .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#9a9384;border-radius:1px}
+.metric .note{font-size:11px;color:var(--fainter)}
+.v-ctas{display:flex;align-items:center;gap:14px;margin-top:4px;flex-wrap:wrap}
+.linkbtn{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit}
+.datastamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.06em}
 
-  /* Top bar */
-  nav{position:sticky;top:0;z-index:50;background:rgba(251,250,247,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-  .nav-in{max-width:1020px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;font-size:17px;color:var(--ink);text-decoration:none}
-  .brand svg{display:block}
-  .nav-cta{font-size:14px;font-weight:700;color:#fff;background:var(--ink);padding:9px 18px;border-radius:999px;text-decoration:none;transition:.18s}
-  .nav-cta:hover{background:var(--accent-ink);transform:translateY(-1px)}
+/* monitor signup (inside verdict) */
+.mform{display:none;flex-direction:column;gap:9px;border-top:1px dashed var(--hairline);padding-top:14px;margin-top:6px}
+.mform input[type=email],.mform input[type=text]{font-size:14px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:7px;background:#fff;font-family:inherit}
+.mform label{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;cursor:pointer}
+.mform label input{margin-top:2px;accent-color:var(--navy)}
+.mform .ok,.mform .err{display:none;font-size:13.5px;font-weight:600}
+.mform .ok{color:var(--green)} .mform .err{color:var(--red)}
 
-  /* Hero */
-  .hero{position:relative;text-align:center;padding:88px 0 72px;overflow:hidden}
-  .hero::before{content:"";position:absolute;inset:0;background:
-    radial-gradient(52% 44% at 50% 0%, rgba(14,138,125,.10), transparent 70%),
-    radial-gradient(30% 30% at 82% 18%, rgba(232,163,23,.07), transparent 70%),
-    radial-gradient(30% 30% at 16% 22%, rgba(224,62,54,.06), transparent 70%);
-    pointer-events:none}
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;padding:7px 16px;border-radius:999px;margin-bottom:26px}
-  .eyebrow .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(18,161,80,.5);animation:pulse 2s infinite}
-  @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(18,161,80,0)}100%{box-shadow:0 0 0 0 rgba(18,161,80,0)}}
-  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(42px,7.2vw,76px);line-height:1.02;letter-spacing:-.015em;margin-bottom:20px}
-  h1 em{font-style:italic;color:var(--accent)}
-  .sub{font-size:clamp(16.5px,2.2vw,20px);color:var(--muted);max-width:640px;margin:0 auto 42px}
+/* partner */
+.partner{display:none;gap:14px;border-top:1px dashed var(--hairline);padding-top:16px;margin-top:6px}
+.partner img{width:58px;height:58px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold)}
+.partner .p-name{font-family:'Newsreader',serif;font-size:16.5px;font-weight:600}
+.partner .p-name small{font-family:system-ui,sans-serif;font-weight:400;font-size:12px;color:var(--faint)}
+.partner .p-blurb{font-size:12.5px;line-height:1.55;color:var(--muted);margin:4px 0 8px}
+.partner .p-ctas{display:flex;gap:8px;flex-wrap:wrap}
+.partner .p-ctas a{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:6px}
+.partner .p-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--fainter);border:1px solid var(--hairline);border-radius:4px;padding:2px 7px;vertical-align:2px;margin-left:6px}
 
-  /* Checker */
-  .checker{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-  .zipbox{position:relative}
-  .checker input{font-family:'Inter';font-size:26px;font-weight:700;letter-spacing:.14em;text-align:center;width:210px;padding:17px 18px;border:1.5px solid #d6d3cb;border-radius:16px;background:var(--card);outline:none;box-shadow:var(--shadow-sm);transition:.18s;color:var(--ink)}
-  .checker input::placeholder{letter-spacing:.02em;font-size:17px;font-weight:500;color:#98a2b3}
-  .checker input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(14,138,125,.14)}
-  .checker button{font-size:17px;font-weight:700;padding:17px 30px;border:none;border-radius:16px;color:#fff;cursor:pointer;background:linear-gradient(180deg,#1d2939,#101828);box-shadow:var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.08);transition:.18s}
-  .checker button:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-  .checker button:active{transform:translateY(0)}
-  .trust{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:22px;font-size:13px;color:var(--muted)}
-  .trust span{display:inline-flex;align-items:center;gap:6px}
-  .trust b{color:var(--ink-2);font-weight:600}
+/* waitlist */
+.waitcard{display:none;padding:20px 22px;animation:fadeUp .3s ease}
+.waitcard .t{font-family:'Newsreader',serif;font-size:19px;font-weight:600;margin-bottom:4px}
+.waitcard p{font-size:13.5px;color:var(--muted);margin:0 0 12px}
+.waitcard form{display:flex;gap:8px;flex-wrap:wrap}
+.waitcard input{flex:1;min-width:200px;font-size:14px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:7px}
+.waitcard .ok{display:none;font-size:13.5px;font-weight:600;color:var(--green)}
 
-  /* Verdict card */
-  .verdict{display:none;scroll-margin-top:78px;max-width:600px;margin:44px auto 0;background:var(--card);border-radius:24px;padding:40px 38px 32px;box-shadow:var(--shadow-lg);text-align:center;border:1px solid var(--line);position:relative;animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
-  @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
-  .verdict .lamp{margin:0 auto 18px}
-  .verdict .word{font-family:'Fraunces',serif;font-weight:900;font-size:54px;letter-spacing:-.01em;line-height:1}
-  .verdict .zipline{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin:10px 0 24px}
-  .verdict .v-caption{font-size:14px;color:var(--ink-2);line-height:1.55;max-width:440px;margin:0 auto 20px}
-
-  /* Warning score bar */
-  .scorebar{margin:0 auto 26px;max-width:420px;text-align:left}
-  .scorebar .sb-track{position:relative;display:flex;gap:3px;height:10px}
-  .scorebar .sb-seg{flex:1;border-radius:4px;background:#efede7}
-  .scorebar .sb-seg.on-g{background:var(--green)} .scorebar .sb-seg.on-a{background:var(--amber)} .scorebar .sb-seg.on-r{background:var(--red)}
-  .scorebar .sb-cap{display:flex;justify-content:space-between;font-size:10.5px;font-weight:600;color:#98a2b3;margin-top:6px;letter-spacing:.03em}
-  .scorebar .sb-label{text-align:center;font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:8px}
-
-  /* Signal gauges */
-  .meters{text-align:left;border-top:1px solid var(--line);margin:0 0 24px}
-  .mrow{padding:15px 2px 17px;border-bottom:1px solid var(--line)}
-  .mrow .m-top{display:flex;justify-content:space-between;align-items:baseline}
-  .mrow .m-name{font-size:13.5px;font-weight:700;color:var(--ink)}
-  .mrow .m-val{font-family:'Fraunces',serif;font-size:19px;font-weight:900}
-  .mrow .m-note{font-size:12px;color:var(--muted);margin:1px 0 11px}
-  .meter{position:relative;height:8px;border-radius:6px;background:linear-gradient(90deg,#d9f2e3 0%,#fdeeca 62%,#f9d9d4 100%)}
-  .meter.rev{background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)}
-  .meter .pin{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(16,24,40,.35);transform:translateX(-8px)}
-  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#667085;border-radius:2px}
-  .meter-cap{display:flex;justify-content:space-between;font-size:10px;color:#98a2b3;margin-top:6px;letter-spacing:.02em}
-  .pin.g{background:var(--green)} .pin.a{background:var(--amber)} .pin.r{background:var(--red)} .pin.i{background:#98a2b3}
-  .m-chip{font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:999px;vertical-align:2px;margin-left:7px}
-  .m-chip.g{color:var(--green);background:#e7f6ed} .m-chip.a{color:#b07f0e;background:#fdf3dd} .m-chip.r{color:var(--red);background:#fdeae9} .m-chip.i{color:#667085;background:#f2f4f7}
-  .m-info{padding:13px 2px;font-size:13.5px;color:var(--muted);border-bottom:1px solid var(--line)}
-
-  /* Guided steps — report-style headers */
-  .steph{display:flex;gap:12px;align-items:flex-start;text-align:left;margin:28px 0 14px}
-  .steph .num{flex:none;font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:28px;height:28px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;margin-top:3px}
-  .steph .st-t{font-family:'Fraunces',serif;font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
-  .steph .st-s{font-size:13px;color:var(--muted);margin-top:2px}
-  .steph .sp-tag{font-size:10px;font-weight:700;letter-spacing:.05em;color:#98a2b3;border:1px solid var(--line);padding:2px 8px;border-radius:999px;vertical-align:3px;margin-left:8px}
-
-  /* Early-warning monitoring (paid) */
-  .monitor{text-align:left;background:linear-gradient(160deg,#0f8175,#0b6e64);border-radius:18px;padding:24px;margin:0 0 6px;color:#fff;box-shadow:var(--shadow-md)}
-  .monitor .mo-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-  .monitor .mo-copy{flex:1;min-width:230px;font-size:14px;line-height:1.6;color:#d3efe9}
-  .monitor .mo-copy b{color:#fff}
-  .monitor .mo-cta{display:flex;flex-direction:column;gap:7px;align-items:stretch;text-align:center}
-  .monitor .mo-price{font-family:'Fraunces',serif;font-size:26px;font-weight:900;color:#fff}
-  .monitor .mo-price small{font-family:'Inter';font-size:12px;font-weight:600;color:#a8ded4}
-  .monitor .mo-btn{white-space:nowrap;font-size:14.5px;font-weight:800;color:#0b2b26;background:linear-gradient(180deg,#8df0d6,#4fd6b4);padding:13px 22px;border-radius:12px;text-decoration:none;box-shadow:var(--shadow-sm);transition:.15s}
-  .monitor .mo-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
-  .monitor .mo-sub{font-size:11.5px;color:#a8ded4}
-  .monitor .mo-form{display:none;margin-top:16px;gap:8px;flex-wrap:wrap}
-  .monitor .mo-form input{flex:1;min-width:180px;font-size:14px;padding:12px 15px;border:1px solid rgba(255,255,255,.25);border-radius:11px;background:rgba(255,255,255,.12);color:#fff;outline:none}
-  .monitor .mo-form input::placeholder{color:#9dd6ca}
-  .monitor .mo-form input:focus{border-color:#8df0d6;background:rgba(255,255,255,.18)}
-  .monitor .mo-form button{font-size:14px;font-weight:800;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(180deg,#8df0d6,#4fd6b4);color:#0b2b26;cursor:pointer}
-  .monitor .mo-ok{display:none;font-size:14px;font-weight:700;color:#8df0d6;margin-top:14px}
-  .monitor .mo-tos{flex-basis:100%;display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#c6e9e1;line-height:1.5;cursor:pointer}
-  .monitor .mo-tos input{flex:none;width:15px;height:15px;min-width:0;margin-top:2px;accent-color:#8df0d6;cursor:pointer}
-  .monitor .mo-tos a{color:#fff;text-decoration:underline}
-  /* Report upsell */
-  .upsell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#131e30,var(--navy));border-radius:16px;padding:20px 22px;margin:0 0 22px}
-  .upsell .up-copy{flex:1;min-width:230px;font-size:13.5px;color:#b6c6d9;line-height:1.55}
-  .upsell .up-copy b{color:#fff}
-  .upsell .up-ctas{display:flex;flex-direction:column;gap:8px;align-items:stretch}
-  .upsell .up-btn{white-space:nowrap;text-align:center;font-size:14px;font-weight:700;color:#0b2b26;background:linear-gradient(180deg,#7dead0,#4fd6b4);padding:12px 20px;border-radius:12px;text-decoration:none;box-shadow:var(--shadow-sm);transition:.15s}
-  .upsell .up-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
-  .upsell .up-link{font-size:12.5px;font-weight:600;color:#8fd8ca;text-decoration:none;text-align:center}
-  .upsell .up-link:hover{color:#b8ece2}
-
-  /* Local expert — integrated "what now" step of the report */
-  .sponsor{margin:2px 0 28px;text-align:left;border-top:1px solid var(--line);padding-top:22px}
-  .sponsor .sp-kicker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:16px}
-  .sponsor .sp-kicker::after{content:"";flex:1;height:1px;background:var(--line)}
-  .sponsor .sp-kicker .sp-tag{font-size:10px;font-weight:700;letter-spacing:.06em;color:#98a2b3;border:1px solid var(--line);padding:2px 8px;border-radius:999px;text-transform:none}
-  .sponsor .sp-row{display:flex;gap:16px;align-items:flex-start}
-  .sponsor .sp-photo{flex:none;width:76px;height:76px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent),var(--shadow-md);background:var(--navy)}
-  .sponsor .sp-name{font-family:'Fraunces',serif;font-weight:700;font-size:19px;letter-spacing:-.01em}
-  .sponsor .sp-name small{font-family:'Inter';font-weight:600;font-size:13px;color:var(--muted)}
-  .sponsor .sp-brok{font-size:13px;font-weight:600;color:var(--accent-ink);margin-top:1px}
-  .sponsor .sp-blurb{font-size:14.5px;color:var(--ink-2);line-height:1.6;margin-top:10px}
-  .sponsor .sp-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
-  .sponsor .sp-chip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
-  .sponsor .sp-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-  .sponsor .sp-btn{flex:1;min-width:150px;text-align:center;font-size:14.5px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;transition:.15s}
-  .sponsor .sp-btn.primary{background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;box-shadow:var(--shadow-sm)}
-  .sponsor .sp-btn.primary:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
-  .sponsor .sp-btn.ghost{border:1.5px solid var(--line);color:var(--ink);background:#fff}
-  .sponsor .sp-btn.ghost:hover{border-color:var(--ink)}
-  @media(max-width:560px){ .sponsor .sp-row{flex-direction:column;align-items:center;text-align:center} .sponsor .sp-chips{justify-content:center} }
-  .verdict .share{font-size:15px;font-weight:700;background:var(--paper);border:1.5px solid var(--ink);color:var(--ink);padding:12px 26px;border-radius:999px;cursor:pointer;transition:.18s}
-  .verdict .share:hover{background:var(--ink);color:#fff}
-  .verdict .fineprint{font-size:12px;color:#98a2b3;margin-top:18px;line-height:1.5}
-
-  /* Waitlist */
-  .waitlist{display:none;scroll-margin-top:78px;max-width:600px;margin:44px auto 0;background:linear-gradient(160deg,#1b2c47,var(--navy));color:#fff;border-radius:24px;padding:40px 38px;text-align:center;box-shadow:var(--shadow-lg);animation:rise .45s cubic-bezier(.2,.9,.3,1.2)}
-  .waitlist h3{font-family:'Fraunces',serif;font-size:26px;font-weight:700;margin-bottom:10px}
-  .waitlist p{color:#b6c6d9;font-size:15px;margin-bottom:24px;max-width:420px;margin-left:auto;margin-right:auto}
-  .waitlist form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-  .waitlist input{flex:1;min-width:230px;font-size:16px;padding:14px 18px;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.08);color:#fff;outline:none}
-  .waitlist input::placeholder{color:#8fa3bb}
-  .waitlist input:focus{border-color:var(--accent);background:rgba(255,255,255,.12)}
-  .waitlist button{font-size:16px;font-weight:700;padding:14px 26px;border:none;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;transition:.18s}
-  .waitlist button:hover{background:#12a394;transform:translateY(-1px)}
-  .waitlist .ok{display:none;font-size:17px;font-weight:600;color:#6fe3c2;margin-top:16px}
-
-  /* Sections */
-  section{padding:76px 0}
-  .kicker{display:block;text-align:center;font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:12px}
-  h2{font-family:'Fraunces',serif;font-size:clamp(28px,4vw,40px);font-weight:700;text-align:center;letter-spacing:-.01em;margin-bottom:10px}
-  .lede{text-align:center;color:var(--muted);max-width:560px;margin:0 auto 48px;font-size:16.5px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
-  .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 28px;box-shadow:var(--shadow-sm);transition:.2s}
-  .tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
-  .tile .n{display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:#eaf5f3;color:var(--accent-ink);border:1px solid #d5eae6;border-radius:10px;width:34px;height:34px;margin-bottom:16px}
-  .tile h3{font-size:17.5px;font-weight:700;margin-bottom:7px;letter-spacing:-.01em}
-  .tile p{font-size:14.5px;color:var(--muted)}
-
-  /* Signals */
-  .signals{background:linear-gradient(170deg,#131e30,var(--navy));color:#fff;border-radius:28px;padding:56px 46px;box-shadow:var(--shadow-lg)}
-  .signals h2{color:#fff}
-  .signals .kicker{color:#5ec9ba}
-  .signals .lede{color:#94a8c0}
-  .sig-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-  .sig{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:22px 20px;transition:.2s}
-  .sig:hover{background:rgba(255,255,255,.09)}
-  .sig b{display:block;font-size:15px;margin-bottom:6px;color:#6fe3c2;font-weight:700}
-  .sig span{font-size:13.5px;color:#a8b9cd;line-height:1.55}
-  .sig .bar{height:3px;width:34px;border-radius:2px;margin-bottom:14px}
-
-  /* Pricing */
-  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:stretch}
-  .plan{position:relative;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px 30px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;transition:.2s}
-  .plan:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
-  .plan.hot{border:2px solid var(--accent);box-shadow:var(--shadow-md)}
-  .plan .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#fff;padding:5px 14px;border-radius:999px}
-  .plan .tag{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink)}
-  .plan .price{font-family:'Fraunces',serif;font-size:44px;font-weight:900;margin:8px 0 0;letter-spacing:-.02em}
-  .plan .per{font-size:13px;color:var(--muted);margin-bottom:18px}
-  .plan ul{list-style:none;font-size:14.5px;flex:1;color:var(--ink-2)}
-  .plan li{padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:9px;align-items:flex-start}
-  .plan li::before{content:"✓";color:var(--accent);font-weight:800;flex:none}
-  .plan li:last-child{border:none}
-
-  footer{padding:52px 0 64px;text-align:center;font-size:13px;color:#98a2b3;border-top:1px solid var(--line);margin-top:20px}
-  footer .f-brand{display:flex;justify-content:center;margin-bottom:14px}
-  footer .disc{max-width:660px;margin:14px auto 0;line-height:1.6}
-  @media(max-width:560px){
-    .wrap{padding:0 16px}
-    .verdict{padding:30px 18px 26px}
-    .verdict .word{font-size:40px}
-    .checker{flex-direction:column;align-items:stretch;gap:10px;padding:0 4px}
-    .checker input{width:100%}
-    .checker button{width:100%}
-    .upsell{flex-direction:column;align-items:stretch;padding:18px 16px}
-    .upsell .up-ctas{width:100%}
-    .upsell .up-btn{white-space:normal;line-height:1.3}
-    .monitor{padding:20px 16px}
-    .monitor .mo-row{flex-direction:column;align-items:stretch}
-    .monitor .mo-cta{width:100%}
-    .monitor .mo-btn{white-space:normal;line-height:1.3}
-    .monitor .mo-form input{min-width:0;width:100%;flex:1 1 100%}
-    .monitor .mo-form button{width:100%}
-    .sponsor .sp-ctas{flex-direction:column}
-    .sponsor .sp-btn{flex:1 1 auto;min-width:0;white-space:normal;line-height:1.3}
-    .waitlist{padding:28px 18px}
-    .waitlist form{flex-direction:column}
-    .waitlist input{min-width:0;width:100%}
-    .waitlist button{width:100%}
-    .signals{padding:36px 20px;border-radius:18px}
-    .plan .price{font-size:36px}
-    .steph .st-t{font-size:18px}
-    .nav-cta{padding:8px 14px;font-size:13px}
-  }
+.mapcard{border:1px solid var(--hairline);border-radius:12px;background:#fff;overflow:hidden}
+.maphead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--hairline2)}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--faint)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.mapfeed{padding:12px 20px;border-top:1px solid var(--hairline2);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden}
+section.band{padding:52px 56px;border-top:1px solid var(--hairline)}
+h2{font-family:'Newsreader',serif;font-weight:500;font-size:30px;margin:0}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.sig{border:1px solid var(--hairline);border-radius:10px;background:#fff;padding:20px;display:flex;flex-direction:column;gap:10px}
+.sig .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold)}
+.sig .n{font-family:'Newsreader',serif;font-size:19px;font-weight:600}
+.sig p{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+.sig .line{margin-top:auto;padding-top:8px;border-top:1px dashed #eee8db;font-size:12px;color:var(--amber);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.step .num{font-family:'Newsreader',serif;font-style:italic;font-size:44px;color:#d7d0c2;line-height:1}
+.step .t{font-size:16px;font-weight:650;margin:10px 0}
+.step p{margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)}
+.pricing{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:860px}
+.price-card{border:1px solid var(--hairline);border-radius:12px;background:#fff;padding:26px;display:flex;flex-direction:column;gap:12px;position:relative}
+.price-card.featured{border:1.5px solid var(--navy)}
+.price-badge{position:absolute;top:-10px;left:24px;background:var(--navy);color:#fff;font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 10px;border-radius:4px}
+.price{font-family:'Newsreader',serif;font-size:36px;font-weight:500}
+.price small{font-size:14px;color:var(--faint);font-family:system-ui,sans-serif;font-weight:400}
+.price-feats{font-size:13.5px;line-height:1.7;color:var(--muted)}
+.price-cta{margin-top:auto;text-align:center;border-radius:7px;padding:11px;font-size:14px;font-weight:600;display:block;cursor:pointer}
+footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
+.foot-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--faint);flex-wrap:wrap;gap:10px}
+.foot-row a{color:var(--faint)}
+.disclaimer{font-size:11.5px;line-height:1.5;color:#b3ac9c;max-width:90ch;margin-top:8px}
+.hidden{display:none!important}
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr;padding:40px 24px}
+  nav{padding:16px 24px}.navlinks a:not(.btn){display:none}
+  h1{font-size:38px}
+  section.band{padding:40px 24px}
+  .grid4{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr;gap:24px}
+  .pricing{grid-template-columns:1fr}
+  .metric{grid-template-columns:130px 58px 1fr;gap:8px}
+  .metric .note{display:none}
+  footer{padding:24px}
+}
+@media (max-width:560px){
+  .zipform{flex-direction:column}
+  .zipform .btn{width:100%}
+  .grid4{grid-template-columns:1fr}
+  .v-ctas{flex-direction:column;align-items:stretch}
+  .v-ctas .btn{text-align:center}
+  .partner{flex-direction:column;align-items:flex-start}
+}
 </style>
 </head>
 <body>
-
+<div class="wrap">
 <nav>
-  <div class="nav-in">
-    <a class="brand" href="#">
-      <svg width="22" height="30" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#101828"/><circle cx="50" cy="34" r="15" fill="#e03e36"/><circle cx="50" cy="70" r="15" fill="#e8a317"/><circle cx="50" cy="106" r="15" fill="#12a150"/></svg>
-      ShouldISellYet<span style="color:var(--accent)">.com</span>
-    </a>
-    <a class="nav-cta" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP</a>
+  <div class="logo">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <span class="serif" style="font-style:italic;font-weight:600;font-size:19px">Should I sell yet?</span>
+  </div>
+  <div class="navlinks">
+    <a href="#how">How it works</a><a href="#signals">The signals</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
+    <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP</a>
   </div>
 </nav>
 
-<header class="hero" id="check">
-  <div class="wrap">
-    <div class="eyebrow"><span class="pulse"></span><span id="eyebrow-text">Watching housing markets nationwide</span></div>
-    <h1>Should I sell <em>yet?</em></h1>
-    <p class="sub">Your home is probably your biggest asset. We watch the early-warning data for your ZIP code and give you one plain-English answer — <strong style="color:var(--ink-2)">before</strong> your equity is at risk.</p>
-
-    <div class="checker">
-      <div class="zipbox"><input id="zip" type="text" inputmode="numeric" maxlength="5" placeholder="Enter ZIP code" aria-label="ZIP code"></div>
-      <button onclick="check()">Get my verdict</button>
+<div class="hero" id="check">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
+    <h1>The market turns quietly. <em>Hear it early.</em></h1>
+    <p class="sub">Prices are the last thing to fall. We crunch the newest inventory, price-cut and days-on-market data for your ZIP into one plain-English verdict — months before it shows up in headlines.</p>
+    <div class="zipform">
+      <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
+      <button class="btn" id="go">Get my verdict</button>
     </div>
-    <div class="trust">
-      <span>🔒 <b>Free</b> · no account</span>
-      <span>📊 <b id="zip-count">Thousands</b> of ZIPs covered</span>
-      <span>🔄 Refreshes when new data publishes</span>
+    <div class="fineprint">Free · no account · refreshed whenever new data publishes · try <span class="mono">20874</span> or <span class="mono">20906</span></div>
+
+    <div class="card crunch hidden" id="crunch">
+      <div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--gold)">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
+      <div class="crunch-row"><span class="crunch-dot"></span><span>Pulling the latest inventory</span><span class="crunch-bar"></span></div>
+      <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.25s"></span><span>Scanning listings for price cuts</span><span class="crunch-bar"></span></div>
+      <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.5s"></span><span>Measuring days on market</span><span class="crunch-bar"></span></div>
+      <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.75s"></span><span>Testing against danger thresholds</span><span class="crunch-bar"></span></div>
     </div>
 
-    <div class="verdict" id="verdict" role="status">
-      <div class="lamp" id="lamp"></div>
-      <div class="word" id="word"></div>
-      <div class="zipline" id="vzip"></div>
-      <div class="v-caption" id="vcaption"></div>
-      <div class="scorebar" id="scorebar"></div>
-      <div class="meters" id="meters"></div>
-
-      <div class="steph"><span class="num">1</span><div><div class="st-t">Turn on your early-warning system</div><div class="st-s">Markets turn quietly, months before headlines. Don't check back — be told.</div></div></div>
-      <div class="monitor" id="monitor">
-        <div class="mo-row">
-          <div class="mo-copy"><b>We watch <span id="mo-zip"></span> continuously.</b> The moment conditions change — supply crossing the danger line, prices turning, sellers capitulating — you get an alert. By the time a downturn is obvious, the equity is already gone. EquityWatch members hear it first.</div>
-          <div class="mo-cta">
-            <div class="mo-price">$5.99<small>/mo</small></div>
-            <a class="mo-btn" href="#" onclick="return buyMonitor()">🔔 Start monitoring</a>
-            <div class="mo-sub">Cancel anytime · full report included</div>
-          </div>
-        </div>
-        <form class="mo-form" id="mo-form" onsubmit="return subMonitor(event)">
-          <input id="mo-email" type="email" required placeholder="you@email.com" aria-label="Email">
-          <input id="mo-address" type="text" placeholder="Property address (optional)" aria-label="Address">
-          <label class="mo-tos"><input type="checkbox" id="mo-tos" required> I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and the <a href="refunds.html" target="_blank">cancellation policy</a> (no refunds; cancel anytime to stop future charges).</label>
-          <button type="submit">Activate my monitoring</button>
-        </form>
-        <div class="mo-ok" id="mo-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
+    <div class="verdict hidden" id="verdict">
+      <div class="verdict-head" id="v-head">
+        <span class="verdict-dot" id="v-dot"></span>
+        <span class="verdict-tag" id="v-tag"></span>
+        <span class="verdict-title" id="v-title"></span>
       </div>
+      <div class="verdict-body">
+        <p id="v-sub"></p>
+        <div id="v-metrics" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div class="datastamp" id="v-stamp"></div>
 
-      <div class="steph"><span class="num">2</span><div><div class="st-t">Or take one deep look</div><div class="st-s">A single full report on your property — no subscription.</div></div></div>
-      <div class="upsell" id="upsell">
-        <div class="up-copy"><b>One deep look at your home — $5.99.</b> Your equity, all five indicators, and your exact walk-away number if you sold today. Same price as a month of monitoring — but the report only knows about today. Monitoring never stops watching.</div>
-        <div class="up-ctas">
-          <a class="up-btn" id="up-buy" href="report.html#buy">Get my full report · $5.99</a>
-          <a class="up-link" href="report.html">See a sample report →</a>
+        <div class="v-ctas">
+          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Watch this ZIP — $5.99/mo</a>
+          <a class="linkbtn" href="report.html" style="text-decoration:underline">See a sample EquityWatch report →</a>
+          <button class="linkbtn" id="share-btn">Share</button>
+          <button class="linkbtn" id="again">Check another ZIP</button>
         </div>
+
+        <div class="mform" id="mform">
+          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — we watch this ZIP continuously and alert you the moment its verdict changes. <b>$5.99/mo, cancel anytime.</b></div>
+          <input type="email" id="mf-email" placeholder="you@email.com" required>
+          <input type="text" id="mf-address" placeholder="Property address (optional)">
+          <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a> and the <a href="refunds.html" target="_blank">no-refund cancellation policy</a> (cancel anytime to stop future charges).</label>
+          <button class="btn" style="font-size:14px" onclick="subMonitor(event)">Activate my monitoring</button>
+          <div class="ok" id="mf-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
+          <div class="err" id="mf-err">Couldn't save your signup — please try again in a minute, or write to naomi@shouldisellyet.com.</div>
+        </div>
+
+        <div class="partner" id="partner"></div>
       </div>
-      <div id="sponsor"></div>
-      <button class="share" onclick="share()">Share this verdict</button>
-      <div class="fineprint" id="fineprint">Updated when new market data is published. Not financial advice — talk to a professional before making big moves.</div>
     </div>
 
-    <div class="waitlist" id="waitlist">
-      <h3 id="wl-title">We're not watching your ZIP yet</h3>
-      <p>Drop your email and we'll alert you the moment your ZIP code goes live — and every time its warning level changes.</p>
-      <form id="wl-form" onsubmit="return joinWaitlist(event)">
-        <input id="wl-email" type="email" required placeholder="you@email.com" aria-label="Email">
-        <button type="submit">Watch my ZIP</button>
+    <div class="card waitcard" id="waitcard">
+      <div class="t">We're not scoring <span id="wl-zip"></span> yet</div>
+      <p>Smaller markets report too few sales for a reliable verdict. Leave your email and we'll tell you the moment your ZIP goes live.</p>
+      <form onsubmit="return joinWaitlist(event)">
+        <input type="email" id="wl-email" placeholder="you@email.com" required>
+        <button class="btn" style="font-size:14px" type="submit">Notify me</button>
       </form>
-      <div class="ok" id="wl-ok">✓ You're on the list. We'll email you when your ZIP goes live.</div>
+      <div class="ok" id="wl-ok">✓ You're on the list.</div>
     </div>
   </div>
-</header>
 
-<section class="wrap">
-  <span class="kicker">How it works</span>
-  <h2>Three steps. Zero jargon.</h2>
-  <p class="lede">The same early-warning signals professionals watch, translated into a traffic light anyone can read.</p>
-  <div class="grid">
-    <div class="tile"><span class="n">1</span><h3>We watch the data</h3><p>Whenever new figures publish, we pull inventory, price cuts, days on market, and sales for your ZIP code from public sources.</p></div>
-    <div class="tile"><span class="n">2</span><h3>We check the thresholds</h3><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
-    <div class="tile"><span class="n">3</span><h3>You get one answer</h3><p>Hold, watch, or act — plus the reasons why, in plain English. No spreadsheets, no dashboards, no noise.</p></div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="mapcard">
+      <div class="maphead">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite"></span>
+          <span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--muted)">WATCHING 24,000+ ZIP MARKETS</span>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--green)"></i>hold</span>
+          <span><i style="background:var(--amber)"></i>watch</span>
+          <span><i style="background:var(--red)"></i>act</span>
+        </div>
+      </div>
+      <canvas id="map" style="display:block;width:100%;height:auto"></canvas>
+      <div class="mapfeed" id="feed">…</div>
+    </div>
+    <div style="font-size:12px;color:var(--fainter);line-height:1.5">Every dot is a metro we score against downturn thresholds. Verdicts refresh the moment new figures publish.</div>
+  </div>
+</div>
+
+<section class="band" id="signals">
+  <div style="display:flex;align-items:baseline;gap:18px;margin-bottom:28px;flex-wrap:wrap">
+    <h2>What we crunch</h2>
+    <span style="font-size:13.5px;color:var(--faint)">Four signals that move months before prices do — with the exact danger lines we use.</span>
+  </div>
+  <div class="grid4">
+    <div class="sig"><div class="k">SIGNAL 01</div><div class="n">Months of supply</div><p>How long it would take to sell every home on the market. Above 4 months, sellers lose pricing power. The single best early signal.</p><div class="line">Danger line: 4.0 mo</div></div>
+    <div class="sig"><div class="k">SIGNAL 02</div><div class="n">Price trend</div><p>The typical sale price versus a year ago — cross-checked against price per square foot so condo-mix distortions don't fool you.</p><div class="line">Danger line: −2% y/y</div></div>
+    <div class="sig"><div class="k">SIGNAL 03</div><div class="n">Time to sell</div><p>Homes sitting longer is the first visible crack, appearing months before prices actually move.</p><div class="line">Danger line: +40% y/y</div></div>
+    <div class="sig"><div class="k">SIGNAL 04</div><div class="n">Price cuts &amp; supply waves</div><p>When over a third of listings cut asking price — or inventory surges — competition is building for the day you sell.</p><div class="line">Danger lines: 35% · +50% y/y</div></div>
   </div>
 </section>
 
-<section class="wrap">
-  <div class="signals">
-    <span class="kicker">The signals</span>
-    <h2>Prices are the last thing to fall</h2>
-    <p class="lede">By the time your home's value drops, the warning signs have been visible for months. These move first:</p>
-    <div class="sig-row">
-      <div class="sig"><div class="bar" style="background:var(--red)"></div><b>Months of supply</b><span>Above 4 months, sellers lose pricing power. The single best early signal.</span></div>
-      <div class="sig"><div class="bar" style="background:var(--amber)"></div><b>Price cuts</b><span>When over a third of listings cut their price, the market is telling you something.</span></div>
-      <div class="sig"><div class="bar" style="background:var(--amber)"></div><b>Days on market</b><span>Homes sitting longer is the first visible crack — months before prices move.</span></div>
-      <div class="sig"><div class="bar" style="background:var(--green)"></div><b>Inventory surges</b><span>A wave of new listings means more competition when you sell. We track the trend.</span></div>
-    </div>
+<section class="band" id="how">
+  <div class="steps">
+    <div class="step"><div class="num">1</div><div class="t">We watch the data</div><p>Whenever new figures publish, we pull inventory, price cuts, days on market and sales for your ZIP from public sources.</p></div>
+    <div class="step"><div class="num">2</div><div class="t">We test the thresholds</div><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
+    <div class="step"><div class="num">3</div><div class="t">You get one answer</div><p>Hold, watch, or act — with the exact numbers behind it, in plain English. No spreadsheets, no jargon.</p></div>
   </div>
 </section>
 
-<section class="wrap">
-  <span class="kicker">Pricing</span>
-  <h2>Free forever. Upgrade if you want more.</h2>
-  <p class="lede">Checking your ZIP will always be free. Pay only when you want us watching <em>your</em> home specifically.</p>
-  <div class="plans">
-    <div class="plan">
-      <div class="tag">Free</div>
-      <div class="price">$0</div>
-      <div class="per">forever</div>
-      <ul><li>Check any ZIP code, anytime</li><li>Traffic-light verdict with signal gauges</li><li>Updated whenever new data publishes</li></ul>
+<section class="band" id="pricing">
+  <h2>Checking is free, forever.</h2>
+  <p style="margin:6px 0 28px;font-size:14.5px;color:var(--muted)">Pay only if you want us watching your home continuously — and telling you the moment conditions change.</p>
+  <div class="pricing">
+    <div class="price-card">
+      <div style="font-size:14px;font-weight:650">Free check</div>
+      <div class="price">$0 <small>forever</small></div>
+      <div class="price-feats">Any ZIP, anytime · full traffic-light verdict · all signal gauges · refreshed on every data release</div>
+      <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="#check">Check a ZIP</a>
     </div>
-    <div class="plan hot">
-      <div class="badge">Most popular</div>
-      <div class="tag">Equity Watch</div>
-      <div class="price">$5.99</div>
-      <div class="per">per month · or $59/year</div>
-      <ul><li>We monitor your ZIP and home continuously</li><li>Instant alert the moment conditions change</li><li>Your estimated equity, updated monthly</li><li>"What selling nets you today" breakdown</li></ul>
-    </div>
-    <div class="plan">
-      <div class="tag">For Agents</div>
-      <div class="price">$39</div>
-      <div class="per">per ZIP per month · exclusive</div>
-      <ul><li>Your branding on every alert in your ZIP</li><li>Monthly leads from worried homeowners</li><li>Done-for-you market snapshot reports</li></ul>
+    <div class="price-card featured">
+      <div class="price-badge">EQUITYWATCH</div>
+      <div style="font-size:14px;font-weight:650">We watch your home for you</div>
+      <div class="price">$5.99 <small>/mo · cancel anytime</small></div>
+      <div class="price-feats">Instant alert the moment your ZIP's verdict changes · your estimated equity, updated monthly · your walk-away number if you sold today · full report included</div>
+      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Start monitoring</a>
     </div>
   </div>
+  <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b>$5.99 one-time</b>. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
+  <div style="margin-top:10px;font-size:13px;color:var(--faint)">Real-estate agent? <a href="mailto:naomi@shouldisellyet.com?subject=ZIP%20sponsorship%20inquiry" style="text-decoration:underline">Sponsor your ZIP — $39/mo, exclusive →</a></div>
 </section>
 
-<footer class="wrap">
-  <div class="f-brand">
-    <svg width="18" height="25" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#98a2b3"/><circle cx="50" cy="34" r="15" fill="#fff"/><circle cx="50" cy="70" r="15" fill="#fff"/><circle cx="50" cy="106" r="15" fill="#fff"/></svg>
+<footer>
+  <div class="foot-row">
+    <span>© 2026 ShouldISellYet.com · operated by Yayday LLC · NTRealty is an affiliated partner</span>
+    <span style="display:flex;gap:18px"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a></span>
   </div>
-  <div>© 2026 ShouldISellYet.com · <a href="terms.html" style="color:inherit">Terms</a> · <a href="privacy.html" style="color:inherit">Privacy</a> · <a href="refunds.html" style="color:inherit">Refunds & Cancellation</a></div>
-  <div class="disc" id="attribution">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
-  <div class="disc" style="margin-top:8px">ShouldISellYet.com is operated by Yayday LLC. NTRealty is an affiliated partner.</div>
+  <div class="disclaimer" id="attribution">Verdicts are generated from public housing-market data (Data from Redfin, a national real estate brokerage — redfin.com) and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
 </footer>
+</div>
 
 <script>
 // ————— Backend config —————
-// Paste your Supabase project values (Settings → API). The anon key is safe to
-// publish: row-level security only allows INSERT into `subscribers`.
-const SUPABASE_URL = "";        // e.g. "https://abcd1234.supabase.co"
+// Stripe Payment Links: paste and the buttons go straight to checkout.
+const MONITOR_CHECKOUT_URL = "";               // $5.99/mo EquityWatch
+// Supabase (Settings → API). Anon key is publish-safe: RLS allows INSERT only.
+const SUPABASE_URL = "";
 const SUPABASE_ANON_KEY = "";
 
 async function saveSignup(rec) {
@@ -393,12 +313,8 @@ async function saveSignup(rec) {
   try {
     const r = await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
       method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-      },
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+                 "Content-Type": "application/json", "Prefer": "return=minimal" },
       body: JSON.stringify(rec)
     });
     return r.ok;
@@ -407,26 +323,23 @@ async function saveSignup(rec) {
 
 // ————— Data layer —————
 const DEMO = {
-  "20874": {l:"green", st:"MD", m:{mos:2.6, spy:0.02, dom:47, domy:0.38, pd:0.25}, r:[]},
-  "20906": {l:"yellow", st:"MD", m:{mos:2.8, spy:-0.072, dom:43, pd:0.22}, r:[["price_falling_fast",-0.072]]}
+  "20874": {l:"green", st:"MD", s:0, m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
+  "20906": {l:"yellow", st:"MD", s:3, m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
 };
-let INDEX = null, META = null, live = false, SPONSORS = null;
+let INDEX = null, META = null, SPONSORS = null, live = false;
 const stateCache = {};
-fetch("sponsors.json").then(r => r.ok ? r.json() : null).then(j => { SPONSORS = j; }).catch(() => {});
 
 fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
-  if (j && Object.keys(j).length > 0) {
-    INDEX = j; live = true;
-    // rough ZIP-count estimate for the trust bar (prefixes × ~variance is wrong; count states instead)
-  }
+  if (j && Object.keys(j).length > 0) { INDEX = j; live = true; }
   return fetch("data/meta.json").then(r => r.ok ? r.json() : null);
 }).then(m => {
   if (m) {
     META = m;
-    document.getElementById("eyebrow-text").textContent =
-      "Live · market data through " + m.period;
+    document.getElementById("eyebrow").textContent =
+      "FREE ZIP CHECK · MARKET DATA THROUGH " + (m.period || "").toUpperCase();
   }
 }).catch(() => {});
+fetch("sponsors.json").then(r => r.ok ? r.json() : null).then(j => { SPONSORS = j; }).catch(() => {});
 
 async function lookup(zip) {
   if (live && INDEX) {
@@ -441,234 +354,242 @@ async function lookup(zip) {
   }
   return DEMO[zip] || null;
 }
-
-// ————— Presentation: signal gauges —————
-const clampPct = x => Math.max(2, Math.min(98, x));
-const SEV = { r: 3, a: 2, g: 1, i: 0 };
-
-function meterRow(o) {
-  return `<div class="mrow">
-    <div class="m-top"><span class="m-name">${o.name}<span class="m-chip ${o.tone}">${o.chip}</span></span>
-    <span class="m-val" style="color:${o.tone === 'r' ? 'var(--red)' : o.tone === 'a' ? '#b07f0e' : 'var(--ink)'}">${o.val}</span></div>
-    <div class="m-note">${o.note}</div>
-    <div class="meter ${o.rev ? 'rev' : ''}"><span class="th" style="left:${o.th}%"></span><span class="pin ${o.tone}" style="left:${o.pin}%"></span></div>
-    <div class="meter-cap"><span>${o.caps[0]}</span><span>${o.caps[1]}</span><span>${o.caps[2]}</span></div>
-  </div>`;
-}
-
-function buildMeters(d) {
-  const m = d.m || {}, codes = new Set((d.r || []).map(x => x[0]));
-  if (codes.has("insufficient_data"))
-    return `<div class="m-info">ℹ️ Limited sales data in this ZIP — smaller markets report fewer transactions, so we hold the verdict at HOLD until signals are reliable.</div>`;
-  const rows = [];
-  if (m.mos != null) {
-    const t = m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g";
-    rows.push({ name: "Months of supply", tone: t, chip: t === "g" ? "HEALTHY" : t === "a" ? "TRIPPED" : "SEVERE",
-      val: m.mos.toFixed(1) + " mo",
-      note: t === "g" ? "Below the 4-month danger line — sellers still hold the pricing power." : "Above the 4-month danger line — buyers are gaining the upper hand.",
-      pin: clampPct(m.mos / 8 * 100), th: 50, rev: false, caps: ["0", "4.0 danger line", "8+"] });
-  }
-  if (m.spy != null) {
-    const t = m.spy < -0.05 ? "r" : m.spy < -0.02 ? "a" : "g";
-    rows.push({ name: "Prices vs. last year", tone: t, chip: t === "g" ? "HEALTHY" : "TRIPPED",
-      val: (m.spy >= 0 ? "+" : "–") + Math.abs(m.spy * 100).toFixed(1) + "%",
-      note: t === "g" ? "The typical sale price is holding or rising." : t === "a" ? "A mild decline is underway — worth watching closely." : "A meaningful decline vs. a year ago.",
-      pin: clampPct((m.spy * 100 + 12) / 24 * 100), th: 41.7, rev: true, caps: ["–12%", "–2% danger line", "+12%"] });
-  }
-  if (m.dom != null && m.domy != null) {
-    const prior = m.dom - m.domy, p = prior > 0 ? m.domy / prior : 0;
-    const t = p > 0.4 ? "a" : "g";
-    rows.push({ name: "Time to sell", tone: t, chip: t === "g" ? "NORMAL" : "SLOWING",
-      val: (m.domy > 0 ? "+" : "") + Math.round(m.domy) + " days",
-      note: m.domy <= 0 ? "Homes are selling as fast or faster than last year." : "Homes take " + Math.round(m.dom) + " days now vs. " + Math.round(prior) + " a year ago.",
-      pin: clampPct((p * 100 + 50) / 150 * 100), th: 60, rev: false, caps: ["faster", "+40% danger line", "much slower"] });
-  }
-  if (m.invy != null) {
-    const t = m.invy > 0.5 ? "a" : "g";
-    rows.push({ name: "Homes for sale", tone: t, chip: t === "g" ? "NORMAL" : "SURGING",
-      val: (m.invy >= 0 ? "+" : "–") + Math.abs(m.invy * 100).toFixed(0) + "%",
-      note: t === "g" ? "Inventory growth is within the normal range." : "A wave of new listings means more competition for sellers.",
-      pin: clampPct((m.invy * 100 + 20) / 120 * 100), th: 58.3, rev: false, caps: ["falling", "+50% danger line", "+100%"] });
-  }
-  if (m.pd != null) {
-    const t = m.pd > 0.35 ? "a" : "g";
-    rows.push({ name: "Listings with price cuts", tone: t, chip: t === "g" ? "NORMAL" : "WIDESPREAD",
-      val: Math.round(m.pd * 100) + "%",
-      note: t === "g" ? "Price cutting is within the normal range." : "Over a third of sellers are cutting — capitulation is spreading.",
-      pin: clampPct(m.pd / 0.7 * 100), th: 50, rev: false, caps: ["0%", "35% danger line", "70%+"] });
-  }
-  rows.sort((a, b) => SEV[b.tone] - SEV[a.tone]);
-  return rows.slice(0, 4).map(meterRow).join("");
-}
-
-const CAPTIONS = {
-  red: "Multiple sell-signals have tripped in this ZIP. If selling was already on your mind, the data says make a plan now — not next spring.",
-  yellow: "One meaningful warning is flashing. No reason to panic — but this is the moment to watch closely and know your numbers.",
-  green: "No danger signals tripped. This market isn't putting pressure on your equity right now."
-};
-
-function scorebarHTML(score, level) {
-  const cls = level === "red" ? "on-r" : level === "yellow" ? "on-a" : "on-g";
-  let segs = "";
-  for (let i = 0; i < 8; i++) segs += `<span class="sb-seg ${i < score ? cls : ""}"></span>`;
-  return `<div class="sb-label">Warning score: ${score} of 8</div>
-    <div class="sb-track">${segs}</div>
-    <div class="sb-cap"><span>0 · calm</span><span>8 · full alarm</span></div>`;
-}
-
-const THEME = {
-  green: { word:"HOLD",  color:"var(--green)", hex:"#12a150" },
-  yellow:{ word:"WATCH", color:"var(--amber)", hex:"#e8a317" },
-  red:   { word:"ACT",   color:"var(--red)",   hex:"#e03e36" }
-};
-
-function lampSVG(level) {
-  const on = { red: level==="red", amber: level==="yellow", green: level==="green" };
-  const lamp = (cy, hex, active) =>
-    `<circle cx="50" cy="${cy}" r="15" fill="${active ? hex : '#e6e4de'}" ${active ? `style="filter:drop-shadow(0 0 10px ${hex}aa)"` : ""}/>`;
-  return `<svg width="46" height="64" viewBox="0 0 100 140" aria-hidden="true">
-    <rect x="18" y="4" width="64" height="132" rx="18" fill="#101828"/>
-    ${lamp(34, "#e03e36", on.red)}${lamp(70, "#e8a317", on.amber)}${lamp(106, "#12a150", on.green)}
-  </svg>`;
-}
-
-const AVATAR_FALLBACK = "data:image/svg+xml," + encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#1b2c47'/><stop offset='1' stop-color='#16243a'/></linearGradient></defs><rect width='100' height='100' rx='50' fill='url(%23g)'/><circle cx='50' cy='40' r='16' fill='#6fe3c2' opacity='.9'/><path d='M22 88c4-18 15-26 28-26s24 8 28 26' fill='#6fe3c2' opacity='.9'/></svg>`);
-
 function sponsorFor(zip) {
   if (!SPONSORS) return null;
   const key = SPONSORS.prefixes[zip.slice(0, 3)];
   return key ? SPONSORS.sponsors[key] : null;
 }
 
-function sponsorHTML(s, level, zip) {
-  const kicker = level === "red" ? "Talk it through with a pro" : "Get a second opinion";
-  const subject = encodeURIComponent(`Free consult — ZIP ${zip} rated ${THEME[level].word} on ShouldISellYet`);
-  const body = encodeURIComponent(`Hi ${s.name},\n\nMy ZIP (${zip}) is rated ${THEME[level].word} on ShouldISellYet.com and I'd like a free consultation about my home.\n\nMy address:\nBest time to reach me:`);
-  const phoneDisplay = s.phoneDisplay ||
-    (s.phone ? s.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
-  const ctas = [
-    s.phone ? `<a class="sp-btn primary" href="tel:${s.phone}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px;margin-right:7px"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z" fill="currentColor"/></svg>Call ${s.name} ${phoneDisplay}</a>` : "",
-    `<a class="sp-btn ${s.phone ? "ghost" : "primary"}" href="mailto:${s.email}?subject=${subject}&body=${body}">Request a free consult</a>`,
-    s.url ? `<a class="sp-btn ghost" href="${s.url}" target="_blank" rel="noopener">${s.brokerage} →</a>` : ""
-  ].join("");
-  const chips = (s.chips || []).map(c => `<span class="sp-chip">${c}</span>`).join("");
-  return `<div class="sponsor">
-    <div class="steph" style="margin-top:0"><span class="num">3</span><div><div class="st-t">${kicker}<span class="sp-tag">Licensed local partner</span></div><div class="st-s">Free conversation, real comparable sales, no obligation.</div></div></div>
-    <div class="sp-row">
-      <img class="sp-photo" src="${s.photo}" alt="${s.name}, ${s.brokerage}" onerror="this.onerror=null;this.src='${AVATAR_FALLBACK}'">
-      <div>
-        <div class="sp-name">${s.name} <small>${s.title} · ${s.area}</small></div>
-        <div class="sp-brok">${s.brokerage}</div>
-        ${s.blurb ? `<div class="sp-blurb">${s.blurb}</div>` : ""}
-        ${chips ? `<div class="sp-chips">${chips}</div>` : ""}
-      </div>
-    </div>
-    <div class="sp-ctas">${ctas}</div>
-  </div>`;
+// ————— Verdict presentation —————
+const $ = id => document.getElementById(id);
+const KINDS = {
+  green:  { key:"hold",  tag:"HOLD",  col:"var(--green)", hex:"#2e9e5b", soft:"#e9f4ee", line:"#bcdcc9",
+            headline:"No warning signs in {zip}",
+            sub:"Nothing in the current data says this market is turning. If you sell now, it should be about your life — not the market." },
+  yellow: { key:"watch", tag:"WATCH", col:"var(--amber)", hex:"#c8891f", soft:"#faf1dd", line:"#e8d5a8",
+            headline:"Early signals moving in {zip}",
+            sub:"A warning signal has tripped. Not a crisis — but this is exactly how turns start, months before prices move. Worth watching closely." },
+  red:    { key:"act",   tag:"ACT",   col:"var(--red)",   hex:"#d64545", soft:"#fbe9e9", line:"#ecc3c3",
+            headline:"Danger lines crossed in {zip}",
+            sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power. If selling was already on your mind, make a plan now — not next spring." }
+};
+const clampPct = x => Math.max(3, Math.min(97, x));
+const tcol = t => t === "r" ? "#d64545" : t === "a" ? "#c8891f" : "#2e9e5b";
+
+function buildMetricRows(d) {
+  const m = d.m || {}, rows = [];
+  if (m.mos != null) {
+    const t = m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g";
+    rows.push({ name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t,
+      fill:clampPct(m.mos/8*100), th:50, note: t==="g" ? "line: 4.0 mo" : "past the line" });
+  }
+  if (m.spy != null) {
+    const t = m.spy < -0.05 ? "r" : m.spy < -0.02 ? "a" : "g";
+    rows.push({ name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t,
+      fill:clampPct((0.12 - m.spy)/0.24*100), th:58.3, note: t==="g" ? "holding or rising" : "line: −2% y/y" });
+  }
+  if (m.dom != null && m.domy != null) {
+    const prior = m.dom - m.domy, p = prior > 0 ? m.domy/prior : 0;
+    const t = p > 0.4 ? "a" : "g";
+    rows.push({ name:"TIME TO SELL", val:Math.round(m.dom)+" days", t,
+      fill:clampPct((p*100+50)/150*100), th:60,
+      note: m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "as fast as last yr" });
+  }
+  if (m.pd != null) {
+    const t = m.pd > 0.35 ? "a" : "g";
+    rows.push({ name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t,
+      fill:clampPct(m.pd/0.7*100), th:50, note: t==="g" ? "line: 35%" : "past the line" });
+  }
+  if (m.invy != null) {
+    const t = m.invy > 0.5 ? "a" : "g";
+    rows.push({ name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t,
+      fill:clampPct((m.invy*100+20)/120*100), th:58.3, note: t==="g" ? "line: +50% y/y" : "surging" });
+  }
+  return rows.slice(0, 4);
 }
 
+function renderMetrics(rows) {
+  return rows.map(r =>
+    '<div class="metric"><span class="name">'+r.name+'</span>'+
+    '<span class="val" style="color:'+tcol(r.t)+'">'+r.val+'</span>'+
+    '<span class="track"><span class="fill" style="width:'+r.fill+'%;background:'+tcol(r.t)+'"></span><span class="th" style="left:'+r.th+'%"></span></span>'+
+    '<span class="note">'+r.note+'</span></div>'
+  ).join("");
+}
+
+function partnerHTML(s, kind, zip) {
+  const phone = s.phoneDisplay || (s.phone ? s.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
+  const subject = encodeURIComponent("Free consult — ZIP " + zip + " rated " + kind.toUpperCase() + " on ShouldISellYet");
+  return `
+    <img src="${s.photo}" alt="${s.name}, ${s.brokerage}"
+         onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E'">
+    <div>
+      <div class="p-name">${s.name} <small>${s.title} · ${s.brokerage}</small><span class="p-tag">LICENSED LOCAL PARTNER</span></div>
+      <div class="p-blurb">${s.blurb || ""}</div>
+      <div class="p-ctas">
+        ${s.phone ? '<a class="btn" style="font-size:12.5px;padding:8px 14px" href="tel:'+s.phone+'">Call '+s.name+' '+phone+'</a>' : ""}
+        <a class="btn-outline" style="border:1.5px solid var(--navy)" href="mailto:${s.email}?subject=${subject}">Request a free consult</a>
+        ${s.url ? '<a class="btn-outline" style="border:1.5px solid var(--hairline);color:var(--muted)!important" href="'+s.url+'" target="_blank" rel="noopener">'+s.brokerage+' →</a>' : ""}
+      </div>
+    </div>`;
+}
+
+function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null;
 
-async function check() {
-  const zip = document.getElementById("zip").value.trim();
-  const v = document.getElementById("verdict"), w = document.getElementById("waitlist");
-  if (!/^\d{5}$/.test(zip)) { document.getElementById("zip").focus(); return; }
+async function run() {
+  const zip = $("zip").value;
+  if (!/^\d{5}$/.test(zip)) { $("zip").focus(); return; }
+  show($("verdict"), false); $("waitcard").style.display = "none"; show($("crunch"), true);
+  $("crunch-zip").textContent = zip;
+  const started = Date.now();
   const d = await lookup(zip);
-  if (d) {
-    const t = THEME[d.l];
-    document.getElementById("lamp").innerHTML = lampSVG(d.l);
-    const word = document.getElementById("word");
-    word.textContent = t.word;
-    word.style.color = t.color;
-    document.getElementById("vzip").textContent =
-      zip + (d.st ? " · " + d.st : "") + (META ? " · data through " + META.period : "");
-    document.getElementById("vcaption").textContent = CAPTIONS[d.l];
-    document.getElementById("scorebar").innerHTML = scorebarHTML(d.s || 0, d.l);
-    document.getElementById("meters").innerHTML = buildMeters(d);
-    document.getElementById("mo-zip").textContent = zip;
+  // let the crunch animation breathe, then reveal
+  setTimeout(() => {
+    show($("crunch"), false);
+    if (!d) {
+      $("wl-zip").textContent = zip;
+      $("wl-ok").style.display = "none";
+      $("waitcard").querySelector("form").style.display = "flex";
+      $("waitcard").style.display = "block";
+      return;
+    }
+    const insufficient = (d.r || []).some(x => x[0] === "insufficient_data");
+    const k = KINDS[d.l];
+    $("v-head").style.background = k.soft;
+    $("verdict").style.borderColor = k.line;
+    $("v-dot").style.background = k.hex;
+    $("v-dot").style.boxShadow = "0 0 0 4px " + k.soft + ",0 0 0 5px " + k.hex;
+    $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
+    $("v-title").textContent = insufficient
+      ? "Limited sales data in " + zip
+      : k.headline.replace("{zip}", zip);
+    $("v-sub").textContent = insufficient
+      ? "Smaller markets report few transactions, so we hold the verdict at HOLD until signals are statistically reliable. Here's what we can see:"
+      : k.sub;
+    $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d));
+    $("v-stamp").textContent = zip + (d.st ? " · " + d.st : "") +
+      (META ? " · data through " + META.period + " · " + META.attribution : "");
+    $("mform").style.display = "none"; $("mf-ok").style.display = "none"; $("mf-err").style.display = "none";
     const sp = sponsorFor(zip);
-    document.getElementById("sponsor").innerHTML =
-      (sp && d.l !== "green") ? sponsorHTML(sp, d.l, zip) : "";
-    if (META) document.getElementById("fineprint").textContent =
-      META.attribution + ". Updated when new data publishes. Not financial advice — talk to a professional before making big moves.";
-    v.style.display = "block"; w.style.display = "none";
-    lastVerdict = { zip, word: t.word, level: d.l };
-    v.scrollIntoView({ behavior: "smooth", block: "start" });
-  } else {
-    w.style.display = "block"; v.style.display = "none";
-    document.getElementById("wl-title").textContent = "We're not watching " + zip + " yet";
-    document.getElementById("wl-ok").style.display = "none";
-    document.getElementById("wl-form").style.display = "flex";
-    w.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+    const pt = $("partner");
+    if (sp && d.l !== "green") { pt.innerHTML = partnerHTML(sp, k.key, zip); pt.style.display = "flex"; }
+    else { pt.style.display = "none"; }
+    lastVerdict = { zip, tag: k.tag, level: d.l };
+    show($("verdict"), true);
+    $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, Math.max(0, 1600 - (Date.now() - started)));
 }
 
-function share() {
-  if (!lastVerdict) return;
-  const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
-  const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.word +
-    " this month on ShouldISellYet.com — check yours free.";
-  if (navigator.share) { navigator.share({ text }); }
-  else { navigator.clipboard.writeText(text).then(() => alert("Copied! Paste it anywhere.")); }
-}
-
-// ————— Email capture —————
-const FORM_ENDPOINT = "";                    // paste your Formspree endpoint here
-const FALLBACK_EMAIL = "naomi@shouldisellyet.com";
-
-async function joinWaitlist(e) {
-  e.preventDefault();
-  const email = document.getElementById("wl-email").value;
-  const zip = document.getElementById("zip").value.trim();
-  if (await saveSignup({ email, zip, plan: "waitlist", source: "waitlist" })) { showOk(); return false; }
-  if (FORM_ENDPOINT) {
-    fetch(FORM_ENDPOINT, {
-      method: "POST",
-      headers: { "Accept": "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ email, zip, source: "waitlist" })
-    }).then(() => showOk()).catch(() => showOk());
-  } else {
-    window.location.href = "mailto:" + FALLBACK_EMAIL +
-      "?subject=" + encodeURIComponent("Watch my ZIP: " + zip) +
-      "&body=" + encodeURIComponent("Please add me to the ShouldISellYet waitlist.\nZIP: " + zip + "\nEmail: " + email);
-    showOk();
-  }
-  return false;
-}
-function showOk() {
-  document.getElementById("wl-form").style.display = "none";
-  document.getElementById("wl-ok").style.display = "block";
-}
-
-// EquityWatch monitoring subscription (paid)
-const MONITOR_CHECKOUT_URL = "";   // paste a Stripe Payment Link for the $5.99/mo plan
-function buyMonitor() {
+// ————— Purchase / signup (no mailto) —————
+function buyMonitor(fromPricing) {
   if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
-  const f = document.getElementById("mo-form");
+  const f = $("mform");
+  if (fromPricing === true && $("verdict").classList.contains("hidden")) {
+    // no verdict open yet — send them to the checker first
+    document.getElementById("check").scrollIntoView({ behavior: "smooth" });
+    $("zip").focus();
+    return false;
+  }
   f.style.display = "flex";
-  document.getElementById("mo-email").focus();
+  $("mf-email").focus();
   return false;
 }
 
 async function subMonitor(e) {
   e.preventDefault();
-  const email = document.getElementById("mo-email").value;
-  const address = document.getElementById("mo-address").value;
-  const zip = document.getElementById("zip").value.trim();
-  const done = () => {
-    document.getElementById("mo-form").style.display = "none";
-    document.getElementById("mo-ok").style.display = "block";
-  };
-  const stored = await saveSignup({ email, zip, address, plan: "monitor", source: "verdict-card" });
-  if (stored) { done(); return false; }
-  window.location.href = "mailto:" + FALLBACK_EMAIL +
-    "?subject=" + encodeURIComponent("Start EquityWatch monitoring — ZIP " + zip) +
-    "&body=" + encodeURIComponent("I'd like EquityWatch monitoring ($5.99/mo).\nZIP: " + zip + "\nAddress: " + address + "\nEmail: " + email);
-  done();
+  const email = $("mf-email").value, address = $("mf-address").value;
+  if (!email || !/@/.test(email)) { $("mf-email").focus(); return false; }
+  if (!$("mf-tos").checked) { $("mf-tos").focus(); return false; }
+  const zip = $("zip").value;
+  const ok = await saveSignup({ email, zip, address, plan: "monitor", source: "verdict-card" });
+  $("mf-ok").style.display = ok ? "block" : "none";
+  $("mf-err").style.display = ok ? "none" : "block";
+  if (ok) { $("mf-email").value = ""; $("mf-address").value = ""; }
   return false;
 }
-document.getElementById("zip").addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+
+async function joinWaitlist(e) {
+  e.preventDefault();
+  const email = $("wl-email").value, zip = $("zip").value;
+  const ok = await saveSignup({ email, zip, plan: "waitlist", source: "waitlist" });
+  if (ok) {
+    e.target.style.display = "none";
+    $("wl-ok").style.display = "block";
+  } else {
+    $("wl-ok").textContent = "Couldn't save — please try again, or write to naomi@shouldisellyet.com";
+    $("wl-ok").style.display = "block"; $("wl-ok").style.color = "var(--red)";
+  }
+  return false;
+}
+
+// ————— Share —————
+$("share-btn").addEventListener("click", () => {
+  if (!lastVerdict) return;
+  const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
+  const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.tag +
+    " this month on ShouldISellYet.com — check yours free.";
+  if (navigator.share) { navigator.share({ text }); }
+  else { navigator.clipboard.writeText(text).then(() => alert("Copied! Paste it anywhere.")); }
+});
+
+$("go").addEventListener("click", run);
+$("zip").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+$("zip").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 5); });
+$("again").addEventListener("click", () => { show($("verdict"), false); $("zip").value = ""; $("zip").focus(); });
+
+// ————— Live-desk feed line (truthful facts, rotating) —————
+function feedLines() {
+  const period = META && META.period ? META.period : "the latest release";
+  return [
+    "scoring 24,000+ ZIP markets · data through " + period,
+    "signals: supply · price trend · time to sell · price cuts",
+    "source: public market data (Redfin Data Center) · refreshed on publication",
+    "verdicts recompute automatically when new figures publish",
+  ];
+}
+let feedIx = 0;
+function tickFeed() {
+  const lines = feedLines();
+  document.getElementById("feed").textContent = "● " + lines[feedIx++ % lines.length];
+}
+tickFeed(); setInterval(tickFeed, 3200);
+
+// ————— US map with pulsing metro dots (decorative; degrades gracefully) —————
+const METROS = [[-74.0,40.7],[-118.24,34.05],[-87.63,41.88],[-95.37,29.76],[-112.07,33.45],[-75.16,39.95],[-98.49,29.42],[-117.16,32.72],[-96.80,32.78],[-97.74,30.27],[-81.66,30.33],[-83.0,39.96],[-80.84,35.23],[-86.16,39.77],[-122.33,47.61],[-104.99,39.74],[-71.06,42.36],[-86.78,36.16],[-122.68,45.52],[-115.14,36.17],[-90.05,35.15],[-85.76,38.25],[-87.91,43.04],[-80.19,25.76],[-82.46,27.95],[-84.39,33.75],[-93.27,44.98],[-90.07,29.95],[-111.89,40.76],[-116.20,43.62],[-78.64,35.78],[-94.58,39.10],[-121.49,38.58],[-90.20,38.63],[-79.99,40.44],[-81.69,41.50],[-83.05,42.33],[-76.61,39.29],[-77.44,37.54],[-97.52,35.47],[-106.65,35.08],[-110.97,32.22],[-119.79,36.74],[-95.93,41.26],[-117.43,47.66],[-106.49,31.76],[-108.5,45.78],[-96.79,46.88],[-92.29,34.75],[-79.93,32.78]];
+function mstatus(i){ return i % 9 === 0 ? 2 : (i % 3 === 0 ? 1 : 0); }
+async function initMap(){
+  for (let i = 0; i < 100; i++){ if (window.d3 && window.topojson) break; await new Promise(r => setTimeout(r, 150)); }
+  if (!window.d3 || !window.topojson) return;
+  let topo;
+  try { topo = await (await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json")).json(); } catch(e){ return; }
+  const states = topojson.feature(topo, topo.objects.states);
+  const cv = document.getElementById("map"), W = 560, H = 360, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr;
+  const proj = d3.geoAlbersUsa().fitExtent([[16,16],[W-16,H-16]], states);
+  const path = d3.geoPath(proj);
+  const base = document.createElement("canvas"); base.width = W * dpr; base.height = H * dpr;
+  const b = base.getContext("2d"); b.setTransform(dpr,0,0,dpr,0,0);
+  b.beginPath(); path.context(b)(states); b.fillStyle = "#ece7db"; b.fill();
+  b.strokeStyle = "#faf8f4"; b.lineWidth = 1; b.stroke();
+  const cols = ["#2e9e5b", "#d99a26", "#d64545"];
+  function tick(t){
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H); ctx.drawImage(base,0,0,W,H);
+    METROS.forEach((m,i) => {
+      const p = proj(m); if (!p) return;
+      const c = cols[mstatus(i)], pulse = (Math.sin(t/700 + i*0.73) + 1) / 2;
+      ctx.globalAlpha = 0.28 * (1 - pulse) + 0.05;
+      ctx.beginPath(); ctx.arc(p[0], p[1], 4 + 9*pulse, 0, Math.PI*2); ctx.fillStyle = c; ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(p[0], p[1], 2.4, 0, Math.PI*2); ctx.fillStyle = c; ctx.fill();
+    });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+initMap();
 </script>
 </body>
 </html>
