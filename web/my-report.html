@@ -84,6 +84,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
 .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 .err{display:none;color:var(--red);font-size:13.5px;font-weight:600;margin-top:10px}
+.callouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.co{border:1px solid var(--hairline);border-radius:10px;padding:12px 14px;background:linear-gradient(180deg,#fff,#fcfbf7)}
+.co .cv{font-family:'Newsreader',serif;font-size:22px;font-weight:600}
+.co .cl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--faint);margin-top:2px}
+.ctxgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ctx{border:1px solid var(--hairline);border-radius:10px;padding:16px 18px;background:#fff}
+.ctx .ch{font-size:13.5px;font-weight:700;margin-bottom:5px}
+.ctx p{font-size:13px!important;line-height:1.55}
+@media(max-width:640px){ .ctxgrid{grid-template-columns:1fr} }
 .gate{margin-top:40px;padding:44px 32px;text-align:center}
 .gate .lock{font-size:34px;margin-bottom:8px}
 .gate h1{font-family:'Newsreader',serif;font-weight:500;font-size:30px;margin:0 0 8px}
@@ -185,8 +194,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
       <p id="v-sub" style="margin-top:6px"></p>
     </div>
 
+    <div class="sec" id="sec-trend" style="display:none">
+      <div class="k">02 · YOUR HOME'S VALUE TREND — 3 YEARS</div>
+      <div id="trend-chart"></div>
+      <div class="callouts" id="trend-callouts"></div>
+      <p style="margin-top:10px;font-size:12px;color:var(--fainter)">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
+    </div>
+
     <div class="sec">
-      <div class="k">02 · YOUR EQUITY POSITION</div>
+      <div class="k">03 · YOUR EQUITY POSITION</div>
       <div class="eqgrid">
         <div class="eqcard">
           <div class="label">ESTIMATED VALUE (YOUR INPUT)</div>
@@ -204,18 +220,36 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
     </div>
 
     <div class="sec">
-      <div class="k">03 · IF YOU SOLD TODAY — YOUR NET</div>
+      <div class="k">04 · IF YOU SOLD TODAY — YOUR NET</div>
       <div class="prtable" id="prtable"></div>
       <div class="prnote">Assumes ~5% agent commissions, ~2% closing costs &amp; transfer taxes, and $6,000 typical prep &amp; moving. Your actual costs will vary — a local agent can tighten these numbers for free.</div>
     </div>
 
+    <div class="sec" id="sec-stress" style="display:none">
+      <div class="k">05 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+      <div class="prtable" id="stress-table"></div>
+      <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
+      <div class="say" id="margin-say" style="margin-top:14px"></div>
+    </div>
+
+    <div class="sec" id="sec-selling" style="display:none">
+      <div class="k">06 · SELLING CONDITIONS IN YOUR ZIP</div>
+      <div id="dom-chart"></div>
+      <p id="season-note" style="margin-top:10px"></p>
+    </div>
+
+    <div class="sec" id="sec-context" style="display:none">
+      <div class="k">07 · THE BIGGER PICTURE</div>
+      <div class="ctxgrid" id="ctxgrid"></div>
+    </div>
+
     <div class="sec">
-      <div class="k">04 · WHAT THIS MEANS</div>
+      <div class="k">08 · WHAT THIS MEANS</div>
       <div class="say" id="meaning"></div>
     </div>
 
     <div class="sec">
-      <div class="k">05 · YOUR NEXT STEP</div>
+      <div class="k">09 · YOUR NEXT STEP</div>
       <div class="partner" id="partner"></div>
       <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
     </div>
@@ -299,6 +333,134 @@ function renderMetrics(rows){
     '<span class="note">'+r.note+'</span></div>').join("");
 }
 
+
+// ————— Deep-dive helpers —————
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function monthLabel(startYM, i){
+  const y = +startYM.slice(0,4), m = +startYM.slice(5,7);
+  const t = (y*12 + (m-1)) + i;
+  return MONTHS[t%12] + " '" + String(Math.floor(t/12)).slice(2);
+}
+function lastIdx(arr){ for (let i=arr.length-1;i>=0;i--) if (arr[i]!=null) return i; return -1; }
+function atOrNear(arr, i){ // value at i, or nearest non-null within 2
+  for (const j of [i, i-1, i+1, i-2, i+2]) if (j>=0 && j<arr.length && arr[j]!=null) return arr[j];
+  return null;
+}
+function lineSVG(series, startYM, opts){
+  const o = Object.assign({w:640,h:190,color:"#1f3a5f",fmt:v=>fmt(v),peak:true}, opts||{});
+  const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
+  if (pts.length < 6) return "";
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y1===y0) y1 = y0*1.01+1;
+  const pad = (y1-y0)*0.12; y0-=pad; y1+=pad;
+  const L=54, R=10, T=14, B=26;
+  const X = i => L + (i-x0)/(x1-x0)*(o.w-L-R);
+  const Y = v => T + (1-(v-y0)/(y1-y0))*(o.h-T-B);
+  let path = "", pen = false;
+  series.forEach((v,i)=>{
+    if (v==null){ pen=false; return; }
+    path += (pen?"L":"M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); pen=true;
+  });
+  // peak marker
+  let peakSvg = "";
+  if (o.peak){
+    let pi=-1, pv=-Infinity;
+    series.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
+    if (pi>=0) peakSvg = '<circle cx="'+X(pi).toFixed(1)+'" cy="'+Y(pv).toFixed(1)+'" r="4" fill="#c8891f"/>'+
+      '<text x="'+Math.min(X(pi),o.w-90).toFixed(1)+'" y="'+Math.max(Y(pv)-8,12).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#8a7a55">peak '+monthLabel(startYM,pi)+'</text>';
+  }
+  const li = lastIdx(series);
+  return '<svg viewBox="0 0 '+o.w+' '+o.h+'" style="width:100%;height:auto;display:block">'+
+    '<line x1="'+L+'" y1="'+Y(y1-pad)+'" x2="'+(o.w-R)+'" y2="'+Y(y1-pad)+'" stroke="#f0ebe0"/>'+
+    '<line x1="'+L+'" y1="'+Y(y0+pad)+'" x2="'+(o.w-R)+'" y2="'+Y(y0+pad)+'" stroke="#f0ebe0"/>'+
+    '<text x="4" y="'+(Y(y1-pad)+4)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(y1-pad)+'</text>'+
+    '<text x="4" y="'+(Y(y0+pad)+4)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(y0+pad)+'</text>'+
+    '<path d="'+path+'" fill="none" stroke="'+o.color+'" stroke-width="2.4" stroke-linecap="round"/>'+
+    peakSvg +
+    (li>=0 ? '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="4" fill="'+o.color+'"/>' : "")+
+    '<text x="'+L+'" y="'+(o.h-8)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,x0)+'</text>'+
+    '<text x="'+(o.w-R)+'" y="'+(o.h-8)+'" text-anchor="end" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,x1)+'</text>'+
+    '</svg>';
+}
+const pctf = x => (x>=0?"+":"−") + Math.abs(x*100).toFixed(1) + "%";
+
+function renderDeepDive(d, zip, val, bal){
+  const h = d.h, m = d.m || {};
+  const commission = 0.05, closing = 0.02, prep = 6000;
+  const netAt = V => V*(1-commission-closing) - bal - prep;
+
+  // 02 · value trend
+  if (h && h.p){
+    const li = lastIdx(h.p);
+    const scale = li>=0 && h.p[li] ? val/h.p[li] : null;
+    if (scale){
+      const home = h.p.map(v => v!=null ? v*scale : null);
+      $("trend-chart").innerHTML = lineSVG(home, h.s, {fmt:v=>"$"+Math.round(v/1000)+"K"});
+      let pi=-1, pv=-Infinity;
+      home.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
+      const fromPeak = val/pv - 1;
+      const y12 = atOrNear(home, li-12), q3 = atOrNear(home, li-3);
+      const cos = [];
+      cos.push({v: fmt(pv), l: "EST. PEAK · " + monthLabel(h.s, pi).toUpperCase()});
+      cos.push({v: pctf(fromPeak), l: "TODAY VS. PEAK"});
+      if (y12) cos.push({v: pctf(val/y12-1), l: "LAST 12 MONTHS"});
+      if (q3) cos.push({v: pctf(Math.pow(val/q3, 4)-1), l: "3-MO TREND, ANNUALIZED"});
+      $("trend-callouts").innerHTML = cos.map(c=>'<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
+      $("sec-trend").style.display = "block";
+
+      // 05 · stress test
+      const mom12 = y12 ? val/y12-1 : null;
+      const rows = [];
+      const scen = (name, V) => rows.push('<div class="prrow"><span>'+name+'</span><span>'+fmt(V)+' value · '+fmt(Math.max(0,V-bal))+' equity · <b>'+ (netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V))) +' net</b></span></div>');
+      scen("Today", val);
+      if (mom12!=null) scen("In 6 months, if the 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
+      scen("In 6 months, if prices go flat", val);
+      scen("Stress case: prices fall 5%", val*0.95);
+      $("stress-table").innerHTML = rows.join("");
+      const V0 = (bal+prep)/(1-commission-closing);
+      const margin = 1 - V0/val;
+      $("margin-say").innerHTML = margin > 0
+        ? "<b>Your safety margin is about " + Math.round(margin*100) + "%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. " + (margin > 0.25 ? "That's a comfortable cushion." : margin > 0.1 ? "A real but not unlimited cushion — one more reason to stay alert." : "That's thin — small market moves matter a lot to you right now.")
+        : "<b>Heads up: at your numbers, selling today would not fully cover your payoff and costs.</b> This is exactly the situation to review with a professional before the market moves further.";
+      $("sec-stress").style.display = "block";
+    }
+  }
+
+  // 06 · selling conditions (time to sell + seasonality)
+  if (h && h.d && h.d.some(x=>x!=null)){
+    $("dom-chart").innerHTML = lineSVG(h.d, h.s, {color:"#8a7a55", h:150, fmt:v=>Math.round(v)+"d", peak:false});
+    // seasonality: avg dom by calendar month
+    const by = {};
+    h.d.forEach((v,i)=>{ if(v==null) return; const mo=(+h.s.slice(5,7)-1+i)%12; (by[mo]=by[mo]||[]).push(v); });
+    let best=-1, bv=Infinity;
+    Object.entries(by).forEach(([mo,arr])=>{ if(arr.length>=2){ const a=arr.reduce((x,y)=>x+y,0)/arr.length; if(a<bv){bv=a;best=+mo;} } });
+    $("season-note").innerHTML = "How long homes take to sell in your ZIP, over time." +
+      (best>=0 ? " Historically, homes here have sold fastest in <b>" + ["January","February","March","April","May","June","July","August","September","October","November","December"][best] + "</b> — worth knowing when you plan your listing." : "");
+    $("sec-selling").style.display = "block";
+  }
+
+  // 07 · bigger picture (national percentile + mortgage headwind)
+  const nat = META && META.national;
+  if (nat){
+    const boxes = [];
+    if (nat.spy_deciles && nat.spy_deciles.length===11 && m.spy!=null){
+      const dec = nat.spy_deciles;
+      let k=0; while(k<10 && m.spy>dec[k+1]) k++;
+      const frac = k*10 + (dec[k+1]>dec[k] ? (m.spy-dec[k])/(dec[k+1]-dec[k])*10 : 5);
+      const pctile = Math.max(1, Math.min(99, Math.round(frac)));
+      boxes.push('<div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Price trend here ranks in the <b>'+pctile+'th percentile</b> of 24,000+ U.S. ZIP codes ('+(pctile>=50?"stronger":"weaker")+' than '+(pctile>=50?pctile:100-pctile)+'% of markets'+(pctile>=50?'':' are stronger')+'). Nationally right now: '+nat.counts.green.toLocaleString()+' ZIPs HOLD · '+nat.counts.yellow.toLocaleString()+' WATCH · '+nat.counts.red.toLocaleString()+' ACT.</p></div>');
+    }
+    if (nat.mortgage){
+      const pay = r => { const i=r/100/12; return i*Math.pow(1+i,360)/(Math.pow(1+i,360)-1); };
+      const power = pay(nat.mortgage.year_ago)/pay(nat.mortgage.now) - 1;
+      boxes.push('<div class="ctx"><div class="ch">The financing backdrop</div><p>30-year rates: <b>'+nat.mortgage.now.toFixed(2)+'%</b> now vs. '+nat.mortgage.year_ago.toFixed(2)+'% a year ago — buyers of your home can afford about <b>'+pctf(power)+'</b> house for the same monthly payment. '+(power<-0.02?"Rising rates shrink your buyer pool — a headwind if you wait.":power>0.02?"Falling rates expand your buyer pool — a tailwind for sellers.":"Roughly neutral for your buyer pool right now.")+'</p></div>');
+    }
+    if (boxes.length){ $("ctxgrid").innerHTML = boxes.join(""); $("sec-context").style.display = "block"; }
+  }
+}
+
 async function generate(){
   const zip = $("in-zip").value.trim();
   const val = parseFloat(($("in-val").value||"").replace(/[^0-9.]/g,""));
@@ -370,6 +532,10 @@ async function generate(){
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
     " · " + (META ? META.attribution : "public market data") +
     "<br>Equity and proceeds are computed from the value and balance you provided — this is not an appraisal. Not financial, legal, or real-estate advice. Consult licensed professionals before making decisions.";
+
+  // deep-dive sections (render only when history/context data exists)
+  ["sec-trend","sec-stress","sec-selling","sec-context"].forEach(id => $(id).style.display = "none");
+  try { renderDeepDive(d, zip, val, bal); } catch(e) { console.error("deep-dive:", e); }
 
   $("report").style.display = "block";
   $("actions").style.display = "flex";
