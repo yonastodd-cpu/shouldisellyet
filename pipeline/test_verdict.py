@@ -94,7 +94,7 @@ def test_uppercase_headers_like_real_redfin_file(tmp_path):
             "0.99\t40\t120\t0.1\t9.9\t30\t0.05\t0.2\n")
     f = tmp_path / "upper.tsv"
     f.write_text(header + rows)
-    best = fetch_data.latest_by_zip(fetch_data.load_rows(str(f)))
+    best, hist = fetch_data.latest_by_zip(fetch_data.load_rows(str(f)))
     assert list(best) == ["60616"]
     m = fetch_data.row_to_metrics("60616", *best["60616"][0:2], best["60616"][2])
     assert m.months_of_supply == 3.0 and m.state == "IL"

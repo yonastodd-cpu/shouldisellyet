@@ -66,9 +66,10 @@ def load_rows(source: str):
     return reader
 
 
-def latest_by_zip(rows, states=None):
-    """Keep the newest 'All Residential' row per ZIP. Prints diagnostics."""
+def latest_by_zip(rows, states=None, months_back=36):
+    """Newest 'All Residential' row per ZIP + monthly history. Prints diagnostics."""
     best = {}
+    hist = {}  # zip -> {"YYYY-MM": (price, dom)}
     skipped = {"property_type": 0, "bad_zip": 0, "state_filter": 0}
     first_row_shown = False
     seen_ptypes = {}
@@ -98,10 +99,48 @@ def latest_by_zip(rows, states=None):
         period = row.get("period_end", "")
         if zip_code not in best or period > best[zip_code][0]:
             best[zip_code] = (period, state, row)
+        # history: one point per calendar month
+        month = period[:7]
+        if month:
+            price = row.get("median_sale_price", "")
+            dom = row.get("median_dom", "")
+            try:
+                p = int(float(price)) if price else None
+            except ValueError:
+                p = None
+            try:
+                dd = int(float(dom)) if dom else None
+            except ValueError:
+                dd = None
+            hist.setdefault(zip_code, {})[month] = (p, dd)
     print("skipped:", skipped)
     print("property_type values seen:",
           dict(sorted(seen_ptypes.items(), key=lambda x: -x[1])[:8]))
-    return best
+    return best, hist
+
+
+def month_seq(end_month, n):
+    """Last n calendar months ending at end_month, as YYYY-MM strings."""
+    y, m = int(end_month[:4]), int(end_month[5:7])
+    out = []
+    for _ in range(n):
+        out.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+    return list(reversed(out))
+
+
+def build_history(hmap, end_month, n=36):
+    """Compact {s: start_month, p: [...], d: [...]} with nulls for gaps."""
+    if not hmap or not end_month:
+        return None
+    months = month_seq(end_month, n)
+    p = [hmap.get(mo, (None, None))[0] for mo in months]
+    d = [hmap.get(mo, (None, None))[1] for mo in months]
+    if sum(x is not None for x in p) < 6:
+        return None  # too sparse to chart honestly
+    return {"s": months[0], "p": p, "d": d}
 
 
 def row_to_metrics(zip_code, period, state, row) -> ZipMetrics:
@@ -123,6 +162,23 @@ def row_to_metrics(zip_code, period, state, row) -> ZipMetrics:
     )
 
 
+def fetch_mortgage_rates():
+    """Current + year-ago 30y fixed rate from FRED (free). Returns None on any failure."""
+    try:
+        req = urllib.request.Request(
+            "https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US",
+            headers={"User-Agent": "shouldisellyet-pipeline"})
+        text = urllib.request.urlopen(req, timeout=60).read().decode()
+        rows = [r.split(",") for r in text.strip().splitlines()[1:] if "," in r]
+        vals = [(r[0], float(r[1])) for r in rows if r[1] not in (".", "")]
+        if len(vals) < 60:
+            return None
+        return {"now": vals[-1][1], "year_ago": vals[-53][1], "asof": vals[-1][0]}
+    except Exception as e:
+        print("mortgage fetch skipped:", e)
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", default=REDFIN_ZIP_TRACKER,
@@ -133,7 +189,7 @@ def main():
     states = set(s.strip().upper() for s in args.states.split(",") if s.strip()) or None
 
     print(f"Loading {args.input} …")
-    best = latest_by_zip(load_rows(args.input), states)
+    best, hist = latest_by_zip(load_rows(args.input), states)
     print(f"{len(best)} ZIPs with data")
     if len(best) < 100 and args.input.startswith("http"):
         sys.exit(
@@ -144,21 +200,39 @@ def main():
     by_state = defaultdict(dict)
     prefix_state = {}
     period_seen = ""
+    spys = []
     for zip_code, (period, state, row) in best.items():
         m = row_to_metrics(zip_code, period, state, row)
         v = evaluate(m)
-        by_state[state or "XX"][zip_code] = to_compact(v, m)
+        entry = to_compact(v, m)
+        h = build_history(hist.get(zip_code), period[:7])
+        if h:
+            entry["h"] = h
+        by_state[state or "XX"][zip_code] = entry
         prefix_state[zip_code[:3]] = state or "XX"
         period_seen = max(period_seen, period)
+        if m.median_sale_price_yoy is not None:
+            spys.append(m.median_sale_price_yoy)
 
     OUT.joinpath("zips").mkdir(parents=True, exist_ok=True)
     for state, zips in by_state.items():
         (OUT / "zips" / f"{state}.json").write_text(json.dumps(zips, separators=(",", ":")))
     (OUT / "index.json").write_text(json.dumps(prefix_state, separators=(",", ":")))
+    # national context: price-trend deciles + verdict counts + mortgage rates
+    spys.sort()
+    deciles = [round(spys[int(len(spys) * q / 10) - (1 if q == 10 else 0)], 4)
+               for q in range(11)] if len(spys) >= 100 else []
+    counts0 = {"green": 0, "yellow": 0, "red": 0}
+    for zips in by_state.values():
+        for z in zips.values():
+            counts0[z["l"]] += 1
+    mortgage = fetch_mortgage_rates()
     (OUT / "meta.json").write_text(json.dumps({
         "generated": date.today().isoformat(),
         "period": period_seen[:7],
         "attribution": "Data from Redfin, a national real estate brokerage (redfin.com)",
+        "national": {"spy_deciles": deciles, "counts": counts0,
+                     **({"mortgage": mortgage} if mortgage else {})},
     }))
 
     counts = defaultdict(int)
