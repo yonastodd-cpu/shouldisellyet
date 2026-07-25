@@ -41,14 +41,14 @@ Deno.serve(async (req) => {
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/subscribers` +
-        `?select=plan,zip,status&access_token=eq.${token}` +
+        `?select=plan,zip,status,address&access_token=eq.${token}` +
         `&status=in.(active,report)&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
     );
     const rows = r.ok ? await r.json() : [];
     if (Array.isArray(rows) && rows.length) {
       const s = rows[0];
-      return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status });
+      return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status, address: s.address ?? "" });
     }
     return json({ ok: false });
   } catch (_e) {

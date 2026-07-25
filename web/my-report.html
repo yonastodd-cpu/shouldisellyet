@@ -39,6 +39,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .f label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
 .f input{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit}
 .f .hint{font-size:11.5px;color:var(--fainter);margin-top:5px}
+details#adv{border:1px dashed var(--hairline);border-radius:10px;padding:12px 16px;margin-top:4px}
+details#adv summary{font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
+details#adv[open] summary{margin-bottom:4px}
 .report{display:none;animation:fadeUp .35s ease;margin-top:26px}
 .r-head{display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:12px 12px 0 0;flex-wrap:wrap}
 .v-dot{width:14px;height:14px;border-radius:50%;flex:none}
@@ -86,13 +89,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .prrow span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
 .prnote{font-size:11.5px;color:var(--fainter);margin-top:8px}
 .say{border-left:3px solid var(--navy);background:#f4f6fa;border-radius:0 10px 10px 0;padding:16px 20px;font-size:14px;line-height:1.6;color:#3a4450}
-.partner{display:none;gap:14px;align-items:flex-start}
-.partner img{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold)}
-.partner .p-name{font-family:'Newsreader',serif;font-size:16px;font-weight:600}
-.partner .p-name small{font-family:system-ui;font-weight:400;font-size:12px;color:var(--faint)}
-.partner .p-blurb{font-size:12.5px;line-height:1.55;color:var(--muted);margin:4px 0 8px}
-.partner .p-ctas{display:flex;gap:8px;flex-wrap:wrap}
-.partner .p-ctas a{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:6px}
+.partner{display:none;gap:24px;align-items:flex-start;border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
+.partner .pframe{flex:none;background:#fff;padding:8px;border:1px solid var(--hairline);border-radius:6px;box-shadow:0 12px 26px -14px rgba(31,42,63,.4)}
+.partner img{width:150px;height:185px;border-radius:3px;object-fit:cover;display:block}
+.partner .p-name{font-family:'Newsreader',serif;font-size:23px;font-weight:600;line-height:1.2}
+.partner .p-name small{font-family:system-ui;font-weight:400;font-size:13px;color:var(--faint);display:block;margin-top:3px}
+.partner .p-blurb{font-size:14.5px;line-height:1.65;color:#3a4450;margin:10px 0 14px;max-width:52ch}
+.partner .p-ctas{display:flex;gap:10px;flex-wrap:wrap}
+.partner .p-ctas a{font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:8px}
+@media(max-width:640px){ .partner{flex-direction:column;align-items:center;text-align:center} .partner .p-ctas{justify-content:center} }
 .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
 .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 .err{display:none;color:var(--red);font-size:13.5px;font-weight:600;margin-top:10px}
@@ -160,35 +165,39 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
   <div class="paidband" id="paidband">✓ You're all set — thank you. Build your report below, and bookmark this page: your private link brings you right back.</div>
 
   <div class="card setup" id="setup">
-    <h1>Your report, in 20 seconds</h1>
-    <p class="lede">Three inputs. We combine them with the latest market data for your ZIP to compute your warning level, your equity position, and your walk-away number if you sold today. Nothing you type here leaves your browser.</p>
+    <h1>Your report, from just your address</h1>
+    <p class="lede">Enter the property address and we do the rest: your ZIP's live market data, a starting value from your area's latest sale prices, and a typical loan assumption &mdash; all adjustable after the report builds. Nothing you type here leaves your browser.</p>
     <div class="frow">
       <div class="f" style="grid-column:1/-1">
-        <label>PROPERTY ADDRESS</label>
-        <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD">
+        <label>PROPERTY ADDRESS (INCLUDE ZIP)</label>
+        <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD 20906"
+               autocomplete="street-address" name="street-address" autofocus>
+        <div class="hint">Your browser can autofill this. We read the ZIP right out of the address.</div>
       </div>
     </div>
-    <div class="frow">
-      <div class="f">
-        <label>ZIP CODE</label>
-        <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="20906">
+    <details id="adv">
+      <summary>Fine-tune the numbers (optional) &mdash; ZIP &middot; home value &middot; mortgage balance</summary>
+      <div class="frow" style="margin-top:12px">
+        <div class="f">
+          <label>ZIP CODE</label>
+          <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="auto from address">
+        </div>
+        <div class="f">
+          <label>YOUR HOME VALUE ($)</label>
+          <input id="in-val" inputmode="numeric" placeholder="auto: your ZIP's median">
+          <div class="hint">Leave blank to start from your ZIP's latest median sale price.</div>
+        </div>
       </div>
-      <div class="f">
-        <label>ESTIMATED HOME VALUE ($)</label>
-        <input id="in-val" inputmode="numeric" placeholder="412000">
-        <div class="hint">Your best estimate — a recent Zillow/Redfin figure or your agent's number.</div>
+      <div class="frow">
+        <div class="f">
+          <label>MORTGAGE BALANCE ($)</label>
+          <input id="in-bal" inputmode="numeric" placeholder="auto: typical assumption">
+          <div class="hint">Leave blank for a typical assumption (50% of value) &mdash; or enter yours, 0 if paid off.</div>
+        </div>
+        <div class="f"></div>
       </div>
-    </div>
-    <div class="frow">
-      <div class="f">
-        <label>MORTGAGE BALANCE ($)</label>
-        <input id="in-bal" inputmode="numeric" placeholder="268000">
-        <div class="hint">Approximate is fine. Enter 0 if paid off.</div>
-      </div>
-      <div class="f" style="display:flex;align-items:flex-end">
-        <button class="btn" style="width:100%" onclick="generate()">Generate my report →</button>
-      </div>
-    </div>
+    </details>
+    <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
   </div>
 
@@ -290,7 +299,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 
   <div class="actions" id="actions" style="display:none">
     <button class="btn" onclick="window.print()">Print / save as PDF</button>
-    <button class="btn-outline" onclick="document.getElementById('setup').scrollIntoView({behavior:'smooth'})">Edit inputs</button>
+    <button class="btn-outline" onclick="return adjustNums()">Adjust my numbers</button>
     <a class="btn-outline" href="index.html" style="text-decoration:none;display:inline-block">← Back to the free check</a>
   </div>
   </div><!-- /paid-area -->
@@ -519,16 +528,42 @@ function renderDeepDive(d, zip, val, bal){
 }
 
 async function generate(){
-  const zip = $("in-zip").value.trim();
-  const val = parseFloat(($("in-val").value||"").replace(/[^0-9.]/g,""));
-  const bal = parseFloat(($("in-bal").value||"0").replace(/[^0-9.]/g,"")) || 0;
   const addr = $("in-addr").value.trim();
+  const zipIn = $("in-zip").value.trim();
+  const zipFromAddr = (addr.match(/\b(\d{5})(?:-\d{4})?\b/) || [])[1] || "";
+  const zip = zipIn || zipFromAddr || (q.get("zip") || "");
   const err = $("err"); err.style.display = "none";
-  if (!/^\d{5}$/.test(zip)) { err.textContent="Please enter a 5-digit ZIP code."; err.style.display="block"; return; }
-  if (!(val > 10000)) { err.textContent="Please enter your estimated home value in dollars (e.g. 412000)."; err.style.display="block"; return; }
-  if (bal < 0 || bal > val * 3) { err.textContent="That mortgage balance doesn't look right — please check it."; err.style.display="block"; return; }
+  if (!/^\d{5}$/.test(zip)) {
+    err.textContent = "Please include the 5-digit ZIP in the address (or open fine-tune and enter it).";
+    err.style.display = "block"; $("in-addr").focus(); return;
+  }
   const d = await lookup(zip);
-  if (!d) { err.textContent="We're not scoring "+zip+" yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display="block"; return; }
+  if (!d) { err.textContent = "We're not scoring " + zip + " yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
+
+  // Home value: user's number if given, else the ZIP's latest median sale price
+  let valAssumed = false, balAssumed = false;
+  let val = parseFloat(($("in-val").value || "").replace(/[^0-9.]/g, "")) || null;
+  if (!val && d.h && d.h.p) {
+    const li = lastIdx(d.h.p);
+    if (li >= 0 && d.h.p[li]) { val = Math.round(d.h.p[li] / 1000) * 1000; valAssumed = true; }
+  }
+  if (!(val > 10000)) {
+    $("adv").open = true;
+    err.textContent = "We couldn't estimate a value for this ZIP — open fine-tune and enter your home value.";
+    err.style.display = "block"; $("in-val").focus(); return;
+  }
+  // Mortgage balance: user's number (0 counts), else a typical 50%-of-value assumption
+  const balRaw = ($("in-bal").value || "").replace(/[^0-9.]/g, "");
+  let bal;
+  if (balRaw === "") { bal = Math.round(val * 0.5 / 1000) * 1000; balAssumed = true; }
+  else bal = parseFloat(balRaw) || 0;
+  if (bal < 0 || bal > val * 3) {
+    err.textContent = "That mortgage balance doesn't look right — please check it.";
+    err.style.display = "block"; return;
+  }
+  // reflect the numbers used into fine-tune so adjusting is one tap
+  $("in-zip").value = zip; $("in-val").value = String(val); $("in-bal").value = String(bal);
+  window.__prov = { valAssumed, balAssumed };
 
   const k = KINDS[d.l], m = d.m || {};
   $("r-head").style.background = k.soft;
@@ -542,15 +577,20 @@ async function generate(){
   $("v-sub").textContent = k.sub;
 
   // equity
+  const prov = window.__prov || {};
   const equity = Math.max(0, val - bal);
   $("eq-val").textContent = fmt(val);
+  $("eq-val").parentElement.querySelector(".label").textContent =
+    prov.valAssumed ? "STARTING VALUE — YOUR ZIP'S LATEST MEDIAN" : "ESTIMATED VALUE (YOUR INPUT)";
   if (m.spy != null) {
     const yearAgo = val / (1 + m.spy);
     const dir = m.spy >= 0 ? "up" : "down";
     $("eq-trend").textContent = "If your home tracked the ZIP median, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
   } else $("eq-trend").textContent = "";
   $("eq-eq").textContent = fmt(equity);
-  $("eq-balline").textContent = "Mortgage balance: " + fmt(bal);
+  $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
+    (prov.balAssumed ? " <i style=\"color:var(--fainter)\">(typical assumption — 50% of value)</i>" : "") +
+    " · <a href=\"#\" onclick=\"return adjustNums()\" style=\"text-decoration:underline\">adjust</a>";
   const eqPct = val > 0 ? Math.round(equity / val * 100) : 0;
   $("bar-loan").style.width = (100 - eqPct) + "%";
   $("bar-eq").style.width = eqPct + "%";
@@ -574,7 +614,7 @@ async function generate(){
   const sp = sponsorFor(zip), pt = $("partner");
   if (sp) {
     const phone = sp.phoneDisplay || (sp.phone ? sp.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
-    pt.innerHTML = '<img src="'+sp.photo+'" alt="'+sp.name+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'">'+
+    pt.innerHTML = '<div class="pframe"><img src="'+sp.photo+'" alt="'+sp.name+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'"></div>'+
       '<div><div class="p-name">'+sp.name+' <small>'+sp.title+' · '+sp.brokerage+' · licensed local partner</small></div>'+
       '<div class="p-blurb">'+(sp.blurb||"")+'</div><div class="p-ctas">'+
       (sp.phone ? '<a class="btn" href="tel:'+sp.phone+'">Call '+sp.name+' '+phone+'</a>' : "")+
@@ -609,11 +649,18 @@ const q = new URLSearchParams(location.search);
 $("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
 ["in-val","in-bal"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/[^0-9]/g,""); }));
 
-function unlock(zip, justPaid){
+function adjustNums(){
+  $("adv").open = true;
+  $("setup").scrollIntoView({behavior:"smooth"});
+  $("in-val").focus();
+  return false;
+}
+function unlock(zip, justPaid, address){
   $("gate").style.display = "none";
   $("paid-area").style.display = "block";
   if (justPaid) $("paidband").style.display = "block";
   if (zip) $("in-zip").value = String(zip).replace(/\D/g,"").slice(0,5);
+  if (address && !$("in-addr").value) $("in-addr").value = address;
   try { if (TOKEN) localStorage.setItem("sisy_token", TOKEN); } catch(e){}
 }
 function lockOut(){
@@ -634,7 +681,7 @@ const justPaid = q.get("paid") === "1" || q.get("checkout");
     try {
       const r = await fetch(VERIFY_FN + "?token=" + encodeURIComponent(TOKEN));
       const j = await r.json();
-      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid); return; }
+      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid, j.address); return; }
     } catch(e) {
       // network hiccup on a real token — fail open rather than block a paying customer
       unlock(q.get("zip"), justPaid); return;
