@@ -6,8 +6,12 @@
   "sponsors": {
     "naomi": {
       "name": "Naomi",
+      "lastName": "[LAST NAME]",
       "title": "Realtor®",
+      "designations": "[DESIGNATIONS e.g. ABR, CRS]",
       "brokerage": "NTRealty",
+      "broker": "[BROKER OF RECORD / MANAGING BROKER]",
+      "license": "[MD LICENSE #]",
       "area": "Montgomery County, MD",
       "photo": "img/naomi.jpg",
       "email": "naomi@shouldisellyet.com",

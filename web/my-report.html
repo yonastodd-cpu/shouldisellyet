@@ -614,10 +614,19 @@ async function generate(){
   const sp = sponsorFor(zip), pt = $("partner");
   if (sp) {
     const phone = sp.phoneDisplay || (sp.phone ? sp.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
-    pt.innerHTML = '<div class="pframe"><img src="'+sp.photo+'" alt="'+sp.name+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'"></div>'+
-      '<div><div class="p-name">'+sp.name+' <small>'+sp.title+' · '+sp.brokerage+' · licensed local partner</small></div>'+
+    const real = v => (v && !/^\[/.test(v)) ? v : "";   // hide un-filled [PLACEHOLDER] fields
+    const fullName = (sp.name + " " + real(sp.lastName)).trim();
+    const desig = real(sp.designations);
+    const nameLine = fullName + (desig ? ", " + desig : "");
+    // credential line: title · brokerage · (broker of record) · (license #)
+    const credParts = [sp.title, sp.brokerage,
+                       real(sp.broker) ? "Broker of record: " + real(sp.broker) : "",
+                       real(sp.license) ? "MD Lic. " + real(sp.license) : "",
+                       "licensed local partner"].filter(Boolean);
+    pt.innerHTML = '<div class="pframe"><img src="'+sp.photo+'" alt="'+fullName+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'"></div>'+
+      '<div><div class="p-name">'+nameLine+' <small>'+credParts.join(' · ')+'</small></div>'+
       '<div class="p-blurb">'+(sp.blurb||"")+'</div><div class="p-ctas">'+
-      (sp.phone ? '<a class="btn" href="tel:'+sp.phone+'">Call '+sp.name+' '+phone+'</a>' : "")+
+      (sp.phone ? '<a class="btn" href="tel:'+sp.phone+'">Call '+fullName+' '+phone+'</a>' : "")+
       '<a class="btn-outline" href="mailto:'+sp.email+'?subject='+encodeURIComponent("EquityWatch report consult — "+zip)+'">Request a free consult</a></div></div>';
     pt.style.display = "flex";
     $("nextstep-generic").style.display = "none";
