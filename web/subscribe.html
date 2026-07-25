@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Set up your EquityWatch alert — ShouldISellYet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
+  --hairline:#e7e2d8;--hairline2:#f0ebe0;--navy:#1f3a5f;--navy-dark:#172d4b;--gold:#8a7a55;--track:#efe9dc;
+  --green:#2e9e5b;--amber:#c8891f;--red:#d64545;--green-soft:#e9f4ee;--green-line:#bcdcc9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+a{color:var(--navy)}
+.mono{font-family:'IBM Plex Mono',monospace}.serif{font-family:'Newsreader',serif}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline);max-width:760px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px}
+.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
+.wrap{max-width:760px;margin:0 auto;padding:36px 20px 70px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}
+h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1;margin:10px 0 8px}
+.sub{font-size:16px;color:var(--muted);line-height:1.6;margin:0 0 26px;max-width:56ch}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
+.card{border:1px solid var(--hairline);border-radius:14px;background:#fff;padding:26px}
+.card h2{font-family:'Newsreader',serif;font-weight:600;font-size:22px;margin:0 0 4px}
+.price{font-family:'Newsreader',serif;font-size:34px;font-weight:500;margin:14px 0 2px}
+.price small{font-size:14px;color:var(--faint);font-family:system-ui;font-weight:400}
+.feats{list-style:none;padding:0;margin:16px 0 0}
+.feats li{position:relative;padding:8px 0 8px 26px;font-size:14.5px;line-height:1.5;color:#3a4450;border-bottom:1px solid var(--hairline2)}
+.feats li:last-child{border:none}
+.feats li::before{content:"";position:absolute;left:0;top:13px;width:12px;height:7px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg)}
+.aside{border:1px solid var(--hairline);border-radius:14px;background:linear-gradient(180deg,#fff,#fbfaf6);padding:22px}
+.aside .k{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--gold);margin-bottom:10px}
+.aside p{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
+.aside .row{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#3a4450;padding:7px 0}
+.aside .row b{color:var(--ink)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.55;margin:22px 0 14px;cursor:pointer}
+.consent input{margin-top:2px;width:17px;height:17px;accent-color:var(--navy);flex:none}
+.consent a{text-decoration:underline}
+.cta{display:block;width:100%;text-align:center;background:var(--navy);color:#fff!important;border:none;border-radius:8px;padding:15px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.cta:hover{background:var(--navy-dark)}
+.cta:disabled{opacity:.42;cursor:not-allowed}
+.securenote{text-align:center;font-size:11.5px;color:var(--fainter);margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px}
+.back{font-size:13px;color:var(--faint);display:inline-block;margin-top:22px}
+.zipnote{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-bottom:2px}
+@media(max-width:720px){ .grid{grid-template-columns:1fr} h1{font-size:30px} }
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="index.html" style="text-decoration:none">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+  </a>
+  <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">CHECKOUT</span>
+</nav>
+
+<div class="wrap">
+  <div class="eyebrow" id="eyebrow">EQUITYWATCH ALERTS</div>
+  <h1 id="headline">Set up your alert</h1>
+  <p class="sub" id="subhead">Here's exactly what you're getting before you pay. Cancel anytime — no phone call, no runaround.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="zipnote mono" id="zipnote"></div>
+      <h2 id="planname">EquityWatch monitoring</h2>
+      <div class="price" id="price">$5.99 <small>/month · cancel anytime</small></div>
+      <ul class="feats" id="feats"></ul>
+
+      <label class="consent">
+        <input type="checkbox" id="tos">
+        <span>I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and the <a href="refunds.html" target="_blank">Refunds &amp; Cancellation policy</a>. I understand payments already made are not refunded, and I can cancel anytime to stop future charges.</span>
+      </label>
+      <button class="cta" id="cta" disabled onclick="go()">Continue to secure payment →</button>
+      <div class="securenote">🔒 Payment is processed securely by Stripe. We never see your card details.</div>
+    </div>
+
+    <div class="aside">
+      <div class="k">WHAT HAPPENS NEXT</div>
+      <div class="row"><b>1.</b><span>You pay securely on Stripe's page ($5.99).</span></div>
+      <div class="row"><b>2.</b><span>You're brought straight back here to build your full property report.</span></div>
+      <div class="row"><b>3.</b><span>We send a confirmation email with your private report link.</span></div>
+      <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment your ZIP's verdict changes color. No news is good news.</span></div>
+      <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. Verdicts use public market data (Redfin Data Center) and are for general information — not financial advice.</p>
+    </div>
+  </div>
+
+  <a class="back" href="index.html">← Back</a>
+</div>
+
+<script>
+// Stripe Payment Links (same as the rest of the site)
+const LINKS = {
+  monitor: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00",
+  report:  "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"
+};
+const COPY = {
+  monitor: {
+    eyebrow: "EQUITYWATCH ALERTS",
+    headline: "Set up your alert",
+    planname: "EquityWatch monitoring",
+    price: '$5.99 <small>/month · cancel anytime</small>',
+    feats: [
+      "An email the moment your ZIP's verdict changes color — up or down",
+      "Your full EquityWatch property report, included and refreshed monthly",
+      "Your estimated equity and walk-away-if-you-sold number",
+      "Every signal gauge for your ZIP: supply, price trend, time to sell, price cuts",
+      "Cancel anytime in one click — no phone call, no runaround"
+    ]
+  },
+  report: {
+    eyebrow: "EQUITYWATCH REPORT",
+    headline: "Get your full report",
+    planname: "EquityWatch property report",
+    price: '$5.99 <small>one-time · all sales final</small>',
+    feats: [
+      "Your ZIP's verdict with every signal gauge",
+      "Your estimated equity and loan-vs-equity breakdown",
+      "Your walk-away number if you sold today, itemized",
+      "Plain-English guidance for your exact situation",
+      "Printable / save-as-PDF · regenerate anytime with the same link"
+    ]
+  }
+};
+const q = new URLSearchParams(location.search);
+const plan = q.get("plan") === "report" ? "report" : "monitor";
+const zip = (q.get("zip") || "").replace(/\D/g,"").slice(0,5);
+const c = COPY[plan];
+document.getElementById("eyebrow").textContent = c.eyebrow;
+document.getElementById("headline").textContent = c.headline;
+document.getElementById("planname").textContent = c.planname;
+document.getElementById("price").innerHTML = c.price;
+document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").join("");
+if (zip) document.getElementById("zipnote").textContent = "FOR ZIP " + zip;
+if (plan === "report") document.getElementById("row4").style.display = "none";
+document.getElementById("tos").addEventListener("change", function(){
+  document.getElementById("cta").disabled = !this.checked;
+});
+function go(){
+  if (!document.getElementById("tos").checked) return;
+  // append ZIP so Stripe → webhook → report can carry it through (client_reference_id)
+  const url = LINKS[plan] + (zip ? "?client_reference_id=" + zip : "");
+  window.location.href = url;
+}
+</script>
+</body>
+</html>
