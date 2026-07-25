@@ -406,16 +406,26 @@ const justPaid = q.get("paid") === "1" || q.get("checkout");
 (async function gateCheck(){
   // If verification isn't configured, don't hard-lock buyers out — open the page.
   if (!VERIFY_FN) { unlock(q.get("zip"), justPaid); return; }
-  if (!TOKEN) { lockOut(); return; }
-  try {
-    const r = await fetch(VERIFY_FN + "?token=" + encodeURIComponent(TOKEN));
-    const j = await r.json();
-    if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid); }
-    else { lockOut(); }
-  } catch(e){
-    // network hiccup on a real token — fail open rather than block a paying customer
-    unlock(q.get("zip"), justPaid);
+  // A valid token (from the welcome email) is the durable unlock.
+  if (TOKEN) {
+    try {
+      const r = await fetch(VERIFY_FN + "?token=" + encodeURIComponent(TOKEN));
+      const j = await r.json();
+      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid); return; }
+    } catch(e) {
+      // network hiccup on a real token — fail open rather than block a paying customer
+      unlock(q.get("zip"), justPaid); return;
+    }
   }
+  // Just came back from Stripe (?paid=1) but no token yet: let them build the
+  // report now, and point them to the durable private link in their email.
+  if (justPaid) {
+    unlock(q.get("zip"), true);
+    $("paidband").innerHTML =
+      "✓ Payment received — thank you. Build your report below. Your <b>permanent private link</b> is in your welcome email — bookmark it so you can come back anytime.";
+    return;
+  }
+  lockOut();
 })();
 </script>
 </body>
