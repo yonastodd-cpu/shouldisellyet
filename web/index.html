@@ -484,18 +484,16 @@ async function run() {
   }, Math.max(0, 1600 - (Date.now() - started)));
 }
 
-// ————— Purchase / signup (no mailto) —————
+// ————— Purchase → plan-details page (describes plan + collects TOS consent), then Stripe —————
 function buyMonitor(fromPricing) {
-  if (MONITOR_CHECKOUT_URL) { window.location.href = MONITOR_CHECKOUT_URL; return false; }
-  const f = $("mform");
+  const zip = ($("zip").value || "").replace(/\D/g, "").slice(0, 5);
+  // "Start monitoring" from pricing without a verdict open → check a ZIP first
   if (fromPricing === true && $("verdict").classList.contains("hidden")) {
-    // no verdict open yet — send them to the checker first
     document.getElementById("check").scrollIntoView({ behavior: "smooth" });
     $("zip").focus();
     return false;
   }
-  f.style.display = "flex";
-  $("mf-email").focus();
+  window.location.href = "subscribe.html?plan=monitor" + (zip ? "&zip=" + zip : "");
   return false;
 }
 

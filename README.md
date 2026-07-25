@@ -100,7 +100,31 @@ Stripe payment completes, and sends the welcome email via Resend:
    `customer.subscription.deleted` → create, then copy the **Signing secret**
    (whsec_…) into the `STRIPE_WEBHOOK_SECRET` secret from step 3.
 5. On both Payment Links, make sure "Collect customers' addresses" is ON —
-   that's where the webhook gets the ZIP code.
+   that's a ZIP fallback (the primary ZIP now rides along as `client_reference_id`
+   from the plan-details page).
+6. **Confirmation page → redirect** on BOTH Payment Links: after payment, redirect to
+   `https://shouldisellyet.com/my-report.html?paid=1` so buyers land on their report
+   (the token in the welcome email is the durable private link).
+
+## Report paywall (verify-access edge function)
+
+The report page (`my-report.html`) will not render until it confirms a valid
+access token. Tokens are minted per purchase by `stripe-webhook` (`access_token`
+column) and delivered via the welcome email's "Open my report" link + the
+post-checkout redirect.
+
+Setup:
+1. Run `supabase/schema-v3.sql` (adds the `access_token` column).
+2. Deploy `supabase/functions/verify-access/index.ts` as edge function
+   `verify-access`; disable "Enforce JWT verification". No secrets needed.
+3. `my-report.html` already points `SUPABASE_URL` at your project — the gate is
+   live once the function is deployed. (If the function is unreachable it *fails
+   open* so a paying customer is never wrongly blocked; obscurity + token is the
+   enforcement, not a hard wall.)
+
+The plan-details page `subscribe.html` sits before Stripe: it describes exactly
+what the plan includes and requires a Terms/refund-policy consent checkbox before
+the "Continue to secure payment" button activates.
 6. Test: Stripe webhook page → "Send test event" → `checkout.session.completed`;
    confirm a row appears/activates in the `subscribers` table and the function
    logs show `activated …`.
