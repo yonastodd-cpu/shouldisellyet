@@ -38,6 +38,11 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 .aside p{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
 .aside .row{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#3a4450;padding:7px 0}
 .aside .row b{color:var(--ink)}
+.propform{margin:20px 0 4px;border-top:1px solid var(--hairline2);padding-top:18px}
+.propform .pf-k{font-size:10px;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
+.propform input{width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;margin-bottom:9px}
+.propform .pf-two{display:grid;grid-template-columns:110px 1fr;gap:9px}
+.propform .pf-hint{font-size:11.5px;color:var(--fainter);line-height:1.5;margin-top:2px}
 .consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.55;margin:22px 0 14px;cursor:pointer}
 .consent input{margin-top:2px;width:17px;height:17px;accent-color:var(--navy);flex:none}
 .consent a{text-decoration:underline}
@@ -71,6 +76,16 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
       <div class="price" id="price">$5.99 <small>/month · cancel anytime</small></div>
       <ul class="feats" id="feats"></ul>
 
+      <div class="propform">
+        <div class="pf-k mono" id="pf-title">THE HOME YOU WANT MONITORED</div>
+        <input id="pf-addr" type="text" placeholder="Property address — 1234 Aspen Knolls Way, Silver Spring, MD">
+        <div class="pf-two">
+          <input id="pf-zip" inputmode="numeric" maxlength="5" placeholder="ZIP">
+          <input id="pf-email" type="email" placeholder="you@email.com">
+        </div>
+        <div class="pf-hint" id="pf-hint">We'll monitor the market conditions for this home and alert you the moment they shift. Use the same email at checkout.</div>
+      </div>
+
       <label class="consent">
         <input type="checkbox" id="tos">
         <span>I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and the <a href="refunds.html" target="_blank">Refunds &amp; Cancellation policy</a>. I understand payments already made are not refunded, and I can cancel anytime to stop future charges.</span>
@@ -81,11 +96,11 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
     <div class="aside">
       <div class="k">WHAT HAPPENS NEXT</div>
-      <div class="row"><b>1.</b><span>You pay securely on Stripe's page ($5.99).</span></div>
-      <div class="row"><b>2.</b><span>You're brought straight back here to build your full property report.</span></div>
+      <div class="row"><b>1.</b><span>You tell us the home to watch, then pay securely on Stripe's page ($5.99).</span></div>
+      <div class="row"><b>2.</b><span>You're brought straight back to build your home's full property report.</span></div>
       <div class="row"><b>3.</b><span>We send a confirmation email with your private report link.</span></div>
-      <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment your ZIP's verdict changes color. No news is good news.</span></div>
-      <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. Verdicts use public market data (Redfin Data Center) and are for general information — not financial advice.</p>
+      <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment the market for your home shifts — up or down. No news is good news.</span></div>
+      <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. We monitor local market conditions (from public Redfin data) for the area your home is in — this is general market information, not an appraisal of your specific home, and not financial advice.</p>
     </div>
   </div>
 
@@ -98,27 +113,33 @@ const LINKS = {
   monitor: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00",
   report:  "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"
 };
+// Supabase — save the property to monitor before checkout (anon key: INSERT-only)
+const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
+
 const COPY = {
   monitor: {
-    eyebrow: "EQUITYWATCH ALERTS",
-    headline: "Set up your alert",
+    eyebrow: "EQUITYWATCH — MONITOR YOUR HOME",
+    headline: "Monitor your home",
     planname: "EquityWatch monitoring",
     price: '$5.99 <small>/month · cancel anytime</small>',
+    propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
-      "An email the moment your ZIP's verdict changes color — up or down",
+      "An email the moment the market for your home shifts — up or down",
       "Your full EquityWatch property report, included and refreshed monthly",
       "Your estimated equity and walk-away-if-you-sold number",
-      "Every signal gauge for your ZIP: supply, price trend, time to sell, price cuts",
+      "Every signal for your home's area: supply, price trend, time to sell, price cuts",
       "Cancel anytime in one click — no phone call, no runaround"
     ]
   },
   report: {
     eyebrow: "EQUITYWATCH REPORT",
-    headline: "Get your full report",
+    headline: "Get your home's report",
     planname: "EquityWatch property report",
     price: '$5.99 <small>one-time · all sales final</small>',
+    propTitle: "THE HOME THIS REPORT IS FOR",
     feats: [
-      "Your ZIP's verdict with every signal gauge",
+      "Your home's verdict with every market signal gauge",
       "Your estimated equity and loan-vs-equity breakdown",
       "Your walk-away number if you sold today, itemized",
       "Plain-English guidance for your exact situation",
@@ -135,16 +156,42 @@ document.getElementById("headline").textContent = c.headline;
 document.getElementById("planname").textContent = c.planname;
 document.getElementById("price").innerHTML = c.price;
 document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").join("");
-if (zip) document.getElementById("zipnote").textContent = "FOR ZIP " + zip;
+document.getElementById("pf-title").textContent = c.propTitle;
+if (zip) { document.getElementById("zipnote").textContent = "FOR ZIP " + zip; document.getElementById("pf-zip").value = zip; }
 if (plan === "report") document.getElementById("row4").style.display = "none";
+document.getElementById("pf-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
 document.getElementById("tos").addEventListener("change", function(){
   document.getElementById("cta").disabled = !this.checked;
 });
-function go(){
+
+async function savePending(rec){
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  try {
+    await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
+      method: "POST",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+                 "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify(rec)
+    });
+  } catch(e){}
+}
+
+async function go(){
   if (!document.getElementById("tos").checked) return;
-  // append ZIP so Stripe → webhook → report can carry it through (client_reference_id)
-  const url = LINKS[plan] + (zip ? "?client_reference_id=" + zip : "");
-  window.location.href = url;
+  const addr = document.getElementById("pf-addr").value.trim();
+  const pfZip = document.getElementById("pf-zip").value.replace(/\D/g,"").slice(0,5) || zip;
+  const email = document.getElementById("pf-email").value.trim();
+  const cta = document.getElementById("cta");
+  const hint = document.getElementById("pf-hint");
+  if (!/^\d{5}$/.test(pfZip)) { hint.textContent = "Please enter the 5-digit ZIP for the home you want monitored."; hint.style.color = "var(--red)"; document.getElementById("pf-zip").focus(); return; }
+  if (!email || !/@/.test(email)) { hint.textContent = "Please enter your email so we can send alerts and your report link."; hint.style.color = "var(--red)"; document.getElementById("pf-email").focus(); return; }
+  cta.disabled = true; cta.textContent = "Saving…";
+  // Record the exact property they want watched as a pending signup; the webhook
+  // matches it by email after payment and keeps this address (not the billing one).
+  await savePending({ email, zip: pfZip, address: addr, plan, source: "subscribe-page" });
+  // Carry the property ZIP into Stripe → webhook via client_reference_id.
+  window.location.href = LINKS[plan] + "?client_reference_id=" + pfZip +
+    "&prefilled_email=" + encodeURIComponent(email);
 }
 </script>
 </body>

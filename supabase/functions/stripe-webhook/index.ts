@@ -65,7 +65,7 @@ function welcomeMonitorEmail(zip: string, token: string) {
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch</p>
   <h1 style="font-size:26px;margin:6px 0 12px">Your alert is live.</h1>
-  <p style="font-size:16px;line-height:1.6">You've set up an alert for <b>${zip}</b>. The early-warning data — supply, prices, price cuts, time to sell — is checked on every release, and the moment your ZIP's verdict changes color, you'll get an email like this one. No news is good news.</p>
+  <p style="font-size:16px;line-height:1.6">You've set up monitoring for your home in <b>${zip}</b>. The early-warning data — supply, prices, price cuts, time to sell — is checked on every release, and the moment the market for your home shifts, you'll get an email like this one. No news is good news.</p>
   <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included. Open your private report page below, enter your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access to the report and it works only for you.</p>
@@ -85,7 +85,7 @@ function welcomeReportEmail(zip: string, token: string) {
   <p style="font-size:16px;line-height:1.6">Open your private report page below and enter your home value estimate and approximate mortgage balance — your full report builds in about 20 seconds. Save it as a PDF, regenerate it anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access and it works only for you.</p>
-  <p style="font-size:16px;line-height:1.6;margin-top:18px">Want to stay ahead after this? Set up an EquityWatch alert — same price monthly — and you'll hear the moment ${zip} changes color.</p>
+  <p style="font-size:16px;line-height:1.6;margin-top:18px">Want to stay ahead after this? Set up an EquityWatch alert — same price monthly — and you'll hear the moment the market for your home shifts.</p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5">All sales final per our refund policy. Data from Redfin, a national real estate brokerage (redfin.com). Not financial advice.</p>
 </div>`,
   };
@@ -107,6 +107,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const token = crypto.randomUUID();  // report access token
 
   // Activate an existing pending signup for this email, else insert fresh.
+  // NOTE: we do NOT overwrite `address` here — the pending row already holds the
+  // exact property the customer chose on the subscribe page. Billing address is
+  // only a fallback for the fresh-insert path below.
   const patch = await sb(
     `subscribers?email=eq.${encodeURIComponent(email)}&status=eq.pending`,
     {
@@ -117,7 +120,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         source: "stripe",
         access_token: token,
         ...(zip ? { zip } : {}),
-        ...(address ? { address } : {}),
       }),
     },
   );
