@@ -24,10 +24,10 @@ def test_load_dir(tmp_path):
 
 
 def test_render_email_deterioration():
-    subject, html = render_email("20906", "yellow", "red")
-    assert "ACT" in subject and "20906" in subject
-    assert "deteriorated" in html
-    assert "shouldisellyet.com/?zip=20906" in html
+    subject, html = render_email("20906", "yellow", "red", address="1234 Main St, Silver Spring, MD", token="00000000-0000-0000-0000-000000000000")
+    assert "ACT" in subject
+    assert "deteriorated" in html and "1234 Main St" in html
+    assert "my-report.html?token=" in html
     assert "Redfin" in html          # attribution required
     assert "Not financial advice" in html
 

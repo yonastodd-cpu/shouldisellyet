@@ -50,26 +50,29 @@ def diff_verdicts(old, new):
             if z in old and old[z] != lvl}
 
 
-def render_email(zip_code, old_level, new_level):
+def render_email(zip_code, old_level, new_level, address="", token=""):
     worse = SEVERITY[new_level] > SEVERITY[old_level]
     word = WORDS[new_level]
-    subject = f"{EMOJI[old_level]}→{EMOJI[new_level]} {zip_code} just changed to {word} — EquityWatch alert"
+    # Personalize to the home if we have the address; fall back to the area.
+    home = address.strip() if address and address.strip() else f"your home in {zip_code}"
+    subject = f"{EMOJI[old_level]}→{EMOJI[new_level]} The market for your home just changed to {word} — EquityWatch"
     headline = (
-        f"Conditions in {zip_code} have deteriorated." if worse
-        else f"Conditions in {zip_code} have improved.")
+        f"The market for {home} has deteriorated." if worse
+        else f"The market for {home} has improved.")
     action = {
-        "red": "Multiple sell-signals are now tripped. If selling was on your mind, it's time to act on a plan — review your numbers and talk to your local expert this week.",
-        "yellow": "This market needs watching. Know your numbers now so you can move quickly if it deteriorates further.",
-        "green": "Pressure has eased. No action needed — we'll keep watching.",
+        "red": "Multiple sell-signals are now tripped in your area. If selling was on your mind, it's time to act on a plan — review your numbers and talk to a local expert this week.",
+        "yellow": "The market around your home needs watching. Know your numbers now so you can move quickly if it deteriorates further.",
+        "green": "Pressure has eased in your area. No action needed — we'll keep an eye on it for you.",
     }[new_level]
+    report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
     html = f"""
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch Alert</p>
-  <h1 style="font-size:26px;margin:6px 0 4px">{EMOJI[new_level]} {zip_code} is now rated <span style="color:{'#e03e36' if new_level=='red' else '#e8a317' if new_level=='yellow' else '#12a150'}">{word}</span></h1>
-  <p style="font-size:14px;color:#667085">Changed from {WORDS[old_level]} → {word}</p>
+  <h1 style="font-size:26px;margin:6px 0 4px">{EMOJI[new_level]} The market for your home is now <span style="color:{'#e03e36' if new_level=='red' else '#e8a317' if new_level=='yellow' else '#12a150'}">{word}</span></h1>
+  <p style="font-size:14px;color:#667085">{home} · changed from {WORDS[old_level]} → {word}</p>
   <p style="font-size:16px;line-height:1.6"><b>{headline}</b> {action}</p>
-  <p style="margin:24px 0"><a href="{SITE}/?zip={zip_code}" style="background:#101828;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">See the full verdict →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5">Data from Redfin, a national real estate brokerage (redfin.com). Not financial advice — talk to a professional before making big moves. You receive these because you subscribed to EquityWatch monitoring for this ZIP.</p>
+  <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your home's report →</a></p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions (from public Redfin data) for the area your home is in — this is general market information, not an appraisal of your specific home. Not financial advice. You receive these because you set up EquityWatch monitoring for this home.</p>
 </div>"""
     return subject, html
 
@@ -83,12 +86,13 @@ def _req(url, headers=None, data=None):
 
 
 def fetch_subscribers(supabase_url, service_key, zips):
-    """Monitor-plan subscribers for the given ZIPs (batched in_ queries)."""
+    """Active monitor-plan subscribers for the given ZIPs (batched in_ queries)."""
     subs, zips = [], sorted(zips)
     for i in range(0, len(zips), 100):
         batch = ",".join(zips[i:i + 100])
         url = (f"{supabase_url}/rest/v1/subscribers"
-               f"?select=email,zip&plan=eq.monitor&status=neq.canceled&zip=in.({batch})")
+               f"?select=email,zip,address,access_token"
+               f"&plan=eq.monitor&status=eq.active&zip=in.({batch})")
         subs += _req(url, headers={"apikey": service_key,
                                    "Authorization": f"Bearer {service_key}"})
     return subs
@@ -135,7 +139,9 @@ def main():
             print("Send cap reached.")
             break
         old_l, new_l = changes[s["zip"]]
-        subject, html = render_email(s["zip"], old_l, new_l)
+        subject, html = render_email(s["zip"], old_l, new_l,
+                                     address=s.get("address", ""),
+                                     token=s.get("access_token", ""))
         try:
             send_email(rs_key, sender, s["email"], subject, html)
             sent += 1
