@@ -46,7 +46,19 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .v-title{font-family:'Newsreader',serif;font-size:21px;font-weight:600}
 .r-addr{width:100%;font-size:13px;color:var(--muted)}
 .sec{padding:22px 24px;border-top:1px solid var(--hairline2)}
-.sec .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:12px}
+.sec .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:6px}
+.sec .title{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 3px}
+.sec .subt{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 16px!important}
+.gauge-legend{display:flex;gap:18px;font-size:11px;color:var(--fainter);margin-top:10px;font-family:'IBM Plex Mono',monospace}
+.gauge-legend i.dotk{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--navy);margin-right:5px;vertical-align:-1px}
+.gauge-legend i.thk{display:inline-block;width:2px;height:11px;background:#9a9384;margin-right:6px;vertical-align:-2px}
+.strow{display:grid;grid-template-columns:1.7fr 1fr 1fr 1.1fr;gap:8px;padding:11px 16px;font-size:13.5px;border-bottom:1px solid var(--hairline2);background:#fff;align-items:baseline}
+.strow.head{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--faint);background:#faf9f5}
+.strow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.strow .net{font-weight:700;color:var(--navy)}
+.strow.today{background:#f4f7fb}
+.strow.stress .net{color:var(--red)}
+@media(max-width:640px){ .strow{grid-template-columns:1.4fr 1fr 1.1fr} .strow span:nth-child(3){display:none} .strow.head span:nth-child(3){display:none} }
 .sec p{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
 .metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center;margin-bottom:12px}
 .metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
@@ -190,12 +202,17 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 
     <div class="sec">
       <div class="k">01 · MARKET SIGNALS IN YOUR ZIP</div>
+      <div class="title">The four dials that predict price moves</div>
+      <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
       <div id="metrics"></div>
+      <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px"></p>
     </div>
 
     <div class="sec" id="sec-trend" style="display:none">
       <div class="k">02 · YOUR HOME'S VALUE TREND — 3 YEARS</div>
+      <div class="title">What your home has been doing</div>
+      <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today tells you how much froth has already come out.</p>
       <div id="trend-chart"></div>
       <div class="callouts" id="trend-callouts"></div>
       <p style="margin-top:10px;font-size:12px;color:var(--fainter)">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
@@ -203,6 +220,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 
     <div class="sec">
       <div class="k">03 · YOUR EQUITY POSITION</div>
+      <div class="title">What you actually own</div>
+      <p class="subt">Your equity is the part of the home that is yours: value minus mortgage. This is the number the market can grow — or shrink — without you doing anything.</p>
       <div class="eqgrid">
         <div class="eqcard">
           <div class="label">ESTIMATED VALUE (YOUR INPUT)</div>
@@ -221,12 +240,16 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 
     <div class="sec">
       <div class="k">04 · IF YOU SOLD TODAY — YOUR NET</div>
+      <div class="title">Your walk-away number</div>
+      <p class="subt">The check you would actually receive at closing after commissions, costs, and payoff. This is the number to protect.</p>
       <div class="prtable" id="prtable"></div>
       <div class="prnote">Assumes ~5% agent commissions, ~2% closing costs &amp; transfer taxes, and $6,000 typical prep &amp; moving. Your actual costs will vary — a local agent can tighten these numbers for free.</div>
     </div>
 
     <div class="sec" id="sec-stress" style="display:none">
       <div class="k">05 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+      <div class="title">Three futures for your walk-away number</div>
+      <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
       <div class="prtable" id="stress-table"></div>
       <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
       <div class="say" id="margin-say" style="margin-top:14px"></div>
@@ -234,22 +257,30 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 
     <div class="sec" id="sec-selling" style="display:none">
       <div class="k">06 · SELLING CONDITIONS IN YOUR ZIP</div>
+      <div class="title">How long selling takes here — and when it goes fastest</div>
+      <p class="subt">Days on market is the earliest visible crack in any housing market. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
       <p id="season-note" style="margin-top:10px"></p>
     </div>
 
     <div class="sec" id="sec-context" style="display:none">
       <div class="k">07 · THE BIGGER PICTURE</div>
+      <div class="title">Your market in national context</div>
+      <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
     <div class="sec">
       <div class="k">08 · WHAT THIS MEANS</div>
+      <div class="title">The plain-English bottom line</div>
+      <p class="subt">One paragraph, no hedging.</p>
       <div class="say" id="meaning"></div>
     </div>
 
     <div class="sec">
       <div class="k">09 · YOUR NEXT STEP</div>
+      <div class="title">Turn numbers into a decision</div>
+      <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
       <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
     </div>
@@ -347,42 +378,68 @@ function atOrNear(arr, i){ // value at i, or nearest non-null within 2
   return null;
 }
 function lineSVG(series, startYM, opts){
-  const o = Object.assign({w:640,h:190,color:"#1f3a5f",fmt:v=>fmt(v),peak:true}, opts||{});
+  const o = Object.assign({w:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
   const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
   if (pts.length < 6) return "";
   const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   let y0 = Math.min(...ys), y1 = Math.max(...ys);
   if (y1===y0) y1 = y0*1.01+1;
-  const pad = (y1-y0)*0.12; y0-=pad; y1+=pad;
-  const L=54, R=10, T=14, B=26;
+  const pad = (y1-y0)*0.14; y0-=pad; y1+=pad;
+  const L=58, R=64, T=14, B=30;
   const X = i => L + (i-x0)/(x1-x0)*(o.w-L-R);
   const Y = v => T + (1-(v-y0)/(y1-y0))*(o.h-T-B);
-  let path = "", pen = false;
+  // gridlines: 4 evenly spaced levels
+  let grid = "";
+  for (let g=0; g<4; g++){
+    const gv = y0+pad + (g/3)*((y1-pad)-(y0+pad));
+    grid += '<line x1="'+L+'" y1="'+Y(gv).toFixed(1)+'" x2="'+(o.w-R)+'" y2="'+Y(gv).toFixed(1)+'" stroke="#f0ebe0"/>'+
+            '<text x="4" y="'+(Y(gv)+3.5).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(gv)+'</text>';
+  }
+  // x ticks every 6 months
+  let ticks = "";
+  for (let i=x0; i<=x1; i++){
+    if ((i-x0)%6===0 && i<=x1-2){
+      ticks += '<line x1="'+X(i).toFixed(1)+'" y1="'+(o.h-B+2)+'" x2="'+X(i).toFixed(1)+'" y2="'+(o.h-B+6)+'" stroke="#d7d0c2"/>'+
+               '<text x="'+X(i).toFixed(1)+'" y="'+(o.h-8)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,i)+'</text>';
+    }
+  }
+  // path + optional area
+  let path = "", pen = false, area = "";
   series.forEach((v,i)=>{
     if (v==null){ pen=false; return; }
     path += (pen?"L":"M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); pen=true;
   });
+  if (o.area){
+    let ap = "", apen = false, firstX=null, lastX=null;
+    series.forEach((v,i)=>{
+      if (v==null){ apen=false; return; }
+      if (!apen && firstX===null) firstX = X(i);
+      ap += (apen?"L":(ap?"M":"M")) + X(i).toFixed(1) + "," + Y(v).toFixed(1); apen=true;
+      lastX = X(i);
+    });
+    if (firstX!==null) area = '<path d="'+ap+' L'+lastX.toFixed(1)+','+(o.h-B)+' L'+firstX.toFixed(1)+','+(o.h-B)+' Z" fill="'+o.color+'" opacity="0.06"/>';
+  }
   // peak marker
   let peakSvg = "";
   if (o.peak){
     let pi=-1, pv=-Infinity;
     series.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
-    if (pi>=0) peakSvg = '<circle cx="'+X(pi).toFixed(1)+'" cy="'+Y(pv).toFixed(1)+'" r="4" fill="#c8891f"/>'+
-      '<text x="'+Math.min(X(pi),o.w-90).toFixed(1)+'" y="'+Math.max(Y(pv)-8,12).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#8a7a55">peak '+monthLabel(startYM,pi)+'</text>';
+    if (pi>=0) peakSvg = '<line x1="'+X(pi).toFixed(1)+'" y1="'+Y(pv).toFixed(1)+'" x2="'+X(pi).toFixed(1)+'" y2="'+T+'" stroke="#c8891f" stroke-dasharray="2 3" opacity="0.6"/>'+
+      '<circle cx="'+X(pi).toFixed(1)+'" cy="'+Y(pv).toFixed(1)+'" r="4" fill="#c8891f"/>'+
+      '<text x="'+Math.min(Math.max(X(pi),L+38),o.w-R-40).toFixed(1)+'" y="'+(T-2+12)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#8a7a55">PEAK '+monthLabel(startYM,pi).toUpperCase()+' · '+o.fmt(pv)+'</text>';
   }
+  // end-value tag
   const li = lastIdx(series);
+  let endTag = "";
+  if (li>=0){
+    endTag = '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="4.5" fill="'+o.color+'"/>'+
+      '<text x="'+(o.w-4)+'" y="'+(Y(series[li])+3.5).toFixed(1)+'" text-anchor="end" font-size="10.5" font-weight="bold" font-family="IBM Plex Mono,monospace" fill="'+o.color+'">'+o.fmt(series[li])+'</text>';
+  }
   return '<svg viewBox="0 0 '+o.w+' '+o.h+'" style="width:100%;height:auto;display:block">'+
-    '<line x1="'+L+'" y1="'+Y(y1-pad)+'" x2="'+(o.w-R)+'" y2="'+Y(y1-pad)+'" stroke="#f0ebe0"/>'+
-    '<line x1="'+L+'" y1="'+Y(y0+pad)+'" x2="'+(o.w-R)+'" y2="'+Y(y0+pad)+'" stroke="#f0ebe0"/>'+
-    '<text x="4" y="'+(Y(y1-pad)+4)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(y1-pad)+'</text>'+
-    '<text x="4" y="'+(Y(y0+pad)+4)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(y0+pad)+'</text>'+
+    grid + ticks + area +
     '<path d="'+path+'" fill="none" stroke="'+o.color+'" stroke-width="2.4" stroke-linecap="round"/>'+
-    peakSvg +
-    (li>=0 ? '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="4" fill="'+o.color+'"/>' : "")+
-    '<text x="'+L+'" y="'+(o.h-8)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,x0)+'</text>'+
-    '<text x="'+(o.w-R)+'" y="'+(o.h-8)+'" text-anchor="end" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,x1)+'</text>'+
-    '</svg>';
+    peakSvg + endTag + '</svg>';
 }
 const pctf = x => (x>=0?"+":"−") + Math.abs(x*100).toFixed(1) + "%";
 
@@ -412,12 +469,12 @@ function renderDeepDive(d, zip, val, bal){
 
       // 05 · stress test
       const mom12 = y12 ? val/y12-1 : null;
-      const rows = [];
-      const scen = (name, V) => rows.push('<div class="prrow"><span>'+name+'</span><span>'+fmt(V)+' value · '+fmt(Math.max(0,V-bal))+' equity · <b>'+ (netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V))) +' net</b></span></div>');
-      scen("Today", val);
-      if (mom12!=null) scen("In 6 months, if the 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
-      scen("In 6 months, if prices go flat", val);
-      scen("Stress case: prices fall 5%", val*0.95);
+      const rows = ['<div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>'];
+      const scen = (name, V, cls) => rows.push('<div class="strow '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span><span>'+fmt(Math.max(0,V-bal))+'</span><span class="net">'+(netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V)))+'</span></div>');
+      scen("Today", val, "today");
+      if (mom12!=null) scen("6 mo · 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
+      scen("6 mo · prices go flat", val);
+      scen("6 mo · stress: prices fall 5%", val*0.95, "stress");
       $("stress-table").innerHTML = rows.join("");
       const V0 = (bal+prep)/(1-commission-closing);
       const margin = 1 - V0/val;
