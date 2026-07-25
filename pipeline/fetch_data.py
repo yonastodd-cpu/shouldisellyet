@@ -163,20 +163,30 @@ def row_to_metrics(zip_code, period, state, row) -> ZipMetrics:
 
 
 def fetch_mortgage_rates():
-    """Current + year-ago 30y fixed rate from FRED (free). Returns None on any failure."""
-    try:
-        req = urllib.request.Request(
-            "https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US",
-            headers={"User-Agent": "shouldisellyet-pipeline"})
-        text = urllib.request.urlopen(req, timeout=60).read().decode()
-        rows = [r.split(",") for r in text.strip().splitlines()[1:] if "," in r]
-        vals = [(r[0], float(r[1])) for r in rows if r[1] not in (".", "")]
-        if len(vals) < 60:
-            return None
-        return {"now": vals[-1][1], "year_ago": vals[-53][1], "asof": vals[-1][0]}
-    except Exception as e:
-        print("mortgage fetch skipped:", e)
-        return None
+    """Current + year-ago 30y fixed rate from FRED (free). Returns None on any failure.
+
+    Requests only the recent ~14-month window (small, fast) instead of the full
+    multi-decade series, and retries once on a slow/timeout response.
+    """
+    from datetime import timedelta
+    start = (date.today() - timedelta(days=430)).isoformat()
+    url = ("https://fred.stlouisfed.org/graph/fredgraph.csv"
+           "?id=MORTGAGE30US&cosd=" + start)
+    for attempt in range(2):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "shouldisellyet-pipeline"})
+            text = urllib.request.urlopen(req, timeout=90).read().decode()
+            rows = [r.split(",") for r in text.strip().splitlines()[1:] if "," in r]
+            vals = [(r[0], float(r[1])) for r in rows if r[1] not in (".", "")]
+            if len(vals) < 40:
+                return None
+            # ~52 weekly points back = one year (clamp to available range)
+            ya = vals[-52] if len(vals) > 52 else vals[0]
+            return {"now": vals[-1][1], "year_ago": ya[1], "asof": vals[-1][0]}
+        except Exception as e:
+            print(f"mortgage fetch attempt {attempt+1} failed:", e)
+    print("mortgage fetch skipped after retries")
+    return None
 
 
 def main():
