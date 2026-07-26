@@ -70,10 +70,12 @@ On every data refresh, `pipeline/notify_changes.py` diffs old vs. new verdicts
 and emails each `monitor`-plan subscriber whose ZIP changed color. If secrets
 aren't configured it dry-runs (prints what it would send) and never fails the build.
 
-**Billing:** create two Stripe Payment Links ($5.99 one-time, $5.99/mo) and paste
-them into `CHECKOUT_URL` / `MONITOR_CHECKOUT_URL` in `web/report.html` and
-`MONITOR_CHECKOUT_URL` in `web/index.html`. Until then, signups are captured as
-`status='pending'` in Supabase for manual follow-up.
+**Billing:** consumer prices live in `web/prices.js` (single source of truth:
+$39/yr annual · $5.99/mo monthly · $9.99 one-time report · $29 first-year
+upgrade for report buyers within 30 days). Create the matching Stripe Payment
+Links and paste them into `LINKS` in `web/subscribe.html` — see the TODO there
+for exactly which links are missing. Until a link exists, that option captures
+the signup as `status='pending'` in Supabase for manual follow-up.
 
 ## Stripe webhook — automatic activation (no manual steps after payment)
 

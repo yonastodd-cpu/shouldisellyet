@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="prices.js"></script>
 <style>
   :root{
     --ink:#1c2430; --ink-2:#3a4450; --muted:#5c6673;
@@ -355,12 +356,12 @@
   <!-- Purchase -->
   <div class="buy" id="buy">
     <h2>Get this report for <em style="color:#bcd2ec">your</em> home</h2>
-    <p>EquityWatch monitoring includes this full report free, refreshed monthly — and taps you on the shoulder the moment your market turns. Prefer one deep look? The report alone is $19.</p>
-    <div class="price">$49<small>/yr · EquityWatch monitoring ($4.08/mo, billed annually — or $5.99/mo monthly)</small></div>
-    <p style="margin-top:6px;font-size:13px;color:#bcd2ec">Or just this report, one-time: $19 — free with EquityWatch.</p>
+    <p>EquityWatch monitoring includes this full report free, refreshed monthly — and taps you on the shoulder the moment your market turns. Prefer one deep look? The report alone is <span data-price="report">$9.99</span>.</p>
+    <div class="price"><span data-price="annual">$39</span><small>/yr · EquityWatch monitoring (<span data-price="annual-permo">$3.25/mo, billed annually</span> — <span data-price="monthly-line">or $5.99/mo billed monthly</span>)</small></div>
+    <p style="margin-top:6px;font-size:13px;color:#bcd2ec">Or just this report, one-time: <span data-price="report">$9.99</span> — upgrade to EquityWatch within 30 days and it's credited toward your first year (<span data-price="upgrade">$29</span> instead of <span data-price="annual">$39</span>).</p>
     <div class="btn-row">
-      <a class="btn primary" href="#" onclick="return buyMonitor()">🔔 Set up alerts · $49/yr</a>
-      <a class="btn ghost" style="background:#fff" id="buy-btn" href="#" onclick="return buyReport()">Just this report · $19</a>
+      <a class="btn primary" href="#" onclick="return buyMonitor()">🔔 Set up alerts · <span data-price="annual-yr">$39/yr</span></a>
+      <a class="btn ghost" style="background:#fff" id="buy-btn" href="#" onclick="return buyReport()">Just this report · <span data-price="report">$9.99</span></a>
       <a class="btn ghost" style="background:#fff" href="my-report.html">Get your walk-away number →</a>
       <a class="btn ghost" style="background:transparent;color:#cfe8e4;border-color:rgba(255,255,255,.25)" href="index.html">← Free ZIP check</a>
     </div>

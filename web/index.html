@@ -11,6 +11,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="prices.js"></script>
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
 <style>
@@ -200,14 +201,14 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
         <div class="datastamp" id="v-stamp"></div>
 
         <div class="v-ctas">
-          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Monitor my home — $49/yr</a>
+          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Monitor my home — <span data-price="annual-yr">$39/yr</span></a>
           <a class="linkbtn" href="report.html" style="text-decoration:underline">See a sample EquityWatch report →</a>
           <button class="linkbtn" id="share-btn">Share</button>
           <button class="linkbtn" id="again">Check another ZIP</button>
         </div>
 
         <div class="mform" id="mform">
-          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b>$49/yr ($4.08/mo, billed annually), or $5.99/mo. Cancel anytime.</b></div>
+          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b><span data-price="annual">$39</span>/yr (<span data-price="annual-permo">$3.25/mo, billed annually</span>), or <span data-price="monthly-mo">$5.99/mo</span>. Cancel anytime.</b></div>
           <input type="email" id="mf-email" placeholder="you@email.com" required>
           <input type="text" id="mf-address" placeholder="Property address (optional)">
           <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</label>
@@ -285,13 +286,14 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
       <div style="font-size:14px;font-weight:650">EquityWatch — we monitor your home</div>
-      <div class="price">$49 <small>/yr · cancel anytime</small></div>
-      <div style="font-size:12.5px;color:var(--faint);margin-top:-6px">$4.08/mo, billed annually · or $5.99/mo billed monthly</div>
+      <div class="price"><span data-price="annual">$39</span> <small>/yr · cancel anytime</small> <span style="font-size:11.5px;font-weight:600;color:var(--green);background:var(--green-soft);border:1px solid var(--green-line);border-radius:4px;padding:2px 8px;vertical-align:6px;font-family:system-ui,sans-serif" data-price="save-line">Save $32 vs monthly</span></div>
+      <div style="font-size:12.5px;color:var(--faint);margin-top:-6px" data-price="annual-permo">$3.25/mo, billed annually</div>
+      <div style="font-size:11.5px;color:var(--fainter);margin-top:-4px" data-price="monthly-line">or $5.99/mo billed monthly</div>
       <div class="price-feats">Instant alert the moment your ZIP's verdict changes · your estimated equity, updated monthly · your walk-away number if you sold today · full report included</div>
       <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Monitor my home</a>
     </div>
   </div>
-  <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b>$19 one-time</b>. Or get it free with EquityWatch. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
+  <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b><span data-price="report">$9.99</span> one-time</b>. Upgrade to EquityWatch within 30 days and we'll credit it toward your first year. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
   <div style="margin-top:14px;font-size:13px;color:var(--faint)">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
 </section>
 
@@ -308,9 +310,10 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 <script>
 // ————— Backend config —————
 // Stripe Payment Links: paste and the buttons go straight to checkout.
-// TODO: payment-provider price IDs must be updated to match the new pricing
-// ($49/yr annual, $5.99/mo monthly, $19 one-time report). Checkout is wired
-// through subscribe.html (see LINKS there); this constant is legacy.
+// TODO: payment-provider price IDs must be updated to match web/prices.js
+// ($39/yr annual, $5.99/mo monthly, $9.99 one-time report, $29 upgrade).
+// Checkout is wired through subscribe.html (see LINKS there); this constant
+// is legacy.
 const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // $5.99/mo EquityWatch
 // Supabase (Settings → API). Anon key is publish-safe: RLS allows INSERT only.
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";

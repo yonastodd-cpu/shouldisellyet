@@ -8,6 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="prices.js"></script>
 <style>
 :root{
   --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
@@ -150,10 +151,10 @@ details#adv[open] summary{margin-bottom:4px}
     <div class="gate-inner" id="gate-locked" style="display:none">
       <div class="lock">🔒</div>
       <h1>This is a paid report</h1>
-      <p class="lede">The full EquityWatch report — your equity, your net-proceeds number, and your ZIP's signal gauges — is included with any EquityWatch purchase. Set up monitoring for $49/yr ($4.08/mo, billed annually — or $5.99/mo monthly) and get the report plus alerts, or buy the report once for $19.</p>
+      <p class="lede">The full EquityWatch report — your equity, your net-proceeds number, and your ZIP's signal gauges — is included with any EquityWatch purchase. Set up monitoring for <span data-price="annual-yr">$39/yr</span> (<span data-price="annual-permo">$3.25/mo, billed annually</span> — <span data-price="monthly-line">or $5.99/mo billed monthly</span>) and get the report plus alerts, or buy the report once for <span data-price="report">$9.99</span> — credited toward annual EquityWatch if you upgrade within 30 days.</p>
       <div class="gate-ctas">
-        <a class="btn" href="subscribe.html?plan=monitor">Set up alerts + report · $49/yr</a>
-        <a class="btn-outline" href="subscribe.html?plan=report">Just the report · $19</a>
+        <a class="btn" href="subscribe.html?plan=monitor">Set up alerts + report · <span data-price="annual-yr">$39/yr</span></a>
+        <a class="btn-outline" href="subscribe.html?plan=report">Just the report · <span data-price="report">$9.99</span></a>
       </div>
       <p style="font-size:12.5px;color:var(--fainter);margin-top:16px">Already purchased? Use the <b>“Open my report”</b> link in your confirmation email — it carries your private access. Lost it? <a href="mailto:naomi@shouldisellyet.com?subject=EquityWatch%20report%20access">Email us</a> and we'll resend it.</p>
       <a class="back-link" href="index.html">← Check any ZIP free instead</a>
@@ -163,6 +164,7 @@ details#adv[open] summary{margin-bottom:4px}
   <!-- Everything below is revealed only after access is confirmed -->
   <div id="paid-area" style="display:none">
   <div class="paidband" id="paidband">✓ You're all set — thank you. Build your report below, and bookmark this page: your private link brings you right back.</div>
+  <div id="upgrade-band" style="display:none;background:#fbf8f1;border:1px solid #e6dcc3;border-radius:8px;padding:12px 16px;font-size:14px;margin:14px 0 0;line-height:1.55"></div>
 
   <div class="card setup" id="setup">
     <h1>Your report, from your own numbers</h1>
@@ -890,7 +892,31 @@ function adjustNums(){
   $("in-val").focus();
   return false;
 }
-function unlock(zip, justPaid, address){
+// ————— Report-credit upgrade offer (report buyers, 30-day window) —————
+// Eligibility source, in order of trust: the verify-access response (when the
+// redeployed function returns plan + purchased_at) → the device-local purchase
+// record written by subscribe.html at checkout handoff.
+// TODO backend: durable cross-device eligibility needs `email`, `purchased_at`,
+// `upgraded_at` server-side; subscribers.created_at covers purchased_at today,
+// upgraded_at does not exist yet.
+function renderUpgradeBand(access){
+  let plan = access && access.plan, at = access && access.purchased_at ? Date.parse(access.purchased_at) : null;
+  if (!plan || !at) {
+    try {
+      const p = JSON.parse(localStorage.getItem("sisy_purchase") || "null");
+      if (p && p.at) { plan = plan || p.plan; at = at || p.at; }
+    } catch(e){}
+  }
+  if (plan !== "report" || !at) return;
+  const days = PRICES.UPGRADE_WINDOW_DAYS - Math.floor((Date.now() - at) / 86400000);
+  if (days <= 0 || days > PRICES.UPGRADE_WINDOW_DAYS) return;  // expired offers disappear
+  const band = $("upgrade-band");
+  band.innerHTML = "🎟️ Your " + PRICES.usd(PRICES.REPORT) + " counts toward EquityWatch — upgrade for " +
+    PRICES.usd(PRICES.UPGRADE) + " in the next <b>" + days + " day" + (days === 1 ? "" : "s") + "</b>. " +
+    "<a href=\"subscribe.html?plan=monitor&upgrade=report-credit" + ($("in-zip").value ? "&zip=" + $("in-zip").value : "") + "\" style=\"font-weight:600;text-decoration:underline\">Upgrade →</a>";
+  band.style.display = "block";
+}
+function unlock(zip, justPaid, address, access){
   $("gate").style.display = "none";
   $("paid-area").style.display = "block";
   if (justPaid) $("paidband").style.display = "block";
@@ -898,6 +924,7 @@ function unlock(zip, justPaid, address){
   if (zip) $("in-zip").value = String(zip).replace(/\D/g,"").slice(0,5);
   if (address && !$("in-addr").value) $("in-addr").value = address;
   try { if (TOKEN) localStorage.setItem("sisy_token", TOKEN); } catch(e){}
+  renderUpgradeBand(access);
 }
 function lockOut(){
   $("gate-checking").style.display = "none";
@@ -917,7 +944,7 @@ const justPaid = q.get("paid") === "1" || q.get("checkout");
     try {
       const r = await fetch(VERIFY_FN + "?token=" + encodeURIComponent(TOKEN));
       const j = await r.json();
-      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid, j.address); return; }
+      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid, j.address, j); return; }
     } catch(e) {
       // network hiccup on a real token — fail open rather than block a paying customer
       unlock(q.get("zip"), justPaid); return;
