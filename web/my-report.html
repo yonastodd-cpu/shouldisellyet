@@ -165,38 +165,79 @@ details#adv[open] summary{margin-bottom:4px}
   <div class="paidband" id="paidband">✓ You're all set — thank you. Build your report below, and bookmark this page: your private link brings you right back.</div>
 
   <div class="card setup" id="setup">
-    <h1>Your report, from just your address</h1>
-    <p class="lede">Enter the property address and we do the rest: your ZIP's live market data, a starting value from your area's latest sale prices, and a typical loan assumption &mdash; all adjustable after the report builds. Nothing you type here leaves your browser.</p>
+    <h1>Your report, from your own numbers</h1>
+    <p class="lede">Your numbers beat any purchased estimate. Only the address is required &mdash; everything else sharpens your walk-away number, and you can come back and adjust any of it anytime (this is also your profile). Nothing you type here leaves your browser: it's saved on this device only.</p>
     <div class="frow">
       <div class="f" style="grid-column:1/-1">
-        <label>PROPERTY ADDRESS (INCLUDE ZIP)</label>
+        <label>1 · PROPERTY ADDRESS (INCLUDE ZIP)</label>
         <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD 20906"
                autocomplete="street-address" name="street-address" autofocus>
-        <div class="hint">Your browser can autofill this. We read the ZIP right out of the address.</div>
+        <div class="hint">Your browser can autofill this. We read the ZIP right out of the address &mdash; the ZIP drives your market verdict.</div>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="f">
+        <label>2 · YOUR ESTIMATE OF THE HOME'S VALUE TODAY ($)</label>
+        <input id="in-val" inputmode="numeric" placeholder="auto: your ZIP's median">
+        <div class="hint">Not sure? Use the Zillow or Redfin estimate as a starting point &mdash; you can adjust anytime.</div>
+      </div>
+      <div class="f">
+        <label>ZIP CODE</label>
+        <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="auto from address">
+        <div class="hint">Auto-filled from the address.</div>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="f">
+        <label>3 · YEAR PURCHASED</label>
+        <input id="in-yr" inputmode="numeric" maxlength="4" placeholder="e.g. 2017">
+      </div>
+      <div class="f">
+        <label>PURCHASE PRICE ($)</label>
+        <input id="in-pp" inputmode="numeric" placeholder="what you paid">
+      </div>
+    </div>
+    <div class="frow">
+      <div class="f">
+        <label>4 · CURRENT MORTGAGE BALANCE ($)</label>
+        <input id="in-bal" inputmode="numeric" placeholder="0 if paid off">
+        <div class="hint">Don't know it? Leave blank and fill in the loan details below &mdash; we'll estimate it.</div>
+      </div>
+      <div class="f">
+        <label>5 · INTEREST RATE ON THE MORTGAGE (%)</label>
+        <input id="in-rate" inputmode="decimal" placeholder="e.g. 3.25">
       </div>
     </div>
     <details id="adv">
-      <summary>Fine-tune the numbers (optional) &mdash; ZIP &middot; home value &middot; mortgage balance</summary>
+      <summary>Don't know your balance? Estimate it from the original loan</summary>
       <div class="frow" style="margin-top:12px">
         <div class="f">
-          <label>ZIP CODE</label>
-          <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="auto from address">
+          <label>ORIGINAL LOAN AMOUNT ($)</label>
+          <input id="in-origamt" inputmode="numeric" placeholder="e.g. 320000">
         </div>
         <div class="f">
-          <label>YOUR HOME VALUE ($)</label>
-          <input id="in-val" inputmode="numeric" placeholder="auto: your ZIP's median">
-          <div class="hint">Leave blank to start from your ZIP's latest median sale price.</div>
+          <label>YEAR THE LOAN STARTED</label>
+          <input id="in-origyr" inputmode="numeric" maxlength="4" placeholder="e.g. 2017">
+          <div class="hint">Uses the rate from field 5 and standard 30-year amortization. The result is labeled &ldquo;estimated.&rdquo;</div>
         </div>
-      </div>
-      <div class="frow">
-        <div class="f">
-          <label>MORTGAGE BALANCE ($)</label>
-          <input id="in-bal" inputmode="numeric" placeholder="auto: typical assumption">
-          <div class="hint">Leave blank for a typical assumption (50% of value) &mdash; or enter yours, 0 if paid off.</div>
-        </div>
-        <div class="f"></div>
       </div>
     </details>
+    <div class="frow" style="margin-top:14px">
+      <div class="f">
+        <label>6 · CURRENT MONTHLY PAYMENT — PITI ($)</label>
+        <input id="in-piti" inputmode="numeric" placeholder="principal + interest + taxes + insurance">
+      </div>
+      <div class="f">
+        <label>7 · THINKING OF SELLING WITHIN&hellip;</label>
+        <select id="in-timeline" style="width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)">
+          <option value="">choose one (optional)</option>
+          <option value="6mo">6 months</option>
+          <option value="1-2yr">1–2 years</option>
+          <option value="someday">Someday</option>
+          <option value="watching">Just watching</option>
+        </select>
+      </div>
+    </div>
     <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
   </div>
@@ -250,13 +291,46 @@ details#adv[open] summary{margin-bottom:4px}
     <div class="sec">
       <div class="k">04 · IF YOU SOLD TODAY — YOUR NET</div>
       <div class="title">Your walk-away number</div>
-      <p class="subt">The check you would actually receive at closing after commissions, costs, and payoff. This is the number to protect.</p>
+      <p class="subt">The estimated check you would receive at closing after selling costs and payoff. Shown as a range because no estimate is exact. This is the number to protect.</p>
+      <div style="border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7);margin-bottom:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)">ESTIMATED WALK-AWAY RANGE</div>
+        <div class="serif" id="wa-range" style="font-size:32px;font-weight:600;color:var(--navy);margin:4px 0 2px"></div>
+        <div style="font-size:12.5px;color:var(--muted)" id="wa-note"></div>
+      </div>
       <div class="prtable" id="prtable"></div>
-      <div class="prnote">Assumes ~5% agent commissions, ~2% closing costs &amp; transfer taxes, and $6,000 typical prep &amp; moving. Your actual costs will vary — a local agent can tighten these numbers for free.</div>
+      <div style="margin-top:14px">
+        <label for="cost-slider" style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--gold)">SELLING COSTS: <span id="cost-pct">8</span>% OF SALE PRICE</label>
+        <input type="range" id="cost-slider" min="6" max="10" step="0.5" value="8" style="width:100%;accent-color:var(--navy);margin-top:6px">
+        <div style="font-size:11.5px;color:var(--fainter)">Commission, transfer taxes, prep, and closing costs — adjust for your situation.</div>
+      </div>
+      <div class="prnote" id="wa-asof"></div>
+    </div>
+
+    <div class="sec" id="sec-lockin" style="display:none">
+      <div class="k">05 · WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
+      <div class="title">Your lock-in cost</div>
+      <p class="subt">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
+      <div id="li-wrap">
+        <div class="eqgrid">
+          <div class="eqcard">
+            <div class="label" id="li-now-label">YOUR CURRENT P&amp;I (ESTIMATED)</div>
+            <div class="big" id="li-now"></div>
+            <div class="sub2" id="li-now-sub"></div>
+          </div>
+          <div class="eqcard">
+            <div class="label">SAME LOAN AT TODAY'S 30-YR RATE</div>
+            <div class="big" id="li-market"></div>
+            <div class="sub2" id="li-market-sub"></div>
+          </div>
+        </div>
+        <div class="say" id="li-say" style="margin-top:14px"></div>
+        <div class="prnote" id="li-asof"></div>
+      </div>
+      <div class="say" id="capgains" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
     </div>
 
     <div class="sec" id="sec-stress" style="display:none">
-      <div class="k">05 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+      <div class="k">06 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
       <div class="title">Three futures for your walk-away number</div>
       <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
       <div class="prtable" id="stress-table"></div>
@@ -265,7 +339,7 @@ details#adv[open] summary{margin-bottom:4px}
     </div>
 
     <div class="sec" id="sec-selling" style="display:none">
-      <div class="k">06 · SELLING CONDITIONS IN YOUR ZIP</div>
+      <div class="k">07 · SELLING CONDITIONS IN YOUR ZIP</div>
       <div class="title">How long selling takes here — and when it goes fastest</div>
       <p class="subt">Days on market is the earliest visible crack in any housing market. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
@@ -273,21 +347,21 @@ details#adv[open] summary{margin-bottom:4px}
     </div>
 
     <div class="sec" id="sec-context" style="display:none">
-      <div class="k">07 · THE BIGGER PICTURE</div>
+      <div class="k">08 · THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
       <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
     <div class="sec">
-      <div class="k">08 · WHAT THIS MEANS</div>
+      <div class="k">09 · WHAT THIS MEANS</div>
       <div class="title">The plain-English bottom line</div>
       <p class="subt">One paragraph, no hedging.</p>
       <div class="say" id="meaning"></div>
     </div>
 
     <div class="sec">
-      <div class="k">09 · YOUR NEXT STEP</div>
+      <div class="k">10 · YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
@@ -317,6 +391,52 @@ details#adv[open] summary{margin-bottom:4px}
 <script>
 const $ = id => document.getElementById(id);
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
+const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
+
+// Current market 30-year fixed rate (%). The pipeline writes a live FRED
+// number into meta.json (national.mortgage.now) when the fetch succeeds;
+// this constant is the fallback when it doesn't.
+// TODO: wire to FRED weekly — refresh this fallback whenever rates move.
+const CURRENT_MARKET_RATE = 6.5;
+
+// Standard mortgage math (monthly compounding, 30-year default)
+function pmt(principal, ratePct, years){
+  const n = (years || 30) * 12, i = ratePct / 100 / 12;
+  if (!(principal > 0)) return 0;
+  if (!(i > 0)) return principal / n;
+  return principal * i * Math.pow(1 + i, n) / (Math.pow(1 + i, n) - 1);
+}
+// Remaining balance after `yearsElapsed` of on-schedule payments (standard amortization)
+function balanceAfter(principal, ratePct, yearsElapsed, years){
+  const n = (years || 30) * 12, i = ratePct / 100 / 12;
+  const k = Math.max(0, Math.min(n, Math.round(yearsElapsed * 12)));
+  if (!(i > 0)) return principal * (1 - k / n);
+  const f = Math.pow(1 + i, n), g = Math.pow(1 + i, k);
+  return principal * (f - g) / (f - 1);
+}
+
+// ————— Profile persistence (device-local) —————
+// TODO backend: there is no user-data store beyond the email-capture row in
+// Supabase. To make this profile follow the subscriber across devices, add
+// these fields to the subscribers table (or a linked profile table):
+//   address, zip, value, year_purchased, purchase_price, balance,
+//   orig_loan_amount, orig_loan_year, rate, piti, timeline, cost_pct
+const PROFILE_KEY = "sisy_profile";
+const PROFILE_FIELDS = ["in-addr","in-zip","in-val","in-yr","in-pp","in-bal","in-rate","in-origamt","in-origyr","in-piti","in-timeline"];
+function saveProfile(){
+  const p = {};
+  PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && el.value) p[id] = el.value; });
+  p.costPct = costPct;
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch(e){}
+}
+function loadProfile(){
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null"); } catch(e){}
+  if (!p) return;
+  PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && p[id] && !el.value) el.value = p[id]; });
+  if (p.costPct >= 6 && p.costPct <= 10) { costPct = p.costPct; }
+}
+let costPct = 8;  // selling costs, % of sale price (user-adjustable 6–10)
 let INDEX = null, META = null, SPONSORS = null;
 const stateCache = {};
 const DEMO = {
@@ -489,8 +609,7 @@ const pctf = x => (x>=0?"+":"−") + Math.abs(x*100).toFixed(1) + "%";
 
 function renderDeepDive(d, zip, val, bal){
   const h = d.h, m = d.m || {};
-  const commission = 0.05, closing = 0.02, prep = 6000;
-  const netAt = V => V*(1-commission-closing) - bal - prep;
+  const netAt = V => V*(1 - costPct/100) - bal;
 
   // 02 · value trend
   if (h && h.p){
@@ -520,7 +639,7 @@ function renderDeepDive(d, zip, val, bal){
       scen("6 mo · prices go flat", val);
       scen("6 mo · stress: prices fall 5%", val*0.95, "stress");
       $("stress-table").innerHTML = rows.join("");
-      const V0 = (bal+prep)/(1-commission-closing);
+      const V0 = bal/(1 - costPct/100);
       const margin = 1 - V0/val;
       $("margin-say").innerHTML = margin > 0
         ? "<b>Your safety margin is about " + Math.round(margin*100) + "%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. " + (margin > 0.25 ? "That's a comfortable cushion." : margin > 0.1 ? "A real but not unlimited cushion — one more reason to stay alert." : "That's thin — small market moves matter a lot to you right now.")
@@ -562,7 +681,7 @@ function renderDeepDive(d, zip, val, bal){
   }
 }
 
-async function generate(){
+async function generate(noScroll){
   const addr = $("in-addr").value.trim();
   const zipIn = $("in-zip").value.trim();
   const zipFromAddr = (addr.match(/\b(\d{5})(?:-\d{4})?\b/) || [])[1] || "";
@@ -583,22 +702,36 @@ async function generate(){
     if (li >= 0 && d.h.p[li]) { val = Math.round(d.h.p[li] / 1000) * 1000; valAssumed = true; }
   }
   if (!(val > 10000)) {
-    $("adv").open = true;
-    err.textContent = "We couldn't estimate a value for this ZIP — open fine-tune and enter your home value.";
+    err.textContent = "We couldn't estimate a value for this ZIP — please enter your home value (field 2).";
     err.style.display = "block"; $("in-val").focus(); return;
   }
-  // Mortgage balance: user's number (0 counts), else a typical 50%-of-value assumption
+  // The rest of the intake (all optional; they sharpen the numbers below)
+  const num = id => parseFloat(($(id).value || "").replace(/[^0-9.]/g, "")) || null;
+  const yr = parseInt($("in-yr").value, 10) || null;        // year purchased
+  const pp = num("in-pp");                                   // purchase price
+  const rate = num("in-rate");                               // current mortgage rate %
+  const origAmt = num("in-origamt");                         // original loan amount
+  const origYr = parseInt($("in-origyr").value, 10) || null; // year the loan started
+  const piti = num("in-piti");                               // current monthly PITI
+  const timeline = $("in-timeline").value;
+  // Mortgage balance: user's number (0 counts) → else estimated from the
+  // original loan by standard amortization (labeled "estimated") → else a
+  // typical 50%-of-value assumption
   const balRaw = ($("in-bal").value || "").replace(/[^0-9.]/g, "");
-  let bal;
-  if (balRaw === "") { bal = Math.round(val * 0.5 / 1000) * 1000; balAssumed = true; }
-  else bal = parseFloat(balRaw) || 0;
+  let bal, balEstimated = false;
+  if (balRaw !== "") bal = parseFloat(balRaw) || 0;
+  else if (origAmt && (origYr || yr) && rate != null) {
+    const yrs = Math.max(0, new Date().getFullYear() - (origYr || yr));
+    bal = Math.round(balanceAfter(origAmt, rate, yrs) / 1000) * 1000;
+    balEstimated = true;
+  } else { bal = Math.round(val * 0.5 / 1000) * 1000; balAssumed = true; }
   if (bal < 0 || bal > val * 3) {
     err.textContent = "That mortgage balance doesn't look right — please check it.";
     err.style.display = "block"; return;
   }
-  // reflect the numbers used into fine-tune so adjusting is one tap
-  $("in-zip").value = zip; $("in-val").value = String(val); $("in-bal").value = String(bal);
-  window.__prov = { valAssumed, balAssumed };
+  $("in-zip").value = zip;
+  window.__prov = { valAssumed, balAssumed, balEstimated };
+  saveProfile();
 
   const k = KINDS[d.l], m = d.m || {};
   $("r-head").style.background = k.soft;
@@ -624,7 +757,9 @@ async function generate(){
   } else $("eq-trend").textContent = "";
   $("eq-eq").textContent = fmt(equity);
   $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
-    (prov.balAssumed ? " <i style=\"color:var(--fainter)\">(typical assumption — 50% of value)</i>" : "") +
+    (prov.balAssumed ? " <i style=\"color:var(--fainter)\">(typical assumption — 50% of value)</i>"
+     : prov.balEstimated ? " <i style=\"color:var(--fainter)\">(estimated from your original loan — standard amortization)</i>"
+     : " <i style=\"color:var(--fainter)\">(your input)</i>") +
     " · <a href=\"#\" onclick=\"return adjustNums()\" style=\"text-decoration:underline\">adjust</a>";
   const eqPct = val > 0 ? Math.round(equity / val * 100) : 0;
   $("bar-loan").style.width = (100 - eqPct) + "%";
@@ -632,16 +767,59 @@ async function generate(){
   $("lg-loan").textContent = (100 - eqPct) + "%";
   $("lg-eq").textContent = eqPct + "%";
 
-  // net proceeds
-  const commission = val * 0.05, closing = val * 0.02, prep = 6000;
-  const net = val - commission - closing - bal - prep;
+  // 04 · walk-away number: value − selling costs (adjustable %) − payoff,
+  // displayed prominently as a range of ±3% of value. Always "estimated."
+  const today = new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
+  const pctLabel = costPct % 1 ? costPct.toFixed(1) : String(costPct);
+  const selling = val * costPct / 100;
+  const net = val - selling - bal;
+  const fs = n => (n >= 0 ? fmtK(n) : "− " + fmtK(Math.abs(n)));
+  $("wa-range").textContent = fs(net - val * 0.03) + " – " + fs(net + val * 0.03);
+  $("wa-note").textContent = "Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.";
+  $("cost-pct").textContent = pctLabel;
+  $("cost-slider").value = costPct;
+  const valSrc = prov.valAssumed ? "ZIP median (market data)" : "your input";
+  const balSrc = prov.balEstimated ? "estimated from your loan details" : prov.balAssumed ? "typical assumption (50% of value)" : "your input";
   $("prtable").innerHTML =
-    '<div class="prrow"><span>Estimated sale price (your input)</span><span>'+fmt(val)+'</span></div>'+
-    '<div class="prrow minus"><span>Agent commissions (~5%)</span><span>− '+fmt(commission)+'</span></div>'+
-    '<div class="prrow minus"><span>Closing costs &amp; transfer taxes (~2%)</span><span>− '+fmt(closing)+'</span></div>'+
-    '<div class="prrow minus"><span>Mortgage payoff</span><span>− '+fmt(bal)+'</span></div>'+
-    '<div class="prrow minus"><span>Prep &amp; moving (typical)</span><span>− '+fmt(prep)+'</span></div>'+
-    '<div class="prrow total"><span>Estimated net proceeds</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
+    '<div class="prrow"><span>Estimated sale price <i style="color:var(--fainter)">('+valSrc+')</i></span><span>'+fmt(val)+'</span></div>'+
+    '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmt(selling)+'</span></div>'+
+    '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+fmt(bal)+'</span></div>'+
+    '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
+  $("wa-asof").textContent = "As of " + today + " · market data through " + (META ? META.period : "latest release") +
+    " · all figures estimated" + (timeline ? " · selling timeline: " + $("in-timeline").selectedOptions[0].textContent + " (your input)" : "");
+
+  // 05 · lock-in cost — needs a rate and a positive balance
+  const liveMkt = META && META.national && META.national.mortgage;
+  const mktRate = liveMkt ? liveMkt.now : CURRENT_MARKET_RATE;
+  const mktSrc = liveMkt ? "FRED 30-yr weekly average, " + liveMkt.asof + " (market data)"
+                         : "assumed " + CURRENT_MARKET_RATE + "% (site constant)";
+  const hasLockin = rate != null && bal > 0;
+  if (hasLockin) {
+    // Their current P&I from the original loan if known, else from the balance
+    // over a fresh 30-year term — either way an estimate, and labeled as one.
+    const nowPI = pmt(origAmt || bal, rate);
+    const mktPI = pmt(bal, mktRate);
+    const lock = mktPI - nowPI;
+    $("li-now").textContent = fmt(nowPI) + "/mo";
+    $("li-now-sub").textContent = "At your " + rate + "% rate" +
+      (origAmt ? ", on the original " + fmt(origAmt) + " loan (your input)" : ", on your current balance (your input)") +
+      (piti ? " · your full PITI: " + fmt(piti) + " — P&I excludes taxes & insurance" : "");
+    $("li-market").textContent = fmt(mktPI) + "/mo";
+    $("li-market-sub").textContent = "Borrowing " + fmt(bal) + " at ~" + (+mktRate).toFixed(2) + "% over 30 years";
+    $("li-say").innerHTML = lock > 0
+      ? "<b>Your locked-in rate is worth about " + fmt(lock) + " a month</b> (≈ " + fmt(lock * 12) + " a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving."
+      : "<b>Today's market rate is at or below yours.</b> Your mortgage isn't locking you in — the same loan at today's rate wouldn't cost more per month.";
+    $("li-asof").textContent = "As of " + today + " · your rate & loan: your input · market rate: " + mktSrc + " · estimated — not a loan quote.";
+  }
+  $("li-wrap").style.display = hasLockin ? "block" : "none";
+  // capital-gains note — informational only
+  const gain = pp != null ? val - pp : null;
+  const hasGainNote = gain != null && gain > 250000;
+  if (hasGainNote) {
+    $("capgains").innerHTML = "<b>A note on taxes:</b> Your gain may exceed the single-filer capital-gains exclusion ($250k single / $500k married filing jointly). Worth discussing with a tax professional. <span style=\"color:var(--fainter)\">Estimated gain ≈ " + fmt(gain) + " vs. your " + (yr ? yr + " " : "") + "purchase price (your input).</span>";
+  }
+  $("capgains").style.display = hasGainNote ? "block" : "none";
+  $("sec-lockin").style.display = (hasLockin || hasGainNote) ? "block" : "none";
 
   $("meaning").textContent = k.meaning;
 
@@ -672,7 +850,7 @@ async function generate(){
 
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
     " · " + (META ? META.attribution : "public market data") +
-    "<br>Equity and proceeds are computed from the value and balance you provided — this is not an appraisal. Not financial, legal, or real-estate advice. Consult licensed professionals before making decisions.";
+    "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
   // deep-dive sections (render only when history/context data exists)
   ["sec-trend","sec-stress","sec-selling","sec-context"].forEach(id => $(id).style.display = "none");
@@ -680,8 +858,15 @@ async function generate(){
 
   $("report").style.display = "block";
   $("actions").style.display = "flex";
-  $("report").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!noScroll) $("report").scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// Selling-cost slider (6–10%, default 8%) re-runs the numbers live
+$("cost-slider").addEventListener("input", function(){
+  costPct = parseFloat(this.value);
+  $("cost-pct").textContent = costPct % 1 ? costPct.toFixed(1) : String(costPct);
+  if ($("report").style.display === "block") generate(true);
+});
 
 // ————— Access gate —————
 // Paste your Supabase project URL so the report can verify access tokens.
@@ -691,10 +876,11 @@ const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : 
 const q = new URLSearchParams(location.search);
 
 $("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
-["in-val","in-bal"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/[^0-9]/g,""); }));
+["in-val","in-bal","in-pp","in-origamt","in-piti"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/[^0-9]/g,""); }));
+["in-yr","in-origyr"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); }));
+$("in-rate").addEventListener("input", function(){ this.value = this.value.replace(/[^0-9.]/g,""); });
 
 function adjustNums(){
-  $("adv").open = true;
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();
   return false;
@@ -703,6 +889,7 @@ function unlock(zip, justPaid, address){
   $("gate").style.display = "none";
   $("paid-area").style.display = "block";
   if (justPaid) $("paidband").style.display = "block";
+  loadProfile();  // prefill the intake from this device's saved profile
   if (zip) $("in-zip").value = String(zip).replace(/\D/g,"").slice(0,5);
   if (address && !$("in-addr").value) $("in-addr").value = address;
   try { if (TOKEN) localStorage.setItem("sisy_token", TOKEN); } catch(e){}
