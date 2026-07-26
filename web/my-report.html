@@ -312,7 +312,8 @@ details#adv[open] summary{margin-bottom:4px}
       <div class="k">05 · WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
       <div class="title">Your lock-in cost</div>
       <p class="subt">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
-      <div id="li-wrap">
+      <div class="say" id="li-prompt" style="display:none;border-left-color:var(--gold);background:#fbf8f1"></div>
+      <div id="li-wrap" style="display:none">
         <div class="eqgrid">
           <div class="eqcard">
             <div class="label" id="li-now-label">YOUR CURRENT P&amp;I (ESTIMATED)</div>
@@ -329,6 +330,7 @@ details#adv[open] summary{margin-bottom:4px}
         <div class="prnote" id="li-asof"></div>
       </div>
       <div class="say" id="capgains" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
+      <div class="say" id="capgains-prompt" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
     </div>
 
     <div class="sec" id="sec-stress" style="display:none">
@@ -815,16 +817,29 @@ async function generate(noScroll){
       ? "<b>Your locked-in rate is worth about " + fmt(lock) + " a month</b> (≈ " + fmt(lock * 12) + " a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving."
       : "<b>Today's market rate is at or below yours.</b> Your mortgage isn't locking you in — the same loan at today's rate wouldn't cost more per month.";
     $("li-asof").textContent = "As of " + today + " · your rate & loan: your input · market rate: " + mktSrc + " · estimated — not a loan quote.";
+  } else {
+    // Only the address is required to build a report, so this is the common
+    // case on a first pass — don't just disappear the whole feature, point
+    // at exactly what unlocks it.
+    $("li-prompt").innerHTML = "<b>Add your mortgage rate</b> (field 5" +
+      (bal <= 0 ? " and your balance, field 4" : "") +
+      ") above and rebuild your report to see what your locked-in rate is worth against today's market rate.";
   }
   $("li-wrap").style.display = hasLockin ? "block" : "none";
+  $("li-prompt").style.display = hasLockin ? "none" : "block";
   // capital-gains note — informational only
   const gain = pp != null ? val - pp : null;
   const hasGainNote = gain != null && gain > 250000;
   if (hasGainNote) {
     $("capgains").innerHTML = "<b>A note on taxes:</b> Your gain may exceed the single-filer capital-gains exclusion ($250k single / $500k married filing jointly). Worth discussing with a tax professional. <span style=\"color:var(--fainter)\">Estimated gain ≈ " + fmt(gain) + " vs. your " + (yr ? yr + " " : "") + "purchase price (your input).</span>";
+  } else if (pp == null) {
+    $("capgains-prompt").innerHTML = "<b>Add your purchase price</b> (field 3) above and rebuild your report to check whether your gain might exceed the capital-gains exclusion ($250k single / $500k married filing jointly).";
   }
   $("capgains").style.display = hasGainNote ? "block" : "none";
-  $("sec-lockin").style.display = (hasLockin || hasGainNote) ? "block" : "none";
+  $("capgains-prompt").style.display = (!hasGainNote && pp == null) ? "block" : "none";
+  // The section itself always renders now — it's a report capability whether
+  // or not the buyer has filled in the optional fields that sharpen it yet.
+  $("sec-lockin").style.display = "block";
 
   $("meaning").textContent = k.meaning;
 
