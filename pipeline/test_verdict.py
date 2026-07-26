@@ -100,6 +100,54 @@ def test_uppercase_headers_like_real_redfin_file(tmp_path):
     assert m.months_of_supply == 3.0 and m.state == "IL"
 
 
+# ——— Strong seller's-market verdict ———
+
+def test_strong_market_three_of_four_is_strong_act():
+    # supply tight + prices surging + homes selling faster (price cuts unknown)
+    v = evaluate(ZipMetrics("67208", months_of_supply=0.4,
+                            median_sale_price_yoy=0.064,
+                            median_dom=15.0, median_dom_yoy=-15.5))
+    assert v.level == "strong" and v.word == "ACT"
+    assert {c for c, _, _ in v.reasons} == {
+        "supply_tight", "prices_surging", "homes_selling_fast"}
+
+
+def test_strong_needs_at_least_three_signals():
+    # only supply + prices met, DOM flat, cuts unknown → plain green
+    v = evaluate(ZipMetrics("00010", months_of_supply=1.5,
+                            median_sale_price_yoy=0.08,
+                            median_dom=30.0, median_dom_yoy=0.0))
+    assert v.level == "green" and v.word == "HOLD"
+
+
+def test_any_danger_flag_beats_strong():
+    # 36% price cuts = a 1-point danger flag → still green score 1, never strong,
+    # even though supply/prices/DOM would all qualify as strong
+    v = evaluate(ZipMetrics("00011", months_of_supply=1.0,
+                            median_sale_price_yoy=0.10,
+                            median_dom=20.0, median_dom_yoy=-10.0,
+                            price_drop_share=0.36))
+    assert v.level == "green" and v.score == 1
+    assert any(c == "price_cuts_widespread" for c, _, _ in v.reasons)
+
+
+def test_strong_with_price_cuts_signal_present():
+    v = evaluate(ZipMetrics("00012", months_of_supply=2.0,
+                            median_sale_price_yoy=0.06,
+                            median_dom=40.0, median_dom_yoy=2.0,   # DOM not qualifying
+                            price_drop_share=0.10))                # cuts qualifying
+    assert v.level == "strong"
+
+
+def test_strong_thresholds_are_exclusive_at_the_line():
+    # exactly at the lines: mos 2.5 and pd 0.20 do NOT qualify; spy 0.05 does
+    v = evaluate(ZipMetrics("00013", months_of_supply=2.5,
+                            median_sale_price_yoy=0.05,
+                            median_dom=30.0, median_dom_yoy=-1.0,
+                            price_drop_share=0.20))
+    assert v.level == "green"
+
+
 # ——— Pipeline on fixture TSV ———
 
 FIXTURE_HEADER = (

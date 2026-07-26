@@ -355,21 +355,47 @@ const KINDS = {
     meaning:"This is the moment to know your numbers — which is exactly what this report gives you. If selling within the next 12–18 months was already on your mind, the data says sooner beats later, and pricing correctly on day one matters more than any year in recent memory. If you're staying put, no action needed — just stay alert."},
   red:{tag:"ACT",hex:"#d64545",soft:"#fbe9e9",line:"#ecc3c3",title:"Danger lines crossed in {zip}",
     sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power.",
-    meaning:"If selling was already on your mind, the data says act on a plan now — not next spring. Markets like this reward sellers who move early and price right the first time. Talk to a local professional this week, get real comparable sales for your street, and decide with numbers instead of nerves."}
+    meaning:"If selling was already on your mind, the data says act on a plan now — not next spring. Markets like this reward sellers who move early and price right the first time. Talk to a local professional this week, get real comparable sales for your street, and decide with numbers instead of nerves."},
+  strong:{tag:"ACT",hex:"#1f3a5f",soft:"#e8eef7",line:"#c3d2e8",title:"Strong seller's market in {zip}",
+    sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now.",
+    meaning:"This is the opposite of a warning: multiple strength signals are past their thresholds at once — homes here sell fast, prices are rising, and supply is thin. If a sale was already in your plans, conditions like these favor sellers; a local professional can tell you what your exact home would command this month. If you're staying put, no action needed — your equity has a tailwind."}
 };
 const clampPct = x => Math.max(3, Math.min(97, x));
-const tcol = t => t==="r" ? "#d64545" : t==="a" ? "#c8891f" : "#2e9e5b";
+const tcol = t => t==="r" ? "#d64545" : t==="a" ? "#c8891f" : t==="s" ? "#1f3a5f" : "#2e9e5b";
 
-function buildMetricRows(d){
+// Strong seller's-market upgrade (mirrors pipeline/verdict.py): a clean green
+// (zero danger flags) with ≥3 strength signals renders as "strong". Danger
+// verdicts always win; signals the data doesn't provide are skipped.
+function strongSignals(m){
+  let met = 0;
+  if (m.mos != null && m.mos < 2.5) met++;
+  if (m.spy != null && m.spy >= 0.05) met++;
+  if (m.dom != null && m.domy != null){ const prior = m.dom - m.domy; if (prior > 0 && m.domy/prior <= -0.15) met++; }
+  if (m.pd != null && m.pd < 0.20) met++;
+  return met;
+}
+function applyStrong(d){
+  if (!d || d.l !== "green" || (d.r||[]).length) return d;
+  if (strongSignals(d.m||{}) >= 3) return Object.assign({}, d, {l:"strong"});
+  return d;
+}
+
+// strong=true marks the strong-market thresholds on the same gauges
+function buildMetricRows(d, strong){
   const m = d.m || {}, rows = [];
-  if (m.mos != null){ const t = m.mos>6?"r":m.mos>4?"a":"g";
-    rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:50, note:t==="g"?"line: 4.0 mo":"past the line"}); }
-  if (m.spy != null){ const t = m.spy<-0.05?"r":m.spy<-0.02?"a":"g";
-    rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:58.3, note:t==="g"?"holding or rising":"line: −2% y/y"}); }
-  if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0; const t=p>0.4?"a":"g";
-    rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:60, note:m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"}); }
-  if (m.pd != null){ const t=m.pd>0.35?"a":"g";
-    rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:50, note:t==="g"?"line: 35%":"past the line"}); }
+  if (m.mos != null){ const t = strong ? (m.mos<2.5?"s":"g") : (m.mos>6?"r":m.mos>4?"a":"g");
+    rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:strong?31.3:50,
+      note:strong?(t==="s"?"past the strong line: 2.5 mo":"strong line: 2.5 mo"):(t==="g"?"line: 4.0 mo":"past the line")}); }
+  if (m.spy != null){ const t = strong ? (m.spy>=0.05?"s":"g") : (m.spy<-0.05?"r":m.spy<-0.02?"a":"g");
+    rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:strong?29.2:58.3,
+      note:strong?(t==="s"?"past the strong line: +5% y/y":"strong line: +5% y/y"):(t==="g"?"holding or rising":"line: −2% y/y")}); }
+  if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
+    const t = strong ? (p<=-0.15?"s":"g") : (p>0.4?"a":"g");
+    rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
+      note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −15% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr")}); }
+  if (m.pd != null){ const t = strong ? (m.pd<0.20?"s":"g") : (m.pd>0.35?"a":"g");
+    rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:strong?28.6:50,
+      note:strong?(t==="s"?"below the strong line: 20%":"strong line: 20%"):(t==="g"?"line: 35%":"past the line")}); }
   if (m.invy != null){ const t=m.invy>0.5?"a":"g";
     rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging"}); }
   return rows.slice(0,4);
@@ -546,7 +572,7 @@ async function generate(){
     err.textContent = "Please include the 5-digit ZIP in the address (or open fine-tune and enter it).";
     err.style.display = "block"; $("in-addr").focus(); return;
   }
-  const d = await lookup(zip);
+  const d = applyStrong(await lookup(zip));
   if (!d) { err.textContent = "We're not scoring " + zip + " yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
 
   // Home value: user's number if given, else the ZIP's latest median sale price
@@ -582,8 +608,8 @@ async function generate(){
   $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
   $("v-title").textContent = k.title.replace("{zip}", zip);
   $("r-addr").textContent = (addr ? addr + " · " : "") + zip + (d.st ? ", " + d.st : "") + " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
-  $("metrics").innerHTML = renderMetrics(buildMetricRows(d));
-  $("v-sub").textContent = k.sub;
+  $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
+  $("v-sub").textContent = k.sub.replace("{zip}", zip);
 
   // equity
   const prov = window.__prov || {};

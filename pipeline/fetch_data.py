@@ -232,7 +232,7 @@ def main():
     spys.sort()
     deciles = [round(spys[int(len(spys) * q / 10) - (1 if q == 10 else 0)], 4)
                for q in range(11)] if len(spys) >= 100 else []
-    counts0 = {"green": 0, "yellow": 0, "red": 0}
+    counts0 = {"green": 0, "yellow": 0, "red": 0, "strong": 0}
     for zips in by_state.values():
         for z in zips.values():
             counts0[z["l"]] += 1
@@ -249,7 +249,8 @@ def main():
     for zips in by_state.values():
         for z in zips.values():
             counts[z["l"]] += 1
-    print(f"Done. green={counts['green']} yellow={counts['yellow']} red={counts['red']}")
+    print(f"Done. green={counts['green']} yellow={counts['yellow']} "
+          f"red={counts['red']} strong={counts['strong']}")
     print(f"Wrote {len(by_state)} state files to {OUT}")
 
 

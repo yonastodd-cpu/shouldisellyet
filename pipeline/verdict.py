@@ -10,6 +10,17 @@ Thresholds are based on well-documented leading indicators:
   - Price-drop share > 35%     → widespread seller capitulation
   - Days on market up > 40% YoY→ demand cracking
   - Inventory up > 50% YoY     → supply wave building
+
+The same signals are also read in the opposite direction. When ZERO danger
+lines are crossed and at least 3 of these strength signals are met, the
+verdict is "strong" — a seller's-market ACT, distinct from the danger ACT:
+  - Months of supply < 2.5
+  - Median sale price ≥ +5% YoY
+  - Median days on market down ≥ 15% YoY
+  - Price-drop share < 20%     (Redfin's price_drops column is empty in
+                                current production files, so this signal is
+                                usually unavailable and simply skipped —
+                                the other three must then all be met)
 """
 
 from dataclasses import dataclass, field
@@ -64,7 +75,26 @@ def _checks(m: ZipMetrics):
     return out
 
 
-LEVELS = {"green": "HOLD", "yellow": "WATCH", "red": "ACT"}
+LEVELS = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "ACT"}
+
+STRONG_MIN_SIGNALS = 3  # strength signals required (of the 4 below) for "strong"
+
+
+def _strong_checks(m: ZipMetrics):
+    """Seller's-market strength signals. Missing metrics are simply skipped."""
+    out = []
+    if m.months_of_supply is not None and m.months_of_supply < 2.5:
+        out.append(("supply_tight", 0, m.months_of_supply))
+    if m.median_sale_price_yoy is not None and m.median_sale_price_yoy >= 0.05:
+        out.append(("prices_surging", 0, m.median_sale_price_yoy))
+    # median_dom_yoy is an absolute change in DAYS (see _checks above)
+    if m.median_dom_yoy is not None and m.median_dom is not None:
+        prior_dom = m.median_dom - m.median_dom_yoy
+        if prior_dom > 0 and (m.median_dom_yoy / prior_dom) <= -0.15:
+            out.append(("homes_selling_fast", 0, m.median_dom_yoy))
+    if m.price_drop_share is not None and m.price_drop_share < 0.20:
+        out.append(("few_price_cuts", 0, m.price_drop_share))
+    return out
 
 
 def evaluate(m: ZipMetrics) -> Verdict:
@@ -87,6 +117,13 @@ def evaluate(m: ZipMetrics) -> Verdict:
     if known < 2:
         return Verdict(m.zip_code, "green", "HOLD", 0,
                        [("insufficient_data", 0, known)])
+
+    # Danger verdicts always win: the strong seller's-market verdict only
+    # renders when zero danger lines are crossed (not even a 1-point flag).
+    if not flags:
+        strong = _strong_checks(m)
+        if len(strong) >= STRONG_MIN_SIGNALS:
+            return Verdict(m.zip_code, "strong", LEVELS["strong"], 0, strong)
 
     return Verdict(m.zip_code, level, LEVELS[level], score, flags)
 
