@@ -286,6 +286,7 @@ details#adv[open] summary{margin-bottom:4px}
           <div class="sub2" id="eq-balline"></div>
           <div class="eqbar"><div class="loan" id="bar-loan"></div><div class="eq" id="bar-eq"></div></div>
           <div class="eqlegend"><span><i style="background:#cfc8b8"></i>Loan <b id="lg-loan"></b></span><span><i style="background:var(--navy)"></i>Equity <b id="lg-eq"></b></span></div>
+          <a href="#" onclick="return jumpToWatch('equity')" style="display:inline-block;margin-top:8px;font-size:12.5px;text-decoration:underline;color:var(--navy)">🔔 Watch this number</a>
         </div>
       </div>
     </div>
@@ -298,6 +299,7 @@ details#adv[open] summary{margin-bottom:4px}
         <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)">ESTIMATED WALK-AWAY RANGE</div>
         <div class="serif" id="wa-range" style="font-size:32px;font-weight:600;color:var(--navy);margin:4px 0 2px"></div>
         <div style="font-size:12.5px;color:var(--muted)" id="wa-note"></div>
+        <a href="#" onclick="return jumpToWatch('walkaway')" style="display:inline-block;margin-top:8px;font-size:12.5px;text-decoration:underline;color:var(--navy)">🔔 Watch this number</a>
       </div>
       <div class="prtable" id="prtable"></div>
       <div style="margin-top:14px">
@@ -327,6 +329,7 @@ details#adv[open] summary{margin-bottom:4px}
           </div>
         </div>
         <div class="say" id="li-say" style="margin-top:14px"></div>
+        <a href="#" onclick="return jumpToWatch('lockin')" style="display:inline-block;margin-top:8px;font-size:12.5px;text-decoration:underline;color:var(--navy)">🔔 Watch this number</a>
         <div class="prnote" id="li-asof"></div>
       </div>
       <div class="say" id="capgains" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
@@ -364,8 +367,48 @@ details#adv[open] summary{margin-bottom:4px}
       <div class="say" id="meaning"></div>
     </div>
 
+    <div class="sec" id="sec-watch">
+      <div class="k">10 · GET ALERTED</div>
+      <div class="title">Watch your numbers</div>
+      <p class="subt">Set a threshold on your walk-away number, equity, or lock-in cost — we'll check it every time new market data publishes and email you the moment it crosses.</p>
+      <div class="say" id="watch-locked" style="display:none">Open your report from the permanent link in your confirmation email, then come back here to set an alert — that link is what makes it durable across visits.</div>
+      <div id="watch-form">
+        <div class="frow">
+          <div class="f">
+            <label>WATCH</label>
+            <select id="watch-metric" style="width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)">
+              <option value="walkaway">My walk-away number</option>
+              <option value="equity">My equity</option>
+              <option value="lockin">My lock-in cost</option>
+            </select>
+          </div>
+          <div class="f">
+            <label>ALERT ME WHEN IT</label>
+            <select id="watch-direction" style="width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)">
+              <option value="below">drops below</option>
+              <option value="above">rises above</option>
+            </select>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="f">
+            <label>THRESHOLD ($)</label>
+            <input id="watch-threshold" inputmode="numeric" placeholder="e.g. 100000">
+          </div>
+          <div class="f"></div>
+        </div>
+        <div class="actions" style="margin-top:2px">
+          <button class="btn" onclick="return saveWatch()">Save alert</button>
+          <button class="btn-outline" id="watch-clear-btn" style="display:none" onclick="return clearWatch()">Turn off alert</button>
+        </div>
+        <div class="err" id="watch-err"></div>
+        <div id="watch-ok" style="display:none;color:var(--green);font-size:13.5px;font-weight:600;margin-top:10px"></div>
+        <p style="font-size:11.5px;color:var(--fainter);margin-top:12px;line-height:1.5">Saving an alert sends the numbers above (your value estimate, balance, rate) to us so we can recheck them monthly — unlike the rest of this report, which stays in your browser. See <a href="privacy.html" style="text-decoration:underline">Privacy</a>. Turn it off anytime.</p>
+      </div>
+    </div>
+
     <div class="sec">
-      <div class="k">10 · YOUR NEXT STEP</div>
+      <div class="k">11 · YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
@@ -708,6 +751,13 @@ async function generate(noScroll){
     const li = lastIdx(d.h.p);
     if (li >= 0 && d.h.p[li]) { val = Math.round(d.h.p[li] / 1000) * 1000; valAssumed = true; }
   }
+  // Independent of whether val above was assumed or typed in, capture the
+  // ZIP's current median as the baseline a saved watch scales forward from.
+  let baselineMedian = null;
+  if (d.h && d.h.p) {
+    const liB = lastIdx(d.h.p);
+    if (liB >= 0 && d.h.p[liB]) baselineMedian = d.h.p[liB];
+  }
   if (!(val > 10000)) {
     err.textContent = "We couldn't estimate a value for this ZIP — please enter your home value (field 2).";
     err.style.display = "block"; $("in-val").focus(); return;
@@ -878,6 +928,11 @@ async function generate(noScroll){
   ["sec-trend","sec-stress","sec-selling","sec-context"].forEach(id => $(id).style.display = "none");
   try { renderDeepDive(d, zip, val, bal); } catch(e) { console.error("deep-dive:", e); }
 
+  // Snapshot for the "watch this number" feature (section 10) — only sent to
+  // the server if the owner explicitly saves an alert; see saveWatch().
+  window.__calcInputs = { value: val, baselineMedian, bal, rate, origAmt, costPct };
+  refreshWatchUI();
+
   $("report").style.display = "block";
   $("actions").style.display = "flex";
   if (!noScroll) $("report").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -895,6 +950,7 @@ $("cost-slider").addEventListener("input", function(){
 // (Leave "" to run the page ungated — e.g. for local preview.)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : "";
+const SAVE_WATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-watch" : "";
 const q = new URLSearchParams(location.search);
 
 $("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
@@ -940,6 +996,90 @@ function unlock(zip, justPaid, address, access){
   if (address && !$("in-addr").value) $("in-addr").value = address;
   try { if (TOKEN) localStorage.setItem("sisy_token", TOKEN); } catch(e){}
   renderUpgradeBand(access);
+}
+
+// ————— Personal-number watch (section 10) —————
+// Unlike the rest of this report, saving a watch DOES send data to us — the
+// specific inputs needed to recheck the chosen metric monthly. Requires a
+// durable token (from the confirmation email), since that token is what the
+// save-watch function uses to find and update the right subscriber row.
+function jumpToWatch(metric){
+  const sel = $("watch-metric");
+  if (sel) sel.value = metric;
+  $("sec-watch").scrollIntoView({behavior:"smooth", block:"start"});
+  return false;
+}
+function refreshWatchUI(){
+  const locked = !TOKEN;
+  $("watch-locked").style.display = locked ? "block" : "none";
+  $("watch-form").style.display = locked ? "none" : "block";
+}
+async function saveWatch(){
+  const errEl = $("watch-err"), okEl = $("watch-ok");
+  errEl.style.display = "none"; okEl.style.display = "none";
+  if (!TOKEN) {
+    errEl.textContent = "Open your report from the link in your confirmation email first — that's what makes this alert durable.";
+    errEl.style.display = "block";
+    return false;
+  }
+  if (!window.__calcInputs) {
+    errEl.textContent = "Build your report above first, then set an alert.";
+    errEl.style.display = "block";
+    return false;
+  }
+  const metric = $("watch-metric").value;
+  const direction = $("watch-direction").value;
+  const threshold = parseFloat(($("watch-threshold").value || "").replace(/[^0-9.]/g, ""));
+  if (!(threshold > 0)) {
+    errEl.textContent = "Enter a threshold amount.";
+    errEl.style.display = "block"; $("watch-threshold").focus();
+    return false;
+  }
+  if (!SAVE_WATCH_FN) {
+    errEl.textContent = "Alerts aren't configured yet — please check back soon.";
+    errEl.style.display = "block";
+    return false;
+  }
+  try {
+    const r = await fetch(SAVE_WATCH_FN, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: TOKEN, calcInputs: window.__calcInputs,
+        watchMetric: metric, watchDirection: direction, watchThreshold: threshold,
+      }),
+    });
+    const j = await r.json();
+    if (j && j.ok) {
+      okEl.textContent = "✓ Alert saved — we'll email you the moment it " +
+        (direction === "below" ? "drops below " : "rises above ") + fmt(threshold) + ".";
+      okEl.style.display = "block";
+      $("watch-clear-btn").style.display = "inline-block";
+    } else {
+      errEl.textContent = "Couldn't save your alert — please try again, or write to naomi@shouldisellyet.com.";
+      errEl.style.display = "block";
+    }
+  } catch (e) {
+    errEl.textContent = "Couldn't save your alert — please try again, or write to naomi@shouldisellyet.com.";
+    errEl.style.display = "block";
+  }
+  return false;
+}
+async function clearWatch(){
+  const okEl = $("watch-ok"), errEl = $("watch-err");
+  errEl.style.display = "none";
+  if (!TOKEN || !SAVE_WATCH_FN) return false;
+  try {
+    await fetch(SAVE_WATCH_FN, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, watchMetric: null }),
+    });
+  } catch (e) {}
+  okEl.textContent = "Alert turned off.";
+  okEl.style.display = "block";
+  $("watch-clear-btn").style.display = "none";
+  return false;
 }
 function lockOut(){
   $("gate-checking").style.display = "none";

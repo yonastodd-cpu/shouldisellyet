@@ -67,6 +67,14 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python pipeline/notify_changes.py --old /tmp/old_zips --new web/data/zips
 
+      - name: Check personal-number watches (Supabase + Resend)
+        if: steps.check.outputs.changed == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python pipeline/check_watches.py --data web/data
+
       - name: Run tests
         if: steps.check.outputs.changed == 'true'
         run: |
