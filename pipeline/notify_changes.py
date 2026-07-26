@@ -26,9 +26,10 @@ import os
 import sys
 import urllib.request
 
-WORDS = {"green": "HOLD", "yellow": "WATCH", "red": "ACT"}
-EMOJI = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
-SEVERITY = {"green": 0, "yellow": 1, "red": 2}
+WORDS = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "ACT"}
+EMOJI = {"green": "🟢", "yellow": "🟡", "red": "🔴", "strong": "🔵"}
+# "strong" = seller's market, the good direction — below green on this scale
+SEVERITY = {"strong": -1, "green": 0, "yellow": 1, "red": 2}
 SITE = "https://shouldisellyet.com"
 
 
@@ -56,19 +57,25 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
     # Personalize to the home if we have the address; fall back to the area.
     home = address.strip() if address and address.strip() else f"your home in {zip_code}"
     subject = f"{EMOJI[old_level]}→{EMOJI[new_level]} The market for your home just changed to {word} — EquityWatch"
-    headline = (
-        f"The market for {home} has deteriorated." if worse
-        else f"The market for {home} has improved.")
+    if new_level == "strong":
+        headline = f"The market for {home} is unusually strong for sellers."
+    elif old_level == "strong":
+        headline = f"The market for {home} has cooled from a strong seller's market."
+    else:
+        headline = (
+            f"The market for {home} has deteriorated." if worse
+            else f"The market for {home} has improved.")
     action = {
         "red": "Multiple sell-signals are now tripped in your area. If selling was on your mind, it's time to act on a plan — review your numbers and talk to a local expert this week.",
         "yellow": "The market around your home needs watching. Know your numbers now so you can move quickly if it deteriorates further.",
         "green": "Pressure has eased in your area. No action needed — we'll keep an eye on it for you.",
+        "strong": "Buyers are competing for homes in your area — multiple strength signals are past their thresholds. If selling was already on your mind, conditions favor you right now.",
     }[new_level]
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
     html = f"""
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch Alert</p>
-  <h1 style="font-size:26px;margin:6px 0 4px">{EMOJI[new_level]} The market for your home is now <span style="color:{'#e03e36' if new_level=='red' else '#e8a317' if new_level=='yellow' else '#12a150'}">{word}</span></h1>
+  <h1 style="font-size:26px;margin:6px 0 4px">{EMOJI[new_level]} The market for your home is now <span style="color:{'#e03e36' if new_level=='red' else '#e8a317' if new_level=='yellow' else '#1f3a5f' if new_level=='strong' else '#12a150'}">{word}</span></h1>
   <p style="font-size:14px;color:#667085">{home} · changed from {WORDS[old_level]} → {word}</p>
   <p style="font-size:16px;line-height:1.6"><b>{headline}</b> {action}</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your home's report →</a></p>

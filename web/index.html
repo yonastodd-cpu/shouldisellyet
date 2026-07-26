@@ -254,7 +254,7 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 <section class="band" id="signals">
   <div style="display:flex;align-items:baseline;gap:18px;margin-bottom:28px;flex-wrap:wrap">
     <h2>What we crunch</h2>
-    <span style="font-size:13.5px;color:var(--faint)">Four signals that move months before prices do — with the exact danger lines we use.</span>
+    <span style="font-size:13.5px;color:var(--faint)">Four signals that move months before prices do — with the exact danger lines we use. We test the same signals in both directions — so you hear it early whether your market is cracking or heating up.</span>
   </div>
   <div class="grid4">
     <div class="sig"><div class="k">SIGNAL 01</div><div class="n">Months of supply</div><p>How long it would take to sell every home on the market. Above 4 months, sellers lose pricing power. The single best early signal.</p><div class="line">Danger line: 4.0 mo</div></div>
@@ -379,34 +379,66 @@ const KINDS = {
             sub:"A warning signal has tripped. Not a crisis — but this is exactly how turns start, months before prices move. Worth watching closely." },
   red:    { key:"act",   tag:"ACT",   col:"var(--red)",   hex:"#d64545", soft:"#fbe9e9", line:"#ecc3c3",
             headline:"Danger lines crossed in {zip}",
-            sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power. If selling was already on your mind, make a plan now — not next spring." }
+            sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power. If selling was already on your mind, make a plan now — not next spring." },
+  strong: { key:"strong", tag:"ACT",  col:"var(--navy)",  hex:"#1f3a5f", soft:"#e8eef7", line:"#c3d2e8",
+            headline:"Strong seller's market",
+            sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now." }
 };
-const clampPct = x => Math.max(3, Math.min(97, x));
-const tcol = t => t === "r" ? "#d64545" : t === "a" ? "#c8891f" : "#2e9e5b";
 
-function buildMetricRows(d) {
+// ————— Strong seller's-market upgrade (mirrors pipeline/verdict.py) —————
+// A clean green (zero danger flags) with ≥3 strength signals becomes "strong".
+// Danger verdicts always win; signals the data doesn't provide are skipped.
+function strongSignals(m) {
+  let met = 0;
+  if (m.mos != null && m.mos < 2.5) met++;
+  if (m.spy != null && m.spy >= 0.05) met++;
+  if (m.dom != null && m.domy != null) {
+    const prior = m.dom - m.domy;
+    if (prior > 0 && m.domy / prior <= -0.15) met++;
+  }
+  if (m.pd != null && m.pd < 0.20) met++;
+  return met;
+}
+function applyStrong(d) {
+  if (!d || d.l !== "green" || (d.r || []).length) return d;
+  if (strongSignals(d.m || {}) >= 3) return Object.assign({}, d, { l: "strong" });
+  return d;
+}
+const clampPct = x => Math.max(3, Math.min(97, x));
+const tcol = t => t === "r" ? "#d64545" : t === "a" ? "#c8891f" : t === "s" ? "#1f3a5f" : "#2e9e5b";
+
+// strong=true renders the same gauges against the strong-market thresholds
+// (navy = past the strong line) instead of the danger lines.
+function buildMetricRows(d, strong) {
   const m = d.m || {}, rows = [];
   if (m.mos != null) {
-    const t = m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g";
+    const t = strong ? (m.mos < 2.5 ? "s" : "g") : (m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g");
     rows.push({ name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t,
-      fill:clampPct(m.mos/8*100), th:50, note: t==="g" ? "line: 4.0 mo" : "past the line" });
+      fill:clampPct(m.mos/8*100), th: strong ? 31.3 : 50,
+      note: strong ? (t==="s" ? "past the strong line: 2.5 mo" : "strong line: 2.5 mo")
+                   : (t==="g" ? "line: 4.0 mo" : "past the line") });
   }
   if (m.spy != null) {
-    const t = m.spy < -0.05 ? "r" : m.spy < -0.02 ? "a" : "g";
+    const t = strong ? (m.spy >= 0.05 ? "s" : "g") : (m.spy < -0.05 ? "r" : m.spy < -0.02 ? "a" : "g");
     rows.push({ name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t,
-      fill:clampPct((0.12 - m.spy)/0.24*100), th:58.3, note: t==="g" ? "holding or rising" : "line: −2% y/y" });
+      fill:clampPct((0.12 - m.spy)/0.24*100), th: strong ? 29.2 : 58.3,
+      note: strong ? (t==="s" ? "past the strong line: +5% y/y" : "strong line: +5% y/y")
+                   : (t==="g" ? "holding or rising" : "line: −2% y/y") });
   }
   if (m.dom != null && m.domy != null) {
     const prior = m.dom - m.domy, p = prior > 0 ? m.domy/prior : 0;
-    const t = p > 0.4 ? "a" : "g";
+    const t = strong ? (p <= -0.15 ? "s" : "g") : (p > 0.4 ? "a" : "g");
     rows.push({ name:"TIME TO SELL", val:Math.round(m.dom)+" days", t,
-      fill:clampPct((p*100+50)/150*100), th:60,
-      note: m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "as fast as last yr" });
+      fill:clampPct((p*100+50)/150*100), th: strong ? 23.3 : 60,
+      note: strong ? (t==="s" ? Math.round(-m.domy)+" days faster y/y" : "strong line: −15% y/y")
+                   : (m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "as fast as last yr") });
   }
   if (m.pd != null) {
-    const t = m.pd > 0.35 ? "a" : "g";
+    const t = strong ? (m.pd < 0.20 ? "s" : "g") : (m.pd > 0.35 ? "a" : "g");
     rows.push({ name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t,
-      fill:clampPct(m.pd/0.7*100), th:50, note: t==="g" ? "line: 35%" : "past the line" });
+      fill:clampPct(m.pd/0.7*100), th: strong ? 28.6 : 50,
+      note: strong ? (t==="s" ? "below the strong line: 20%" : "strong line: 20%")
+                   : (t==="g" ? "line: 35%" : "past the line") });
   }
   if (m.invy != null) {
     const t = m.invy > 0.5 ? "a" : "g";
@@ -458,7 +490,7 @@ async function run() {
   show($("verdict"), false); $("waitcard").style.display = "none"; show($("crunch"), true);
   $("crunch-zip").textContent = zip;
   const started = Date.now();
-  const d = await lookup(zip);
+  const d = applyStrong(await lookup(zip));
   // let the crunch animation breathe, then reveal
   setTimeout(() => {
     show($("crunch"), false);
@@ -481,8 +513,8 @@ async function run() {
       : k.headline.replace("{zip}", zip);
     $("v-sub").textContent = insufficient
       ? "Smaller markets report few transactions, so we hold the verdict at HOLD until signals are statistically reliable. Here's what we can see:"
-      : k.sub;
-    $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d));
+      : k.sub.replace("{zip}", zip);
+    $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
     $("v-stamp").textContent = zip + (d.st ? " · " + d.st : "") +
       (META ? " · data through " + META.period + " · " + META.attribution : "");
     $("mform").style.display = "none"; $("mf-ok").style.display = "none"; $("mf-err").style.display = "none";

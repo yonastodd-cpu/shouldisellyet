@@ -142,6 +142,14 @@ the "Continue to secure payment" button activates.
 Score ≥ 4 → 🔴 ACT · ≥ 2 → 🟡 WATCH · else → 🟢 HOLD.
 ZIPs with fewer than 2 known signals default to 🟢 with an "insufficient data" note.
 
+**Upside verdict:** when ZERO danger lines are crossed and ≥3 of these strength
+signals are met, the verdict is 🔵 "strong" — ACT, seller's-market flavor:
+months of supply < 2.5 · price ≥ +5% y/y · DOM down ≥ 15% y/y · price cuts < 20%.
+(Redfin's price-drops column is empty in current production files, so that
+signal is skipped and the other three must all be met.) Danger verdicts always
+win. The front end also applies this upgrade client-side so existing data files
+render it without a pipeline rerun.
+
 ## Licensing checklist (do before charging money)
 
 - [ ] Email press@redfin.com for written OK to use Data Center files in a commercial
