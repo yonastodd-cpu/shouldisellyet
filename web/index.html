@@ -473,6 +473,7 @@ function partnerHTML(s, kind, zip) {
     <div>
       <div class="p-name">${nameLine} <small>${cred}</small><span class="p-tag">REALTOR MATCH</span></div>
       <div class="p-blurb">${s.blurb || ""}</div>
+      ${s.affiliated ? '<div style="font-size:11.5px;color:var(--fainter);line-height:1.5;margin:-4px 0 8px">Affiliated partner of ShouldISellYet.com — she also answers our support email. Verdicts are computed from public market data and are not influenced by sponsorship. <a href="terms.html" style="color:inherit;text-decoration:underline">Details</a>.</div>' : ""}
       <div class="p-ctas">
         ${s.phone ? '<a class="btn" style="font-size:12.5px;padding:8px 14px" href="tel:'+s.phone+'">Call '+fullName+' '+phone+'</a>' : ""}
         <a class="btn-outline" style="border:1.5px solid var(--navy)" href="mailto:${s.email}?subject=${subject}">Request a free consult</a>
