@@ -200,14 +200,14 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
         <div class="datastamp" id="v-stamp"></div>
 
         <div class="v-ctas">
-          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Monitor my home — $5.99/mo</a>
+          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Monitor my home — $49/yr</a>
           <a class="linkbtn" href="report.html" style="text-decoration:underline">See a sample EquityWatch report →</a>
           <button class="linkbtn" id="share-btn">Share</button>
           <button class="linkbtn" id="again">Check another ZIP</button>
         </div>
 
         <div class="mform" id="mform">
-          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b>$5.99/mo, cancel anytime.</b></div>
+          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b>$49/yr ($4.08/mo, billed annually), or $5.99/mo. Cancel anytime.</b></div>
           <input type="email" id="mf-email" placeholder="you@email.com" required>
           <input type="text" id="mf-address" placeholder="Property address (optional)">
           <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</label>
@@ -283,14 +283,15 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
       <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="#check">Check a ZIP</a>
     </div>
     <div class="price-card featured">
-      <div class="price-badge">EQUITYWATCH</div>
-      <div style="font-size:14px;font-weight:650">We monitor your home</div>
-      <div class="price">$5.99 <small>/mo · cancel anytime</small></div>
+      <div class="price-badge">MOST POPULAR</div>
+      <div style="font-size:14px;font-weight:650">EquityWatch — we monitor your home</div>
+      <div class="price">$49 <small>/yr · cancel anytime</small></div>
+      <div style="font-size:12.5px;color:var(--faint);margin-top:-6px">$4.08/mo, billed annually · or $5.99/mo billed monthly</div>
       <div class="price-feats">Instant alert the moment your ZIP's verdict changes · your estimated equity, updated monthly · your walk-away number if you sold today · full report included</div>
       <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Monitor my home</a>
     </div>
   </div>
-  <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b>$5.99 one-time</b>. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
+  <div style="margin-top:16px;font-size:13.5px;color:var(--muted)">Or take one deep look, no subscription: the full EquityWatch report for your property — <b>$19 one-time</b>. Or get it free with EquityWatch. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
   <div style="margin-top:14px;font-size:13px;color:var(--faint)">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
 </section>
 
@@ -307,6 +308,9 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 <script>
 // ————— Backend config —————
 // Stripe Payment Links: paste and the buttons go straight to checkout.
+// TODO: payment-provider price IDs must be updated to match the new pricing
+// ($49/yr annual, $5.99/mo monthly, $19 one-time report). Checkout is wired
+// through subscribe.html (see LINKS there); this constant is legacy.
 const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // $5.99/mo EquityWatch
 // Supabase (Settings → API). Anon key is publish-safe: RLS allows INSERT only.
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";

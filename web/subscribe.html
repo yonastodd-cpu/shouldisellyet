@@ -43,6 +43,11 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 .propform input{width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;margin-bottom:9px}
 .propform .pf-two{display:grid;grid-template-columns:110px 1fr;gap:9px}
 .propform .pf-hint{font-size:11.5px;color:var(--fainter);line-height:1.5;margin-top:2px}
+.billing{display:none;gap:8px;margin:14px 0 2px}
+.billing button{flex:1;font-family:inherit;font-size:13px;font-weight:600;padding:10px 12px;border-radius:8px;border:1.5px solid var(--hairline);background:#fff;color:var(--muted);cursor:pointer;text-align:left;line-height:1.4}
+.billing button.on{border-color:var(--navy);color:var(--ink);background:#f4f7fb}
+.billing button small{display:block;font-weight:400;font-size:11.5px;color:var(--fainter)}
+.billing button.on small{color:var(--faint)}
 .consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.55;margin:22px 0 14px;cursor:pointer}
 .consent input{margin-top:2px;width:17px;height:17px;accent-color:var(--navy);flex:none}
 .consent a{text-decoration:underline}
@@ -73,7 +78,11 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
     <div class="card">
       <div class="zipnote mono" id="zipnote"></div>
       <h2 id="planname">EquityWatch monitoring</h2>
-      <div class="price" id="price">$5.99 <small>/month · cancel anytime</small></div>
+      <div class="price" id="price">$49 <small>/year · cancel anytime</small></div>
+      <div class="billing" id="billing">
+        <button type="button" id="bill-annual" class="on" onclick="setBilling('annual')">Annual — $49/yr<small>$4.08/mo, billed annually</small></button>
+        <button type="button" id="bill-monthly" onclick="setBilling('monthly')">Monthly — $5.99/mo<small>billed monthly</small></button>
+      </div>
       <ul class="feats" id="feats"></ul>
 
       <div class="propform">
@@ -96,7 +105,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
     <div class="aside">
       <div class="k">WHAT HAPPENS NEXT</div>
-      <div class="row"><b>1.</b><span>You tell us the home to watch, then pay securely on Stripe's page ($5.99).</span></div>
+      <div class="row"><b>1.</b><span>You tell us the home to watch, then pay securely on Stripe's page.</span></div>
       <div class="row"><b>2.</b><span>You're brought straight back to build your home's full property report.</span></div>
       <div class="row"><b>3.</b><span>We send a confirmation email with your private report link.</span></div>
       <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment the market for your home shifts — up or down. No news is good news.</span></div>
@@ -118,9 +127,16 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
 <script>
 // Stripe Payment Links (same as the rest of the site)
+// TODO: payment-provider price IDs must be updated to match the new pricing:
+//   monitor_annual  — $49/yr Payment Link does not exist yet; until it's pasted
+//                     here, choosing annual saves the signup as pending for
+//                     manual follow-up (the site's established fallback).
+//   report          — the existing link still charges the OLD $5.99 price;
+//                     create a $19 one-time Payment Link and replace it.
 const LINKS = {
-  monitor: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00",
-  report:  "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"
+  monitor_annual:  "",                                              // $49/yr
+  monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // $5.99/mo
+  report:          "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"  // TODO $19 (link is $5.99)
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
@@ -131,7 +147,7 @@ const COPY = {
     eyebrow: "EQUITYWATCH — MONITOR YOUR HOME",
     headline: "Monitor your home",
     planname: "EquityWatch monitoring",
-    price: '$5.99 <small>/month · cancel anytime</small>',
+    price: '$49 <small>/year · cancel anytime</small>',
     propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
       "An email the moment the market for your home shifts — up or down",
@@ -145,7 +161,7 @@ const COPY = {
     eyebrow: "EQUITYWATCH REPORT",
     headline: "Get your home's report",
     planname: "EquityWatch property report",
-    price: '$5.99 <small>one-time · all sales final</small>',
+    price: '$19 <small>one-time · or free with EquityWatch monitoring</small>',
     propTitle: "THE HOME THIS REPORT IS FOR",
     feats: [
       "Your home's verdict with every market signal gauge",
@@ -160,6 +176,18 @@ const q = new URLSearchParams(location.search);
 const plan = q.get("plan") === "report" ? "report" : "monitor";
 const zip = (q.get("zip") || "").replace(/\D/g,"").slice(0,5);
 const c = COPY[plan];
+// Billing interval for the monitor plan — annual is the default.
+let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
+const PRICE_HTML = {
+  annual:  '$49 <small>/year · $4.08/mo, billed annually · cancel anytime</small>',
+  monthly: '$5.99 <small>/month · billed monthly · cancel anytime</small>'
+};
+function setBilling(b){
+  billing = b;
+  document.getElementById("bill-annual").classList.toggle("on", b === "annual");
+  document.getElementById("bill-monthly").classList.toggle("on", b === "monthly");
+  document.getElementById("price").innerHTML = PRICE_HTML[b];
+}
 document.getElementById("eyebrow").textContent = c.eyebrow;
 document.getElementById("headline").textContent = c.headline;
 document.getElementById("planname").textContent = c.planname;
@@ -168,6 +196,7 @@ document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").
 document.getElementById("pf-title").textContent = c.propTitle;
 if (zip) { document.getElementById("zipnote").textContent = "FOR ZIP " + zip; document.getElementById("pf-zip").value = zip; }
 if (plan === "report") document.getElementById("row4").style.display = "none";
+if (plan === "monitor") { document.getElementById("billing").style.display = "flex"; setBilling(billing); }
 document.getElementById("pf-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
 document.getElementById("tos").addEventListener("change", function(){
   document.getElementById("cta").disabled = !this.checked;
@@ -195,11 +224,21 @@ async function go(){
   if (!/^\d{5}$/.test(pfZip)) { hint.textContent = "Please enter the 5-digit ZIP for the home you want monitored."; hint.style.color = "var(--red)"; document.getElementById("pf-zip").focus(); return; }
   if (!email || !/@/.test(email)) { hint.textContent = "Please enter your email so we can send alerts and your report link."; hint.style.color = "var(--red)"; document.getElementById("pf-email").focus(); return; }
   cta.disabled = true; cta.textContent = "Saving…";
+  const planKey = plan === "monitor" ? "monitor-" + billing : plan;
   // Record the exact property they want watched as a pending signup; the webhook
   // matches it by email after payment and keeps this address (not the billing one).
-  await savePending({ email, zip: pfZip, address: addr, plan, source: "subscribe-page" });
+  await savePending({ email, zip: pfZip, address: addr, plan: planKey, source: "subscribe-page" });
+  const link = plan === "monitor" ? LINKS["monitor_" + billing] : LINKS[plan];
+  if (!link) {
+    // No Payment Link for this option yet (see LINKS TODO) — the signup is
+    // saved as pending, so confirm instead of dead-ending at Stripe.
+    cta.textContent = "✓ You're on the list";
+    hint.style.color = "var(--green)";
+    hint.textContent = "Saved! We'll email your secure payment link to " + email + " today — you won't be charged until then.";
+    return;
+  }
   // Carry the property ZIP into Stripe → webhook via client_reference_id.
-  window.location.href = LINKS[plan] + "?client_reference_id=" + pfZip +
+  window.location.href = link + "?client_reference_id=" + pfZip +
     "&prefilled_email=" + encodeURIComponent(email);
 }
 </script>
