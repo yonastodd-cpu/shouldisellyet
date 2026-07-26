@@ -129,23 +129,18 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
 <script>
 // Stripe Payment Links. Prices themselves live in web/prices.js — these are
-// the provider-side counterparts that must be created to match it.
-// TODO (payment provider) — create in Stripe and paste here:
-//   monitor_annual  — $39/yr Payment Link does not exist yet; until it's pasted
-//                     here, choosing annual saves the signup as pending for
-//                     manual follow-up (the site's established fallback).
-//   report          — the existing link still charges the OLD $5.99 price;
-//                     create a $9.99 one-time Payment Link and replace it.
-//   annual_upgrade  — $29 first-year price for report buyers upgrading within
-//                     30 days (a $39 price with a $9.99-off coupon, or a
-//                     dedicated $29/first-year Payment Link). Nothing is
-//                     auto-applied provider-side until this exists; upgrade
-//                     signups fall back to pending + manual follow-up.
+// the provider-side counterparts, all now created and live (2026-07-26).
+//   annual_upgrade reuses the monitor_annual Payment Link with a $10-off
+//   promo code prefilled (UPGRADE10) rather than a distinct price — depends
+//   on "Allow promotion codes" being enabled on that link in Stripe, and on
+//   UPGRADE10 being a flat $10.00 discount (not a percentage). Confirmed
+//   correct in the Stripe dashboard as of this pricing pass; re-verify if
+//   either link or coupon is ever touched again.
 const LINKS = {
-  monitor_annual:  "",                                              // $39/yr
+  monitor_annual:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03", // $39/yr
   monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // $5.99/mo
-  annual_upgrade:  "",                                              // $29 first yr
-  report:          "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"  // TODO $9.99 (link is $5.99)
+  annual_upgrade:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03?prefilled_promo_code=UPGRADE10", // $29 first yr
+  report:          "https://buy.stripe.com/7sY5kE60V1kZ8DEezx2go02"  // $9.99 one-time
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
@@ -281,7 +276,9 @@ async function go(){
     : (upgrade && billing === "annual") ? LINKS.annual_upgrade
     : LINKS["monitor_" + billing];
   if (!link) {
-    // No Payment Link for this option yet (see LINKS TODO). The pending signup
+    // Defensive fallback — all LINKS entries are populated as of 2026-07-26,
+    // but if one is ever emptied again, fall back to manual follow-up instead
+    // of sending a customer to Stripe with an empty URL. The pending signup
     // IS the record here — if it didn't save, say so rather than claiming it did.
     if (saved) {
       cta.textContent = "✓ You're on the list";
@@ -296,7 +293,11 @@ async function go(){
     return;
   }
   // Carry the property ZIP into Stripe → webhook via client_reference_id.
-  window.location.href = link + "?client_reference_id=" + pfZip +
+  // `link` may already carry its own query string (e.g. annual_upgrade's
+  // ?prefilled_promo_code=...) — join with & in that case, not a second ?,
+  // which would corrupt the earlier param and drop these two entirely.
+  const sep = link.includes("?") ? "&" : "?";
+  window.location.href = link + sep + "client_reference_id=" + pfZip +
     "&prefilled_email=" + encodeURIComponent(email);
 }
 </script>
