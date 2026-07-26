@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="prices.js"></script>
 <style>
 :root{
   --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
@@ -78,10 +79,11 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
     <div class="card">
       <div class="zipnote mono" id="zipnote"></div>
       <h2 id="planname">EquityWatch monitoring</h2>
-      <div class="price" id="price">$49 <small>/year · cancel anytime</small></div>
+      <div class="price" id="price"><span data-price="annual">$39</span> <small>/year · cancel anytime</small></div>
+      <div id="upgrade-note" style="display:none;font-size:13px;color:#1e6b3f;background:var(--green-soft);border:1px solid var(--green-line);border-radius:8px;padding:10px 14px;margin:10px 0 0;line-height:1.5"></div>
       <div class="billing" id="billing">
-        <button type="button" id="bill-annual" class="on" onclick="setBilling('annual')">Annual — $49/yr<small>$4.08/mo, billed annually</small></button>
-        <button type="button" id="bill-monthly" onclick="setBilling('monthly')">Monthly — $5.99/mo<small>billed monthly</small></button>
+        <button type="button" id="bill-annual" class="on" onclick="setBilling('annual')"></button>
+        <button type="button" id="bill-monthly" onclick="setBilling('monthly')"></button>
       </div>
       <ul class="feats" id="feats"></ul>
 
@@ -126,17 +128,24 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 </div>
 
 <script>
-// Stripe Payment Links (same as the rest of the site)
-// TODO: payment-provider price IDs must be updated to match the new pricing:
-//   monitor_annual  — $49/yr Payment Link does not exist yet; until it's pasted
+// Stripe Payment Links. Prices themselves live in web/prices.js — these are
+// the provider-side counterparts that must be created to match it.
+// TODO (payment provider) — create in Stripe and paste here:
+//   monitor_annual  — $39/yr Payment Link does not exist yet; until it's pasted
 //                     here, choosing annual saves the signup as pending for
 //                     manual follow-up (the site's established fallback).
 //   report          — the existing link still charges the OLD $5.99 price;
-//                     create a $19 one-time Payment Link and replace it.
+//                     create a $9.99 one-time Payment Link and replace it.
+//   annual_upgrade  — $29 first-year price for report buyers upgrading within
+//                     30 days (a $39 price with a $9.99-off coupon, or a
+//                     dedicated $29/first-year Payment Link). Nothing is
+//                     auto-applied provider-side until this exists; upgrade
+//                     signups fall back to pending + manual follow-up.
 const LINKS = {
-  monitor_annual:  "",                                              // $49/yr
+  monitor_annual:  "",                                              // $39/yr
   monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // $5.99/mo
-  report:          "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"  // TODO $19 (link is $5.99)
+  annual_upgrade:  "",                                              // $29 first yr
+  report:          "https://buy.stripe.com/9B6eVe9d7gfT5rs2QP2go01"  // TODO $9.99 (link is $5.99)
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
@@ -147,7 +156,7 @@ const COPY = {
     eyebrow: "EQUITYWATCH — MONITOR YOUR HOME",
     headline: "Monitor your home",
     planname: "EquityWatch monitoring",
-    price: '$49 <small>/year · cancel anytime</small>',
+    price: PRICES.usd(PRICES.ANNUAL) + ' <small>/year · cancel anytime</small>',
     propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
       "An email the moment the market for your home shifts — up or down",
@@ -161,7 +170,7 @@ const COPY = {
     eyebrow: "EQUITYWATCH REPORT",
     headline: "Get your home's report",
     planname: "EquityWatch property report",
-    price: '$19 <small>one-time · or free with EquityWatch monitoring</small>',
+    price: PRICES.usd(PRICES.REPORT) + ' <small>one-time · credited toward annual EquityWatch within 30 days</small>',
     propTitle: "THE HOME THIS REPORT IS FOR",
     feats: [
       "Your home's verdict with every market signal gauge",
@@ -178,18 +187,50 @@ const zip = (q.get("zip") || "").replace(/\D/g,"").slice(0,5);
 const c = COPY[plan];
 // Billing interval for the monitor plan — annual is the default.
 let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
+
+// ————— Report-credit upgrade (report buyer → annual within 30 days) —————
+// Purchase timestamps are recorded client-side at checkout handoff (see go()).
+// TODO backend: to make eligibility verifiable across devices, the backend
+// needs `email`, `purchased_at`, `upgraded_at` per report purchase
+// (subscribers.created_at already exists; upgraded_at does not). Until then
+// this is device-local + honored manually on follow-up.
+const upgrade = plan === "monitor" && q.get("upgrade") === "report-credit";
+function reportCreditDaysLeft(){
+  try {
+    const p = JSON.parse(localStorage.getItem("sisy_purchase") || "null");
+    if (!p || p.plan !== "report" || !p.at) return null;
+    return PRICES.UPGRADE_WINDOW_DAYS - Math.floor((Date.now() - p.at) / 86400000);
+  } catch(e){ return null; }
+}
+
 const PRICE_HTML = {
-  annual:  '$49 <small>/year · $4.08/mo, billed annually · cancel anytime</small>',
-  monthly: '$5.99 <small>/month · billed monthly · cancel anytime</small>'
+  annual: upgrade
+    ? PRICES.usd(PRICES.UPGRADE) + ' <small>first year · then ' + PRICES.usd(PRICES.ANNUAL) + '/year · cancel anytime</small>'
+    : PRICES.usd(PRICES.ANNUAL) + ' <small>/year · ' + PRICE_TEXT["annual-permo"] + ' · cancel anytime</small>',
+  monthly: PRICES.usd(PRICES.MONTHLY) + ' <small>/month · billed monthly · cancel anytime</small>'
 };
 function setBilling(b){
   billing = b;
   document.getElementById("bill-annual").classList.toggle("on", b === "annual");
   document.getElementById("bill-monthly").classList.toggle("on", b === "monthly");
   document.getElementById("price").innerHTML = PRICE_HTML[b];
+  document.getElementById("upgrade-note").style.display = (upgrade && b === "annual") ? "block" : "none";
+}
+document.getElementById("bill-annual").innerHTML =
+  "Annual — " + PRICES.usd(upgrade ? PRICES.UPGRADE : PRICES.ANNUAL) + (upgrade ? " first yr" : "/yr") +
+  "<small>" + (upgrade ? "your report credited" : PRICE_TEXT["annual-permo"] + " · " + PRICE_TEXT["save-line"]) + "</small>";
+document.getElementById("bill-monthly").innerHTML =
+  "Monthly — " + PRICES.usd(PRICES.MONTHLY) + "/mo<small>billed monthly</small>";
+if (upgrade) {
+  const days = reportCreditDaysLeft();
+  document.getElementById("upgrade-note").innerHTML =
+    "Your " + PRICES.usd(PRICES.REPORT) + " report counts toward EquityWatch — first year " +
+    PRICES.usd(PRICES.UPGRADE) + " (" + PRICES.usd(PRICES.ANNUAL) + " − " + PRICES.usd(PRICES.REPORT) + " credit, rounded)" +
+    (days != null && days > 0 ? ", available for <b>" + days + " more day" + (days === 1 ? "" : "s") + "</b>." :
+     ". We confirm eligibility (report purchased within the last 30 days) against your purchase email.");
 }
 document.getElementById("eyebrow").textContent = c.eyebrow;
-document.getElementById("headline").textContent = c.headline;
+document.getElementById("headline").textContent = upgrade ? "Upgrade to EquityWatch" : c.headline;
 document.getElementById("planname").textContent = c.planname;
 document.getElementById("price").innerHTML = c.price;
 document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").join("");
@@ -203,15 +244,16 @@ document.getElementById("tos").addEventListener("change", function(){
 });
 
 async function savePending(rec){
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
   try {
-    await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
       method: "POST",
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY,
                  "Content-Type": "application/json", "Prefer": "return=minimal" },
       body: JSON.stringify(rec)
     });
-  } catch(e){}
+    return r.ok;
+  } catch(e){ return false; }
 }
 
 async function go(){
@@ -224,17 +266,33 @@ async function go(){
   if (!/^\d{5}$/.test(pfZip)) { hint.textContent = "Please enter the 5-digit ZIP for the home you want monitored."; hint.style.color = "var(--red)"; document.getElementById("pf-zip").focus(); return; }
   if (!email || !/@/.test(email)) { hint.textContent = "Please enter your email so we can send alerts and your report link."; hint.style.color = "var(--red)"; document.getElementById("pf-email").focus(); return; }
   cta.disabled = true; cta.textContent = "Saving…";
-  const planKey = plan === "monitor" ? "monitor-" + billing : plan;
-  // Record the exact property they want watched as a pending signup; the webhook
-  // matches it by email after payment and keeps this address (not the billing one).
-  await savePending({ email, zip: pfZip, address: addr, plan: planKey, source: "subscribe-page" });
-  const link = plan === "monitor" ? LINKS["monitor_" + billing] : LINKS[plan];
+  // `plan` is constrained by the DB to monitor|report|waitlist, so the billing
+  // interval (and the upgrade flag) ride along in `source` (free text).
+  const sourceTag = "subscribe-page" +
+    (plan === "monitor" ? ":" + billing + (upgrade && billing === "annual" ? "-upgrade" : "") : "");
+  const saved = await savePending({ email, zip: pfZip, address: addr, plan, source: sourceTag });
+  // Record the purchase locally (email + timestamp) — this is what powers the
+  // 30-day report-credit countdown on the report page. See the TODO backend
+  // note above for the fields needed to make this durable server-side.
+  try { localStorage.setItem("sisy_purchase", JSON.stringify({ plan, billing, email, at: Date.now() })); } catch(e){}
+  // Upgrade-annual may ONLY use the $29 link — never fall through to the
+  // full-price annual link, which would overcharge a buyer promised the credit.
+  const link = plan !== "monitor" ? LINKS[plan]
+    : (upgrade && billing === "annual") ? LINKS.annual_upgrade
+    : LINKS["monitor_" + billing];
   if (!link) {
-    // No Payment Link for this option yet (see LINKS TODO) — the signup is
-    // saved as pending, so confirm instead of dead-ending at Stripe.
-    cta.textContent = "✓ You're on the list";
-    hint.style.color = "var(--green)";
-    hint.textContent = "Saved! We'll email your secure payment link to " + email + " today — you won't be charged until then.";
+    // No Payment Link for this option yet (see LINKS TODO). The pending signup
+    // IS the record here — if it didn't save, say so rather than claiming it did.
+    if (saved) {
+      cta.textContent = "✓ You're on the list";
+      hint.style.color = "var(--green)";
+      hint.textContent = "Saved! We'll email your secure payment link to " + email + " today — you won't be charged until then.";
+    } else {
+      cta.disabled = false; cta.textContent = "Continue to secure payment →";
+      hint.style.color = "var(--red)";
+      hint.innerHTML = "We couldn't save your signup just now. Please try again, or email " +
+        "<a href=\"mailto:naomi@shouldisellyet.com?subject=EquityWatch%20annual%20signup\">naomi@shouldisellyet.com</a> and we'll set it up by hand.";
+    }
     return;
   }
   // Carry the property ZIP into Stripe → webhook via client_reference_id.

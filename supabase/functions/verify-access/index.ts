@@ -10,8 +10,10 @@
 // No extra secrets needed — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected.
 //
 // GET  /verify-access?token=<uuid>
-//   200 { ok:true, plan, zip, status }   — valid, active/report token
-//   200 { ok:false }                     — unknown or revoked token
+//   200 { ok:true, plan, zip, status, address, purchased_at }  — valid token
+//   200 { ok:false }                                           — unknown/revoked
+// NOTE: prices quoted in the webhook's emails are hardcoded there — keep them
+// in sync with web/prices.js when pricing changes.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -41,14 +43,16 @@ Deno.serve(async (req) => {
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/subscribers` +
-        `?select=plan,zip,status,address&access_token=eq.${token}` +
+        `?select=plan,zip,status,address,created_at&access_token=eq.${token}` +
         `&status=in.(active,report)&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
     );
     const rows = r.ok ? await r.json() : [];
     if (Array.isArray(rows) && rows.length) {
       const s = rows[0];
-      return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status, address: s.address ?? "" });
+      // purchased_at powers the report page's 30-day upgrade-credit countdown
+      return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status,
+                    address: s.address ?? "", purchased_at: s.created_at ?? null });
     }
     return json({ ok: false });
   } catch (_e) {

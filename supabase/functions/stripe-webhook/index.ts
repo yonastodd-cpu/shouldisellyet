@@ -85,7 +85,7 @@ function welcomeReportEmail(zip: string, token: string) {
   <p style="font-size:16px;line-height:1.6">Open your private report page below and enter your home value estimate and approximate mortgage balance — your full report builds in about 20 seconds. Save it as a PDF, regenerate it anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access and it works only for you.</p>
-  <p style="font-size:16px;line-height:1.6;margin-top:18px">Want to stay ahead after this? Set up an EquityWatch alert — same price monthly — and you'll hear the moment the market for your home shifts.</p>
+  <p style="font-size:16px;line-height:1.6;margin-top:18px">🎟️ <b>Your $9.99 counts toward EquityWatch</b> — upgrade to annual monitoring for <b>$29</b> in the next 30 days ($39/yr less your report, rounded) and you'll hear the moment the market for your home shifts. <a href="${SITE}/subscribe.html?plan=monitor&upgrade=report-credit${/^\d{5}$/.test(zip) ? `&zip=${zip}` : ""}" style="color:#1f3a5f;font-weight:bold">Upgrade →</a></p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5">All sales final per our refund policy. Data from Redfin, a national real estate brokerage (redfin.com). Not financial advice.</p>
 </div>`,
   };
