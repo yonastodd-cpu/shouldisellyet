@@ -133,15 +133,21 @@ the "Continue to secure payment" button activates.
 
 ## Personal-number alerts (save-watch edge function + check_watches.py)
 
-On the report page, a subscriber can watch their own walk-away number,
-equity, or lock-in cost against a threshold they set — separate from the
-ZIP-level HOLD/WATCH/ACT alert everyone on the monitor plan already gets.
-This is opt-in: saving a watch is the only thing on the site that sends
-personal calculation inputs (value, balance, rate, etc.) to the backend —
-see the "watch your numbers" section in `privacy.html`.
+On the report page, a left-margin toggle next to each of the three
+watchable numbers (equity, walk-away number, lock-in cost) lets a
+subscriber set a threshold and get emailed when that specific number
+crosses it — separate from the ZIP-level HOLD/WATCH/ACT alert everyone on
+the monitor plan already gets. A subscriber can watch all three at once;
+each toggle saves/clears independently. Gated to the EquityWatch monitoring
+plan (a one-time report has no ongoing check-in for a monthly recompute to
+attach to) — a report-plan subscriber sees an upgrade prompt instead of the
+form. This is opt-in: saving a watch is the only thing on the site that
+sends personal calculation inputs (value, balance, rate, etc.) to the
+backend — see the "watch your numbers" section in `privacy.html`.
 
 Setup:
-1. Run `supabase/schema-v4.sql` (adds `calc_inputs` + `watch_*` columns).
+1. Run `supabase/schema-v4.sql` (adds `calc_inputs` jsonb + `watches` jsonb
+   array — up to 3 entries, one per metric — to `subscribers`).
 2. Deploy `supabase/functions/save-watch/index.ts` as edge function
    `save-watch`; disable "Enforce JWT verification". No secrets needed — it
    verifies the subscriber's existing access token itself before writing.

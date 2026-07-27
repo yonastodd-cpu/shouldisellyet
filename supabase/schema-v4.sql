@@ -6,22 +6,29 @@
 -- (as opposed to the existing ZIP-level verdict-color alert, which watches
 -- the market, not their specific numbers).
 --
+-- A subscriber can watch UP TO THREE metrics at once (one toggle per number
+-- on the report — walk-away, equity, lock-in cost), so `watches` is an array
+-- rather than a single set of columns; saving one metric's watch never
+-- overwrites another's.
+--
 -- This is opt-in and requires the subscriber to explicitly submit their
 -- calculation inputs via the save-watch edge function — see
 -- supabase/functions/save-watch/index.ts. Nothing here is populated by
--- default; a subscriber who never sets a watch has null values throughout.
+-- default; a subscriber who never sets a watch has calc_inputs = null and
+-- watches = '[]'.
 
 alter table public.subscribers
-  -- Snapshot of the inputs needed to recompute their numbers monthly:
-  -- {value, baselineMedian, pp, yr, bal, rate, origAmt, origYr, piti, costPct}
+  -- Snapshot of the inputs needed to recompute their numbers monthly, shared
+  -- across all of that subscriber's watches:
+  -- {value, baselineMedian, bal, rate, origAmt, costPct}
   add column if not exists calc_inputs jsonb,
-  add column if not exists watch_metric text
-    check (watch_metric in ('walkaway', 'equity', 'lockin')),
-  add column if not exists watch_direction text
-    check (watch_direction in ('below', 'above')),
-  add column if not exists watch_threshold numeric,
-  -- Latch so we alert once per crossing, not every month it stays crossed.
-  add column if not exists watch_crossed boolean not null default false;
+  -- Array of 0-3 entries: {metric, direction, threshold, crossed}
+  --   metric    in "walkaway" | "equity" | "lockin"
+  --   direction in "below" | "above"
+  --   threshold numeric
+  --   crossed   bool — latch so we alert once per crossing, not every month
+  --             it stays crossed (reset to false when the value moves back)
+  add column if not exists watches jsonb not null default '[]'::jsonb;
 
 -- No RLS changes: the anon key still can't UPDATE this table (insert-only,
 -- per schema.sql). Watch settings are written by the save-watch edge

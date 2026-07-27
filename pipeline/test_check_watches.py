@@ -1,11 +1,12 @@
 """Unit tests for the personal-number watch engine. Run: pytest -q"""
 
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from check_watches import (compute_metric, is_crossed, latest_price, pmt,
-                            scale_value)
+                            process_subscriber, scale_value)
 
 
 # ——— pmt / scale_value ———
@@ -101,3 +102,80 @@ def test_above_direction():
 
 def test_crossed_is_none_when_value_uncomputable():
     assert is_crossed(None, "below", 100000) is None
+
+
+# ——— process_subscriber (multi-watch array orchestration) ———
+
+def _make_data_dir(tmp_path, zip_code, state, price_history):
+    (tmp_path / "zips").mkdir(exist_ok=True)
+    (tmp_path / "index.json").write_text(json.dumps({zip_code[:3]: state}))
+    (tmp_path / "zips" / f"{state}.json").write_text(json.dumps({
+        zip_code: {"h": {"p": price_history}}
+    }))
+    (tmp_path / "meta.json").write_text(json.dumps({"national": {}}))
+    return str(tmp_path)
+
+
+def test_process_subscriber_no_watches_is_noop():
+    sub = {"watches": [], "calc_inputs": {}, "zip": "20906"}
+    updated, emails = process_subscriber(sub, "/nonexistent", 6.58)
+    assert updated == [] and emails == []
+
+
+def test_process_subscriber_fires_once_and_latches(tmp_path):
+    data_dir = _make_data_dir(tmp_path, "20906", "MD", [400000] * 12)
+    sub = {
+        "email": "a@example.com", "zip": "20906", "access_token": "tok",
+        "calc_inputs": {"value": 400000, "bal": 250000},  # equity = 150000
+        "watches": [{"metric": "equity", "direction": "below", "threshold": 200000, "crossed": False}],
+    }
+    updated, emails = process_subscriber(sub, data_dir, 6.58)
+    assert len(emails) == 1 and "equity" in emails[0][0].lower()
+    assert updated[0]["crossed"] is True
+
+    # second run with the same (still-crossed) data must NOT re-email
+    sub["watches"] = updated
+    updated2, emails2 = process_subscriber(sub, data_dir, 6.58)
+    assert emails2 == []
+    assert updated2[0]["crossed"] is True
+
+
+def test_process_subscriber_rearms_after_uncrossing(tmp_path):
+    data_dir = _make_data_dir(tmp_path, "20906", "MD", [400000] * 12)
+    sub = {
+        "email": "a@example.com", "zip": "20906", "access_token": "tok",
+        "calc_inputs": {"value": 400000, "bal": 100000},  # equity = 300000, not below 200000
+        "watches": [{"metric": "equity", "direction": "below", "threshold": 200000, "crossed": True}],
+    }
+    updated, emails = process_subscriber(sub, data_dir, 6.58)
+    assert emails == []
+    assert updated[0]["crossed"] is False  # rearmed, silently
+
+
+def test_process_subscriber_evaluates_each_watch_independently(tmp_path):
+    data_dir = _make_data_dir(tmp_path, "20906", "MD", [400000] * 12)
+    sub = {
+        "email": "a@example.com", "zip": "20906", "access_token": "tok",
+        "calc_inputs": {"value": 400000, "bal": 250000, "rate": 3.75},  # equity=150000, no lockin trip
+        "watches": [
+            {"metric": "equity", "direction": "below", "threshold": 200000, "crossed": False},  # crosses
+            {"metric": "lockin", "direction": "below", "threshold": 0, "crossed": False},        # does not
+        ],
+    }
+    updated, emails = process_subscriber(sub, data_dir, 6.58)
+    assert len(emails) == 1
+    by_metric = {w["metric"]: w for w in updated}
+    assert by_metric["equity"]["crossed"] is True
+    assert by_metric["lockin"]["crossed"] is False
+
+
+def test_process_subscriber_skips_uncomputable_watch_without_erroring(tmp_path):
+    data_dir = _make_data_dir(tmp_path, "20906", "MD", [400000] * 12)
+    sub = {
+        "email": "a@example.com", "zip": "20906", "access_token": "tok",
+        "calc_inputs": {"value": 400000, "bal": 250000},  # no rate → lockin uncomputable
+        "watches": [{"metric": "lockin", "direction": "below", "threshold": 100, "crossed": False}],
+    }
+    updated, emails = process_subscriber(sub, data_dir, 6.58)
+    assert emails == []
+    assert updated == sub["watches"]  # left untouched, not crashed

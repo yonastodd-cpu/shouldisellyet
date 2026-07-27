@@ -7,6 +7,10 @@ numbers — walk-away number, equity, or lock-in cost — against a threshold
 they set, using the calculation inputs they explicitly opted to save via the
 save-watch edge function (see supabase/functions/save-watch/index.ts).
 
+A subscriber can watch up to three metrics at once (one toggle per number on
+the report), stored as a jsonb array in `subscribers.watches` — this module
+evaluates every entry in that array independently.
+
 Runs in the GitHub Action right after fetch_data.py, using the freshly
 published web/data/. If Supabase/Resend secrets aren't configured, dry-runs
 and never fails the pipeline — same convention as notify_changes.py.
@@ -115,6 +119,42 @@ def render_watch_email(metric, direction, threshold, current_value, zip_code, to
     return subject, html
 
 
+def process_subscriber(sub, data_dir, market_rate):
+    """Evaluate every watch entry for one subscriber against fresh ZIP data.
+
+    Returns (updated_watches, emails) where emails is a list of
+    (subject, html) tuples to send to sub["email"]. `updated_watches` should
+    be written back only if it differs from sub["watches"] (crossed-flag
+    changes or a fresh evaluation of a previously-unevaluable metric).
+    """
+    watches = sub.get("watches") or []
+    if not watches:
+        return watches, []
+    inputs = sub.get("calc_inputs") or {}
+    entry = load_zip_data(data_dir, sub.get("zip", ""))
+    current_median = latest_price(entry) if entry else None
+
+    updated, emails = [], []
+    for w in watches:
+        value = compute_metric(w["metric"], inputs, current_median, market_rate)
+        crossed = is_crossed(value, w["direction"], w["threshold"])
+        if crossed is None:
+            updated.append(w)  # can't evaluate yet (e.g., lock-in needs a rate) — leave as-is
+            continue
+        was_crossed = bool(w.get("crossed"))
+        if crossed and not was_crossed:
+            emails.append(render_watch_email(
+                w["metric"], w["direction"], w["threshold"], value,
+                sub.get("zip", ""), sub.get("access_token", ""),
+            ))
+            updated.append({**w, "crossed": True})
+        elif not crossed and was_crossed:
+            updated.append({**w, "crossed": False})  # rearm for a future crossing
+        else:
+            updated.append(w)
+    return updated, emails
+
+
 # ——— I/O ———
 
 def _req(url, headers=None, data=None, method=None):
@@ -129,18 +169,22 @@ def _req(url, headers=None, data=None, method=None):
 
 
 def fetch_watchers(supabase_url, service_key):
+    """Active/report subscribers who have at least one watch — filtered
+    client-side (not via a jsonb-array PostgREST filter) to stay robust to
+    exact-text-match quirks on jsonb equality."""
     url = (f"{supabase_url}/rest/v1/subscribers"
-           f"?select=id,email,zip,access_token,calc_inputs,watch_metric,watch_direction,watch_threshold,watch_crossed"
-           f"&status=in.(active,report)&watch_metric=not.is.null")
-    return _req(url, headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"}) or []
+           f"?select=id,email,zip,access_token,calc_inputs,watches"
+           f"&status=in.(active,report)")
+    rows = _req(url, headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"}) or []
+    return [r for r in rows if r.get("watches")]
 
 
-def set_crossed(supabase_url, service_key, sub_id, crossed):
+def set_watches(supabase_url, service_key, sub_id, watches):
     _req(
         f"{supabase_url}/rest/v1/subscribers?id=eq.{sub_id}",
         headers={"apikey": service_key, "Authorization": f"Bearer {service_key}",
                  "Content-Type": "application/json", "Prefer": "return=minimal"},
-        data={"watch_crossed": crossed},
+        data={"watches": watches},
         method="PATCH",
     )
 
@@ -190,35 +234,24 @@ def main():
         return
 
     watchers = fetch_watchers(sb_url, sb_key)
-    print(f"{len(watchers)} subscriber(s) with an active number watch.")
+    total_watches = sum(len(w.get("watches") or []) for w in watchers)
+    print(f"{len(watchers)} subscriber(s) with {total_watches} active watch(es) total.")
     market_rate = load_market_rate(args.data)
     sent = 0
 
-    for w in watchers:
-        inputs = w.get("calc_inputs") or {}
-        entry = load_zip_data(args.data, w.get("zip", ""))
-        current_median = latest_price(entry) if entry else None
-        value = compute_metric(w["watch_metric"], inputs, current_median, market_rate)
-        crossed = is_crossed(value, w["watch_direction"], w["watch_threshold"])
-        if crossed is None:
-            continue  # can't evaluate yet (e.g., lock-in needs a rate)
-        was_crossed = bool(w.get("watch_crossed"))
-        if crossed and not was_crossed:
-            subject, html = render_watch_email(
-                w["watch_metric"], w["watch_direction"], w["watch_threshold"],
-                value, w.get("zip", ""), w.get("access_token", ""),
-            )
+    for sub in watchers:
+        updated, emails = process_subscriber(sub, args.data, market_rate)
+        for subject, html in emails:
             if rs_key:
                 try:
-                    send_email(rs_key, sender, w["email"], subject, html)
+                    send_email(rs_key, sender, sub["email"], subject, html)
                     sent += 1
                 except Exception as e:  # one bad address must not kill the batch
-                    print(f"send failed for {w.get('email')}: {e}", file=sys.stderr)
+                    print(f"send failed for {sub.get('email')}: {e}", file=sys.stderr)
             else:
-                print(f"DRY RUN would email {w.get('email')}: {subject}")
-            set_crossed(sb_url, sb_key, w["id"], True)
-        elif not crossed and was_crossed:
-            set_crossed(sb_url, sb_key, w["id"], False)  # rearm for a future crossing
+                print(f"DRY RUN would email {sub.get('email')}: {subject}")
+        if updated != sub.get("watches"):
+            set_watches(sb_url, sb_key, sub["id"], updated)
 
     print(f"Sent {sent} personal-number alert(s).")
 
