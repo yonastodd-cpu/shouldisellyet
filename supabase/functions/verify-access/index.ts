@@ -10,8 +10,10 @@
 // No extra secrets needed — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected.
 //
 // GET  /verify-access?token=<uuid>
-//   200 { ok:true, plan, zip, status, address, purchased_at }  — valid token
-//   200 { ok:false }                                           — unknown/revoked
+//   200 { ok:true, plan, zip, status, address, purchased_at, watches }  — valid token
+//   200 { ok:false }                                                   — unknown/revoked
+// `watches` (from schema-v4.sql) lets the report page restore each metric's
+// toggle to its last-saved state instead of always starting unchecked.
 // NOTE: prices quoted in the webhook's emails are hardcoded there — keep them
 // in sync with web/prices.js when pricing changes.
 
@@ -43,7 +45,7 @@ Deno.serve(async (req) => {
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/subscribers` +
-        `?select=plan,zip,status,address,created_at&access_token=eq.${token}` +
+        `?select=plan,zip,status,address,created_at,watches&access_token=eq.${token}` +
         `&status=in.(active,report)&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
     );
@@ -52,7 +54,8 @@ Deno.serve(async (req) => {
       const s = rows[0];
       // purchased_at powers the report page's 30-day upgrade-credit countdown
       return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status,
-                    address: s.address ?? "", purchased_at: s.created_at ?? null });
+                    address: s.address ?? "", purchased_at: s.created_at ?? null,
+                    watches: s.watches ?? [] });
     }
     return json({ ok: false });
   } catch (_e) {

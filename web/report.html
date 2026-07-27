@@ -81,6 +81,22 @@
   .eq-legend{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--muted)}
   .eq-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
 
+  /* watch toggle — left-margin control, illustrative on this sample page */
+  .watchable{display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:start}
+  .watch-rail{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
+  .watch-switch-label{position:relative;display:inline-block;width:38px;height:22px;flex:none}
+  .watch-switch-label input{opacity:0;width:0;height:0;position:absolute}
+  .watch-switch-track{position:absolute;inset:0;background:#d7d0c2;border-radius:999px;opacity:.6;cursor:not-allowed}
+  .watch-switch-track::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.28)}
+  .watch-tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.35;max-width:60px;text-transform:uppercase}
+  .watch-note{margin-top:14px;padding:14px 18px;border:1px dashed var(--line);border-radius:14px;background:#faf8f4;font-size:13px;color:var(--muted);line-height:1.55}
+  .watch-note a{font-weight:700;color:var(--accent-ink)}
+  @media(max-width:640px){
+    .watchable{grid-template-columns:1fr}
+    .watch-rail{flex-direction:row;padding-top:0;margin-bottom:10px;justify-content:flex-start}
+    .watch-tag{max-width:none;text-align:left}
+  }
+
   /* Indicator dashboard */
   .ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:640px){ .ind-grid{grid-template-columns:1fr} }
@@ -210,18 +226,27 @@
       <div class="sec">
         <div class="sec-title"><span class="num">2</span> Your equity position</div>
         <p class="sec-sub">Estimated from your home's value trend and typical loan amortization. Connect your actual mortgage balance for precision.</p>
-        <div class="eq-grid">
-          <div class="eq-card">
-            <div class="label">Estimated home value</div>
-            <div class="big">$412,000</div>
-            <div class="delta down">▾ $9,300 (–2.2%) vs. 12 months ago</div>
+        <div class="watchable">
+          <div class="watch-rail">
+            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
+            <span class="watch-tag">Watch</span>
           </div>
-          <div class="eq-card">
-            <div class="label">Estimated equity</div>
-            <div class="big" style="color:var(--accent-ink)">$144,000</div>
-            <div class="delta flat">Mortgage balance ≈ $268,000</div>
-            <div class="eq-bar"><div class="seg-loan" style="width:65%"></div><div class="seg-equity" style="width:35%"></div></div>
-            <div class="eq-legend"><span><i style="background:#c9c5ba"></i>Loan 65%</span><span><i style="background:var(--accent)"></i>Your equity 35%</span></div>
+          <div>
+            <div class="eq-grid">
+              <div class="eq-card">
+                <div class="label">Estimated home value</div>
+                <div class="big">$412,000</div>
+                <div class="delta down">▾ $9,300 (–2.2%) vs. 12 months ago</div>
+              </div>
+              <div class="eq-card">
+                <div class="label">Estimated equity</div>
+                <div class="big" style="color:var(--accent-ink)">$144,000</div>
+                <div class="delta flat">Mortgage balance ≈ $268,000</div>
+                <div class="eq-bar"><div class="seg-loan" style="width:65%"></div><div class="seg-equity" style="width:35%"></div></div>
+                <div class="eq-legend"><span><i style="background:#c9c5ba"></i>Loan 65%</span><span><i style="background:var(--accent)"></i>Your equity 35%</span></div>
+              </div>
+            </div>
+            <div class="watch-note">🔒 <b>Get alerted</b> when your equity crosses a number you choose — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
           </div>
         </div>
       </div>
@@ -319,66 +344,61 @@
       <div class="sec">
         <div class="sec-title"><span class="num">6</span> If you sold today: your walk-away number</div>
         <p class="sec-sub">The estimated check you'd receive at closing after selling costs and payoff — shown as a range because no estimate is exact. This is the number to protect.</p>
-        <div style="border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8);margin-bottom:16px">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Estimated walk-away range</div>
-          <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:900;color:var(--accent-ink);margin:4px 0 2px">$99,000 – $123,000</div>
-          <div style="font-size:13px;color:var(--muted)">Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.</div>
+        <div class="watchable">
+          <div class="watch-rail">
+            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
+            <span class="watch-tag">Watch</span>
+          </div>
+          <div>
+            <div style="border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8);margin-bottom:16px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Estimated walk-away range</div>
+              <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:900;color:var(--accent-ink);margin:4px 0 2px">$99,000 – $123,000</div>
+              <div style="font-size:13px;color:var(--muted)">Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.</div>
+            </div>
+            <div class="pr-table">
+              <div class="pr-row"><span class="lbl">Estimated sale price</span><span class="amt">$412,000</span></div>
+              <div class="pr-row minus"><span class="lbl">Selling costs (8% — adjustable 6–10% in your report)</span><span class="amt">– $32,960</span></div>
+              <div class="pr-row minus"><span class="lbl">Mortgage payoff</span><span class="amt">– $268,000</span></div>
+              <div class="pr-row total"><span class="lbl">Estimated walk-away (midpoint)</span><span class="amt">$111,040</span></div>
+            </div>
+            <p class="pr-note">Selling costs cover commission, transfer taxes, prep, and closing costs — your real report has a slider so you can adjust this for your situation.</p>
+            <div class="watch-note">🔒 <b>Get alerted</b> the moment this crosses a number you choose — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
+          </div>
         </div>
-        <div class="pr-table">
-          <div class="pr-row"><span class="lbl">Estimated sale price</span><span class="amt">$412,000</span></div>
-          <div class="pr-row minus"><span class="lbl">Selling costs (8% — adjustable 6–10% in your report)</span><span class="amt">– $32,960</span></div>
-          <div class="pr-row minus"><span class="lbl">Mortgage payoff</span><span class="amt">– $268,000</span></div>
-          <div class="pr-row total"><span class="lbl">Estimated walk-away (midpoint)</span><span class="amt">$111,040</span></div>
-        </div>
-        <p class="pr-note">Selling costs cover commission, transfer taxes, prep, and closing costs — your real report has a slider so you can adjust this for your situation. Every month the verdict holds at WATCH, history says this number moves by roughly ±$2–4K. That's what your alert keeps track of.</p>
       </div>
 
       <!-- 7. Lock-in cost + capital gains -->
       <div class="sec">
         <div class="sec-title"><span class="num">7</span> What staying costs — your rate vs. today's</div>
         <p class="sec-sub">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
-        <div class="eq-grid">
-          <div class="eq-card">
-            <div class="label">Your current P&amp;I (estimated)</div>
-            <div class="big">$1,241<span style="font-size:16px;color:var(--muted)">/mo</span></div>
-            <div class="delta flat">At your 3.75% rate, on your $268,000 balance</div>
+        <div class="watchable">
+          <div class="watch-rail">
+            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
+            <span class="watch-tag">Watch</span>
           </div>
-          <div class="eq-card">
-            <div class="label">Same loan at today's 30-yr rate</div>
-            <div class="big">$1,708<span style="font-size:16px;color:var(--muted)">/mo</span></div>
-            <div class="delta flat">Borrowing $268,000 at ~6.58% over 30 years</div>
-          </div>
-        </div>
-        <div class="say" style="margin-top:16px"><b>Your locked-in rate is worth about $467 a month</b> (≈ $5,603 a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving.</div>
-        <div class="say" style="margin-top:12px;border-left-color:var(--amber);background:#fbf8f1"><b>A note on taxes:</b> if your gain (sale price minus what you paid) exceeds $250,000 as a single filer or $500,000 filing jointly, it may exceed the capital-gains exclusion — worth discussing with a tax professional. <span style="color:#a49d8d">Illustrative example: purchased 2011 for $150,000 → estimated gain ≈ $262,000.</span></div>
-      </div>
-
-      <!-- 8. Watch your numbers (illustrative — real control lives on your report) -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">8</span> Get alerted</div>
-        <p class="sec-sub">Set a threshold on your walk-away number, equity, or lock-in cost — get emailed the moment new market data crosses it. Illustrative below; set your own on your real report.</p>
-        <div style="border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div>
-              <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Watch</div>
-              <div style="border:1.5px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;color:var(--ink);background:#fff">My walk-away number</div>
+          <div>
+            <div class="eq-grid">
+              <div class="eq-card">
+                <div class="label">Your current P&amp;I (estimated)</div>
+                <div class="big">$1,241<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+                <div class="delta flat">At your 3.75% rate, on your $268,000 balance</div>
+              </div>
+              <div class="eq-card">
+                <div class="label">Same loan at today's 30-yr rate</div>
+                <div class="big">$1,708<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+                <div class="delta flat">Borrowing $268,000 at ~6.58% over 30 years</div>
+              </div>
             </div>
-            <div>
-              <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Alert me when it</div>
-              <div style="border:1.5px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;color:var(--ink);background:#fff">drops below</div>
-            </div>
+            <div class="say" style="margin-top:16px"><b>Your locked-in rate is worth about $467 a month</b> (≈ $5,603 a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving.</div>
+            <div class="watch-note">🔒 <b>Get alerted</b> if today's rate drops close to yours — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
+            <div class="say" style="margin-top:12px;border-left-color:var(--amber);background:#fbf8f1"><b>A note on taxes:</b> if your gain (sale price minus what you paid) exceeds $250,000 as a single filer or $500,000 filing jointly, it may exceed the capital-gains exclusion — worth discussing with a tax professional. <span style="color:#a49d8d">Illustrative example: purchased 2011 for $150,000 → estimated gain ≈ $262,000.</span></div>
           </div>
-          <div style="margin-top:14px;max-width:220px">
-            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Threshold ($)</div>
-            <div style="border:1.5px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;color:var(--ink);background:#fff">95,000</div>
-          </div>
-          <a class="btn primary" href="my-report.html" style="display:inline-flex;margin-top:16px">Set this up on your report →</a>
         </div>
       </div>
 
-      <!-- 9. Next step / partner -->
+      <!-- 8. Next step / partner -->
       <div class="sec" style="margin-bottom:0">
-        <div class="sec-title"><span class="num">9</span> Your next step</div>
+        <div class="sec-title"><span class="num">8</span> Your next step</div>
         <p class="sec-sub">A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month.</p>
         <div class="partner">
           <img src="img/naomi.jpg" alt="Naomi, NTRealty" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%2316243a%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2216%22 fill=%22%236fe3c2%22 opacity=%22.9%22/%3E%3Cpath d=%22M22 88c4-18 15-26 28-26s24 8 28 26%22 fill=%22%236fe3c2%22 opacity=%22.9%22/%3E%3C/svg%3E'">
