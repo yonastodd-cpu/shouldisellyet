@@ -64,7 +64,17 @@ details#adv[open] summary{margin-bottom:4px}
 .strow.stress .net{color:var(--red)}
 @media(max-width:640px){ .strow{grid-template-columns:1.4fr 1fr 1.1fr} .strow span:nth-child(3){display:none} .strow.head span:nth-child(3){display:none} }
 .sec p{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
-.metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center;margin-bottom:12px}
+.metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center}
+.metric-block{margin-bottom:12px}
+.dials-intro{font-size:13.5px;color:var(--muted);margin:0 0 14px!important}
+/* per-dial methodology disclosure — collapsed by default, quiet when open */
+details.how{margin:4px 0 0 0;padding-left:0}
+details.how summary{font-size:12px;color:var(--faint);cursor:pointer;list-style:none;display:inline-block;text-decoration:underline dotted;text-underline-offset:3px}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary::before{content:"+ "}
+details.how[open] summary::before{content:"− "}
+details.how .how-body{margin:8px 0 10px;padding:12px 14px;border-left:2px solid var(--hairline);font-size:13px;line-height:1.6;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+details.how .how-body b{color:#3a4450}
 .metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
 .metric .val{font-size:14px;font-weight:650}
 .metric .track{height:6px;border-radius:3px;background:var(--track);position:relative}
@@ -276,6 +286,7 @@ details#adv[open] summary{margin-bottom:4px}
       <div class="k">01 · MARKET SIGNALS IN YOUR ZIP</div>
       <div class="title">The four dials that predict price moves</div>
       <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
+      <p class="dials-intro">Four numbers, all public data, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
       <div id="metrics"></div>
       <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px"></p>
@@ -626,32 +637,74 @@ function applyStrong(d){
   return d;
 }
 
-// strong=true marks the strong-market thresholds on the same gauges
+// strong=true marks the strong-market thresholds on the same gauges.
+// Each row carries its own methodology (`how`) for the disclosure under the
+// dial: plain definition, the exact math in words, and why the danger line
+// sits where it does. Threshold rationale is deliberately general — we have
+// no proprietary backtest, so claims stay at "the level that preceded price
+// declines in past national downturns," which is the honest version.
 function buildMetricRows(d, strong){
   const m = d.m || {}, rows = [];
   if (m.mos != null){ const t = strong ? (m.mos<2.5?"s":"g") : (m.mos>6?"r":m.mos>4?"a":"g");
     rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:strong?31.3:50,
-      note:strong?(t==="s"?"past the strong line: 2.5 mo":"strong line: 2.5 mo"):(t==="g"?"line: 4.0 mo":"past the line")}); }
+      note:strong?(t==="s"?"past the strong line: 2.5 mo":"strong line: 2.5 mo"):(t==="g"?"line: 4.0 mo":"past the line"),
+      how:{what:"If no new homes were listed, how long until everything currently for sale is sold.",
+           math:"homes for sale ÷ homes sold per month",
+           why:strong?"Below 2.5 months, buyers are competing over too few homes — the classic seller's-market line.":"Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following.",
+           yours:"Yours: "+m.mos.toFixed(1)+" mo"}}); }
   if (m.spy != null){ const t = strong ? (m.spy>=0.05?"s":"g") : (m.spy<-0.05?"r":m.spy<-0.02?"a":"g");
     rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:strong?29.2:58.3,
-      note:strong?(t==="s"?"past the strong line: +5% y/y":"strong line: +5% y/y"):(t==="g"?"holding or rising":"line: −2% y/y")}); }
+      note:strong?(t==="s"?"past the strong line: +5% y/y":"strong line: +5% y/y"):(t==="g"?"holding or rising":"line: −2% y/y"),
+      how:{what:"What the typical home sells for now, compared with the same month a year ago.",
+           math:"this month's typical sale price ÷ the typical price 12 months ago, as a percent change",
+           why:strong?"Prices rising 5%+ a year is faster than normal appreciation — a strength signal when supply is thin.":"A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns.",
+           yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
   if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
     const t = strong ? (p<=-0.15?"s":"g") : (p>0.4?"a":"g");
     rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
-      note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −15% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr")}); }
+      note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −15% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
+      how:{what:"How many days the typical home sits on the market before a buyer commits.",
+           math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago",
+           why:strong?"Homes selling 15%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
+           yours:"Yours: "+Math.round(m.dom)+" days"}}); }
   if (m.pd != null){ const t = strong ? (m.pd<0.20?"s":"g") : (m.pd>0.35?"a":"g");
     rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:strong?28.6:50,
-      note:strong?(t==="s"?"below the strong line: 20%":"strong line: 20%"):(t==="g"?"line: 35%":"past the line")}); }
+      note:strong?(t==="s"?"below the strong line: 20%":"strong line: 20%"):(t==="g"?"line: 35%":"past the line"),
+      how:{what:"The share of homes for sale that have already dropped their asking price at least once.",
+           math:"listings with a price cut ÷ all active listings",
+           why:strong?"Under 20%, few sellers are having to negotiate down — pricing power sits with sellers.":"Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.",
+           yours:"Yours: "+Math.round(m.pd*100)+"%"}}); }
   if (m.invy != null){ const t=m.invy>0.5?"a":"g";
-    rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging"}); }
+    rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging",
+      how:{what:"How many homes are coming up for sale, compared with a year ago.",
+           math:"homes newly listed this month ÷ homes newly listed the same month last year",
+           why:"A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows.",
+           yours:"Yours: "+(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%"}}); }
   return rows.slice(0,4);
 }
-function renderMetrics(rows){
-  return rows.map(r =>
-    '<div class="metric"><span class="name">'+r.name+'</span>'+
+// One-word state for the "Yours: …" restatement in each disclosure
+function stateWord(t){
+  return t==="r" ? "past the danger line"
+       : t==="a" ? "past the warning line"
+       : t==="s" ? "past the strong-market line"
+       : "well inside healthy";
+}
+function renderMetrics(rows, zip){
+  const period = (META && META.period) ? META.period : "the latest release";
+  return rows.map(r => {
+    const how = r.how ? (
+      '<details class="how"><summary>How this is measured</summary><div class="how-body">'+
+        '<div>'+r.how.what+'</div>'+
+        '<div><b>Where it comes from:</b> Redfin market data for ZIP '+zip+', through '+period+'.</div>'+
+        '<div><b>The math:</b> '+r.how.math+'.</div>'+
+        '<div><b>Why the line is there:</b> '+r.how.why+'</div>'+
+        '<div><b>'+r.how.yours+'</b> — '+stateWord(r.t)+'.</div>'+
+      '</div></details>') : '';
+    return '<div class="metric-block"><div class="metric"><span class="name">'+r.name+'</span>'+
     '<span class="val" style="color:'+tcol(r.t)+'">'+r.val+'</span>'+
     '<span class="track"><span class="fill" style="width:'+r.fill+'%;background:'+tcol(r.t)+'"></span><span class="th" style="left:'+r.th+'%"></span></span>'+
-    '<span class="note">'+r.note+'</span></div>').join("");
+    '<span class="note">'+r.note+'</span></div>'+how+'</div>';
+  }).join("");
 }
 
 
@@ -874,7 +927,7 @@ async function generate(noScroll){
   $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
   $("v-title").textContent = k.title.replace("{zip}", zip);
   $("r-addr").textContent = (addr ? addr + " · " : "") + zip + (d.st ? ", " + d.st : "") + " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
-  $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
+  $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
   $("v-sub").textContent = k.sub.replace("{zip}", zip);
 
   // equity
