@@ -1,0 +1,86 @@
+{
+  "generated": "2026-08-01",
+  "redfin_years": [
+    2012,
+    2026
+  ],
+  "fhfa_thru": 2023,
+  "n_pairs": 155612,
+  "notes": "Outcomes are FHFA nominal annual ZIP-index changes the year after each year-end signal snapshot; FHFA indexes sample GSE-backed mortgages and are annual, so this measures direction over a 12-month horizon, not exact magnitudes.",
+  "levels": {
+    "green": {
+      "n": 76921,
+      "decline_pct": 10.2,
+      "median_chg": 5.78
+    },
+    "yellow": {
+      "n": 34335,
+      "decline_pct": 18.3,
+      "median_chg": 4.13
+    },
+    "red": {
+      "n": 11118,
+      "decline_pct": 27.8,
+      "median_chg": 3.19
+    },
+    "strong": {
+      "n": 33238,
+      "decline_pct": 6.1,
+      "median_chg": 8.87
+    }
+  },
+  "signals": {
+    "mos": {
+      "crossed": {
+        "n": 5380,
+        "decline_pct": 36.5,
+        "median_chg": 1.95
+      },
+      "clear": {
+        "n": 146366,
+        "decline_pct": 11.5,
+        "median_chg": 5.93
+      }
+    },
+    "price": {
+      "crossed": {
+        "n": 38698,
+        "decline_pct": 19.8,
+        "median_chg": 3.96
+      },
+      "clear": {
+        "n": 116914,
+        "decline_pct": 9.9,
+        "median_chg": 6.47
+      }
+    },
+    "cuts": {
+      "crossed": null,
+      "clear": null
+    },
+    "dom": {
+      "crossed": {
+        "n": 23791,
+        "decline_pct": 19.0,
+        "median_chg": 4.67
+      },
+      "clear": {
+        "n": 131273,
+        "decline_pct": 11.2,
+        "median_chg": 6.01
+      }
+    },
+    "inv": {
+      "crossed": {
+        "n": 16606,
+        "decline_pct": 18.8,
+        "median_chg": 4.83
+      },
+      "clear": {
+        "n": 134042,
+        "decline_pct": 11.5,
+        "median_chg": 5.92
+      }
+    }
+  }
+}

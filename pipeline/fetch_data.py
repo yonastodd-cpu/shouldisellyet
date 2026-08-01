@@ -316,6 +316,43 @@ def load_rdc(source):
     return out
 
 
+def load_fhfa_compact(base=None):
+    """pipeline/fhfa_zip.csv (written annually by fetch_fhfa.py) →
+    {zip: {"y": thru_year, "a1": latest_annual_change_pct, "a3": 3yr_avg}}.
+    Absent file just means no FHFA benchmark on the report."""
+    path = Path(base or Path(__file__).parent) / "fhfa_zip.csv"
+    if not path.exists():
+        return {}
+    out = {}
+    for r in csv.DictReader(open(path)):
+        try:
+            out[r["zip"]] = {"y": int(r["thru"]), "a1": float(r["a1"]), "a3": float(r["a3"])}
+        except (KeyError, ValueError):
+            continue
+    print(f"FHFA benchmark: {len(out)} ZIPs")
+    return out
+
+
+def load_backtest(base=None):
+    """pipeline/backtest_results.json (written by backtest_thresholds.py) →
+    the compact topline meta.json ships to the report, or None."""
+    path = Path(base or Path(__file__).parent) / "backtest_results.json"
+    if not path.exists():
+        return None
+    try:
+        r = json.loads(path.read_text())
+        sig = {}
+        for k, v in (r.get("signals") or {}).items():
+            if v.get("crossed") and v.get("clear"):
+                sig[k] = {"x": v["crossed"]["decline_pct"], "c": v["clear"]["decline_pct"],
+                          "n": v["crossed"]["n"]}
+        return {"y0": r["redfin_years"][0], "y1": r["redfin_years"][1],
+                "fhfa": r["fhfa_thru"], "n": r["n_pairs"], "sig": sig}
+    except (KeyError, ValueError, json.JSONDecodeError) as e:
+        print("backtest results unreadable, skipping:", e)
+        return None
+
+
 def fetch_mortgage_rates():
     """Current + year-ago 30y fixed rate. Returns None only if every source fails.
 
@@ -374,6 +411,7 @@ def main():
         )
 
     rdc = load_rdc(args.rdc) if args.rdc else {}
+    fhfa = load_fhfa_compact()
 
     by_state = defaultdict(dict)
     prefix_state = {}
@@ -391,6 +429,10 @@ def main():
         x = rdc.get(zip_code)
         if x:
             entry["x"] = x
+        # FHFA official annual index — benchmark, not a signal
+        fb = fhfa.get(zip_code)
+        if fb:
+            entry["f"] = fb
         by_state[state or "XX"][zip_code] = entry
         prefix_state[zip_code[:3]] = state or "XX"
         period_seen = max(period_seen, period)
@@ -410,13 +452,15 @@ def main():
         for z in zips.values():
             counts0[z["l"]] += 1
     mortgage = fetch_mortgage_rates()
+    backtest = load_backtest()
     (OUT / "meta.json").write_text(json.dumps({
         "generated": date.today().isoformat(),
         "period": period_seen[:7],
         "attribution": "Data from Redfin, a national real estate brokerage (redfin.com)"
                        + (" · Listing data from Realtor.com" if rdc else ""),
         "national": {"spy_deciles": deciles, "counts": counts0,
-                     **({"mortgage": mortgage} if mortgage else {})},
+                     **({"mortgage": mortgage} if mortgage else {}),
+                     **({"backtest": backtest} if backtest else {})},
     }))
 
     counts = defaultdict(int)

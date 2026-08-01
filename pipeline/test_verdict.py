@@ -284,3 +284,28 @@ def test_rdc_never_touches_verdict(tmp_path):
     assert "x" not in without["20874"]
     for k in ("l", "s", "r", "m"):
         assert with_rdc["20874"][k] == without["20874"][k]
+
+
+# ——— FHFA benchmark + backtest merge (fetch_data) ———
+
+def test_load_fhfa_compact_and_backtest(tmp_path):
+    import fetch_data as fd
+
+    fhfa = tmp_path / "fhfa_zip.csv"
+    fhfa.write_text("zip,thru,a1,a3\n20874,2023,8.89,9.56\nbadzip,x,y,z\n")
+    bt = tmp_path / "backtest_results.json"
+    bt.write_text(json.dumps({
+        "redfin_years": [2012, 2026], "fhfa_thru": 2023, "n_pairs": 150000,
+        "signals": {
+            "mos": {"crossed": {"n": 900, "decline_pct": 41.0, "median_chg": 0.4},
+                     "clear":   {"n": 90000, "decline_pct": 12.0, "median_chg": 5.1}},
+            "cuts": {"crossed": None, "clear": {"n": 5, "decline_pct": 0.0, "median_chg": 4.0}},
+        },
+    }))
+    out = fd.load_fhfa_compact(base=tmp_path)
+    assert out == {"20874": {"y": 2023, "a1": 8.89, "a3": 9.56}}
+
+    meta_bt = fd.load_backtest(base=tmp_path)
+    assert meta_bt["y0"] == 2012 and meta_bt["fhfa"] == 2023
+    assert meta_bt["sig"]["mos"] == {"x": 41.0, "c": 12.0, "n": 900}
+    assert "cuts" not in meta_bt["sig"]  # one-sided data never ships
