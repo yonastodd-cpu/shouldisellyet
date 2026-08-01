@@ -171,8 +171,6 @@ details.how .how-body b{color:#3a4450}
 .modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:26px;box-shadow:0 24px 60px -20px rgba(16,24,40,.45)}
 .modal h3{font-family:'Newsreader',serif;font-size:22px;font-weight:600;margin:0 0 4px}
 .modal .sub{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.55}
-.modal label.consent{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#3a4450;line-height:1.55;cursor:pointer;margin:4px 0 14px}
-.modal label.consent input{margin-top:3px;accent-color:var(--navy)}
 .modal .mrow{display:flex;gap:10px;justify-content:flex-end}
 @media print{ .connect-card,.modal-veil{display:none!important} }
 .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
@@ -696,10 +694,11 @@ details.how .how-body b{color:#3a4450}
           <div class="f"><label>PROPERTY ADDRESS / ZIP</label><input id="cm-addr"></div>
         </div>
         <div class="frow">
-          <div class="f"><label>THINKING OF SELLING WITHIN&hellip;</label>
+          <div class="f"><label>YOUR SELLING TIMELINE</label>
             <select id="cm-timeline" style="width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)">
               <option value="">choose one (optional)</option>
-              <option value="6mo">6 months</option>
+              <option value="ready">I'm ready to sell now</option>
+              <option value="6mo">Within 6 months</option>
               <option value="1-2yr">1–2 years</option>
               <option value="someday">Someday</option>
               <option value="watching">Just watching</option>
@@ -707,12 +706,11 @@ details.how .how-body b{color:#3a4450}
           </div>
           <div class="f"><label>ANYTHING THEY SHOULD KNOW? (OPTIONAL)</label><input id="cm-note"></div>
         </div>
-        <label class="consent"><input type="checkbox" id="cm-consent" onchange="$('cm-send').disabled=!this.checked">
-          <span>Share my name and contact info so ShouldISellYet can personally introduce me to one vetted local agent. Nothing is shared until you submit.</span></label>
+        <p class="sub" id="cm-disclosure" style="margin:4px 0 14px">Requesting an introduction shares your name and contact details with one carefully chosen local agent — that's the whole point, and it's all we share. Free, no obligation, and we never sell your info.</p>
         <div class="err" id="cm-err"></div>
         <div class="mrow">
           <button class="btn-outline" onclick="return closeConnect()">Cancel</button>
-          <button class="btn" id="cm-send" disabled onclick="return submitConnect()">Request my introduction</button>
+          <button class="btn" id="cm-send" onclick="return submitConnect()">Request my introduction</button>
         </div>
       </div>
       <div id="cm-done" style="display:none">
@@ -1548,13 +1546,15 @@ function adjustNums(){
 }
 
 // ————— Get Connected modal (Task 8) —————
-// The consent copy is stored verbatim with every request row.
-const CONSENT_TEXT = "Share my name and contact info so ShouldISellYet can personally introduce me to one vetted local agent. Nothing is shared until you submit.";
+// The disclosure shown beside the submit button, stored verbatim with every
+// request row (consented_at = submit time). A user-initiated "introduce me"
+// request needs clear disclosure, not a consent checkbox — submitting the
+// form IS the ask, so the gate came out and the audit trail stayed.
+const CONSENT_TEXT = "Requesting an introduction shares your name and contact details with one carefully chosen local agent — that's the whole point, and it's all we share. Free, no obligation, and we never sell your info.";
 function openConnect(){
   $("cm-form").style.display = "block";
   $("cm-done").style.display = "none";
   $("cm-err").style.display = "none";
-  $("cm-consent").checked = false; $("cm-send").disabled = true;
   const addr = $("in-addr").value.trim(), zip = $("in-zip").value.trim();
   if (!$("cm-addr").value) $("cm-addr").value = addr || zip;
   if ($("in-timeline").value && !$("cm-timeline").value) $("cm-timeline").value = $("in-timeline").value;
@@ -1575,7 +1575,6 @@ async function submitConnect(){
   if (!name) { $("cm-name").focus(); return fail("Please add your name."); }
   if (!/@/.test(email)) { $("cm-email").focus(); return fail("Please add a working email."); }
   if (!/^\d{5}$/.test(zip)) { $("cm-addr").focus(); return fail("Please include the property's 5-digit ZIP."); }
-  if (!$("cm-consent").checked) return fail("Please check the consent box first.");
   if (!MATCH_FN) return fail("Introductions aren't configured yet — email naomi@shouldisellyet.com and we'll set it up by hand.");
   const btn = $("cm-send"); btn.disabled = true; btn.textContent = "Sending…";
   try {
