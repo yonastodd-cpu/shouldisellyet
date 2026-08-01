@@ -1,6 +1,7 @@
 """Unit tests for the verdict engine + pipeline parsing. Run: pytest -q"""
 
 import gzip
+import os
 import json
 import subprocess
 import sys
@@ -181,6 +182,7 @@ def test_pipeline_end_to_end(tmp_path):
         [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
          "--input", str(fixture)],
         check=True, capture_output=True,
+        env={**os.environ, "SISY_SKIP_MORTGAGE": "1"},  # no network in unit tests
     )
 
     data_dir = repo / "web" / "data"
@@ -197,3 +199,30 @@ def test_pipeline_end_to_end(tmp_path):
     meta = json.loads((data_dir / "meta.json").read_text())
     assert meta["period"] == "2026-05"
     assert "Redfin" in meta["attribution"]
+
+
+# ——— mortgage-rate source parsers (fetch_data) ———
+
+def test_mortgage_parsers_and_selection():
+    import fetch_data as fd
+
+    fred = "DATE,MORTGAGE30US\n" + "\n".join(
+        f"2025-{m:02d}-01,{6.0 + m/100}" for m in range(1, 13)) + \
+        "\n2026-01-01,.\n" + "\n".join(
+        f"2026-{m:02d}-01,{6.5 + m/100}" for m in range(2, 8))
+    vals = fd.parse_fred_csv(fred)
+    assert all(v[1] > 0 for v in vals)
+    assert not any(v[1] is None for v in vals)          # '.' rows dropped
+    assert vals[-1][0] == "2026-07-01"
+
+    pmms = "date,pmms30,pmms15\n" + "\n".join(
+        f"{m}/2/2026,{6.6 + m/100},5.9" for m in range(1, 8))
+    pvals = fd.parse_pmms_csv(pmms)
+    assert pvals[-1] == ("2026-07-02", 6.67)
+    assert pvals[0][0] == "2026-01-02"                  # M/D/YYYY → ISO
+
+    # too-short series is rejected rather than trusted
+    assert fd._rates_from_weekly(pvals) is None
+    long = [(f"2025-{i:02d}", 6.0) for i in range(1, 10)] * 8
+    r = fd._rates_from_weekly(long)
+    assert r and set(r) == {"now", "year_ago", "asof"}

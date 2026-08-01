@@ -736,14 +736,12 @@ const $ = id => document.getElementById(id);
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
 const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
 
-// Current market 30-year fixed rate (%). The pipeline writes a live FRED
-// number into meta.json (national.mortgage.now) when the fetch succeeds;
-// this constant is the fallback when it doesn't — and today it IS what
-// renders, because the last pipeline runs failed to reach FRED (meta.json
-// has no `mortgage` key). Verified against FRED MORTGAGE30US 2026-07-23.
-// TODO: wire to FRED weekly — fix the pipeline's FRED fetch so the live
-// number lands in meta.json, and refresh this fallback when rates move.
-const CURRENT_MARKET_RATE = 6.58;
+// Current market 30-year fixed rate (%) — fallback only. The pipeline now
+// writes the live Freddie Mac PMMS number into meta.json
+// (national.mortgage: {now, year_ago, asof}) with FRED as backup source,
+// so this constant renders only if meta itself fails to load. Refresh it
+// when rates move meaningfully. PMMS 2026-07-30: 6.66.
+const CURRENT_MARKET_RATE = 6.66;
 
 // Standard mortgage math (monthly compounding, 30-year default)
 function pmt(principal, ratePct, years){
@@ -1366,7 +1364,7 @@ async function generate(noScroll){
   if (!liveMkt) console.warn("FRED mortgage data missing from meta.json — falling back to the site constant " +
     CURRENT_MARKET_RATE + "% (pipeline fetch_mortgage_rates didn't land; see fetch_data.py)");
   const mktRate = liveMkt ? liveMkt.now : CURRENT_MARKET_RATE;
-  const mktSrc = liveMkt ? "FRED 30-yr weekly average, " + liveMkt.asof + " (market data)"
+  const mktSrc = liveMkt ? "Freddie Mac PMMS 30-yr weekly average, " + liveMkt.asof + " (market data)"
                          : "assumed " + CURRENT_MARKET_RATE + "% (site constant)";
   // Three states (Task 2): rate + balance → full dollars; rate only →
   // rate-only framing (their rate vs. the market in points — never an
