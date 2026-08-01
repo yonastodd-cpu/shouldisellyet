@@ -131,6 +131,16 @@ details.how .how-body b{color:#3a4450}
 .locked-card .lc-row .f{flex:1}
 .locked-card .btn{flex:none}
 .strow.slim{grid-template-columns:1.7fr 1fr}
+/* "More answers" optional-analysis cards */
+.moregrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mcard{border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7);display:flex;flex-direction:column;gap:10px}
+.mcard .mt{font-weight:700;font-size:15px}
+.mcard p{font-size:13.5px}
+.mcard .big2{font-family:'Newsreader',serif;font-size:24px;font-weight:600}
+.mcard .locked-card{border:none;background:none;padding:0}
+.mcard-watch{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px}
+.mcard-watch .watch-tag{max-width:none}
+@media(max-width:640px){ .moregrid{grid-template-columns:1fr} }
 @media(max-width:640px){ .strow.slim{grid-template-columns:1.4fr 1fr} .locked-card .lc-row{flex-direction:column;align-items:stretch} }
 .partner{display:none;gap:24px;align-items:flex-start;border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
 .partner .pframe{flex:none;background:#fff;padding:6px;border:1px solid var(--hairline);border-radius:10px;box-shadow:0 12px 26px -14px rgba(31,42,63,.4)}
@@ -282,6 +292,7 @@ details.how .how-body b{color:#3a4450}
         </select>
       </div>
     </div>
+    <input type="hidden" id="in-rent">
     <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
   </div>
@@ -473,8 +484,6 @@ details.how .how-body b{color:#3a4450}
               <p style="font-size:11px;color:var(--fainter);margin-top:10px;line-height:1.5">Sends this number's inputs to us so we can recheck monthly — unlike the rest of this report, which stays in your browser. See <a href="privacy.html" style="text-decoration:underline">Privacy</a>.</p>
             </div>
           </div>
-          <div class="say" id="capgains" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
-          <div class="say" id="capgains-prompt" style="display:none;margin-top:12px;border-left-color:var(--gold);background:#fbf8f1"></div>
         </div>
       </div>
     </div>
@@ -551,15 +560,80 @@ details.how .how-body b{color:#3a4450}
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
+
+    <div class="sec" id="sec-more">
+      <div class="k">10 · MORE ANSWERS, IF YOU WANT THEM</div>
+      <div class="title">Questions you didn't think to ask</div>
+      <p class="subt">All optional. Each card needs one number from you — add it and the answer appears. Everything stays in your browser unless you save an alert.</p>
+      <div class="moregrid">
+        <div class="mcard" id="mc-rategap">
+          <div class="mt">Your rate vs. the market</div>
+          <div id="mc-rategap-body"></div>
+          <div class="mcard-watch">
+          <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-rategap" onchange="toggleWatch('rategap', this.checked)"><span class="watch-switch-track"></span></label>
+          <span class="watch-tag" id="watch-tag-rategap">ALERT</span>
+        </div>
+        <div class="watch-panel" id="watch-panel-rategap" style="display:none">
+          <div class="locked-msg" id="watch-locked-rategap" style="display:none"></div>
+          <div id="watch-active-rategap" style="display:none">
+            <div class="f" style="margin-bottom:10px">
+              <label>TELL ME IF THE MARKET RATE COMES WITHIN THIS MANY POINTS OF MINE</label>
+              <input id="watch-threshold-rategap" inputmode="decimal" placeholder="e.g. 1.0">
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" style="font-size:13.5px;padding:9px 16px" onclick="return saveWatch('rategap')">Save alert</button>
+              <button class="btn-outline" style="font-size:13.5px;padding:9px 16px;display:none" id="watch-clear-btn-rategap" onclick="return clearWatch('rategap')">Turn off</button>
+            </div>
+            <div class="err" id="watch-err-rategap" style="margin-top:8px"></div>
+            <div id="watch-ok-rategap" style="display:none;color:var(--green);font-size:13px;font-weight:600;margin-top:8px"></div>
+            <p style="font-size:11px;color:var(--fainter);margin-top:10px;line-height:1.5">Sends this number's inputs to us so we can recheck monthly — unlike the rest of this report, which stays in your browser. See <a href="privacy.html" style="text-decoration:underline">Privacy</a>.</p>
+          </div>
+        </div>
+        </div>
+        <div class="mcard" id="mc-gains">
+          <div class="mt">Capital gains clock</div>
+          <div id="mc-gains-body"></div>
+          <div class="mcard-watch">
+          <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-gain" onchange="toggleWatch('gain', this.checked)"><span class="watch-switch-track"></span></label>
+          <span class="watch-tag" id="watch-tag-gain">ALERT</span>
+        </div>
+        <div class="watch-panel" id="watch-panel-gain" style="display:none">
+          <div class="locked-msg" id="watch-locked-gain" style="display:none"></div>
+          <div id="watch-active-gain" style="display:none">
+            <div class="f" style="margin-bottom:10px">
+              <label>TELL ME IF MY ESTIMATED GAIN CROSSES ($)</label>
+              <input id="watch-threshold-gain" inputmode="decimal" placeholder="250000 single · 500000 married">
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" style="font-size:13.5px;padding:9px 16px" onclick="return saveWatch('gain')">Save alert</button>
+              <button class="btn-outline" style="font-size:13.5px;padding:9px 16px;display:none" id="watch-clear-btn-gain" onclick="return clearWatch('gain')">Turn off</button>
+            </div>
+            <div class="err" id="watch-err-gain" style="margin-top:8px"></div>
+            <div id="watch-ok-gain" style="display:none;color:var(--green);font-size:13px;font-weight:600;margin-top:8px"></div>
+            <p style="font-size:11px;color:var(--fainter);margin-top:10px;line-height:1.5">Sends this number's inputs to us so we can recheck monthly — unlike the rest of this report, which stays in your browser. See <a href="privacy.html" style="text-decoration:underline">Privacy</a>.</p>
+          </div>
+        </div>
+        </div>
+        <div class="mcard" id="mc-rent">
+          <div class="mt">Sell — or rent it out?</div>
+          <div id="mc-rent-body"></div>
+        </div>
+        <div class="mcard" id="mc-wait">
+          <div class="mt">What waiting builds</div>
+          <div id="mc-wait-body"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="sec">
-      <div class="k">10 · WHAT THIS MEANS</div>
+      <div class="k">11 · WHAT THIS MEANS</div>
       <div class="title">The plain-English bottom line</div>
       <p class="subt">One paragraph, no hedging.</p>
       <div class="say" id="meaning"></div>
     </div>
 
     <div class="sec">
-      <div class="k">11 · YOUR NEXT STEP</div>
+      <div class="k">12 · YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
@@ -623,7 +697,7 @@ function balanceAfter(principal, ratePct, yearsElapsed, years){
 //   address, zip, value, year_purchased, purchase_price, balance,
 //   orig_loan_amount, orig_loan_year, rate, piti, timeline, cost_pct
 const PROFILE_KEY = "sisy_profile";
-const PROFILE_FIELDS = ["in-addr","in-zip","in-val","in-yr","in-pp","in-bal","in-rate","in-origamt","in-origyr","in-piti","in-timeline"];
+const PROFILE_FIELDS = ["in-addr","in-zip","in-val","in-yr","in-pp","in-bal","in-rate","in-origamt","in-origyr","in-piti","in-timeline","in-rent"];
 function saveProfile(){
   const p = {};
   PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && el.value) p[id] = el.value; });
@@ -962,6 +1036,102 @@ function renderDeepDive(d, zip, val, bal){
   }
 }
 
+// ————— "More answers" optional cards (Task 4) —————
+// Four analyses, each locked until its own input exists. No approximated
+// stand-ins: a card that can't be computed correctly from what the user
+// gave us asks for the one number it needs instead.
+function renderMoreAnswers(o){
+  const {val, bal, rate, pp, yr, piti, origAmt, mktRate, hasVal, hasBal} = o;
+
+  // 1 · rate gap — needs their rate. Dollars ride along only when a real
+  // balance exists (same rule as lock-in: no example-loan dollars).
+  const rg = $("mc-rategap-body");
+  const canGap = rate != null;
+  if (canGap){
+    const gap = mktRate - rate;
+    const gapAbs = Math.abs(gap).toFixed(1);
+    let html = '<div class="big2">' + (gap>0 ? gapAbs + " points below market" : gap<0 ? gapAbs + " points above market" : "right at market") + '</div>' +
+      '<p>Your ' + rate + "% vs. today's ~" + (+mktRate).toFixed(2) + "%.</p>";
+    if (gap > 0.05){
+      if (hasBal && bal > 0){
+        const save = pmt(bal, mktRate) - pmt(origAmt || bal, rate);
+        if (save > 0) html += '<p>That gap is an asset worth about <b>' + fmt(save) + ' a month</b> on your loan — replacing it at today\'s rate would cost that much more.</p>';
+      } else {
+        html += '<p>That gap is an asset — a loan this cheap can\'t be replaced right now. Add your balance (section above) to see it in dollars.</p>';
+      }
+      html += '<p style="color:var(--muted)">The alert below answers the real question: when does the market come close enough to your rate that moving stops being expensive?</p>';
+    } else {
+      html += '<p>Your mortgage isn\'t locking you in — today\'s money costs about what yours does' + (gap<-0.05 ? ' or less' : '') + '.</p>';
+    }
+    rg.innerHTML = html;
+  } else {
+    rg.innerHTML = lockedCard("mc-rategap-body", "Add your mortgage's interest rate to see how far below (or above) today's market your loan sits — and when that stops mattering.", "in-rate");
+  }
+  setWatchAvail("rategap", canGap, "ADD RATE");
+
+  // 2 · capital gains clock — needs purchase price (+ value to compute gain)
+  const gc = $("mc-gains-body");
+  const canGain = pp != null && hasVal;
+  if (canGain){
+    const gain = val - pp;
+    const owned = yr ? (new Date().getFullYear() - yr) : null;
+    const SINGLE = 250000, MARRIED = 500000;
+    let line;
+    if (gain >= MARRIED) line = "past both the $250K single and $500K married-filing-jointly federal exclusions";
+    else if (gain >= SINGLE) line = "past the $250K single exclusion, inside the $500K married-filing-jointly one";
+    else if (gain >= SINGLE - 50000) line = "within $50K of the $250K single exclusion";
+    else line = "inside both federal exclusions ($250K single / $500K married filing jointly)";
+    gc.innerHTML = '<div class="big2">' + (gain>=0 ? fmt(gain) : "− "+fmt(-gain)) + ' gain so far</div>' +
+      '<p>' + (owned!=null ? owned + " years owned — your " : "Your ") + (yr||"") + ' purchase at ' + fmt(pp) + ' vs. your ' + fmt(val) + ' estimate today: ' + line + '.</p>' +
+      (gain >= SINGLE - 50000 ? '<p><b>Worth a conversation with a tax professional before you sell.</b></p>' : '') +
+      '<p style="color:var(--fainter);font-size:12px">Informational only — not tax advice. Exclusions have ownership and residency rules.</p>';
+  } else {
+    gc.innerHTML = pp == null
+      ? lockedCard("mc-gains-body", "Add what you paid for the home to see your gain so far against the $250K/$500K federal tax exclusions.", "in-pp")
+      : lockedCard("mc-gains-body", "Add your estimate of the home's value to compare your gain against the $250K/$500K federal tax exclusions.", "in-val");
+  }
+  setWatchAvail("gain", canGain, pp == null ? "ADD PRICE" : "ADD VALUE");
+
+  // 3 · sell vs. rent — needs PITI + the user's own rent estimate (card-only
+  // input). Yield line needs a value too; it drops out rather than guessing.
+  const rc = $("mc-rent-body");
+  const rent = parseFloat(($("in-rent").value || "").replace(/[^0-9.]/g, "")) || null;
+  if (piti != null){
+    let html = '<div class="f" style="margin-bottom:4px"><label>EXPECTED MONTHLY RENT — YOUR ESTIMATE ($)</label>' +
+      '<input id="mc-rent-in" inputmode="numeric" value="' + (rent || "") + '" placeholder="what it would rent for"></div>' +
+      '<div style="margin-bottom:6px"><button class="btn-outline" style="font-size:13px;padding:8px 14px" onclick="return addInline(\'in-rent\',\'mc-rent-in\')">Update</button></div>';
+    if (rent){
+      const cash = rent - piti;
+      html += '<div class="big2">' + (cash>=0 ? "+" : "−") + fmt(Math.abs(cash)).slice(1) + '/mo cash flow</div>' +
+        '<p>Your rent estimate ' + fmt(rent) + ' − your ' + fmt(piti) + ' payment (PITI — principal, interest, taxes, insurance).</p>' +
+        (hasVal ? '<p>Gross yield: rent × 12 ÷ home value ≈ <b>' + (rent*12/val*100).toFixed(1) + '%</b> a year, before costs.</p>' : '') +
+        '<p style="color:var(--fainter);font-size:12px">Honest caveat: vacancies, maintenance, and management aren\'t in this math — real landlording nets less than the headline.</p>';
+    } else {
+      html += '<p>Type what you think it would rent for and we\'ll run the monthly math against your actual payment.</p>';
+    }
+    rc.innerHTML = html;
+  } else {
+    rc.innerHTML = lockedCard("mc-rent-body", "Add your monthly payment (PITI — principal, interest, taxes, insurance) to see whether renting the home out would carry itself.", "in-piti");
+  }
+
+  // 4 · what waiting builds — needs balance + rate: principal paydown over
+  // the next 12 months at their actual amortization.
+  const wc = $("mc-wait-body");
+  if (hasBal && bal > 0 && rate != null){
+    const PI = pmt(origAmt || bal, rate);
+    const i = rate/100/12;
+    let b = bal, paid = 0;
+    for (let k=0; k<12; k++){ const pr = Math.max(0, PI - b*i); paid += pr; b -= pr; }
+    wc.innerHTML = '<div class="big2">≈ ' + fmt(paid) + ' in a year</div>' +
+      '<p>Waiting a year adds about that much to your equity from loan payments alone — before any price change.</p>' +
+      '<p style="color:var(--muted)">Stack that against the price scenarios in the stress test above: payments build equity slowly and surely; the market moves it faster, in either direction.</p>';
+  } else {
+    wc.innerHTML = (bal == null || bal <= 0)
+      ? lockedCard("mc-wait-body", "Add your mortgage balance to see how much equity the next 12 months of payments build on their own.", "in-bal")
+      : lockedCard("mc-wait-body", "Add your mortgage's interest rate to see how much equity the next 12 months of payments build on their own.", "in-rate");
+  }
+}
+
 async function generate(noScroll){
   const addr = $("in-addr").value.trim();
   const zipIn = $("in-zip").value.trim();
@@ -1164,18 +1334,6 @@ async function generate(noScroll){
     $("rb-asof").textContent = "Market rate: " + mktSrc + ".";
   }
   $("rb-sense").innerHTML = "<b>Why you care:</b> each 1-point drop in rates gives buyers roughly 10% more buying power — cheaper money tends to support prices, expensive money pressures them. (An approximation, not a forecast.)";
-  // capital-gains note — informational only
-  const gain = pp != null ? val - pp : null;
-  const hasGainNote = gain != null && gain > 250000;
-  if (hasGainNote) {
-    $("capgains").innerHTML = "<b>A note on taxes:</b> Your gain may exceed the single-filer capital-gains exclusion ($250k single / $500k married filing jointly). Worth discussing with a tax professional. <span style=\"color:var(--fainter)\">Estimated gain ≈ " + fmt(gain) + " vs. your " + (yr ? yr + " " : "") + "purchase price (your input).</span>";
-  } else if (pp == null) {
-    $("capgains-prompt").innerHTML = "<b>Add your purchase price</b> (field 3) above and rebuild your report to check whether your gain might exceed the capital-gains exclusion ($250k single / $500k married filing jointly).";
-  }
-  $("capgains").style.display = hasGainNote ? "block" : "none";
-  $("capgains-prompt").style.display = (!hasGainNote && pp == null) ? "block" : "none";
-  // The section itself always renders now — it's a report capability whether
-  // or not the buyer has filled in the optional fields that sharpen it yet.
   $("sec-lockin").style.display = "block";
 
   $("meaning").textContent = k.meaning;
@@ -1217,7 +1375,9 @@ async function generate(noScroll){
 
   // Snapshot for the "watch this number" toggles — only sent to the server
   // if the owner explicitly saves an alert; see saveWatch().
-  window.__calcInputs = { value: val, baselineMedian, bal, rate, origAmt, costPct };
+  renderMoreAnswers({val, bal, rate, pp, yr, piti, origAmt, mktRate, hasVal, hasBal});
+
+  window.__calcInputs = { value: val, baselineMedian, bal, rate, origAmt, costPct, pp };
   // A watch needs its number to exist — locked sections have nothing to watch.
   setWatchAvail("equity",   canEquity, !hasVal ? "ADD VALUE" : "ADD BALANCE");
   setWatchAvail("walkaway", canWalk,   !hasVal ? "ADD VALUE" : "ADD BALANCE");
@@ -1341,9 +1501,14 @@ function unlock(zip, justPaid, address, access){
 // for a monthly recompute to attach to). A subscriber can watch all three
 // metrics at once — window.__savedWatches mirrors the server's `watches`
 // array so toggles survive a report rebuild and a page reload alike.
-const METRIC_LABEL = { walkaway: "walk-away number", equity: "equity", lockin: "lock-in cost", rate: "market 30-year rate" };
+const METRIC_LABEL = { walkaway: "walk-away number", equity: "equity", lockin: "lock-in cost", rate: "market 30-year rate", rategap: "rate gap (market vs. yours)", gain: "estimated gain" };
+// Direction is fixed for the no-select alerts: rate/rategap fire on the way
+// down, the gains clock on the way up.
+const DEFAULT_DIR = { rate: "below", rategap: "below", gain: "above" };
 // Thresholds are dollars for the personal numbers, percent for the rate watch
-const fmtThreshold = (metric, n) => metric === "rate" ? (+n).toFixed(2).replace(/\.?0+$/, "") + "%" : fmt(n);
+const fmtThreshold = (metric, n) => metric === "rate" ? (+n).toFixed(2).replace(/\.?0+$/, "") + "%"
+  : metric === "rategap" ? (+n).toFixed(1).replace(/\.0$/, "") + " points"
+  : fmt(n);
 window.__savedWatches = [];
 
 function toggleWatch(metric, on){
@@ -1368,7 +1533,7 @@ function refreshWatchPanel(metric){
 // rebuilds the report and right after unlock() resolves the access token,
 // so a returning visitor sees their alerts already on, not reset to off.
 function syncWatchToggles(){
-  ["walkaway", "equity", "lockin", "rate"].forEach(m => {
+  ["walkaway", "equity", "lockin", "rate", "rategap", "gain"].forEach(m => {
     const t = $("watch-toggle-" + m);
     if (!t) return;
     const saved = window.__savedWatches.find(w => w.metric === m);
@@ -1395,7 +1560,7 @@ async function saveWatch(metric){
     return false;
   }
   const dirEl = $("watch-direction-" + metric);
-  const direction = dirEl ? dirEl.value : "below";   // rate watch has no direction select — below only
+  const direction = dirEl ? dirEl.value : (DEFAULT_DIR[metric] || "below");
   const threshold = parseFloat(($("watch-threshold-" + metric).value || "").replace(/[^0-9.]/g, ""));
   if (!(threshold > 0)) {
     errEl.textContent = "Enter a threshold amount.";

@@ -36,10 +36,14 @@ METRIC_LABEL = {
     "equity": "equity",
     "lockin": "lock-in cost",
     "rate": "market 30-year rate",
+    "rategap": "rate gap (market vs. yours)",
+    "gain": "estimated gain",
 }
 
-# Percent-valued metrics format as "6.25%" in emails; everything else is dollars.
+# Percent-valued metrics format as "6.25%" in emails, point-valued as
+# "1.5 points"; everything else is dollars.
 PERCENT_METRICS = {"rate"}
+POINT_METRICS = {"rategap"}
 
 
 # ——— Pure calculation logic (mirrors web/my-report.html's client JS) ———
@@ -79,6 +83,10 @@ def compute_metric(metric, inputs, current_median, market_rate):
     if metric == "rate":
         # Pure market number — needs no personal inputs at all.
         return market_rate
+    if metric == "rategap":
+        # Points between today's market rate and theirs — no dollar inputs.
+        my_rate = inputs.get("rate")
+        return None if my_rate is None else market_rate - my_rate
     value = scale_value(inputs.get("value"), inputs.get("baselineMedian"), current_median)
     if value is None:
         return None
@@ -88,6 +96,11 @@ def compute_metric(metric, inputs, current_median, market_rate):
     if metric == "walkaway":
         cost_pct = inputs.get("costPct", 8)
         return value * (1 - cost_pct / 100) - bal
+    if metric == "gain":
+        pp = inputs.get("pp")
+        if pp is None:
+            return None
+        return value - pp
     if metric == "lockin":
         rate = inputs.get("rate")
         if rate is None or bal <= 0:
@@ -111,15 +124,18 @@ def fmt(n):
 
 
 def fmt_metric(metric, n):
-    """Dollars for personal numbers, percent for rate-style metrics."""
+    """Dollars for personal numbers, percent/points for rate-style metrics."""
     if metric in PERCENT_METRICS:
         return f"{n:.2f}".rstrip("0").rstrip(".") + "%"
+    if metric in POINT_METRICS:
+        txt = f"{n:.1f}".rstrip("0").rstrip(".")
+        return txt + (" point" if txt in ("1", "-1", "−1") else " points")
     return fmt(n)
 
 
 def render_watch_email(metric, direction, threshold, current_value, zip_code, token):
     label = METRIC_LABEL.get(metric, metric)
-    verb = "dropped below" if direction == "below" else "risen above"
+    verb = "dropped below" if direction == "below" else "rose above"
     whose = "The" if metric in PERCENT_METRICS else "Your"
     subject = f"{whose} {label} just {verb} {fmt_metric(metric, threshold)} — EquityWatch"
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
