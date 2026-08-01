@@ -209,6 +209,10 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .band-note{margin-top:20px;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .band-note.sm{margin-top:16px;font-size:var(--fs-meta)}
 .lede{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted)}
+.sources{padding:26px 56px 22px;border-top:1px solid var(--hairline)}
+.src-k{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
+.src-list{font-size:var(--fs-meta);color:var(--muted);line-height:1.6}
+.src-note{font-size:.9375rem;color:var(--faint-ink);line-height:1.55;margin-top:6px;max-width:80ch}
 footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 .foot-row{display:flex;justify-content:space-between;font-size:var(--fs-meta);color:var(--muted);flex-wrap:wrap;gap:12px}
 .foot-row a{color:var(--muted)}
@@ -231,6 +235,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 @media (max-width:560px){
   .hero{padding:36px 20px}
   section.band{padding:48px 20px}
+  .sources{padding:22px 20px 18px}
   .zipform{flex-direction:column}
   .zipform .btn{width:100%}
   .grid4{grid-template-columns:1fr}
@@ -409,6 +414,15 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
   </div>
   <div class="band-note sm">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
+</section>
+
+<!-- Sources strip. Text-only by rule: no logos, no wordmarks, no "powered by",
+     and never adjacent to our own logo or the hero. Lists ONLY sources wired
+     into the product today — see docs/ATTRIBUTION.md before editing. -->
+<section class="sources" aria-label="Data sources">
+  <div class="src-k">Built on public data</div>
+  <div class="src-list">Redfin Data Center · Realtor.com residential listings · Federal Housing Finance Agency (FHFA) · Freddie Mac Primary Mortgage Market Survey</div>
+  <div class="src-note">We compute our verdicts from public market data. No source sponsors, endorses, or partners with this site.</div>
 </section>
 
 <footer>
