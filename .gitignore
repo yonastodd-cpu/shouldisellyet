@@ -2,3 +2,7 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .DS_Store
+
+# Raw source snapshots — kept as workflow artifacts, never committed
+# (the Redfin tracker alone is ~1.5GB). See docs/DATA.md.
+archive/
