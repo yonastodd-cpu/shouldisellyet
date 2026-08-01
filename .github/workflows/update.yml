@@ -55,9 +55,50 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: cp -r web/data/zips /tmp/old_zips 2>/dev/null || mkdir -p /tmp/old_zips
 
+      - name: Snapshot raw sources (archive)
+        if: steps.check.outputs.changed == 'true'
+        id: archive
+        run: |
+          set -euo pipefail
+          MONTH=$(date -u +%Y-%m)
+          DIR="archive/$MONTH"
+          mkdir -p "$DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "month=$MONTH" >> "$GITHUB_OUTPUT"
+
+          # Raw source files, exactly as published. The Redfin tracker is
+          # ~1.5GB so it is NEVER committed — see the retention note below.
+          curl -sSL --retry 3 -o "$DIR/zip_code_market_tracker.tsv000.gz" "$DATA_URL"
+          curl -sSL --retry 3 -o "$DIR/RDC_Inventory_Core_Metrics_Zip.csv" \
+            "https://econdata.s3-us-west-2.amazonaws.com/Reports/Core/RDC_Inventory_Core_Metrics_Zip.csv" || \
+            echo "::warning::RDC archive fetch failed"
+          curl -sSL --retry 3 -o "$DIR/PMMS_history.csv" \
+            "https://www.freddiemac.com/pmms/docs/PMMS_history.csv" || \
+            echo "::warning::PMMS archive fetch failed"
+
+          # Compliance record: the terms page as published this month.
+          # If this 403s from CI, the operator captures it manually
+          # (archive.org + dated screenshot — see docs/ATTRIBUTION.md).
+          curl -sSL --retry 2 -o "$DIR/redfin-data-center.html" \
+            "https://www.redfin.com/news/data-center/" || \
+            echo "::warning::TODO terms-page capture blocked from CI — capture manually"
+          if [ ! -s "$DIR/redfin-data-center.html" ]; then
+            echo "::warning::TODO terms-page capture empty — capture manually"
+          fi
+          ls -lh "$DIR"
+
+      - name: Upload raw-source archive (2-year retention)
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-sources-${{ steps.archive.outputs.month }}
+          path: ${{ steps.archive.outputs.dir }}
+          retention-days: 730
+          compression-level: 0   # inputs are already compressed
+
       - name: Run pipeline (all states)
         if: steps.check.outputs.changed == 'true'
-        run: python pipeline/fetch_data.py
+        run: python pipeline/fetch_data.py --input "${{ steps.archive.outputs.dir }}/zip_code_market_tracker.tsv000.gz"
 
       - name: Send verdict-change alerts (Supabase + Resend)
         if: steps.check.outputs.changed == 'true'
@@ -85,7 +126,7 @@ jobs:
         run: |
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add web/data .redfin-etag
+          git add web/data .redfin-etag   # archive/ is gitignored — artifacts only
           git diff --cached --quiet && { echo "no data change"; exit 0; }
           git commit -m "Data refresh $(date +%Y-%m-%d)"
           # A manual push can land on main while this run computes. Rebase our
