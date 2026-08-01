@@ -349,6 +349,7 @@ details.how .how-body b{color:#3a4450}
       <div id="trend-chart"></div>
       <div class="callouts" id="trend-callouts"></div>
       <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
+      <p style="margin-top:8px;font-size:12px;color:var(--fainter)" id="fhfa-line"></p>
       <div id="trend-locked" style="display:none;margin-top:12px"></div>
     </div>
 
@@ -865,7 +866,7 @@ function buildMetricRows(d, strong){
       how:{what:"If no new homes were listed, how long until everything currently for sale is sold.",
            goesin:(m.inv!=null&&m.sold!=null) ? m.inv.toLocaleString()+" homes listed for sale · "+m.sold.toLocaleString()+" homes sold in the latest month"
                  : "every home listed for sale, and every home sold in the latest month",
-           math:"homes for sale ÷ homes sold per month",
+           math:"homes for sale ÷ homes sold per month", bt:"mos",
            why:strong?"Below 2.5 months, buyers are competing over too few homes — the classic seller's-market line.":"Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following.",
            yours:"Yours: "+m.mos.toFixed(1)+" mo"}}); }
   if (m.spy != null){ const t = strong ? (m.spy>=0.05?"s":"g") : (m.spy<-0.05?"r":m.spy<-0.02?"a":"g");
@@ -874,7 +875,7 @@ function buildMetricRows(d, strong){
       how:{what:"What the typical home sells for now, compared with the same month a year ago.",
            goesin:(m.sold!=null) ? "the sale prices of the "+m.sold.toLocaleString()+" homes sold in the latest month, and of the homes sold the same month last year"
                  : "the sale price of every home sold in the latest month, and of every home sold the same month last year",
-           math:"this month's typical sale price ÷ the typical price 12 months ago, as a percent change",
+           math:"this month's typical sale price ÷ the typical price 12 months ago, as a percent change", bt:"price",
            why:strong?"Prices rising 5%+ a year is faster than normal appreciation — a strength signal when supply is thin.":"A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns.",
            yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
   if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
@@ -884,7 +885,7 @@ function buildMetricRows(d, strong){
       how:{what:"How many days the typical home sits on the market before a buyer commits.",
            goesin:(m.sold!=null) ? "days from listing to contract for the "+m.sold.toLocaleString()+" homes sold in the latest month, and for last year's sales"
                  : "days from listing to contract for every home sold in the latest month, and for last year's sales",
-           math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago",
+           math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago", bt:"dom",
            why:strong?"Homes selling 15%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
            yours:"Yours: "+Math.round(m.dom)+" days"}}); }
   if (m.pd != null){ const t = strong ? (m.pd<0.20?"s":"g") : (m.pd>0.35?"a":"g");
@@ -893,7 +894,7 @@ function buildMetricRows(d, strong){
       how:{what:"The share of homes for sale that have already dropped their asking price at least once.",
            goesin:(m.inv!=null) ? "about "+Math.round(m.pd*m.inv).toLocaleString()+" of the "+m.inv.toLocaleString()+" homes for sale have cut their asking price"
                  : "every home currently for sale, counting those that have cut their asking price",
-           math:"listings with a price cut ÷ all active listings",
+           math:"listings with a price cut ÷ all active listings", bt:"cuts",
            why:strong?"Under 20%, few sellers are having to negotiate down — pricing power sits with sellers.":"Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.",
            yours:"Yours: "+Math.round(m.pd*100)+"%"}}); }
   if (m.invy != null){ const t=m.invy>0.5?"a":"g";
@@ -901,11 +902,26 @@ function buildMetricRows(d, strong){
       how:{what:"How many homes are coming up for sale, compared with a year ago.",
            goesin:(m.inv!=null) ? m.inv.toLocaleString()+" homes for sale now vs. about "+Math.round(m.inv/(1+m.invy)).toLocaleString()+" a year ago"
                  : "the count of homes for sale now, against the same month last year",
-           math:"homes for sale this month ÷ homes for sale the same month last year",
+           math:"homes for sale this month ÷ homes for sale the same month last year", bt:"inv",
            why:"A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows.",
            yours:"Yours: "+(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%"}}); }
+  // The backtest measured the DANGER lines; strong-market mode explains
+  // different thresholds, so its disclosures skip the backtest sentence.
+  if (strong) rows.forEach(r => { if (r.how) delete r.how.bt; });
   return rows.slice(0,4);
 }
+// Measured backtest sentence for a dial's disclosure, when the pipeline has
+// shipped one (meta.national.backtest — Redfin year-end signals vs. FHFA's
+// official ZIP index the following year). Falls back to silence, never to a
+// made-up number.
+function backtestNote(key){
+  const bt = META && META.national && META.national.backtest;
+  if (!bt || !key || !bt.sig || !bt.sig[key]) return "";
+  const s = bt.sig[key];
+  return " In our backtest (" + bt.y0 + "–" + bt.y1 + " year-end signals vs. FHFA's official ZIP price indexes the following year), " +
+    "markets past this line saw prices fall the next year " + s.x + "% of the time, vs. " + s.c + "% for markets inside it.";
+}
+
 // One-word state for the "Yours: …" restatement in each disclosure
 function stateWord(t){
   return t==="r" ? "past the danger line"
@@ -921,7 +937,7 @@ function renderMetrics(rows, zip){
         '<div>'+r.how.what+'</div>'+
         '<div><b>What goes in:</b> '+r.how.goesin+' — ZIP '+zip+', through '+period+'.</div>'+
         '<div><b>The math:</b> '+r.how.math+'.</div>'+
-        '<div><b>Why the line is there:</b> '+r.how.why+'</div>'+
+        '<div><b>Why the line is there:</b> '+r.how.why+backtestNote(r.how.bt)+'</div>'+
         '<div><b>'+r.how.yours+'</b> — '+stateWord(r.t)+'.</div>'+
       '</div></details>') : '';
     return '<div class="metric-block"><div class="metric"><span class="name">'+r.name+'</span>'+
@@ -1083,6 +1099,17 @@ function renderDeepDive(d, zip, val, bal){
       $("trend-foot").textContent = (hasVal
         ? "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary."
         : "Your ZIP's median sale price, month by month — market data, not your home.") + soldNote;
+      // Official benchmark: FHFA's government repeat-sales index for this
+      // ZIP — annual and lagged, so it checks the trend, it doesn't lead it.
+      const fb = d.f;
+      if (fb){
+        const sgn = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
+        $("fhfa-line").textContent = "Official check — FHFA's government price index for this ZIP: " +
+          sgn(fb.a1) + " in " + fb.y + ", averaging " + sgn(fb.a3) + "/yr over its last three reported years. " +
+          "Annual data through " + fb.y + " — it lags the sales feed above and won't catch turns early; that's what the dials are for.";
+      } else {
+        $("fhfa-line").textContent = "";
+      }
       $("trend-locked").style.display = hasVal ? "none" : "block";
       if (!hasVal) $("trend-locked").innerHTML =
         lockedCard("trend-locked", "Add your estimate of the home's value to see this trend indexed to your own home.", "in-val");
