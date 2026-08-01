@@ -108,16 +108,25 @@ h1 em{font-style:italic;color:var(--navy)}
 .vbtn{flex:1 1 0;min-width:0;min-height:56px;display:inline-flex;flex-direction:column;
       align-items:center;justify-content:center;gap:3px;
       text-align:center;padding:12px 10px;border-radius:8px;border:1.5px solid transparent;
-      font-family:inherit;font-size:var(--fs-ui);font-weight:600;line-height:1.25;cursor:pointer}
+      font-family:inherit;font-size:1rem;font-weight:600;line-height:1.25;cursor:pointer}
 /* The price sits on its own line — at the hero column's width the label and a
    price won't share one. Share carries no price, so it sizes to its own label
    instead of taking an equal third and squeezing the two that do. */
+/* Between 980 and 1240 the hero column is too narrow for these labels on one
+   line (above 1240 .wrap caps the column and they fit). Balance the break so
+   it reads as two even lines instead of orphaning the last word. */
+.vbtn > span:first-child{text-wrap:balance}
 .vbtn-price{font-size:.85em;font-weight:600;opacity:.8}
+/* .vbtn stacks its children, so the icon and label need their own row. The
+   label lives in its own span because the copied/failed states rewrite it —
+   writing to the button itself would delete the icon. */
+.share-face{display:inline-flex;align-items:center;gap:7px}
+.share-ico{width:16px;height:16px;flex:none}
 .vbtn-primary{background:var(--navy);border-color:var(--navy);color:#faf8f4!important}
 .vbtn-primary:hover{background:var(--navy-dark);border-color:var(--navy-dark)}
 .vbtn-secondary{background:#fff;border-color:var(--navy);color:var(--navy)!important}
 .vbtn-secondary:hover{background:#eef2f8}
-.vbtn-tertiary{background:none;border-color:var(--faint);color:var(--muted)!important;flex:0 0 auto;padding-left:16px;padding-right:16px}
+.vbtn-tertiary{background:none;border-color:var(--faint);color:var(--muted)!important;flex:0 0 auto;padding-left:14px;padding-right:14px}
 .vbtn-tertiary:hover{background:#f1eee6}
 .vbtn-tertiary.copied{border-color:var(--green-ink);color:var(--green-ink)!important}
 .datastamp{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);line-height:1.5;color:var(--faint-ink);letter-spacing:.04em}
@@ -186,7 +195,7 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
 .step .t{font-size:var(--fs-h3);font-weight:650;margin:12px 0}
 .step p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
-.pricing{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:920px}
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1080px}
 .price-card{border:1px solid var(--hairline);border-radius:12px;background:#fff;padding:30px;display:flex;flex-direction:column;gap:14px;position:relative}
 .price-card.featured{border:1.5px solid var(--navy)}
 .price-badge{position:absolute;top:-11px;left:24px;background:var(--navy);color:#fff;font-size:var(--fs-micro);font-weight:600;letter-spacing:.1em;padding:4px 11px;border-radius:4px}
@@ -244,7 +253,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   </div>
   <div class="navlinks">
     <a href="#how">How it works</a><a href="#signals">The signals</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
-    <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a>
+    <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP - free</a>
   </div>
 </nav>
 
@@ -286,7 +295,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
         <div class="v-ctas">
           <a class="vbtn vbtn-primary" id="cta-report" href="subscribe.html?plan=report"><span>Get the Full Report</span><span class="vbtn-price" data-price="report">$9.99</span></a>
           <a class="vbtn vbtn-secondary" id="cta-monitor" href="subscribe.html?plan=monitor"><span>Set Up Notifications</span><span class="vbtn-price" data-price="monthly-mo">$5.99/mo</span></a>
-          <button class="vbtn vbtn-tertiary" id="share-btn" type="button">Share</button>
+          <button class="vbtn vbtn-tertiary" id="share-btn" type="button"><span class="share-face"><svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="share-label">Share</span></span></button>
         </div>
 
         <div class="datastamp" id="v-stamp"></div>
@@ -383,16 +392,22 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price-feats">Any ZIP, anytime · full traffic-light verdict · all signal gauges · refreshed on every data release</div>
       <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="#check">Check a ZIP</a>
     </div>
+    <div class="price-card">
+      <div class="card-title">Full report — one time</div>
+      <div class="price"><span data-price="report">$9.99</span> <small>once</small></div>
+      <div class="price-note">Credited toward EquityWatch if you upgrade within 30 days</div>
+      <div class="price-feats">Your home's full report: every signal gauge · your estimated equity · your walk-away number if you sold today · printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
+      <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
+    </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
       <div class="card-title">EquityWatch — full report &amp; notifications</div>
-      <div class="price"><span data-price="monthly">$5.99</span> <small>/mo · cancel anytime</small></div>
-      <div class="price-note" data-price="annual-alt">or $39/yr — save $32</div>
-      <div class="price-feats">The full report for your home, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
-      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Full report &amp; notifications — <span data-price="monthly">$5.99</span></a>
+      <div class="price"><span data-price="monthly">$5.99</span> <small>/mo</small></div>
+      <div class="price-note">Cancel anytime · <span data-price="annual-alt">or $39/yr — save $32</span></div>
+      <div class="price-feats">Everything in the one-time report, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
+      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Full Report + Notifications</a>
     </div>
   </div>
-  <div class="band-note">Or take one deep look, no subscription: the full EquityWatch report for your property — <b><span data-price="report">$9.99</span> one-time</b>. Upgrade to EquityWatch within 30 days and we'll credit it toward your first year. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
   <div class="band-note sm">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
 </section>
 
@@ -739,8 +754,8 @@ async function joinWaitlist(e) {
 let shareTimer = null;
 function resetShare() {
   clearTimeout(shareTimer);
-  const b = $("share-btn");
-  b.textContent = "Share"; b.classList.remove("copied");
+  $("share-label").textContent = "Share";
+  $("share-btn").classList.remove("copied");
 }
 $("share-btn").addEventListener("click", () => {
   if (!lastVerdict) return;
@@ -748,10 +763,10 @@ $("share-btn").addEventListener("click", () => {
   const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.tag +
     " this month on ShouldISellYet.com — check yours free.";
   if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
-  const b = $("share-btn");
+  const b = $("share-btn"), lbl = $("share-label");
   const done = ok => {
     clearTimeout(shareTimer);
-    b.textContent = ok ? "Copied ✓" : "Couldn't copy";
+    lbl.textContent = ok ? "Copied ✓" : "Couldn't copy";
     b.classList.toggle("copied", ok);
     shareTimer = setTimeout(resetShare, 2400);
   };
