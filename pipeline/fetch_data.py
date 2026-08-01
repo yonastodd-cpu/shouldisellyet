@@ -159,6 +159,8 @@ def row_to_metrics(zip_code, period, state, row) -> ZipMetrics:
         median_dom=_f(row, "median_dom"),
         median_dom_yoy=_f(row, "median_dom_yoy"),
         inventory_yoy=_f(row, "inventory_yoy"),
+        inventory=inv,
+        homes_sold=sold,
     )
 
 

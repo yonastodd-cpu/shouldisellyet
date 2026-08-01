@@ -860,6 +860,8 @@ function buildMetricRows(d, strong){
     rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:strong?31.3:50,
       note:strong?(t==="s"?"past the strong line: 2.5 mo":"strong line: 2.5 mo"):(t==="g"?"line: 4.0 mo":"past the line"),
       how:{what:"If no new homes were listed, how long until everything currently for sale is sold.",
+           goesin:(m.inv!=null&&m.sold!=null) ? m.inv.toLocaleString()+" homes listed for sale · "+m.sold.toLocaleString()+" homes sold in the latest month"
+                 : "every home listed for sale, and every home sold in the latest month",
            math:"homes for sale ÷ homes sold per month",
            why:strong?"Below 2.5 months, buyers are competing over too few homes — the classic seller's-market line.":"Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following.",
            yours:"Yours: "+m.mos.toFixed(1)+" mo"}}); }
@@ -867,6 +869,8 @@ function buildMetricRows(d, strong){
     rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:strong?29.2:58.3,
       note:strong?(t==="s"?"past the strong line: +5% y/y":"strong line: +5% y/y"):(t==="g"?"holding or rising":"line: −2% y/y"),
       how:{what:"What the typical home sells for now, compared with the same month a year ago.",
+           goesin:(m.sold!=null) ? "the sale prices of the "+m.sold.toLocaleString()+" homes sold in the latest month, and of the homes sold the same month last year"
+                 : "the sale price of every home sold in the latest month, and of every home sold the same month last year",
            math:"this month's typical sale price ÷ the typical price 12 months ago, as a percent change",
            why:strong?"Prices rising 5%+ a year is faster than normal appreciation — a strength signal when supply is thin.":"A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns.",
            yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
@@ -875,6 +879,8 @@ function buildMetricRows(d, strong){
     rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
       note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −15% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
       how:{what:"How many days the typical home sits on the market before a buyer commits.",
+           goesin:(m.sold!=null) ? "days from listing to contract for the "+m.sold.toLocaleString()+" homes sold in the latest month, and for last year's sales"
+                 : "days from listing to contract for every home sold in the latest month, and for last year's sales",
            math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago",
            why:strong?"Homes selling 15%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
            yours:"Yours: "+Math.round(m.dom)+" days"}}); }
@@ -882,13 +888,17 @@ function buildMetricRows(d, strong){
     rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:strong?28.6:50,
       note:strong?(t==="s"?"below the strong line: 20%":"strong line: 20%"):(t==="g"?"line: 35%":"past the line"),
       how:{what:"The share of homes for sale that have already dropped their asking price at least once.",
+           goesin:(m.inv!=null) ? "about "+Math.round(m.pd*m.inv).toLocaleString()+" of the "+m.inv.toLocaleString()+" homes for sale have cut their asking price"
+                 : "every home currently for sale, counting those that have cut their asking price",
            math:"listings with a price cut ÷ all active listings",
            why:strong?"Under 20%, few sellers are having to negotiate down — pricing power sits with sellers.":"Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.",
            yours:"Yours: "+Math.round(m.pd*100)+"%"}}); }
   if (m.invy != null){ const t=m.invy>0.5?"a":"g";
     rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging",
       how:{what:"How many homes are coming up for sale, compared with a year ago.",
-           math:"homes newly listed this month ÷ homes newly listed the same month last year",
+           goesin:(m.inv!=null) ? m.inv.toLocaleString()+" homes for sale now vs. about "+Math.round(m.inv/(1+m.invy)).toLocaleString()+" a year ago"
+                 : "the count of homes for sale now, against the same month last year",
+           math:"homes for sale this month ÷ homes for sale the same month last year",
            why:"A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows.",
            yours:"Yours: "+(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%"}}); }
   return rows.slice(0,4);
@@ -906,7 +916,7 @@ function renderMetrics(rows, zip){
     const how = r.how ? (
       '<details class="how"><summary>How this is measured</summary><div class="how-body">'+
         '<div>'+r.how.what+'</div>'+
-        '<div><b>Where it comes from:</b> Redfin market data for ZIP '+zip+', through '+period+'.</div>'+
+        '<div><b>What goes in:</b> '+r.how.goesin+' — ZIP '+zip+', through '+period+'.</div>'+
         '<div><b>The math:</b> '+r.how.math+'.</div>'+
         '<div><b>Why the line is there:</b> '+r.how.why+'</div>'+
         '<div><b>'+r.how.yours+'</b> — '+stateWord(r.t)+'.</div>'+
@@ -1026,9 +1036,12 @@ function renderDeepDive(d, zip, val, bal){
       if (y12) cos.push({v: pctf(anchor/y12-1), l: "LAST 12 MONTHS"});
       if (q3) cos.push({v: pctf(anchor/q3-1), l: "LAST 3 MONTHS"});
       $("trend-callouts").innerHTML = cos.map(c=>'<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
-      $("trend-foot").textContent = hasVal
+      const soldNote = (m.sold != null)
+        ? " Each month's point is the middle sale price of the homes sold that month (" + m.sold.toLocaleString() + " in the latest month)."
+        : " Each month's point is the middle sale price of the homes sold that month.";
+      $("trend-foot").textContent = (hasVal
         ? "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary."
-        : "Your ZIP's median sale price, month by month — market data, not your home.";
+        : "Your ZIP's median sale price, month by month — market data, not your home.") + soldNote;
       $("trend-locked").style.display = hasVal ? "none" : "block";
       if (!hasVal) $("trend-locked").innerHTML =
         lockedCard("trend-locked", "Add your estimate of the home's value to see this trend indexed to your own home.", "in-val");
@@ -1085,7 +1098,7 @@ function renderDeepDive(d, zip, val, bal){
     h.d.forEach((v,i)=>{ if(v==null) return; const mo=(+h.s.slice(5,7)-1+i)%12; (by[mo]=by[mo]||[]).push(v); });
     let best=-1, bv=Infinity;
     Object.entries(by).forEach(([mo,arr])=>{ if(arr.length>=2){ const a=arr.reduce((x,y)=>x+y,0)/arr.length; if(a<bv){bv=a;best=+mo;} } });
-    $("season-note").innerHTML = "How long homes take to sell in your ZIP, over time." +
+    $("season-note").innerHTML = "How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales" + ((d.m && d.m.sold != null) ? " (" + d.m.sold.toLocaleString() + " sold in the latest month)." : ".") +
       (best>=0 ? " Historically, homes here have sold fastest in <b>" + ["January","February","March","April","May","June","July","August","September","October","November","December"][best] + "</b> — worth knowing when you plan your listing." : "");
     $("selling-conditions").style.display = "block";
   }

@@ -38,6 +38,11 @@ class ZipMetrics:
     median_dom: Optional[float] = None              # days
     median_dom_yoy: Optional[float] = None          # fraction change
     inventory_yoy: Optional[float] = None           # fraction change
+    # Raw counts behind the ratios above — shipped so the report can show
+    # what actually goes into each calculation ("37 for sale · 12 sold")
+    # instead of a bare source citation. Not used by the verdict logic.
+    inventory: Optional[float] = None               # homes for sale (count)
+    homes_sold: Optional[float] = None              # homes sold that month (count)
 
 
 @dataclass
@@ -144,6 +149,9 @@ def to_compact(v: Verdict, m: ZipMetrics) -> dict:
                 "dom": m.median_dom,
                 "domy": m.median_dom_yoy,
                 "invy": m.inventory_yoy,
+                # counts ship as ints; the report's disclosures list them
+                "inv": int(m.inventory) if m.inventory is not None else None,
+                "sold": int(m.homes_sold) if m.homes_sold is not None else None,
             }.items() if x is not None
         },
         "st": m.state,
