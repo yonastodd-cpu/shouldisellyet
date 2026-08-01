@@ -120,6 +120,18 @@ details.how .how-body b{color:#3a4450}
 .prrow span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
 .prnote{font-size:11.5px;color:var(--fainter);margin-top:8px}
 .say{border-left:3px solid var(--navy);background:#f4f6fa;border-radius:0 10px 10px 0;padding:16px 20px;font-size:14px;line-height:1.6;color:#3a4450}
+/* locked-card: a personal section whose input is missing. Visible, reduced,
+   honest — states what it answers and asks for exactly one input. Never
+   renders placeholder numbers. */
+.locked-card{border:1.5px dashed #d7d0c2;border-radius:10px;padding:18px 20px;background:#fbfaf6}
+.locked-card p{margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--muted)}
+.locked-card .lc-priv{color:var(--fainter);font-size:12.5px}
+.locked-card .lc-priv a{text-decoration:underline;color:inherit}
+.locked-card .lc-row{display:flex;gap:10px;align-items:flex-end;max-width:420px}
+.locked-card .lc-row .f{flex:1}
+.locked-card .btn{flex:none}
+.strow.slim{grid-template-columns:1.7fr 1fr}
+@media(max-width:640px){ .strow.slim{grid-template-columns:1.4fr 1fr} .locked-card .lc-row{flex-direction:column;align-items:stretch} }
 .partner{display:none;gap:24px;align-items:flex-start;border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
 .partner .pframe{flex:none;background:#fff;padding:6px;border:1px solid var(--hairline);border-radius:10px;box-shadow:0 12px 26px -14px rgba(31,42,63,.4)}
 .partner img{width:112px;height:139px;border-radius:6px;object-fit:cover;display:block}
@@ -298,17 +310,19 @@ details.how .how-body b{color:#3a4450}
       <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today tells you how much froth has already come out.</p>
       <div id="trend-chart"></div>
       <div class="callouts" id="trend-callouts"></div>
-      <p style="margin-top:10px;font-size:12px;color:var(--fainter)">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
+      <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
+      <div id="trend-locked" style="display:none;margin-top:12px"></div>
     </div>
 
     <div class="sec">
       <div class="k">03 · YOUR EQUITY POSITION</div>
       <div class="title">What you actually own</div>
       <p class="subt">Your equity is the part of the home that is yours: value minus mortgage. This is the number the market can grow — or shrink — without you doing anything.</p>
-      <div class="watchable">
+      <div id="equity-locked" style="display:none"></div>
+      <div class="watchable" id="equity-body">
         <div class="watch-rail">
           <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-equity" onchange="toggleWatch('equity', this.checked)"><span class="watch-switch-track"></span></label>
-          <span class="watch-tag">WATCH</span>
+          <span class="watch-tag" id="watch-tag-equity">WATCH</span>
         </div>
         <div>
           <div class="eqgrid">
@@ -358,10 +372,11 @@ details.how .how-body b{color:#3a4450}
       <div class="k">04 · IF YOU SOLD TODAY — YOUR NET</div>
       <div class="title">Your walk-away number</div>
       <p class="subt">The estimated check you would receive at closing after selling costs and payoff. Shown as a range because no estimate is exact. This is the number to protect.</p>
-      <div class="watchable">
+      <div id="walkaway-locked" style="display:none"></div>
+      <div class="watchable" id="walkaway-body">
         <div class="watch-rail">
           <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-walkaway" onchange="toggleWatch('walkaway', this.checked)"><span class="watch-switch-track"></span></label>
-          <span class="watch-tag">WATCH</span>
+          <span class="watch-tag" id="watch-tag-walkaway">WATCH</span>
         </div>
         <div>
           <div style="border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7);margin-bottom:14px">
@@ -415,7 +430,8 @@ details.how .how-body b{color:#3a4450}
           <span class="watch-tag" id="watch-tag-lockin">WATCH</span>
         </div>
         <div>
-          <div class="say" id="li-prompt" style="display:none;border-left-color:var(--gold);background:#fbf8f1"></div>
+          <div id="lockin-locked" style="display:none"></div>
+          <div id="li-rateonly" style="display:none"></div>
           <div id="li-wrap" style="display:none">
             <div class="eqgrid">
               <div class="eqcard">
@@ -468,6 +484,7 @@ details.how .how-body b{color:#3a4450}
       <div class="title">Three futures for your walk-away number</div>
       <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
       <div class="prtable" id="stress-table"></div>
+      <div id="stress-note" style="display:none;margin-top:10px"></div>
       <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
       <div class="say" id="margin-say" style="margin-top:14px"></div>
     </div>
@@ -788,43 +805,81 @@ const pctf = x => (x>=0?"+":"−") + Math.abs(x*100).toFixed(1) + "%";
 
 function renderDeepDive(d, zip, val, bal){
   const h = d.h, m = d.m || {};
-  const netAt = V => V*(1 - costPct/100) - bal;
+  const hasVal = val != null, hasBal = bal != null;
 
-  // 02 · value trend
+  // 02 · value trend — with a value, the ZIP series indexed to it (overlay);
+  // without one, the ZIP median itself, clearly labeled as market data. The
+  // chart is real public data either way — only the "your home" framing is
+  // gated on the user actually providing a value.
+  let y12v = null;   // 12-months-ago point on the rendered series (stress reuses)
   if (h && h.p){
     const li = lastIdx(h.p);
-    const scale = li>=0 && h.p[li] ? val/h.p[li] : null;
-    if (scale){
+    const base = li>=0 && h.p[li] ? h.p[li] : null;
+    if (base){
+      const scale = hasVal ? val/base : 1;
+      const anchor = hasVal ? val : base;
       const home = h.p.map(v => v!=null ? v*scale : null);
       $("trend-chart").innerHTML = lineSVG(home, h.s, {fmt:v=>"$"+Math.round(v/1000)+"K"});
       let pi=-1, pv=-Infinity;
       home.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
-      const fromPeak = val/pv - 1;
+      const fromPeak = anchor/pv - 1;
       const y12 = atOrNear(home, li-12), q3 = atOrNear(home, li-3);
+      y12v = y12;
       const cos = [];
-      cos.push({v: fmt(pv), l: "EST. PEAK · " + monthLabel(h.s, pi).toUpperCase()});
+      cos.push({v: fmt(pv), l: (hasVal ? "EST. PEAK · " : "ZIP MEDIAN PEAK · ") + monthLabel(h.s, pi).toUpperCase()});
       cos.push({v: pctf(fromPeak), l: "TODAY VS. PEAK"});
-      if (y12) cos.push({v: pctf(val/y12-1), l: "LAST 12 MONTHS"});
-      if (q3) cos.push({v: pctf(Math.pow(val/q3, 4)-1), l: "3-MO TREND, ANNUALIZED"});
+      if (y12) cos.push({v: pctf(anchor/y12-1), l: "LAST 12 MONTHS"});
+      if (q3) cos.push({v: pctf(Math.pow(anchor/q3, 4)-1), l: "3-MO TREND, ANNUALIZED"});
       $("trend-callouts").innerHTML = cos.map(c=>'<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
+      $("trend-foot").textContent = hasVal
+        ? "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary."
+        : "Your ZIP's median sale price, month by month — market data, not your home.";
+      $("trend-locked").style.display = hasVal ? "none" : "block";
+      if (!hasVal) $("trend-locked").innerHTML =
+        lockedCard("trend-locked", "Add your estimate of the home's value to see this trend indexed to your own home.", "in-val");
       $("sec-trend").style.display = "block";
+    }
+  }
 
-      // 05 · stress test
-      const mom12 = y12 ? val/y12-1 : null;
-      const rows = ['<div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>'];
-      const scen = (name, V, cls) => rows.push('<div class="strow '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span><span>'+fmt(Math.max(0,V-bal))+'</span><span class="net">'+(netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V)))+'</span></div>');
-      scen("Today", val, "today");
-      if (mom12!=null) scen("6 mo · 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
-      scen("6 mo · prices go flat", val);
-      scen("6 mo · stress: prices fall 5%", val*0.95, "stress");
-      $("stress-table").innerHTML = rows.join("");
+  // 06 · stress test — needs a value; the balance adds the equity and
+  // net-if-sold columns. Without a value the section stays visible, locked.
+  if (!hasVal){
+    $("stress-table").innerHTML = "";
+    $("stress-note").style.display = "block";
+    $("stress-note").innerHTML =
+      lockedCard("stress-note", "Add your estimate of the home's value to see three futures for your value, equity, and walk-away number.", "in-val");
+    $("margin-say").style.display = "none";
+    $("sec-stress").style.display = "block";
+  } else {
+    const netAt = V => V*(1 - costPct/100) - (bal || 0);
+    const mom12 = y12v ? val/y12v-1 : null;
+    const full = hasBal;
+    const rows = [full
+      ? '<div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>'
+      : '<div class="strow head slim"><span>SCENARIO</span><span>HOME VALUE</span></div>'];
+    const scen = (name, V, cls) => rows.push(full
+      ? '<div class="strow '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span><span>'+fmt(Math.max(0,V-bal))+'</span><span class="net">'+(netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V)))+'</span></div>'
+      : '<div class="strow slim '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span></div>');
+    scen("Today", val, "today");
+    if (mom12!=null) scen("6 mo · 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
+    scen("6 mo · prices go flat", val);
+    scen("6 mo · stress: prices fall 5%", val*0.95, "stress");
+    $("stress-table").innerHTML = rows.join("");
+    if (!full){
+      $("stress-note").style.display = "block";
+      $("stress-note").innerHTML =
+        lockedCard("stress-note", "These are the home-value scenarios only. Add your mortgage balance to see your equity and net-if-sold under each one.", "in-bal");
+      $("margin-say").style.display = "none";
+    } else {
+      $("stress-note").style.display = "none";
+      $("margin-say").style.display = "block";
       const V0 = bal/(1 - costPct/100);
       const margin = 1 - V0/val;
       $("margin-say").innerHTML = margin > 0
         ? "<b>Your safety margin is about " + Math.round(margin*100) + "%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. " + (margin > 0.25 ? "That's a comfortable cushion." : margin > 0.1 ? "A real but not unlimited cushion — one more reason to stay alert." : "That's thin — small market moves matter a lot to you right now.")
         : "<b>Heads up: at your numbers, selling today would not fully cover your payoff and costs.</b> This is exactly the situation to review with a professional before the market moves further.";
-      $("sec-stress").style.display = "block";
     }
+    $("sec-stress").style.display = "block";
   }
 
   // 06 · selling conditions (time to sell + seasonality)
@@ -873,25 +928,20 @@ async function generate(noScroll){
   const d = applyStrong(await lookup(zip));
   if (!d) { err.textContent = "We're not scoring " + zip + " yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
 
-  // Home value: user's number if given, else the ZIP's latest median sale price
-  let valAssumed = false, balAssumed = false;
+  // Home value: the user's number or nothing. The ZIP median is real market
+  // data and still powers the market sections (02's base line, buyer math),
+  // but it is never silently presented as "your value" — personal sections
+  // lock instead (Task 2: no placeholder or fake numbers, ever).
   let val = parseFloat(($("in-val").value || "").replace(/[^0-9.]/g, "")) || null;
-  if (!val && d.h && d.h.p) {
-    const li = lastIdx(d.h.p);
-    if (li >= 0 && d.h.p[li]) { val = Math.round(d.h.p[li] / 1000) * 1000; valAssumed = true; }
-  }
-  // Independent of whether val above was assumed or typed in, capture the
-  // ZIP's current median as the baseline a saved watch scales forward from.
+  if (val != null && !(val > 10000)) val = null;
+  // The ZIP's current median: baseline a saved watch scales forward from,
+  // and the labeled fallback for buyer math.
   let baselineMedian = null;
   if (d.h && d.h.p) {
     const liB = lastIdx(d.h.p);
     if (liB >= 0 && d.h.p[liB]) baselineMedian = d.h.p[liB];
   }
-  if (!(val > 10000)) {
-    err.textContent = "We couldn't estimate a value for this ZIP — please enter your home value (field 2).";
-    err.style.display = "block"; $("in-val").focus(); return;
-  }
-  // The rest of the intake (all optional; they sharpen the numbers below)
+  // The rest of the intake (all optional; each unlocks its own analysis)
   const num = id => parseFloat(($(id).value || "").replace(/[^0-9.]/g, "")) || null;
   const yr = parseInt($("in-yr").value, 10) || null;        // year purchased
   const pp = num("in-pp");                                   // purchase price
@@ -900,23 +950,25 @@ async function generate(noScroll){
   const origYr = parseInt($("in-origyr").value, 10) || null; // year the loan started
   const piti = num("in-piti");                               // current monthly PITI
   const timeline = $("in-timeline").value;
-  // Mortgage balance: user's number (0 counts) → else estimated from the
-  // original loan by standard amortization (labeled "estimated") → else a
-  // typical 50%-of-value assumption
+  // Mortgage balance: the user's number (0 = paid off counts) → else
+  // estimated from their original loan by standard amortization (their data,
+  // labeled "estimated") → else NULL. The old 50%-of-value assumption is
+  // gone: an invented balance makes every downstream number fiction.
   const balRaw = ($("in-bal").value || "").replace(/[^0-9.]/g, "");
-  let bal, balEstimated = false;
+  let bal = null, balEstimated = false;
   if (balRaw !== "") bal = parseFloat(balRaw) || 0;
   else if (origAmt && (origYr || yr) && rate != null) {
     const yrs = Math.max(0, new Date().getFullYear() - (origYr || yr));
     bal = Math.round(balanceAfter(origAmt, rate, yrs) / 1000) * 1000;
     balEstimated = true;
-  } else { bal = Math.round(val * 0.5 / 1000) * 1000; balAssumed = true; }
-  if (bal < 0 || bal > val * 3) {
+  }
+  if (bal != null && (bal < 0 || (val != null && bal > val * 3))) {
     err.textContent = "That mortgage balance doesn't look right — please check it.";
     err.style.display = "block"; return;
   }
+  const hasVal = val != null, hasBal = bal != null;
   $("in-zip").value = zip;
-  window.__prov = { valAssumed, balAssumed, balEstimated };
+  window.__prov = { balEstimated };
   saveProfile();
 
   const k = KINDS[d.l], m = d.m || {};
@@ -930,56 +982,75 @@ async function generate(noScroll){
   $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
   $("v-sub").textContent = k.sub.replace("{zip}", zip);
 
-  // equity
+  // 03 · equity — needs value AND balance; otherwise a locked card naming
+  // the one missing input (value first: it's the gateway number).
   const prov = window.__prov || {};
-  const equity = Math.max(0, val - bal);
-  $("eq-val").textContent = fmt(val);
-  $("eq-val").parentElement.querySelector(".label").textContent =
-    prov.valAssumed ? "STARTING VALUE — YOUR ZIP'S LATEST MEDIAN" : "ESTIMATED VALUE (YOUR INPUT)";
-  if (m.spy != null) {
-    const yearAgo = val / (1 + m.spy);
-    const dir = m.spy >= 0 ? "up" : "down";
-    $("eq-trend").textContent = "If your home tracked the ZIP median, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
-  } else $("eq-trend").textContent = "";
-  $("eq-eq").textContent = fmt(equity);
-  $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
-    (prov.balAssumed ? " <i style=\"color:var(--fainter)\">(typical assumption — 50% of value)</i>"
-     : prov.balEstimated ? " <i style=\"color:var(--fainter)\">(estimated from your original loan — standard amortization)</i>"
-     : " <i style=\"color:var(--fainter)\">(your input)</i>") +
-    " · <a href=\"#\" onclick=\"return adjustNums()\" style=\"text-decoration:underline\">adjust</a>";
-  const eqPct = val > 0 ? Math.round(equity / val * 100) : 0;
-  $("bar-loan").style.width = (100 - eqPct) + "%";
-  $("bar-eq").style.width = eqPct + "%";
-  $("lg-loan").textContent = (100 - eqPct) + "%";
-  $("lg-eq").textContent = eqPct + "%";
-
-  // 04 · walk-away number: value − selling costs (adjustable %) − payoff,
-  // displayed prominently as a range of ±3% of value. Always "estimated."
   const today = new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
-  const pctLabel = costPct % 1 ? costPct.toFixed(1) : String(costPct);
-  const selling = val * costPct / 100;
-  const net = val - selling - bal;
-  const fs = n => (n >= 0 ? fmtK(n) : "− " + fmtK(Math.abs(n)));
-  $("wa-range").textContent = fs(net - val * 0.03) + " – " + fs(net + val * 0.03);
-  $("wa-note").textContent = "Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.";
-  $("cost-pct").textContent = pctLabel;
-  $("cost-slider").value = costPct;
-  const valSrc = prov.valAssumed ? "ZIP median (market data)" : "your input";
-  const balSrc = prov.balEstimated ? "estimated from your loan details" : prov.balAssumed ? "typical assumption (50% of value)" : "your input";
-  $("prtable").innerHTML =
-    '<div class="prrow"><span>Estimated sale price <i style="color:var(--fainter)">('+valSrc+')</i></span><span>'+fmt(val)+'</span></div>'+
-    '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmt(selling)+'</span></div>'+
-    '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+fmt(bal)+'</span></div>'+
-    '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
-  $("wa-asof").textContent = "As of " + today + " · market data through " + (META ? META.period : "latest release") +
-    " · all figures estimated" + (timeline ? " · selling timeline: " + $("in-timeline").selectedOptions[0].textContent + " (your input)" : "");
+  const canEquity = hasVal && hasBal;
+  $("equity-body").style.display = canEquity ? "" : "none";
+  $("equity-locked").style.display = canEquity ? "none" : "";
+  if (!canEquity) {
+    $("equity-locked").innerHTML = !hasVal
+      ? lockedCard("equity-locked", "Add your estimate of the home's value to see your equity — the part of the home you actually own.", "in-val")
+      : lockedCard("equity-locked", "Add your mortgage balance to see your equity and how it splits against your loan.", "in-bal");
+  } else {
+    const equity = Math.max(0, val - bal);
+    $("eq-val").textContent = fmt(val);
+    if (m.spy != null) {
+      const yearAgo = val / (1 + m.spy);
+      const dir = m.spy >= 0 ? "up" : "down";
+      $("eq-trend").textContent = "If your home tracked the ZIP median, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
+    } else $("eq-trend").textContent = "";
+    $("eq-eq").textContent = fmt(equity);
+    $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
+      (prov.balEstimated ? " <i style=\"color:var(--fainter)\">(estimated from your original loan — standard amortization)</i>"
+       : " <i style=\"color:var(--fainter)\">(your input)</i>") +
+      " · <a href=\"#\" onclick=\"return adjustNums()\" style=\"text-decoration:underline\">adjust</a>";
+    const eqPct = val > 0 ? Math.round(equity / val * 100) : 0;
+    $("bar-loan").style.width = (100 - eqPct) + "%";
+    $("bar-eq").style.width = eqPct + "%";
+    $("lg-loan").textContent = (100 - eqPct) + "%";
+    $("lg-eq").textContent = eqPct + "%";
+  }
+
+  // 04 · walk-away — same dependencies as equity: value − selling costs
+  // (adjustable %) − payoff, as a ±3%-of-value range. Always "estimated."
+  const canWalk = hasVal && hasBal;
+  $("walkaway-body").style.display = canWalk ? "" : "none";
+  $("walkaway-locked").style.display = canWalk ? "none" : "";
+  if (!canWalk) {
+    $("walkaway-locked").innerHTML = !hasVal
+      ? lockedCard("walkaway-locked", "Add your estimate of the home's value to see your walk-away number — the check you'd get at closing if you sold today.", "in-val")
+      : lockedCard("walkaway-locked", "Add your mortgage balance to see your walk-away number — the check you'd get at closing if you sold today.", "in-bal");
+  } else {
+    const pctLabel = costPct % 1 ? costPct.toFixed(1) : String(costPct);
+    const selling = val * costPct / 100;
+    const net = val - selling - bal;
+    const fs = n => (n >= 0 ? fmtK(n) : "− " + fmtK(Math.abs(n)));
+    $("wa-range").textContent = fs(net - val * 0.03) + " – " + fs(net + val * 0.03);
+    $("wa-note").textContent = "Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.";
+    $("cost-pct").textContent = pctLabel;
+    $("cost-slider").value = costPct;
+    const balSrc = prov.balEstimated ? "estimated from your loan details" : "your input";
+    $("prtable").innerHTML =
+      '<div class="prrow"><span>Estimated sale price <i style="color:var(--fainter)">(your input)</i></span><span>'+fmt(val)+'</span></div>'+
+      '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmt(selling)+'</span></div>'+
+      '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+fmt(bal)+'</span></div>'+
+      '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
+    $("wa-asof").textContent = "As of " + today + " · market data through " + (META ? META.period : "latest release") +
+      " · all figures estimated" + (timeline ? " · selling timeline: " + $("in-timeline").selectedOptions[0].textContent + " (your input)" : "");
+  }
 
   // 05 · lock-in cost — needs a rate and a positive balance
   const liveMkt = META && META.national && META.national.mortgage;
   const mktRate = liveMkt ? liveMkt.now : CURRENT_MARKET_RATE;
   const mktSrc = liveMkt ? "FRED 30-yr weekly average, " + liveMkt.asof + " (market data)"
                          : "assumed " + CURRENT_MARKET_RATE + "% (site constant)";
-  const hasLockin = rate != null && bal > 0;
+  // Three states (Task 2): rate + balance → full dollars; rate only →
+  // rate-only framing (their rate vs. the market in points — never an
+  // example-loan dollar figure); no rate → locked card asking for the rate.
+  const hasLockin = rate != null && hasBal && bal > 0;
+  const rateOnly = rate != null && !hasLockin;
   if (hasLockin) {
     // Their current P&I from the original loan if known, else from the balance
     // over a fresh 30-year term — either way an estimate, and labeled as one.
@@ -996,16 +1067,25 @@ async function generate(noScroll){
       ? "<b>Your locked-in rate is worth about " + fmt(lock) + " a month</b> (≈ " + fmt(lock * 12) + " a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving."
       : "<b>Today's market rate is at or below yours.</b> Your mortgage isn't locking you in — the same loan at today's rate wouldn't cost more per month.";
     $("li-asof").textContent = "As of " + today + " · your rate & loan: your input · market rate: " + mktSrc + " · estimated — not a loan quote.";
+  } else if (rateOnly) {
+    const gap = mktRate - rate;
+    const gapTxt = Math.abs(gap).toFixed(1);
+    $("li-rateonly").innerHTML =
+      '<div class="say" style="border-left-color:var(--gold);background:#fbf8f1">' +
+      (gap > 0.05
+        ? "<b>Your " + rate + "% is " + gapTxt + " points below today's ~" + (+mktRate).toFixed(2) + "% market rate.</b> That gap is an asset — a loan this cheap can't be replaced right now."
+        : gap < -0.05
+        ? "<b>Your " + rate + "% is " + gapTxt + " points above today's ~" + (+mktRate).toFixed(2) + "% market rate.</b> Your mortgage isn't locking you in — moving wouldn't mean a more expensive loan."
+        : "<b>Your " + rate + "% is right at today's ~" + (+mktRate).toFixed(2) + "% market rate.</b> Your mortgage isn't locking you in either way.") +
+      '</div>' +
+      lockedCard("lockin-locked", "Add your mortgage balance to turn this into dollars per month on your actual loan.", "in-bal");
   } else {
-    // Only the address is required to build a report, so this is the common
-    // case on a first pass — don't just disappear the whole feature, point
-    // at exactly what unlocks it.
-    $("li-prompt").innerHTML = "<b>Add your mortgage rate</b> (field 5" +
-      (bal <= 0 ? " and your balance, field 4" : "") +
-      ") above and rebuild your report to see what your locked-in rate is worth against today's market rate.";
+    $("lockin-locked").innerHTML =
+      lockedCard("lockin-locked", "Add your mortgage's interest rate to see what your locked-in rate is worth against today's market — in dollars per month.", "in-rate");
   }
   $("li-wrap").style.display = hasLockin ? "block" : "none";
-  $("li-prompt").style.display = hasLockin ? "none" : "block";
+  $("li-rateonly").style.display = rateOnly ? "block" : "none";
+  $("lockin-locked").style.display = (!hasLockin && !rateOnly) ? "block" : "none";
   // capital-gains note — informational only
   const gain = pp != null ? val - pp : null;
   const hasGainNote = gain != null && gain > 250000;
@@ -1060,9 +1140,10 @@ async function generate(noScroll){
   // Snapshot for the "watch this number" toggles — only sent to the server
   // if the owner explicitly saves an alert; see saveWatch().
   window.__calcInputs = { value: val, baselineMedian, bal, rate, origAmt, costPct };
-  const lockinToggle = $("watch-toggle-lockin");
-  lockinToggle.disabled = !hasLockin;
-  $("watch-tag-lockin").textContent = hasLockin ? "WATCH" : "ADD RATE FIRST";
+  // A watch needs its number to exist — locked sections have nothing to watch.
+  setWatchAvail("equity",   canEquity, !hasVal ? "ADD VALUE" : "ADD BALANCE");
+  setWatchAvail("walkaway", canWalk,   !hasVal ? "ADD VALUE" : "ADD BALANCE");
+  setWatchAvail("lockin",   hasLockin, rate == null ? "ADD RATE" : "ADD BALANCE");
   syncWatchToggles();
 
   $("report").style.display = "block";
@@ -1094,6 +1175,46 @@ function adjustNums(){
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();
   return false;
+}
+
+// ————— Locked-card state (Task 2) —————
+// One reusable pattern for every personal section whose input is missing:
+// visible at reduced height, one sentence on what it answers, ONE inline
+// input for the missing field, and the privacy note. The inline input writes
+// to the same master field in the setup card (single stored profile), then
+// rebuilds — so "adjust" and inline entry can never disagree.
+const LC_FIELDS = {
+  "in-val":  {label:"YOUR ESTIMATE OF THE HOME'S VALUE ($)", ph:"e.g. 550000", mode:"numeric"},
+  "in-bal":  {label:"CURRENT MORTGAGE BALANCE ($)",          ph:"0 if paid off", mode:"numeric"},
+  "in-rate": {label:"INTEREST RATE ON THE MORTGAGE (%)",     ph:"e.g. 3.25", mode:"decimal"},
+  "in-piti": {label:"MONTHLY PAYMENT — PITI ($)",            ph:"loan + taxes + insurance", mode:"numeric"},
+  "in-yr":   {label:"YEAR PURCHASED",                        ph:"e.g. 2017", mode:"numeric"},
+  "in-pp":   {label:"PURCHASE PRICE ($)",                    ph:"what you paid", mode:"numeric"},
+};
+function lockedCard(hostId, sentence, fieldId){
+  const f = LC_FIELDS[fieldId];
+  const inId = hostId + "-in";
+  return '<div class="locked-card">' +
+    '<p>' + sentence + ' <span class="lc-priv">Stays in your browser — <a href="privacy.html">see Privacy</a>.</span></p>' +
+    '<div class="lc-row"><div class="f"><label>' + f.label + '</label>' +
+    '<input id="' + inId + '" inputmode="' + f.mode + '" placeholder="' + f.ph + '"></div>' +
+    '<button class="btn" onclick="return addInline(\'' + fieldId + '\',\'' + inId + '\')">Add</button></div></div>';
+}
+function addInline(fieldId, inlineId){
+  const raw = ($(inlineId).value || "").replace(/[^0-9.]/g, "");
+  if (!raw){ $(inlineId).focus(); return false; }
+  $(fieldId).value = raw;
+  generate(true);
+  return false;
+}
+// Enable/disable a watch toggle with an explanatory tag when its numbers
+// don't exist yet (no fake numbers → nothing to watch).
+function setWatchAvail(metric, ok, lockedTag){
+  const t = $("watch-toggle-" + metric), tag = $("watch-tag-" + metric);
+  if (!t) return;
+  t.disabled = !ok;
+  if (tag) tag.textContent = ok ? "WATCH" : lockedTag;
+  if (!ok){ t.checked = false; $("watch-panel-" + metric).style.display = "none"; }
 }
 // ————— Report-credit upgrade offer (report buyers, 30-day window) —————
 // Eligibility source, in order of trust: the verify-access response (when the
