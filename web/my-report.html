@@ -735,12 +735,19 @@ details.how .how-body b{color:#3a4450}
     <a href="privacy.html" style="color:inherit">Privacy</a> ·
     <a href="refunds.html" style="color:inherit">Refunds &amp; cancellation</a> ·
     <a href="partners.html" style="color:inherit">For real estate professionals</a>
-    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data (Data from Redfin, a national real estate brokerage — redfin.com · Listing data from Realtor.com) and are for general information only — not financial, legal, or real-estate advice. Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
+    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data (Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage · Listing data from Realtor.com) and are for general information only — not financial, legal, or real-estate advice. Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+// Links the brand name inside the pipeline's plain-text citation. The exact
+// wording lives in the data (meta.attribution); this only adds the required
+// redfin.com link. See docs/ATTRIBUTION.md.
+function citeHTML(t){
+  return (t || "").replace("Redfin", '<a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>');
+}
+
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
 const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
 
@@ -1540,7 +1547,7 @@ async function generate(noScroll){
   }
 
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
-    " · " + (META ? META.attribution : "public market data") +
+    " · " + (META ? citeHTML(META.attribution) : "public market data") +
     "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
   // deep-dive sections (render only when history/context data exists)
