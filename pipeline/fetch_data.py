@@ -164,30 +164,112 @@ def row_to_metrics(zip_code, period, state, row) -> ZipMetrics:
     )
 
 
-def fetch_mortgage_rates():
-    """Current + year-ago 30y fixed rate from FRED (free). Returns None on any failure.
+def _ssl_context():
+    """A verifying SSL context that also works on machines whose python has
+    no default CA bundle (stock macOS installs): certifi when importable,
+    else the system bundle at /etc/ssl/cert.pem. Verification is never
+    disabled — no bundle just means the default context and its error."""
+    import ssl
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        pass
+    ctx = ssl.create_default_context()
+    if not ctx.get_ca_certs() and Path("/etc/ssl/cert.pem").exists():
+        ctx = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
+    return ctx
 
-    Requests only the recent ~14-month window (small, fast) instead of the full
-    multi-decade series, and retries once on a slow/timeout response.
+
+def _http_get(url, timeout):
+    req = urllib.request.Request(url, headers={"User-Agent": "shouldisellyet-pipeline"})
+    return urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()).read().decode("utf-8", "replace")
+
+
+def _rates_from_weekly(vals):
+    """{now, year_ago, asof} from [(date, rate), ...] weekly points, oldest
+    first. None when the series is too short to trust."""
+    if len(vals) < 40:
+        return None
+    ya = vals[-52] if len(vals) > 52 else vals[0]
+    return {"now": vals[-1][1], "year_ago": ya[1], "asof": vals[-1][0]}
+
+
+def parse_fred_csv(text):
+    """FRED fredgraph.csv → weekly points. Rows are 'YYYY-MM-DD,6.72' with
+    '.' for missing observations."""
+    rows = [r.split(",") for r in text.strip().splitlines()[1:] if "," in r]
+    return [(r[0], float(r[1])) for r in rows if len(r) >= 2 and r[1].strip() not in (".", "")]
+
+
+def parse_pmms_csv(text, keep=80):
+    """Freddie Mac PMMS_history.csv → weekly (date, 30yr-rate) points.
+
+    The file is the full multi-decade history; the header names shift
+    case/order occasionally, so find the date and 30-year-rate columns by
+    name. Only the trailing `keep` rows matter here."""
+    reader = csv.DictReader(io.StringIO(text))
+    fields = {(f or "").strip().lower(): f for f in (reader.fieldnames or [])}
+    date_col = next((fields[k] for k in fields if k in ("date", "week")), None)
+    rate_col = next((fields[k] for k in fields if k.replace(" ", "") in ("pmms30", "us30yr", "frm30", "30yrfrm")), None)
+    if not date_col or not rate_col:
+        return []
+    vals = []
+    for row in reader:
+        d = (row.get(date_col) or "").strip()
+        v = (row.get(rate_col) or "").strip().rstrip("%")
+        if not d or not v:
+            continue
+        try:
+            rate = float(v)
+        except ValueError:
+            continue
+        # normalize PMMS's M/D/YYYY to ISO so meta.json dates read the same
+        # regardless of which source produced them
+        if "/" in d:
+            try:
+                mth, day, yr = d.split("/")
+                d = f"{int(yr):04d}-{int(mth):02d}-{int(day):02d}"
+            except ValueError:
+                pass
+        vals.append((d, rate))
+    return vals[-keep:]
+
+
+def fetch_mortgage_rates():
+    """Current + year-ago 30y fixed rate. Returns None only if every source fails.
+
+    Two independent sources for the same Freddie Mac PMMS series, publisher
+    first: freddiemac.com answers quickly, while FRED's fredgraph.csv graph
+    endpoint has timed out from both CI (2026-07-26 run) and local testing —
+    it stays as the fallback with a short timeout.
+
+    SISY_SKIP_MORTGAGE=1 skips the network entirely (unit tests).
     """
+    import os
+    if os.environ.get("SISY_SKIP_MORTGAGE"):
+        print("mortgage fetch skipped (SISY_SKIP_MORTGAGE)")
+        return None
     from datetime import timedelta
     start = (date.today() - timedelta(days=430)).isoformat()
-    url = ("https://fred.stlouisfed.org/graph/fredgraph.csv"
-           "?id=MORTGAGE30US&cosd=" + start)
-    for attempt in range(2):
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "shouldisellyet-pipeline"})
-            text = urllib.request.urlopen(req, timeout=90).read().decode()
-            rows = [r.split(",") for r in text.strip().splitlines()[1:] if "," in r]
-            vals = [(r[0], float(r[1])) for r in rows if r[1] not in (".", "")]
-            if len(vals) < 40:
-                return None
-            # ~52 weekly points back = one year (clamp to available range)
-            ya = vals[-52] if len(vals) > 52 else vals[0]
-            return {"now": vals[-1][1], "year_ago": ya[1], "asof": vals[-1][0]}
-        except Exception as e:
-            print(f"mortgage fetch attempt {attempt+1} failed:", e)
-    print("mortgage fetch skipped after retries")
+    sources = [
+        ("Freddie Mac PMMS", "https://www.freddiemac.com/pmms/docs/PMMS_history.csv",
+         parse_pmms_csv, 60),
+        ("FRED", "https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US&cosd=" + start,
+         parse_fred_csv, 30),
+    ]
+    for name, url, parse, timeout in sources:
+        for attempt in range(2):
+            try:
+                rates = _rates_from_weekly(parse(_http_get(url, timeout)))
+                if rates:
+                    print(f"mortgage rates via {name}: {rates}")
+                    return rates
+                print(f"mortgage fetch via {name}: series too short, skipping source")
+                break
+            except Exception as e:
+                print(f"mortgage fetch via {name} attempt {attempt+1} failed:", e)
+    print("mortgage fetch skipped — all sources failed")
     return None
 
 
