@@ -182,7 +182,7 @@ def test_pipeline_end_to_end(tmp_path):
         [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
          "--input", str(fixture)],
         check=True, capture_output=True,
-        env={**os.environ, "SISY_SKIP_MORTGAGE": "1"},  # no network in unit tests
+        env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_RDC": "1"},  # no network in unit tests
     )
 
     data_dir = repo / "web" / "data"
@@ -226,3 +226,61 @@ def test_mortgage_parsers_and_selection():
     long = [(f"2025-{i:02d}", 6.0) for i in range(1, 10)] * 8
     r = fd._rates_from_weekly(long)
     assert r and set(r) == {"now", "year_ago", "asof"}
+
+
+# ——— Realtor.com RDC cross-check loader ———
+
+RDC_FIXTURE = """month_date_yyyymm,postal_code,zip_name,median_listing_price,median_listing_price_mm,median_listing_price_yy,active_listing_count,active_listing_count_mm,active_listing_count_yy,median_days_on_market,median_days_on_market_mm,median_days_on_market_yy,new_listing_count,new_listing_count_mm,new_listing_count_yy,price_increased_count,price_increased_count_mm,price_increased_count_yy,price_increased_share,price_increased_share_mm,price_increased_share_yy,price_reduced_count,price_reduced_count_mm,price_reduced_count_yy,price_reduced_share,price_reduced_share_mm,price_reduced_share_yy,pending_listing_count,pending_listing_count_mm,pending_listing_count_yy,median_listing_price_per_square_foot,median_listing_price_per_square_foot_mm,median_listing_price_per_square_foot_yy,median_square_feet,median_square_feet_mm,median_square_feet_yy,average_listing_price,average_listing_price_mm,average_listing_price_yy,total_listing_count,total_listing_count_mm,total_listing_count_yy,pending_ratio,pending_ratio_mm,pending_ratio_yy,quality_flag
+202606,20874,"germantown, md",520000.0,0.01,0.03,119,0.02,0.05,33.0,0.1,-0.06,50,0.04,-0.07,4,0.0,,0.02,0.0,0.02,23.0,0.0,-0.09,0.147,0.04,-0.04,59.0,-0.08,0.31,610.0,-0.01,0.04,1712.0,0.0,-0.07,540000.0,0.02,-0.03,155,0.02,0.21,0.62,-0.07,0.09,0
+202606,2138,"cambridge, ma",1200000.0,0.0,0.05,42,0.0,0.1,25.0,0.0,0.0,20,0.0,0.0,1,,,0.01,0.0,0.0,5.0,0.0,0.0,0.119,0.0,0.0,30.0,0.0,0.0,900.0,0.0,0.0,1500.0,0.0,0.0,1400000.0,0.0,0.0,70,0.0,0.0,0.7,0.0,0.0,0
+202606,90210,"beverly hills, ca",5000000.0,0.0,0.0,200,0.0,0.0,60.0,0.0,0.0,80,0.0,0.0,2,,,0.01,0.0,0.0,50.0,0.0,0.0,0.25,0.0,0.0,40.0,0.0,0.0,2000.0,0.0,0.0,3000.0,0.0,0.0,6000000.0,0.0,0.0,260,0.0,0.0,0.2,0.0,0.0,1
+"""
+
+
+def test_load_rdc(tmp_path):
+    import fetch_data as fd
+    f = tmp_path / "rdc.csv"
+    f.write_text(RDC_FIXTURE)
+    out = fd.load_rdc(str(f))
+    # quality_flag=1 row (90210) keeps counts, loses yy comparisons
+    assert set(out) == {"20874", "02138", "90210"}
+    q = out["90210"]
+    assert q["q"] == 1 and q["inv"] == 200 and q["pdn"] == 50
+    assert "domy" not in q and "invy" not in q
+    e = out["20874"]
+    assert e["p"] == "2026-06"
+    assert e["inv"] == 119 and e["pdn"] == 23 and e["dom"] == 33
+    assert e["pd"] == 0.147 and e["domy"] == -0.06     # yy fields stay fractions
+    # leading-zero ZIP restored
+    assert out["02138"]["inv"] == 42
+
+
+def test_rdc_never_touches_verdict(tmp_path):
+    """The cross-check is additive: entries gain `x` but l/s/r/m are
+    byte-identical with and without the RDC feed."""
+    import fetch_data as fd
+    fixture = tmp_path / "fix.tsv.gz"
+    with gzip.open(fixture, "wt") as f:
+        f.write(FIXTURE_HEADER + FIXTURE_ROWS)
+    rdcf = tmp_path / "rdc.csv"
+    rdcf.write_text(RDC_FIXTURE)
+
+    def run(rdc_arg, outdir):
+        repo = tmp_path / outdir
+        (repo / "pipeline").mkdir(parents=True)
+        for name in ("fetch_data.py", "verdict.py"):
+            (repo / "pipeline" / name).write_text((HERE / name).read_text())
+        subprocess.run(
+            [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
+             "--input", str(fixture), "--rdc", rdc_arg],
+            check=True, capture_output=True,
+            env={**os.environ, "SISY_SKIP_MORTGAGE": "1"},
+        )
+        return json.loads((repo / "web" / "data" / "zips" / "MD.json").read_text())
+
+    with_rdc = run(str(rdcf), "repo_a")
+    without = run("", "repo_b")
+    assert "x" in with_rdc["20874"] and with_rdc["20874"]["x"]["inv"] == 119
+    assert "x" not in without["20874"]
+    for k in ("l", "s", "r", "m"):
+        assert with_rdc["20874"][k] == without["20874"][k]

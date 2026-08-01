@@ -79,6 +79,12 @@ details#adv[open] summary{margin-bottom:4px}
 .metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center}
 .metric-block{margin-bottom:12px}
 .dials-intro{font-size:13.5px;color:var(--muted);margin:0 0 14px!important}
+/* independent listing-feed cross-check strip (Realtor.com) */
+.xcheck{margin-top:14px;border:1px solid var(--hairline);border-radius:10px;padding:14px 17px;background:#fbfaf6;font-size:13px;line-height:1.6;color:var(--muted)}
+.xcheck .xk{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
+.xcheck b{color:#3a4450}
+.xcheck .agree{color:var(--green);font-weight:650}
+.xcheck .differ{color:var(--amber);font-weight:650}
 /* per-dial methodology disclosure — collapsed by default, quiet when open */
 details.how{margin:4px 0 0 0;padding-left:0}
 details.how summary{font-size:12px;color:var(--faint);cursor:pointer;list-style:none;display:inline-block;text-decoration:underline dotted;text-underline-offset:3px}
@@ -333,6 +339,7 @@ details.how .how-body b{color:#3a4450}
       <div id="metrics"></div>
       <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px"></p>
+      <div class="xcheck" id="xcheck" style="display:none"></div>
     </div>
 
     <div class="sec" id="value-trend" data-nav="value trend" style="display:none">
@@ -727,7 +734,7 @@ details.how .how-body b{color:#3a4450}
     <a href="privacy.html" style="color:inherit">Privacy</a> ·
     <a href="refunds.html" style="color:inherit">Refunds &amp; cancellation</a> ·
     <a href="partners.html" style="color:inherit">For real estate professionals</a>
-    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data (Data from Redfin, a national real estate brokerage — redfin.com) and are for general information only — not financial, legal, or real-estate advice. Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
+    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data (Data from Redfin, a national real estate brokerage — redfin.com · Listing data from Realtor.com) and are for general information only — not financial, legal, or real-estate advice. Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
   </div>
 </div>
 
@@ -924,6 +931,44 @@ function renderMetrics(rows, zip){
   }).join("");
 }
 
+
+// ————— Independent listing-feed cross-check (Realtor.com) —————
+// A second, independent read on the same market: fresher (listings move
+// before closings) and differently defined — so it corroborates direction,
+// it does NOT feed the verdict. Definitions differ enough (their days-on-
+// market counts listing days; their price-cut share uses their own listing
+// universe) that comparing exact levels across feeds would mislead.
+function renderCrossCheck(d){
+  const x = d.x, m = d.m || {}, el = $("xcheck");
+  if (!x){ el.style.display = "none"; return; }
+  const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const label = x.p ? MON[+x.p.slice(5,7)-1] + " " + x.p.slice(0,4) : "";
+  const newer = x.p && META && META.period && x.p > META.period;
+  const pf = v => (v>=0?"+":"−") + Math.abs(v*100).toFixed(0) + "%";
+  const bits = [];
+  if (x.inv != null) bits.push("<b>" + x.inv.toLocaleString() + "</b> homes listed" + (x.invy != null ? " (" + pf(x.invy) + " vs. last year)" : ""));
+  if (x.dom != null) bits.push("typical listing <b>" + x.dom + " days</b> on the market" + (x.domy != null ? " (" + pf(x.domy) + ")" : ""));
+  if (x.pdn != null) bits.push("<b>" + x.pdn.toLocaleString() + "</b> price cuts" + (x.pd != null ? " (" + (x.pd*100).toFixed(0) + "% of listings it tracks)" : ""));
+  // Direction agreement — only judged on signals both feeds carry.
+  const dir = (v, dead) => v == null ? null : v > dead ? 1 : v < -dead ? -1 : 0;
+  const checks = [];
+  const rd = dir(m.domy, 1), xd = dir(x.domy, 0.03);        // Redfin domy is DAYS; RDC's is a fraction
+  if (rd != null && xd != null) checks.push(rd === xd);
+  const ri = dir(m.invy, 0.03), xi = dir(x.invy, 0.03);
+  if (ri != null && xi != null) checks.push(ri === xi);
+  let verdictLine = "";
+  if (x.q){
+    verdictLine = '<div style="margin-top:6px;color:var(--fainter);font-size:12px">Year-over-year comparisons withheld this month — the feed flags this ZIP\'s comparability.</div>';
+  } else if (checks.length){
+    verdictLine = checks.every(Boolean)
+      ? '<div class="agree" style="margin-top:6px">✓ Both feeds read this market the same direction.</div>'
+      : '<div class="differ" style="margin-top:6px">◆ The two feeds read direction differently right now — often a timing gap between listings and closings; worth watching next month.</div>';
+  }
+  el.innerHTML = '<div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM LISTING FEED · ' +
+    (label ? label.toUpperCase() : "") + (newer ? " (ONE MONTH NEWER THAN THE SALES DATA ABOVE)" : "") + '</div>' +
+    (bits.length ? bits.join(" · ") + "." : "") + verdictLine;
+  el.style.display = "block";
+}
 
 // ————— Deep-dive helpers —————
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -1298,6 +1343,7 @@ async function generate(noScroll){
   $("v-title").textContent = k.title.replace("{zip}", zip);
   renderAddrLine(streetFrom(addr), zip, d.st);
   $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
+  renderCrossCheck(d);
   $("v-sub").textContent = k.sub.replace("{zip}", zip);
 
   // 03 · equity — needs value AND balance; otherwise a locked card naming

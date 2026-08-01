@@ -36,6 +36,11 @@ REDFIN_ZIP_TRACKER = (
     "redfin_market_tracker/zip_code_market_tracker.tsv000.gz"
 )
 
+RDC_ZIP_URL = (
+    "https://econdata.s3-us-west-2.amazonaws.com/"
+    "Reports/Core/RDC_Inventory_Core_Metrics_Zip.csv"
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "web" / "data"
 
@@ -236,6 +241,81 @@ def parse_pmms_csv(text, keep=80):
     return vals[-keep:]
 
 
+def load_rdc(source):
+    """Realtor.com residential listings database — current-month ZIP file.
+
+    Returns {zip: {p, dom, domy, inv, invy, pd, pdn}}. This feed enriches
+    entries for DISPLAY and cross-checking only; it never feeds the verdict
+    engine. Two hard reasons:
+      - Definitions differ (RDC price_reduced_share does not even reconcile
+        with price_reduced_count / active_listing_count in the published
+        file, so it is clearly measured against a denominator we can't see;
+        RDC *_yy fields are fractions while Redfin's median_dom_yoy is
+        absolute days). Our danger thresholds are validated against Redfin's
+        definitions only.
+      - Silently switching a verdict input's source would flip verdicts and
+        fire subscriber alert emails on a data-source change, not a market
+        change.
+
+    quality_flag=1 rows (about half the file — mostly thin ZIPs) keep their
+    current-month counts but DROP the year-over-year fields and gain q:1:
+    the flag marks unreliable comparability, not unreliable counts, so the
+    cross-check still lists properties while withholding the comparisons
+    and the direction verdict. Any fetch/parse failure returns {} — the
+    site simply renders without the cross-check.
+    """
+    import os
+    if os.environ.get("SISY_SKIP_RDC"):
+        print("RDC fetch skipped (SISY_SKIP_RDC)")
+        return {}
+    try:
+        if source.startswith("http"):
+            text = _http_get(source, timeout=120)
+        else:
+            text = open(source, encoding="utf-8", errors="replace").read()
+    except Exception as e:
+        print("RDC fetch failed — cross-check skipped:", e)
+        return {}
+    out = {}
+    period = ""
+    for row in csv.DictReader(io.StringIO(text)):
+        z = (row.get("postal_code") or "").strip()
+        if z.isdigit() and len(z) < 5:
+            z = z.zfill(5)  # leading zeros (New England ZIPs) drop in the CSV
+        if not (z.isdigit() and len(z) == 5):
+            continue
+        flagged = (row.get("quality_flag") or "0").strip() not in ("", "0", "0.0")
+        month = (row.get("month_date_yyyymm") or "").strip()
+        p = f"{month[:4]}-{month[4:6]}" if len(month) == 6 and month.isdigit() else ""
+        def g(col):
+            v = (row.get(col) or "").strip()
+            try:
+                return float(v)
+            except ValueError:
+                return None
+        e = {"p": p}
+        cols = [
+            ("dom",  "median_days_on_market",     True),
+            ("inv",  "active_listing_count",      True),
+            ("pd",   "price_reduced_share",       False),
+            ("pdn",  "price_reduced_count",       True),
+        ]
+        if not flagged:  # yy comparisons only where the feed itself trusts them
+            cols += [("domy", "median_days_on_market_yy", False),   # fraction, not days
+                     ("invy", "active_listing_count_yy",  False)]
+        for k, col, as_int in cols:
+            v = g(col)
+            if v is not None:
+                e[k] = int(v) if as_int else round(v, 3)
+        if flagged:
+            e["q"] = 1
+        if len(e) > (2 if flagged else 1):
+            out[z] = e
+            period = max(period, p)
+    print(f"RDC: {len(out)} ZIPs, period {period}")
+    return out
+
+
 def fetch_mortgage_rates():
     """Current + year-ago 30y fixed rate. Returns None only if every source fails.
 
@@ -279,6 +359,8 @@ def main():
                     help="Local TSV(.gz) path or URL (default: Redfin ZIP tracker)")
     ap.add_argument("--states", default="",
                     help="Comma-separated state codes to limit output (e.g. MD,VA,DC)")
+    ap.add_argument("--rdc", default=RDC_ZIP_URL,
+                    help="Realtor.com RDC ZIP csv path or URL ('' to disable)")
     args = ap.parse_args()
     states = set(s.strip().upper() for s in args.states.split(",") if s.strip()) or None
 
@@ -291,6 +373,8 @@ def main():
             "Check the COLUMNS/SAMPLE ROW diagnostics above for a schema mismatch."
         )
 
+    rdc = load_rdc(args.rdc) if args.rdc else {}
+
     by_state = defaultdict(dict)
     prefix_state = {}
     period_seen = ""
@@ -302,6 +386,11 @@ def main():
         h = build_history(hist.get(zip_code), period[:7])
         if h:
             entry["h"] = h
+        # Independent listing-feed cross-check — display only, post-verdict,
+        # so adding/refreshing this source can never flip a verdict.
+        x = rdc.get(zip_code)
+        if x:
+            entry["x"] = x
         by_state[state or "XX"][zip_code] = entry
         prefix_state[zip_code[:3]] = state or "XX"
         period_seen = max(period_seen, period)
@@ -324,7 +413,8 @@ def main():
     (OUT / "meta.json").write_text(json.dumps({
         "generated": date.today().isoformat(),
         "period": period_seen[:7],
-        "attribution": "Data from Redfin, a national real estate brokerage (redfin.com)",
+        "attribution": "Data from Redfin, a national real estate brokerage (redfin.com)"
+                       + (" · Listing data from Realtor.com" if rdc else ""),
         "national": {"spy_deciles": deciles, "counts": counts0,
                      **({"mortgage": mortgage} if mortgage else {})},
     }))
