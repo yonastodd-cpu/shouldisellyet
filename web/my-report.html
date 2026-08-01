@@ -331,7 +331,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="value-trend" data-nav="value trend" style="display:none">
       <div class="k">YOUR HOME'S VALUE TREND — 3 YEARS</div>
       <div class="title">What your home has been doing</div>
-      <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today tells you how much froth has already come out.</p>
+      <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today shows how much prices have already cooled.</p>
       <div id="trend-chart"></div>
       <div class="callouts" id="trend-callouts"></div>
       <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary.</p>
@@ -375,7 +375,7 @@ details.how .how-body b{color:#3a4450}
                   </select>
                 </div>
                 <div class="f">
-                  <label>THRESHOLD ($)</label>
+                  <label>AMOUNT ($)</label>
                   <input id="watch-threshold-equity" inputmode="numeric" placeholder="e.g. 100000">
                 </div>
               </div>
@@ -427,7 +427,7 @@ details.how .how-body b{color:#3a4450}
                   </select>
                 </div>
                 <div class="f">
-                  <label>THRESHOLD ($)</label>
+                  <label>AMOUNT ($)</label>
                   <input id="watch-threshold-walkaway" inputmode="numeric" placeholder="e.g. 100000">
                 </div>
               </div>
@@ -447,7 +447,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="lock-in" data-nav="lock-in" style="display:none">
       <div class="k">WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
       <div class="title">Your lock-in cost</div>
-      <p class="subt">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
+      <p class="subt">If you borrowed the same amount at today's rate instead of yours, this is what would happen to your monthly P&amp;I — principal and interest, the loan part of your payment. A low locked-in rate is an asset; this puts a number on it.</p>
       <div class="watchable">
         <div class="watch-rail">
           <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-lockin" onchange="toggleWatch('lockin', this.checked)"><span class="watch-switch-track"></span></label>
@@ -484,7 +484,7 @@ details.how .how-body b{color:#3a4450}
                   </select>
                 </div>
                 <div class="f">
-                  <label>THRESHOLD ($)</label>
+                  <label>AMOUNT ($)</label>
                   <input id="watch-threshold-lockin" inputmode="numeric" placeholder="e.g. 100">
                 </div>
               </div>
@@ -561,7 +561,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="selling-conditions" data-nav="selling" style="display:none">
       <div class="k">SELLING CONDITIONS IN YOUR ZIP</div>
       <div class="title">How long selling takes here — and when it goes fastest</div>
-      <p class="subt">Days on market is the earliest visible crack in any housing market. The seasonal pattern below can be worth thousands in timing.</p>
+      <p class="subt">How long homes take to sell is the earliest visible crack in any housing market — it moves months before prices do. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
       <p id="season-note" style="margin-top:10px"></p>
     </div>
@@ -961,9 +961,10 @@ function renderDeepDive(d, zip, val, bal){
       y12v = y12;
       const cos = [];
       cos.push({v: fmt(pv), l: (hasVal ? "EST. PEAK · " : "ZIP MEDIAN PEAK · ") + monthLabel(h.s, pi).toUpperCase()});
-      cos.push({v: pctf(fromPeak), l: "TODAY VS. PEAK"});
+      if (fromPeak >= -0.005) cos.push({v: "At the high", l: "TODAY — THE 3-YEAR HIGH"});
+      else cos.push({v: pctf(fromPeak), l: "FROM THE " + monthLabel(h.s, pi).toUpperCase() + " PEAK"});
       if (y12) cos.push({v: pctf(anchor/y12-1), l: "LAST 12 MONTHS"});
-      if (q3) cos.push({v: pctf(Math.pow(anchor/q3, 4)-1), l: "3-MO TREND, ANNUALIZED"});
+      if (q3) cos.push({v: pctf(anchor/q3-1), l: "LAST 3 MONTHS"});
       $("trend-callouts").innerHTML = cos.map(c=>'<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
       $("trend-foot").textContent = hasVal
         ? "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary."
@@ -1029,7 +1030,7 @@ function renderDeepDive(d, zip, val, bal){
     $("selling-conditions").style.display = "block";
   }
 
-  // 07 · bigger picture (national percentile + mortgage headwind)
+  // bigger picture (how this ZIP compares nationally + the financing backdrop)
   const nat = META && META.national;
   if (nat){
     const boxes = [];
@@ -1038,7 +1039,9 @@ function renderDeepDive(d, zip, val, bal){
       let k=0; while(k<10 && m.spy>dec[k+1]) k++;
       const frac = k*10 + (dec[k+1]>dec[k] ? (m.spy-dec[k])/(dec[k+1]-dec[k])*10 : 5);
       const pctile = Math.max(1, Math.min(99, Math.round(frac)));
-      boxes.push('<div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Price trend here ranks in the <b>'+pctile+'th percentile</b> of 24,000+ U.S. ZIP codes ('+(pctile>=50?"stronger":"weaker")+' than '+(pctile>=50?pctile:100-pctile)+'% of markets'+(pctile>=50?'':' are stronger')+'). Nationally right now: '+nat.counts.green.toLocaleString()+' ZIPs HOLD · '+nat.counts.yellow.toLocaleString()+' WATCH · '+nat.counts.red.toLocaleString()+' ACT.</p></div>');
+      const pack = pctile>=85 ? "near the top of the pack" : pctile>=60 ? "ahead of most markets"
+                 : pctile>40 ? "squarely mid-pack" : pctile>15 ? "behind most markets" : "near the bottom of the pack";
+      boxes.push('<div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Prices here are rising faster than about <b>'+pctile+'%</b> of U.S. ZIP codes — '+pack+'. Across the country right now: '+nat.counts.green.toLocaleString()+' ZIPs read HOLD · '+nat.counts.yellow.toLocaleString()+' WATCH · '+nat.counts.red.toLocaleString()+' ACT.</p></div>');
     }
     if (nat.mortgage){
       const pay = r => { const i=r/100/12; return i*Math.pow(1+i,360)/(Math.pow(1+i,360)-1); };
@@ -1553,7 +1556,7 @@ function toggleWatch(metric, on){
 function refreshWatchPanel(metric){
   const lockedEl = $("watch-locked-" + metric), activeEl = $("watch-active-" + metric);
   if (!TOKEN) {
-    lockedEl.innerHTML = "Open your report from the link in your confirmation email to turn on alerts — that link is what makes it durable.";
+    lockedEl.innerHTML = "To turn on alerts, open your report from the link in your confirmation email — that link is how we know it's you.";
     lockedEl.style.display = "block"; activeEl.style.display = "none";
   } else if (SUB_PLAN !== "monitor") {
     const zip = $("in-zip").value;
