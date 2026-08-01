@@ -49,8 +49,20 @@ details#adv[open] summary{margin-bottom:4px}
 .v-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.16em}
 .v-title{font-family:'Newsreader',serif;font-size:21px;font-weight:600}
 .r-addr{width:100%;font-size:13px;color:var(--muted)}
-.sec{padding:22px 24px;border-top:1px solid var(--hairline2)}
+.sec{padding:22px 24px;border-top:1px solid var(--hairline2);scroll-margin-top:52px}
 .sec .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:6px}
+/* Big display numeral — assigned at render time (sections come and go, so
+   numbering is computed, never hardcoded; anchors stay semantic). Structures
+   the page without shouting: the title stays the strongest text. */
+.secnum{font-family:'Newsreader',serif;font-size:3.25rem;line-height:.9;font-weight:500;color:var(--gold);opacity:.26;margin:2px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+/* Sticky jump-nav mirroring the rendered section order */
+.jumpnav{position:sticky;top:0;z-index:6;display:flex;gap:16px;overflow-x:auto;white-space:nowrap;
+  padding:11px 24px;background:rgba(250,248,244,.95);backdrop-filter:blur(5px);
+  border-bottom:1px solid var(--hairline);font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;scrollbar-width:none}
+.jumpnav::-webkit-scrollbar{display:none}
+.jumpnav a{color:var(--muted);flex:none}
+.jumpnav a b{color:var(--gold);font-weight:600;margin-right:4px}
+.jumpnav a:hover{color:var(--ink)}
 .sec .title{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 3px}
 .sec .subt{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 16px!important}
 .gauge-legend{display:flex;gap:18px;font-size:11px;color:var(--fainter);margin-top:10px;font-family:'IBM Plex Mono',monospace}
@@ -178,7 +190,7 @@ details.how .how-body b{color:#3a4450}
   .metric .note{display:none}
 }
 @media print{
-  nav,.setup,.actions,.paidband,#site-foot{display:none!important}
+  nav,.setup,.actions,.paidband,#site-foot,.jumpnav{display:none!important}
   body{background:#fff}
   .report{margin-top:0}
   .card{border-color:#ddd}
@@ -304,9 +316,10 @@ details.how .how-body b{color:#3a4450}
       <span class="v-title" id="v-title"></span>
       <span class="r-addr" id="r-addr"></span>
     </div>
+    <nav class="jumpnav" id="jumpnav" aria-label="Report sections"></nav>
 
-    <div class="sec">
-      <div class="k">01 · MARKET SIGNALS IN YOUR ZIP</div>
+    <div class="sec" id="signals" data-nav="signals">
+      <div class="k">MARKET SIGNALS IN YOUR ZIP</div>
       <div class="title">The four dials that predict price moves</div>
       <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
       <p class="dials-intro">Four numbers, all public data, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
@@ -315,8 +328,8 @@ details.how .how-body b{color:#3a4450}
       <p id="v-sub" style="margin-top:6px"></p>
     </div>
 
-    <div class="sec" id="sec-trend" style="display:none">
-      <div class="k">02 · YOUR HOME'S VALUE TREND — 3 YEARS</div>
+    <div class="sec" id="value-trend" data-nav="value trend" style="display:none">
+      <div class="k">YOUR HOME'S VALUE TREND — 3 YEARS</div>
       <div class="title">What your home has been doing</div>
       <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today tells you how much froth has already come out.</p>
       <div id="trend-chart"></div>
@@ -325,8 +338,8 @@ details.how .how-body b{color:#3a4450}
       <div id="trend-locked" style="display:none;margin-top:12px"></div>
     </div>
 
-    <div class="sec">
-      <div class="k">03 · YOUR EQUITY POSITION</div>
+    <div class="sec" id="equity" data-nav="equity">
+      <div class="k">YOUR EQUITY POSITION</div>
       <div class="title">What you actually own</div>
       <p class="subt">Your equity is the part of the home that is yours: value minus mortgage. This is the number the market can grow — or shrink — without you doing anything.</p>
       <div id="equity-locked" style="display:none"></div>
@@ -379,8 +392,8 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
-    <div class="sec">
-      <div class="k">04 · IF YOU SOLD TODAY — YOUR NET</div>
+    <div class="sec" id="walk-away" data-nav="walk-away">
+      <div class="k">IF YOU SOLD TODAY — YOUR NET</div>
       <div class="title">Your walk-away number</div>
       <p class="subt">The estimated check you would receive at closing after selling costs and payoff. Shown as a range because no estimate is exact. This is the number to protect.</p>
       <div id="walkaway-locked" style="display:none"></div>
@@ -431,8 +444,8 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
-    <div class="sec" id="sec-lockin" style="display:none">
-      <div class="k">05 · WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
+    <div class="sec" id="lock-in" data-nav="lock-in" style="display:none">
+      <div class="k">WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
       <div class="title">Your lock-in cost</div>
       <p class="subt">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
       <div class="watchable">
@@ -489,8 +502,8 @@ details.how .how-body b{color:#3a4450}
     </div>
 
 
-    <div class="sec" id="sec-rates">
-      <div class="k">06 · RATES AND YOUR BUYERS</div>
+    <div class="sec" id="rates-buyers" data-nav="rates">
+      <div class="k">RATES AND YOUR BUYERS</div>
       <div class="title">The money your buyer borrows</div>
       <p class="subt">Whoever buys your home almost certainly needs a mortgage. The price of that loan sets what they can pay for your house — this is the weather your sale happens in.</p>
       <div class="eqgrid">
@@ -535,8 +548,8 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
-    <div class="sec" id="sec-stress" style="display:none">
-      <div class="k">07 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+    <div class="sec" id="stress-test" data-nav="stress test" style="display:none">
+      <div class="k">STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
       <div class="title">Three futures for your walk-away number</div>
       <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
       <div class="prtable" id="stress-table"></div>
@@ -545,24 +558,24 @@ details.how .how-body b{color:#3a4450}
       <div class="say" id="margin-say" style="margin-top:14px"></div>
     </div>
 
-    <div class="sec" id="sec-selling" style="display:none">
-      <div class="k">08 · SELLING CONDITIONS IN YOUR ZIP</div>
+    <div class="sec" id="selling-conditions" data-nav="selling" style="display:none">
+      <div class="k">SELLING CONDITIONS IN YOUR ZIP</div>
       <div class="title">How long selling takes here — and when it goes fastest</div>
       <p class="subt">Days on market is the earliest visible crack in any housing market. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
       <p id="season-note" style="margin-top:10px"></p>
     </div>
 
-    <div class="sec" id="sec-context" style="display:none">
-      <div class="k">09 · THE BIGGER PICTURE</div>
+    <div class="sec" id="bigger-picture" data-nav="big picture" style="display:none">
+      <div class="k">THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
       <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
 
-    <div class="sec" id="sec-more">
-      <div class="k">10 · MORE ANSWERS, IF YOU WANT THEM</div>
+    <div class="sec" id="more-answers" data-nav="more answers">
+      <div class="k">MORE ANSWERS, IF YOU WANT THEM</div>
       <div class="title">Questions you didn't think to ask</div>
       <p class="subt">All optional. Each card needs one number from you — add it and the answer appears. Everything stays in your browser unless you save an alert.</p>
       <div class="moregrid">
@@ -625,15 +638,15 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
-    <div class="sec">
-      <div class="k">11 · WHAT THIS MEANS</div>
+    <div class="sec" id="bottom-line" data-nav="bottom line">
+      <div class="k">WHAT THIS MEANS</div>
       <div class="title">The plain-English bottom line</div>
       <p class="subt">One paragraph, no hedging.</p>
       <div class="say" id="meaning"></div>
     </div>
 
-    <div class="sec">
-      <div class="k">12 · YOUR NEXT STEP</div>
+    <div class="sec" id="next-step" data-nav="next step">
+      <div class="k">YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
@@ -958,7 +971,7 @@ function renderDeepDive(d, zip, val, bal){
       $("trend-locked").style.display = hasVal ? "none" : "block";
       if (!hasVal) $("trend-locked").innerHTML =
         lockedCard("trend-locked", "Add your estimate of the home's value to see this trend indexed to your own home.", "in-val");
-      $("sec-trend").style.display = "block";
+      $("value-trend").style.display = "block";
     }
   }
 
@@ -970,7 +983,7 @@ function renderDeepDive(d, zip, val, bal){
     $("stress-note").innerHTML =
       lockedCard("stress-note", "Add your estimate of the home's value to see three futures for your value, equity, and walk-away number.", "in-val");
     $("margin-say").style.display = "none";
-    $("sec-stress").style.display = "block";
+    $("stress-test").style.display = "block";
   } else {
     const netAt = V => V*(1 - costPct/100) - (bal || 0);
     const mom12 = y12v ? val/y12v-1 : null;
@@ -1000,7 +1013,7 @@ function renderDeepDive(d, zip, val, bal){
         ? "<b>Your safety margin is about " + Math.round(margin*100) + "%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. " + (margin > 0.25 ? "That's a comfortable cushion." : margin > 0.1 ? "A real but not unlimited cushion — one more reason to stay alert." : "That's thin — small market moves matter a lot to you right now.")
         : "<b>Heads up: at your numbers, selling today would not fully cover your payoff and costs.</b> This is exactly the situation to review with a professional before the market moves further.";
     }
-    $("sec-stress").style.display = "block";
+    $("stress-test").style.display = "block";
   }
 
   // 06 · selling conditions (time to sell + seasonality)
@@ -1013,7 +1026,7 @@ function renderDeepDive(d, zip, val, bal){
     Object.entries(by).forEach(([mo,arr])=>{ if(arr.length>=2){ const a=arr.reduce((x,y)=>x+y,0)/arr.length; if(a<bv){bv=a;best=+mo;} } });
     $("season-note").innerHTML = "How long homes take to sell in your ZIP, over time." +
       (best>=0 ? " Historically, homes here have sold fastest in <b>" + ["January","February","March","April","May","June","July","August","September","October","November","December"][best] + "</b> — worth knowing when you plan your listing." : "");
-    $("sec-selling").style.display = "block";
+    $("selling-conditions").style.display = "block";
   }
 
   // 07 · bigger picture (national percentile + mortgage headwind)
@@ -1032,7 +1045,7 @@ function renderDeepDive(d, zip, val, bal){
       const power = pay(nat.mortgage.year_ago)/pay(nat.mortgage.now) - 1;
       boxes.push('<div class="ctx"><div class="ch">The financing backdrop</div><p>30-year rates: <b>'+nat.mortgage.now.toFixed(2)+'%</b> now vs. '+nat.mortgage.year_ago.toFixed(2)+'% a year ago — buyers of your home can afford about <b>'+pctf(power)+'</b> house for the same monthly payment. '+(power<-0.02?"Rising rates shrink your buyer pool — a headwind if you wait.":power>0.02?"Falling rates expand your buyer pool — a tailwind for sellers.":"Roughly neutral for your buyer pool right now.")+'</p></div>');
     }
-    if (boxes.length){ $("ctxgrid").innerHTML = boxes.join(""); $("sec-context").style.display = "block"; }
+    if (boxes.length){ $("ctxgrid").innerHTML = boxes.join(""); $("bigger-picture").style.display = "block"; }
   }
 }
 
@@ -1334,7 +1347,7 @@ async function generate(noScroll){
     $("rb-asof").textContent = "Market rate: " + mktSrc + ".";
   }
   $("rb-sense").innerHTML = "<b>Why you care:</b> each 1-point drop in rates gives buyers roughly 10% more buying power — cheaper money tends to support prices, expensive money pressures them. (An approximation, not a forecast.)";
-  $("sec-lockin").style.display = "block";
+  $("lock-in").style.display = "block";
 
   $("meaning").textContent = k.meaning;
 
@@ -1370,7 +1383,7 @@ async function generate(noScroll){
     "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
   // deep-dive sections (render only when history/context data exists)
-  ["sec-trend","sec-stress","sec-selling","sec-context"].forEach(id => $(id).style.display = "none");
+  ["value-trend","stress-test","selling-conditions","bigger-picture"].forEach(id => $(id).style.display = "none");
   try { renderDeepDive(d, zip, val, bal); } catch(e) { console.error("deep-dive:", e); }
 
   // Snapshot for the "watch this number" toggles — only sent to the server
@@ -1384,9 +1397,31 @@ async function generate(noScroll){
   setWatchAvail("lockin",   hasLockin, rate == null ? "ADD RATE" : "ADD BALANCE");
   syncWatchToggles();
 
+  renumberSections();
+
   $("report").style.display = "block";
   $("actions").style.display = "flex";
   if (!noScroll) $("report").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Numbering is computed from what actually rendered — locked cards keep
+// their number (they're visible sections), hidden sections don't consume
+// one, and the jump-nav mirrors the same order. Anchors are semantic ids
+// (#walk-away, #rates-buyers …) and never change with the numbering.
+function renumberSections(){
+  let n = 0;
+  const nav = [];
+  document.querySelectorAll("#report .sec").forEach(sec => {
+    if (sec.style.display === "none") { return; }
+    n++;
+    const num = String(n).padStart(2, "0");
+    let el = sec.querySelector(".secnum");
+    if (!el){ el = document.createElement("div"); el.className = "secnum"; sec.prepend(el); }
+    el.textContent = num;
+    if (sec.id && sec.dataset.nav) nav.push({ id: sec.id, num, label: sec.dataset.nav });
+  });
+  $("jumpnav").innerHTML = nav.map(x =>
+    '<a href="#' + x.id + '"><b>' + x.num + '</b>' + x.label + '</a>').join("");
 }
 
 // Selling-cost slider (6–10%, default 8%) re-runs the numbers live
