@@ -35,7 +35,11 @@ METRIC_LABEL = {
     "walkaway": "walk-away number",
     "equity": "equity",
     "lockin": "lock-in cost",
+    "rate": "market 30-year rate",
 }
+
+# Percent-valued metrics format as "6.25%" in emails; everything else is dollars.
+PERCENT_METRICS = {"rate"}
 
 
 # ——— Pure calculation logic (mirrors web/my-report.html's client JS) ———
@@ -72,6 +76,9 @@ def scale_value(baseline_value, baseline_median, current_median):
 def compute_metric(metric, inputs, current_median, market_rate):
     """Current value of the requested metric, or None if the saved inputs
     are insufficient to compute it (e.g., lock-in needs a rate)."""
+    if metric == "rate":
+        # Pure market number — needs no personal inputs at all.
+        return market_rate
     value = scale_value(inputs.get("value"), inputs.get("baselineMedian"), current_median)
     if value is None:
         return None
@@ -103,16 +110,24 @@ def fmt(n):
     return sign + "$" + f"{abs(round(n)):,}"
 
 
+def fmt_metric(metric, n):
+    """Dollars for personal numbers, percent for rate-style metrics."""
+    if metric in PERCENT_METRICS:
+        return f"{n:.2f}".rstrip("0").rstrip(".") + "%"
+    return fmt(n)
+
+
 def render_watch_email(metric, direction, threshold, current_value, zip_code, token):
     label = METRIC_LABEL.get(metric, metric)
     verb = "dropped below" if direction == "below" else "risen above"
-    subject = f"Your {label} just {verb} {fmt(threshold)} — EquityWatch"
+    whose = "The" if metric in PERCENT_METRICS else "Your"
+    subject = f"{whose} {label} just {verb} {fmt_metric(metric, threshold)} — EquityWatch"
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
     html = f"""
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">\U0001F514 EquityWatch — your number alert</p>
-  <h1 style="font-size:24px;margin:6px 0 4px">Your {label} just {verb} {fmt(threshold)}</h1>
-  <p style="font-size:14px;color:#667085">You asked to hear about this. Current estimate: <b>{fmt(current_value)}</b>.</p>
+  <h1 style="font-size:24px;margin:6px 0 4px">{whose} {label} just {verb} {fmt_metric(metric, threshold)}</h1>
+  <p style="font-size:14px;color:#667085">You asked to hear about this. Current reading: <b>{fmt_metric(metric, current_value)}</b>.</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your report →</a></p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5">This is your own number, computed from the inputs you saved and the latest public market data — not an appraisal. Not financial advice. Turn this alert off anytime from your report page.</p>
 </div>"""

@@ -479,8 +479,55 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
+
+    <div class="sec" id="sec-rates">
+      <div class="k">06 · RATES AND YOUR BUYERS</div>
+      <div class="title">The money your buyer borrows</div>
+      <p class="subt">Whoever buys your home almost certainly needs a mortgage. The price of that loan sets what they can pay for your house — this is the weather your sale happens in.</p>
+      <div class="eqgrid">
+        <div class="eqcard">
+          <div class="label">TODAY'S 30-YEAR RATE</div>
+          <div class="big" id="rb-rate"></div>
+          <div class="sub2" id="rb-dir"></div>
+        </div>
+        <div class="eqcard" id="rb-buyer-card">
+          <div class="label" id="rb-buyer-label">THE BUYER OF THIS HOME</div>
+          <div id="rb-buyer"></div>
+        </div>
+      </div>
+      <div class="say" id="rb-sense" style="margin-top:14px"></div>
+      <div class="prnote" id="rb-asof"></div>
+      <div class="watchable" style="margin-top:16px">
+        <div class="watch-rail">
+          <label class="watch-switch-label"><input type="checkbox" id="watch-toggle-rate" onchange="toggleWatch('rate', this.checked)"><span class="watch-switch-track"></span></label>
+          <span class="watch-tag" id="watch-tag-rate">WATCH</span>
+        </div>
+        <div>
+          <p style="font-size:13.5px">Rates move your buyer pool before they move prices. Get an email the moment the 30-year rate drops past a line you choose.</p>
+          <div class="watch-panel" id="watch-panel-rate" style="display:none">
+            <div class="locked-msg" id="watch-locked-rate" style="display:none"></div>
+            <div id="watch-active-rate" style="display:none">
+              <div class="frow" style="margin-bottom:10px">
+                <div class="f">
+                  <label>ALERT ME WHEN THE 30-YEAR RATE DROPS BELOW (%)</label>
+                  <input id="watch-threshold-rate" inputmode="decimal" placeholder="e.g. 5.5">
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" style="font-size:13.5px;padding:9px 16px" onclick="return saveWatch('rate')">Save alert</button>
+                <button class="btn-outline" style="font-size:13.5px;padding:9px 16px;display:none" id="watch-clear-btn-rate" onclick="return clearWatch('rate')">Turn off</button>
+              </div>
+              <div class="err" id="watch-err-rate" style="margin-top:8px"></div>
+              <div id="watch-ok-rate" style="display:none;color:var(--green);font-size:13px;font-weight:600;margin-top:8px"></div>
+              <p style="font-size:11px;color:var(--fainter);margin-top:10px;line-height:1.5">Sends this number's inputs to us so we can recheck monthly — unlike the rest of this report, which stays in your browser. See <a href="privacy.html" style="text-decoration:underline">Privacy</a>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="sec" id="sec-stress" style="display:none">
-      <div class="k">06 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+      <div class="k">07 · STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
       <div class="title">Three futures for your walk-away number</div>
       <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
       <div class="prtable" id="stress-table"></div>
@@ -490,7 +537,7 @@ details.how .how-body b{color:#3a4450}
     </div>
 
     <div class="sec" id="sec-selling" style="display:none">
-      <div class="k">07 · SELLING CONDITIONS IN YOUR ZIP</div>
+      <div class="k">08 · SELLING CONDITIONS IN YOUR ZIP</div>
       <div class="title">How long selling takes here — and when it goes fastest</div>
       <p class="subt">Days on market is the earliest visible crack in any housing market. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
@@ -498,21 +545,21 @@ details.how .how-body b{color:#3a4450}
     </div>
 
     <div class="sec" id="sec-context" style="display:none">
-      <div class="k">08 · THE BIGGER PICTURE</div>
+      <div class="k">09 · THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
       <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
     <div class="sec">
-      <div class="k">09 · WHAT THIS MEANS</div>
+      <div class="k">10 · WHAT THIS MEANS</div>
       <div class="title">The plain-English bottom line</div>
       <p class="subt">One paragraph, no hedging.</p>
       <div class="say" id="meaning"></div>
     </div>
 
     <div class="sec">
-      <div class="k">10 · YOUR NEXT STEP</div>
+      <div class="k">11 · YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <div class="partner" id="partner"></div>
@@ -1043,6 +1090,8 @@ async function generate(noScroll){
 
   // 05 · lock-in cost — needs a rate and a positive balance
   const liveMkt = META && META.national && META.national.mortgage;
+  if (!liveMkt) console.warn("FRED mortgage data missing from meta.json — falling back to the site constant " +
+    CURRENT_MARKET_RATE + "% (pipeline fetch_mortgage_rates didn't land; see fetch_data.py)");
   const mktRate = liveMkt ? liveMkt.now : CURRENT_MARKET_RATE;
   const mktSrc = liveMkt ? "FRED 30-yr weekly average, " + liveMkt.asof + " (market data)"
                          : "assumed " + CURRENT_MARKET_RATE + "% (site constant)";
@@ -1086,6 +1135,35 @@ async function generate(noScroll){
   $("li-wrap").style.display = hasLockin ? "block" : "none";
   $("li-rateonly").style.display = rateOnly ? "block" : "none";
   $("lockin-locked").style.display = (!hasLockin && !rateOnly) ? "block" : "none";
+
+  // 06 · rates and your buyers — always renders, never locks. Buyer math runs
+  // on the user's value when given, else the ZIP's median sale price, labeled.
+  $("rb-rate").textContent = (+mktRate).toFixed(2) + "%";
+  if (liveMkt && liveMkt.year_ago != null) {
+    const delta = mktRate - liveMkt.year_ago;
+    $("rb-dir").textContent = (Math.abs(delta) < 0.05 ? "About flat vs. " : (delta < 0 ? "Down from " : "Up from ")) +
+      (+liveMkt.year_ago).toFixed(2) + "% a year ago";
+  } else {
+    $("rb-dir").textContent = "Live rate unavailable — using our latest saved figure";
+  }
+  const buyV = hasVal ? val : baselineMedian;
+  if (buyV) {
+    const loan = buyV * 0.8;
+    const bpi = pmt(loan, mktRate);
+    const incYr = bpi / 0.28 * 12;
+    $("rb-buyer-label").textContent = hasVal ? "THE BUYER OF THIS HOME (AT YOUR VALUE)" : "THE BUYER HERE (AT THE ZIP'S MEDIAN PRICE)";
+    $("rb-buyer").innerHTML =
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Buys at</span><span>' + fmt(buyV) + '</span></div>' +
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Puts 20% down</span><span>' + fmt(buyV * 0.2) + '</span></div>' +
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Pays monthly (loan part)</span><span><b>' + fmt(bpi) + '/mo</b></span></div>' +
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Income that takes</span><span><b>≈ ' + fmt(incYr) + '/yr</b></span></div>';
+    $("rb-asof").textContent = "Rules of thumb: 20% down and a payment near 28% of income — real buyers vary. Market rate: " + mktSrc + ".";
+  } else {
+    $("rb-buyer-label").textContent = "THE BUYER OF THIS HOME";
+    $("rb-buyer").innerHTML = '<p style="font-size:13.5px">This ZIP reports too few sales for a reliable price — add your home value above and this becomes your buyer\'s math.</p>';
+    $("rb-asof").textContent = "Market rate: " + mktSrc + ".";
+  }
+  $("rb-sense").innerHTML = "<b>Why you care:</b> each 1-point drop in rates gives buyers roughly 10% more buying power — cheaper money tends to support prices, expensive money pressures them. (An approximation, not a forecast.)";
   // capital-gains note — informational only
   const gain = pp != null ? val - pp : null;
   const hasGainNote = gain != null && gain > 250000;
@@ -1263,7 +1341,9 @@ function unlock(zip, justPaid, address, access){
 // for a monthly recompute to attach to). A subscriber can watch all three
 // metrics at once — window.__savedWatches mirrors the server's `watches`
 // array so toggles survive a report rebuild and a page reload alike.
-const METRIC_LABEL = { walkaway: "walk-away number", equity: "equity", lockin: "lock-in cost" };
+const METRIC_LABEL = { walkaway: "walk-away number", equity: "equity", lockin: "lock-in cost", rate: "market 30-year rate" };
+// Thresholds are dollars for the personal numbers, percent for the rate watch
+const fmtThreshold = (metric, n) => metric === "rate" ? (+n).toFixed(2).replace(/\.?0+$/, "") + "%" : fmt(n);
 window.__savedWatches = [];
 
 function toggleWatch(metric, on){
@@ -1288,7 +1368,7 @@ function refreshWatchPanel(metric){
 // rebuilds the report and right after unlock() resolves the access token,
 // so a returning visitor sees their alerts already on, not reset to off.
 function syncWatchToggles(){
-  ["walkaway", "equity", "lockin"].forEach(m => {
+  ["walkaway", "equity", "lockin", "rate"].forEach(m => {
     const t = $("watch-toggle-" + m);
     if (!t) return;
     const saved = window.__savedWatches.find(w => w.metric === m);
@@ -1296,7 +1376,8 @@ function syncWatchToggles(){
       t.checked = true;
       $("watch-panel-" + m).style.display = "block";
       refreshWatchPanel(m);
-      $("watch-direction-" + m).value = saved.direction;
+      const dirEl = $("watch-direction-" + m);
+      if (dirEl) dirEl.value = saved.direction;
       $("watch-threshold-" + m).value = saved.threshold;
       $("watch-clear-btn-" + m).style.display = "inline-block";
     } else {
@@ -1313,7 +1394,8 @@ async function saveWatch(metric){
     errEl.style.display = "block";
     return false;
   }
-  const direction = $("watch-direction-" + metric).value;
+  const dirEl = $("watch-direction-" + metric);
+  const direction = dirEl ? dirEl.value : "below";   // rate watch has no direction select — below only
   const threshold = parseFloat(($("watch-threshold-" + metric).value || "").replace(/[^0-9.]/g, ""));
   if (!(threshold > 0)) {
     errEl.textContent = "Enter a threshold amount.";
@@ -1336,8 +1418,8 @@ async function saveWatch(metric){
     });
     const j = await r.json();
     if (j && j.ok) {
-      okEl.textContent = "✓ Alert saved — we'll email you the moment your " + METRIC_LABEL[metric] + " " +
-        (direction === "below" ? "drops below " : "rises above ") + fmt(threshold) + ".";
+      okEl.textContent = "✓ Alert saved — we'll email you the moment " + (metric === "rate" ? "the " : "your ") + METRIC_LABEL[metric] + " " +
+        (direction === "below" ? "drops below " : "rises above ") + fmtThreshold(metric, threshold) + ".";
       okEl.style.display = "block";
       $("watch-clear-btn-" + metric).style.display = "inline-block";
       window.__savedWatches = (window.__savedWatches || []).filter(w => w.metric !== metric)

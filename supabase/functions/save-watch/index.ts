@@ -39,7 +39,9 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const METRICS = new Set(["walkaway", "equity", "lockin"]);
+// "rate" (market 30-year rate) needs no personal inputs — the threshold is a
+// percent, and check_watches.py evaluates it against the pipeline's FRED rate.
+const METRICS = new Set(["walkaway", "equity", "lockin", "rate"]);
 const DIRECTIONS = new Set(["below", "above"]);
 const TOKEN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
