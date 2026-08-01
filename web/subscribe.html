@@ -148,14 +148,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const COPY = {
   monitor: {
-    eyebrow: "EQUITYWATCH — MONITOR YOUR HOME",
-    headline: "Monitor your home",
-    planname: "EquityWatch monitoring",
-    price: PRICES.usd(PRICES.ANNUAL) + ' <small>/year · cancel anytime</small>',
+    eyebrow: "EQUITYWATCH — FULL REPORT & NOTIFICATIONS",
+    headline: "Full report & notifications",
+    planname: "EquityWatch — full report & notifications",
+    // Monitor renders its price through setBilling() below; this is the
+    // pre-toggle value and leads with monthly to match the homepage card.
+    price: PRICES.usd(PRICES.MONTHLY) + ' <small>/month · cancel anytime</small>',
     propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
-      "An email the moment the market for your home shifts — up or down",
       "Your full EquityWatch property report, included and refreshed monthly",
+      "An email the moment the market for your home shifts — up or down",
       "Your estimated equity and walk-away-if-you-sold number",
       "Every signal for your home's area: supply, price trend, time to sell, price cuts",
       "Cancel anytime in one click — no phone call, no runaround"
@@ -180,8 +182,10 @@ const q = new URLSearchParams(location.search);
 const plan = q.get("plan") === "report" ? "report" : "monitor";
 const zip = (q.get("zip") || "").replace(/\D/g,"").slice(0,5);
 const c = COPY[plan];
-// Billing interval for the monitor plan — annual is the default.
-let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
+// Billing interval for the monitor plan — monthly is the default, matching the
+// $5.99 the homepage buttons advertise. ?billing=annual still opts in, and the
+// report-credit upgrade below forces annual since the credit only applies there.
+let billing = q.get("billing") === "annual" ? "annual" : "monthly";
 
 // ————— Report-credit upgrade (report buyer → annual within 30 days) —————
 // Purchase timestamps are recorded client-side at checkout handoff (see go()).
@@ -190,6 +194,9 @@ let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
 // (subscribers.created_at already exists; upgraded_at does not). Until then
 // this is device-local + honored manually on follow-up.
 const upgrade = plan === "monitor" && q.get("upgrade") === "report-credit";
+// The report credit buys down the first *year*, so an upgrade arrival has to
+// land on annual — otherwise the credit silently doesn't apply.
+if (upgrade) billing = "annual";
 function reportCreditDaysLeft(){
   try {
     const p = JSON.parse(localStorage.getItem("sisy_purchase") || "null");

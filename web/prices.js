@@ -30,6 +30,10 @@ const PRICE_TEXT = {
   "monthly": usd(PRICES.MONTHLY),
   "monthly-mo": usd(PRICES.MONTHLY) + "/mo",
   "monthly-line": "or " + usd(PRICES.MONTHLY) + "/mo billed monthly",
+  // The homepage card leads with monthly, so annual is the alternate line
+  // there. "monthly-line" above is its mirror, for any surface still led by
+  // the annual price.
+  "annual-alt": "or " + usd(PRICES.ANNUAL) + "/yr — save $" + PRICES.SAVE_VS_MONTHLY,
   "save-line": "Save $" + PRICES.SAVE_VS_MONTHLY + " vs monthly",
   "report": usd(PRICES.REPORT),
   "upgrade": usd(PRICES.UPGRADE),

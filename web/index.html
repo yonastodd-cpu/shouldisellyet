@@ -105,14 +105,19 @@ h1 em{font-style:italic;color:var(--navy)}
 .metric .note{font-size:.8125rem;color:var(--faint-ink)}
 /* results action row — exactly three buttons, equal height, stacked on mobile */
 .v-ctas{display:flex;gap:12px;margin-top:2px}
-.vbtn{flex:1 1 0;min-width:0;min-height:56px;display:inline-flex;align-items:center;justify-content:center;
-      text-align:center;padding:14px 16px;border-radius:8px;border:1.5px solid transparent;
+.vbtn{flex:1 1 0;min-width:0;min-height:56px;display:inline-flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:3px;
+      text-align:center;padding:12px 10px;border-radius:8px;border:1.5px solid transparent;
       font-family:inherit;font-size:var(--fs-ui);font-weight:600;line-height:1.25;cursor:pointer}
+/* The price sits on its own line — at the hero column's width the label and a
+   price won't share one. Share carries no price, so it sizes to its own label
+   instead of taking an equal third and squeezing the two that do. */
+.vbtn-price{font-size:.85em;font-weight:600;opacity:.8}
 .vbtn-primary{background:var(--navy);border-color:var(--navy);color:#faf8f4!important}
 .vbtn-primary:hover{background:var(--navy-dark);border-color:var(--navy-dark)}
 .vbtn-secondary{background:#fff;border-color:var(--navy);color:var(--navy)!important}
 .vbtn-secondary:hover{background:#eef2f8}
-.vbtn-tertiary{background:none;border-color:var(--faint);color:var(--muted)!important}
+.vbtn-tertiary{background:none;border-color:var(--faint);color:var(--muted)!important;flex:0 0 auto;padding-left:16px;padding-right:16px}
 .vbtn-tertiary:hover{background:#f1eee6}
 .vbtn-tertiary.copied{border-color:var(--green-ink);color:var(--green-ink)!important}
 .datastamp{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);line-height:1.5;color:var(--faint-ink);letter-spacing:.04em}
@@ -192,7 +197,6 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .card-title{font-size:var(--fs-body-sm);font-weight:650}
 .price-note{font-size:var(--fs-meta);color:var(--muted);margin-top:-6px}
 .price-note.sm{font-size:.9375rem;color:var(--faint-ink);margin-top:-4px}
-.save-badge{font-size:.875rem;font-weight:600;color:var(--green-ink);background:var(--green-soft);border:1px solid var(--green-line);border-radius:4px;padding:3px 9px;vertical-align:8px;font-family:system-ui,sans-serif}
 .band-note{margin-top:20px;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .band-note.sm{margin-top:16px;font-size:var(--fs-meta)}
 .lede{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted)}
@@ -280,8 +284,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
         <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
 
         <div class="v-ctas">
-          <a class="vbtn vbtn-primary" id="cta-report" href="subscribe.html?plan=report">Get the Full Report</a>
-          <a class="vbtn vbtn-secondary" id="cta-monitor" href="subscribe.html?plan=monitor">Set Up Notifications</a>
+          <a class="vbtn vbtn-primary" id="cta-report" href="subscribe.html?plan=report"><span>Get the Full Report</span><span class="vbtn-price" data-price="report">$9.99</span></a>
+          <a class="vbtn vbtn-secondary" id="cta-monitor" href="subscribe.html?plan=monitor"><span>Set Up Notifications</span><span class="vbtn-price" data-price="monthly-mo">$5.99/mo</span></a>
           <button class="vbtn vbtn-tertiary" id="share-btn" type="button">Share</button>
         </div>
 
@@ -381,12 +385,11 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
-      <div class="card-title">EquityWatch — we monitor your home</div>
-      <div class="price"><span data-price="annual">$39</span> <small>/yr · cancel anytime</small> <span class="save-badge" data-price="save-line">Save $32 vs monthly</span></div>
-      <div class="price-note" data-price="annual-permo">$3.25/mo, billed annually</div>
-      <div class="price-note sm" data-price="monthly-line">or $5.99/mo billed monthly</div>
-      <div class="price-feats">Instant alert the moment your ZIP's verdict changes · your estimated equity, updated monthly · your walk-away number if you sold today · full report included</div>
-      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Monitor my home</a>
+      <div class="card-title">EquityWatch — full report &amp; notifications</div>
+      <div class="price"><span data-price="monthly">$5.99</span> <small>/mo · cancel anytime</small></div>
+      <div class="price-note" data-price="annual-alt">or $39/yr — save $32</div>
+      <div class="price-feats">The full report for your home, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
+      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Full report &amp; notifications — <span data-price="monthly">$5.99</span></a>
     </div>
   </div>
   <div class="band-note">Or take one deep look, no subscription: the full EquityWatch report for your property — <b><span data-price="report">$9.99</span> one-time</b>. Upgrade to EquityWatch within 30 days and we'll credit it toward your first year. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
@@ -675,7 +678,7 @@ async function run() {
     // data vintage and the required Redfin attribution.
     $("v-stamp").textContent = META ? "Data through " + META.period + " · " + META.attribution : "";
     $("cta-report").href = "subscribe.html?plan=report&zip=" + zip;
-    $("cta-monitor").href = "subscribe.html?plan=monitor&zip=" + zip;   // annual is subscribe.html's default
+    $("cta-monitor").href = "subscribe.html?plan=monitor&zip=" + zip;   // monthly is subscribe.html's default
     resetShare();
     const sp = sponsorFor(zip);
     const pt = $("partner");
