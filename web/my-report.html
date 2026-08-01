@@ -163,6 +163,18 @@ details.how .how-body b{color:#3a4450}
 .partner .p-ctas{display:flex;gap:10px;flex-wrap:wrap}
 .partner .p-ctas a{font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:8px}
 @media(max-width:640px){ .partner{flex-direction:column;align-items:center;text-align:center} .partner .p-ctas{justify-content:center} }
+/* Get Connected — neutral card + request modal (no agent identity on page) */
+.connect-card{border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
+.connect-card h3{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 8px}
+.connect-card p{margin:0 0 16px;max-width:60ch}
+.modal-veil{position:fixed;inset:0;background:rgba(28,36,48,.45);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:26px;box-shadow:0 24px 60px -20px rgba(16,24,40,.45)}
+.modal h3{font-family:'Newsreader',serif;font-size:22px;font-weight:600;margin:0 0 4px}
+.modal .sub{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.55}
+.modal label.consent{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#3a4450;line-height:1.55;cursor:pointer;margin:4px 0 14px}
+.modal label.consent input{margin-top:3px;accent-color:var(--navy)}
+.modal .mrow{display:flex;gap:10px;justify-content:flex-end}
+@media print{ .connect-card,.modal-veil{display:none!important} }
 .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
 .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 .err{display:none;color:var(--red);font-size:13.5px;font-weight:600;margin-top:10px}
@@ -646,8 +658,18 @@ details.how .how-body b{color:#3a4450}
       <div class="k">YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
+      <!-- REALTOR MATCH (feature-flagged OFF 2026-08-01 — SHOW_REALTOR_MATCH).
+           The sponsored-agent card and its render path below are kept intact
+           for a possible return; while the flag is false the neutral
+           Get Connected card renders instead and no agent name, photo, or
+           brokerage appears anywhere in the consumer report. -->
       <div class="partner" id="partner"></div>
       <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
+      <div class="connect-card" id="connect-card">
+        <h3>Get Connected With a Local Expert Realtor</h3>
+        <p>A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month. We'll personally match you with a vetted agent for your area — only when you ask. The conversation is free, no obligation.</p>
+        <button class="btn" onclick="return openConnect()">Request an introduction</button>
+      </div>
     </div>
 
     <div class="stamp" id="stamp"></div>
@@ -659,6 +681,47 @@ details.how .how-body b{color:#3a4450}
     <a class="btn-outline" href="index.html" style="text-decoration:none;display:inline-block">← Back to the free check</a>
   </div>
   </div><!-- /paid-area -->
+
+  <div class="modal-veil" id="connect-veil" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cm-title">
+      <div id="cm-form">
+        <h3 id="cm-title">Request an introduction</h3>
+        <p class="sub">We personally match you with one vetted local agent for your area. Nothing is shared until you submit.</p>
+        <div class="frow">
+          <div class="f"><label>YOUR NAME</label><input id="cm-name" autocomplete="name"></div>
+          <div class="f"><label>EMAIL</label><input id="cm-email" type="email" autocomplete="email"></div>
+        </div>
+        <div class="frow">
+          <div class="f"><label>PHONE (OPTIONAL)</label><input id="cm-phone" inputmode="tel" autocomplete="tel"></div>
+          <div class="f"><label>PROPERTY ADDRESS / ZIP</label><input id="cm-addr"></div>
+        </div>
+        <div class="frow">
+          <div class="f"><label>THINKING OF SELLING WITHIN&hellip;</label>
+            <select id="cm-timeline" style="width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)">
+              <option value="">choose one (optional)</option>
+              <option value="6mo">6 months</option>
+              <option value="1-2yr">1–2 years</option>
+              <option value="someday">Someday</option>
+              <option value="watching">Just watching</option>
+            </select>
+          </div>
+          <div class="f"><label>ANYTHING THEY SHOULD KNOW? (OPTIONAL)</label><input id="cm-note"></div>
+        </div>
+        <label class="consent"><input type="checkbox" id="cm-consent" onchange="$('cm-send').disabled=!this.checked">
+          <span>Share my name and contact info so ShouldISellYet can personally introduce me to one vetted local agent. Nothing is shared until you submit.</span></label>
+        <div class="err" id="cm-err"></div>
+        <div class="mrow">
+          <button class="btn-outline" onclick="return closeConnect()">Cancel</button>
+          <button class="btn" id="cm-send" disabled onclick="return submitConnect()">Request my introduction</button>
+        </div>
+      </div>
+      <div id="cm-done" style="display:none">
+        <h3>Done — introduction on the way</h3>
+        <p class="sub" style="margin-top:8px">We'll personally reach out within 2 business days with your introduction. We only shared what you saw above.</p>
+        <div class="mrow"><button class="btn" onclick="return closeConnect()">Close</button></div>
+      </div>
+    </div>
+  </div>
 
   <div id="site-foot" style="margin-top:36px;border-top:1px solid var(--hairline);padding-top:16px;font-size:12px;color:var(--fainter)">
     © 2026 ShouldISellYet.com · operated by Yayday LLC ·
@@ -1217,6 +1280,7 @@ async function generate(noScroll){
   saveProfile();
 
   const k = KINDS[d.l], m = d.m || {};
+  window.__lastVerdict = { zip, tag: k.tag };
   $("r-head").style.background = k.soft;
   $("report").style.borderColor = k.line;
   $("v-dot").style.background = k.hex;
@@ -1366,8 +1430,8 @@ async function generate(noScroll){
 
   $("meaning").textContent = k.meaning;
 
-  // partner / next step
-  const sp = sponsorFor(zip), pt = $("partner");
+  // partner / next step (sponsored card renders only behind the flag)
+  const sp = SHOW_REALTOR_MATCH ? sponsorFor(zip) : null, pt = $("partner");
   if (sp) {
     const phone = sp.phoneDisplay || (sp.phone ? sp.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
     const real = v => (v && !/^\[/.test(v)) ? v : "";   // hide un-filled [PLACEHOLDER] fields
@@ -1390,7 +1454,7 @@ async function generate(noScroll){
     $("nextstep-generic").style.display = "none";
   } else {
     pt.style.display = "none";
-    $("nextstep-generic").style.display = "block";
+    $("nextstep-generic").style.display = "none";  // the Get Connected card carries this section now
   }
 
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
@@ -1452,6 +1516,11 @@ $("cost-slider").addEventListener("input", function(){
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : "";
 const SAVE_WATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-watch" : "";
+const MATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/match-request" : "";
+// Realtor Match (sponsored-agent card) is feature-flagged OFF — the neutral
+// Get Connected flow below replaces it. Flip to true to bring the card back;
+// sponsors.json, sponsorFor() and the render path are all still wired.
+const SHOW_REALTOR_MATCH = false;
 const q = new URLSearchParams(location.search);
 
 $("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
@@ -1462,6 +1531,59 @@ $("in-rate").addEventListener("input", function(){ this.value = this.value.repla
 function adjustNums(){
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();
+  return false;
+}
+
+// ————— Get Connected modal (Task 8) —————
+// The consent copy is stored verbatim with every request row.
+const CONSENT_TEXT = "Share my name and contact info so ShouldISellYet can personally introduce me to one vetted local agent. Nothing is shared until you submit.";
+function openConnect(){
+  $("cm-form").style.display = "block";
+  $("cm-done").style.display = "none";
+  $("cm-err").style.display = "none";
+  $("cm-consent").checked = false; $("cm-send").disabled = true;
+  const addr = $("in-addr").value.trim(), zip = $("in-zip").value.trim();
+  if (!$("cm-addr").value) $("cm-addr").value = addr || zip;
+  if ($("in-timeline").value && !$("cm-timeline").value) $("cm-timeline").value = $("in-timeline").value;
+  $("connect-veil").style.display = "flex";
+  $("cm-name").focus();
+  return false;
+}
+function closeConnect(){ $("connect-veil").style.display = "none"; return false; }
+$("connect-veil").addEventListener("click", e => { if (e.target === $("connect-veil")) closeConnect(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("connect-veil").style.display !== "none") closeConnect(); });
+async function submitConnect(){
+  const errEl = $("cm-err"); errEl.style.display = "none";
+  const name = $("cm-name").value.trim(), email = $("cm-email").value.trim();
+  const addrField = $("cm-addr").value.trim();
+  const zips = addrField.match(/\b\d{5}(?:-\d{4})?\b/g) || [];
+  const zip = (zips.length ? zips[zips.length-1].slice(0,5) : "") || $("in-zip").value.trim();
+  const fail = msg => { errEl.textContent = msg; errEl.style.display = "block"; return false; };
+  if (!name) { $("cm-name").focus(); return fail("Please add your name."); }
+  if (!/@/.test(email)) { $("cm-email").focus(); return fail("Please add a working email."); }
+  if (!/^\d{5}$/.test(zip)) { $("cm-addr").focus(); return fail("Please include the property's 5-digit ZIP."); }
+  if (!$("cm-consent").checked) return fail("Please check the consent box first.");
+  if (!MATCH_FN) return fail("Introductions aren't configured yet — email naomi@shouldisellyet.com and we'll set it up by hand.");
+  const btn = $("cm-send"); btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const r = await fetch(MATCH_FN, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name, email, phone: $("cm-phone").value.trim(), zip, address: addrField,
+        timeline: $("cm-timeline").value, note: $("cm-note").value.trim(),
+        consent_text: CONSENT_TEXT,
+        verdict: (window.__lastVerdict && window.__lastVerdict.tag) || "",
+        source: "report",
+      }),
+    });
+    const j = await r.json();
+    if (j && j.ok) { $("cm-form").style.display = "none"; $("cm-done").style.display = "block"; }
+    else fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
+  } catch (e) {
+    fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
+  }
+  btn.disabled = false; btn.textContent = "Request my introduction";
   return false;
 }
 
