@@ -12,7 +12,8 @@ Run monthly (locally or via GitHub Actions):
   python pipeline/fetch_data.py [--states MD,VA,DC] [--input path.tsv.gz]
 
 NOTE ON LICENSING: Redfin makes this data available for use with proper
-citation ("Data from Redfin, a national real estate brokerage"). Before
+citation ("Data provided by Redfin, a national real estate brokerage",
+linked to redfin.com on first reference — see docs/ATTRIBUTION.md). Before
 charging customers, get written confirmation from press@redfin.com.
 Zillow research data is NOT used here — its terms restrict commercial use.
 """
@@ -456,7 +457,10 @@ def main():
     (OUT / "meta.json").write_text(json.dumps({
         "generated": date.today().isoformat(),
         "period": period_seen[:7],
-        "attribution": "Data from Redfin, a national real estate brokerage (redfin.com)"
+        # Exact citation string required by Redfin's Data Center terms. Plain
+        # text on purpose — render sites add the redfin.com link (see
+        # docs/ATTRIBUTION.md before changing a single word of this).
+        "attribution": "Data provided by Redfin, a national real estate brokerage"
                        + (" · Listing data from Realtor.com" if rdc else ""),
         "national": {"spy_deciles": deciles, "counts": counts0,
                      **({"mortgage": mortgage} if mortgage else {}),
