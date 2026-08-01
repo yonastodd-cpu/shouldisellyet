@@ -1,4 +1,3 @@
-at .github/workflows/update.yml
 name: Data refresh & deploy (when new data is published)
 
 on:
@@ -157,4 +156,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-yonastodd@Mac shouldisellyet %
