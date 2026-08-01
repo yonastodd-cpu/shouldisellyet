@@ -238,19 +238,15 @@ details.how .how-body b{color:#3a4450}
         <label>1 · PROPERTY ADDRESS (INCLUDE ZIP)</label>
         <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD 20906"
                autocomplete="street-address" name="street-address" autofocus>
-        <div class="hint">Your browser can autofill this. We read the ZIP right out of the address &mdash; the ZIP drives your market verdict.</div>
+        <div class="hint">Your browser can autofill this. We read the ZIP right off the end of the address &mdash; the ZIP drives your market verdict.</div>
       </div>
     </div>
+    <div id="zip-mismatch" class="locked-card" style="display:none;margin-bottom:14px"></div>
     <div class="frow">
-      <div class="f">
+      <div class="f" style="grid-column:1/-1">
         <label>2 · YOUR ESTIMATE OF THE HOME'S VALUE TODAY ($)</label>
-        <input id="in-val" inputmode="numeric" placeholder="auto: your ZIP's median">
+        <input id="in-val" inputmode="numeric" placeholder="e.g. 550000">
         <div class="hint">Not sure? Use the Zillow or Redfin estimate as a starting point &mdash; you can adjust anytime.</div>
-      </div>
-      <div class="f">
-        <label>ZIP CODE</label>
-        <input id="in-zip" inputmode="numeric" maxlength="5" placeholder="auto from address">
-        <div class="hint">Auto-filled from the address.</div>
       </div>
     </div>
     <div class="frow">
@@ -305,6 +301,7 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
     <input type="hidden" id="in-rent">
+    <input type="hidden" id="in-zip">
     <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
   </div>
@@ -1150,12 +1147,27 @@ function renderMoreAnswers(o){
 
 async function generate(noScroll){
   const addr = $("in-addr").value.trim();
-  const zipIn = $("in-zip").value.trim();
-  const zipFromAddr = (addr.match(/\b(\d{5})(?:-\d{4})?\b/) || [])[1] || "";
-  const zip = zipIn || zipFromAddr || (q.get("zip") || "");
+  // The address is the single source of the ZIP: take the LAST 5-digit group
+  // (streets have numbers too), tolerating ZIP+4.
+  const zipsInAddr = addr.match(/\b\d{5}(?:-\d{4})?\b/g) || [];
+  const zipFromAddr = zipsInAddr.length ? zipsInAddr[zipsInAddr.length - 1].slice(0, 5) : "";
+  const zipStored = ($("in-zip").value || "").trim() || (q.get("zip") || "");
   const err = $("err"); err.style.display = "none";
+  // Mismatch guard: an address ZIP that disagrees with the ZIP this report
+  // was set up for NEVER renders silently — the user picks, we remember the
+  // pick for exactly that pair, and the header is composed from the chosen
+  // ZIP so header and address can't disagree.
+  let zip;
+  if (zipFromAddr && zipStored && zipFromAddr !== zipStored) {
+    const memo = window.__zipKeep;
+    if (memo && memo.addr === zipFromAddr && memo.zip === zipStored) zip = zipStored;
+    else { showZipMismatch(zipFromAddr, zipStored); return; }
+  } else {
+    zip = zipFromAddr || zipStored;
+  }
+  $("zip-mismatch").style.display = "none";
   if (!/^\d{5}$/.test(zip)) {
-    err.textContent = "Please include the 5-digit ZIP in the address (or open fine-tune and enter it).";
+    err.textContent = "Please include the 5-digit ZIP at the end of the address.";
     err.style.display = "block"; $("in-addr").focus(); return;
   }
   const d = applyStrong(await lookup(zip));
@@ -1211,7 +1223,7 @@ async function generate(noScroll){
   $("v-dot").style.boxShadow = "0 0 0 4px "+k.soft+",0 0 0 5px "+k.hex;
   $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
   $("v-title").textContent = k.title.replace("{zip}", zip);
-  $("r-addr").textContent = (addr ? addr + " · " : "") + zip + (d.st ? ", " + d.st : "") + " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
+  renderAddrLine(streetFrom(addr), zip, d.st);
   $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
   $("v-sub").textContent = k.sub.replace("{zip}", zip);
 
@@ -1451,6 +1463,55 @@ function adjustNums(){
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();
   return false;
+}
+
+// ————— ZIP-from-address helpers (Task 7) —————
+function showZipMismatch(addrZip, reportZip){
+  const el = $("zip-mismatch");
+  el.innerHTML = '<p><b>Your address says ' + addrZip + '; this report was set up for ' + reportZip + '.</b> Which should we use?</p>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+    '<button class="btn" onclick="return chooseZip(\'' + addrZip + '\',\'' + addrZip + '\')">Use ' + addrZip + ' — my address</button>' +
+    '<button class="btn-outline" onclick="return chooseZip(\'' + reportZip + '\',\'' + addrZip + '\')">Keep ' + reportZip + '</button></div>';
+  el.style.display = "block";
+  el.scrollIntoView({behavior:"smooth", block:"center"});
+}
+function chooseZip(chosen, addrZip){
+  window.__zipKeep = { addr: addrZip, zip: chosen };  // remember for this pair only
+  $("in-zip").value = chosen;
+  $("zip-mismatch").style.display = "none";
+  generate(true);
+  return false;
+}
+// Street only: the address with its ", City, ST 12345" tail stripped, so the
+// header can be recomposed from the CHOSEN zip and never disagree with it.
+function streetFrom(addr){
+  if (!addr) return "";
+  let t = addr.replace(/[\s,]+$/, "");
+  t = t.replace(/,?\s*[A-Za-z .'’-]+,?\s+[A-Za-z]{2}\.?\s*\d{5}(?:-\d{4})?\s*$/, "");
+  t = t.replace(/,?\s*\d{5}(?:-\d{4})?\s*$/, "");
+  return t.trim().replace(/,+$/, "");
+}
+// City for the header — shares the homepage's Zippopotam cache (sisy_city_*).
+// Never blocks the report: renders ZIP-only first, patches the city in.
+function cityCache(zip){ try { return localStorage.getItem("sisy_city_" + zip) || ""; } catch(e){ return ""; } }
+async function cityFor(zip){
+  const hit = cityCache(zip);
+  if (hit) return hit;
+  try {
+    const r = await fetch("https://api.zippopotam.us/us/" + zip);
+    if (!r.ok) return "";
+    const j = await r.json();
+    const names = [...new Set((j.places || []).map(p => p["place name"]).filter(Boolean))];
+    const city = names.join(" / ");
+    if (city) { try { localStorage.setItem("sisy_city_" + zip, city); } catch(e){} }
+    return city;
+  } catch(e){ return ""; }
+}
+function renderAddrLine(street, zip, st){
+  const gen = " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
+  const line = c => (street ? street + " · " : "") + (c ? c + ", " : "") + (st ? st + " " : "") + zip + gen;
+  $("r-addr").textContent = line(cityCache(zip));
+  cityFor(zip).then(c => { if (c) $("r-addr").textContent = line(c); });
 }
 
 // ————— Locked-card state (Task 2) —————
