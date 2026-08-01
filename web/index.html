@@ -59,11 +59,13 @@ h1 em{font-style:italic;color:var(--navy)}
 .crunch-row span:nth-child(2){font-size:13.5px;color:#3a4450;width:250px;flex:none}
 .crunch-bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#efe9dc 25%,#dcd4c2 50%,#efe9dc 75%);background-size:360px 100%;animation:shimmer 1.2s linear infinite}
 .verdict{border-radius:10px;background:#fff;overflow:hidden;animation:fadeUp .35s ease;border:1px solid var(--hairline)}
-.verdict-head{display:flex;align-items:center;gap:14px;padding:18px 22px;flex-wrap:wrap}
+.verdict-head{display:flex;flex-direction:column;gap:10px;padding:20px 24px 22px}
+.v-loc{font-family:'IBM Plex Mono',monospace;font-size:1rem;letter-spacing:.05em;color:var(--muted)}
+.v-tagline{display:flex;align-items:center;gap:14px}
 .verdict-dot{width:14px;height:14px;border-radius:50%;flex:none}
 .verdict-tag{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;letter-spacing:.14em;line-height:1}
 .verdict-title{font-family:'Newsreader',serif;font-size:20px;font-weight:600}
-.verdict-body{padding:16px 22px 20px;display:flex;flex-direction:column;gap:12px}
+.verdict-body{padding:16px 24px 22px;display:flex;flex-direction:column;gap:14px}
 .verdict-body p{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
 .metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center}
 .metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
@@ -72,8 +74,18 @@ h1 em{font-style:italic;color:var(--navy)}
 .metric .fill{position:absolute;inset:0 auto 0 0;border-radius:3px}
 .metric .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#9a9384;border-radius:1px}
 .metric .note{font-size:11px;color:var(--fainter)}
-.v-ctas{display:flex;align-items:center;gap:14px;margin-top:4px;flex-wrap:wrap}
-.linkbtn{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit}
+/* results action row — exactly three buttons, equal height, stacked on mobile */
+.v-ctas{display:flex;gap:12px;margin-top:2px}
+.vbtn{flex:1 1 0;min-width:0;min-height:52px;display:inline-flex;align-items:center;justify-content:center;
+      text-align:center;padding:13px 16px;border-radius:8px;border:1.5px solid transparent;
+      font-family:inherit;font-size:1.0625rem;font-weight:600;line-height:1.25;cursor:pointer}
+.vbtn-primary{background:var(--navy);border-color:var(--navy);color:#faf8f4!important}
+.vbtn-primary:hover{background:var(--navy-dark);border-color:var(--navy-dark)}
+.vbtn-secondary{background:#fff;border-color:var(--navy);color:var(--navy)!important}
+.vbtn-secondary:hover{background:#eef2f8}
+.vbtn-tertiary{background:none;border-color:var(--faint);color:var(--muted)!important}
+.vbtn-tertiary:hover{background:#f1eee6}
+.vbtn-tertiary.copied{border-color:var(--green);color:var(--green)!important}
 .datastamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.06em}
 
 /* monitor signup (inside verdict) */
@@ -151,8 +163,8 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
   .zipform{flex-direction:column}
   .zipform .btn{width:100%}
   .grid4{grid-template-columns:1fr}
-  .v-ctas{flex-direction:column;align-items:stretch}
-  .v-ctas .btn{text-align:center}
+  .v-ctas{flex-direction:column}
+  .vbtn{width:100%}
   .partner{flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -189,24 +201,35 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
       <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.75s"></span><span>Testing against danger thresholds</span><span class="crunch-bar"></span></div>
     </div>
 
+    <!-- Results block. Contains, in order: location line, verdict, signal gauges,
+         three actions, Redfin attribution. Nothing else — see the 2026-07-31
+         redesign brief before adding anything here. -->
     <div class="verdict hidden" id="verdict">
       <div class="verdict-head" id="v-head">
-        <span class="verdict-dot" id="v-dot"></span>
-        <span class="verdict-tag" id="v-tag"></span>
-        <span class="verdict-title" id="v-title"></span>
+        <div class="v-loc" id="v-loc"></div>
+        <div class="v-tagline">
+          <span class="verdict-dot" id="v-dot"></span>
+          <span class="verdict-tag" id="v-tag"></span>
+        </div>
+        <div class="verdict-title" id="v-title"></div>
       </div>
       <div class="verdict-body">
         <p id="v-sub"></p>
-        <div id="v-metrics" style="display:flex;flex-direction:column;gap:12px"></div>
-        <div class="datastamp" id="v-stamp"></div>
+        <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
 
         <div class="v-ctas">
-          <a class="btn" style="font-size:13.5px;padding:10px 18px" href="#" id="monitor-cta" onclick="return buyMonitor()">Monitor my home — <span data-price="annual-yr">$39/yr</span></a>
-          <a class="linkbtn" href="report.html" style="text-decoration:underline">See a sample EquityWatch report →</a>
-          <button class="linkbtn" id="share-btn">Share</button>
-          <button class="linkbtn" id="again">Check another ZIP</button>
+          <a class="vbtn vbtn-primary" id="cta-report" href="subscribe.html?plan=report">Get the Full Report</a>
+          <a class="vbtn vbtn-secondary" id="cta-monitor" href="subscribe.html?plan=monitor">Set Up Notifications</a>
+          <button class="vbtn vbtn-tertiary" id="share-btn" type="button">Share</button>
         </div>
 
+        <div class="datastamp" id="v-stamp"></div>
+
+        <!-- REMOVED FROM RESULTS 2026-07-31 (inline EquityWatch signup form).
+             Superseded by subscribe.html, which owns plan copy, billing choice
+             and TOS consent; this form had been display:none and unreachable
+             since checkout moved there. subMonitor() below is kept intact and
+             pairs with this markup — restore both together if it ever returns.
         <div class="mform" id="mform">
           <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b><span data-price="annual">$39</span>/yr (<span data-price="annual-permo">$3.25/mo, billed annually</span>), or <span data-price="monthly-mo">$5.99/mo</span>. Cancel anytime.</b></div>
           <input type="email" id="mf-email" placeholder="you@email.com" required>
@@ -216,7 +239,12 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
           <div class="ok" id="mf-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
           <div class="err" id="mf-err">Couldn't save your signup — please try again in a minute, or write to naomi@shouldisellyet.com.</div>
         </div>
+        -->
 
+        <!-- Realtor introduction. Rendered only when SHOW_AGENT_CTA_IN_RESULTS
+             is true (off since 2026-07-31); sponsors.json, sponsorFor() and
+             partnerHTML() are all still wired. The match-request flow on the
+             report pages is unaffected. -->
         <div class="partner" id="partner"></div>
       </div>
     </div>
@@ -308,6 +336,13 @@ footer{padding:28px 56px 34px;border-top:1px solid var(--hairline)}
 </div>
 
 <script>
+// ————— Feature flags —————
+// The realtor introduction is off in the results block as of 2026-07-31 — the
+// results are verdict + gauges + three actions and nothing else. Every piece of
+// wiring (sponsors.json, sponsorFor, partnerHTML, the #partner node) is intact:
+// flip this to true to bring the introduction back exactly as it was.
+const SHOW_AGENT_CTA_IN_RESULTS = false;
+
 // ————— Backend config —————
 // Stripe Payment Links: paste and the buttons go straight to checkout.
 // TODO: payment-provider price IDs must be updated to match web/prices.js
@@ -369,6 +404,30 @@ function sponsorFor(zip) {
   if (!SPONSORS) return null;
   const key = SPONSORS.prefixes[zip.slice(0, 3)];
   return key ? SPONSORS.sponsors[key] : null;
+}
+
+// ————— City name for a ZIP —————
+// The Redfin feed only carries "Zip Code: 20874" — no place name — so the city
+// is resolved client-side from Zippopotam (free, keyless, no rate limit) and
+// cached in localStorage per ZIP. This never blocks the verdict: the location
+// line renders with the ZIP immediately and the city is filled in when (if) it
+// arrives. Any failure is silent — the ZIP alone is a fine location line.
+const CITY_KEY = zip => "sisy_city_" + zip;
+async function cityFor(zip) {
+  try {
+    const hit = localStorage.getItem(CITY_KEY(zip));
+    if (hit !== null) return hit;
+  } catch (e) {}
+  try {
+    const r = await fetch("https://api.zippopotam.us/us/" + zip);
+    if (!r.ok) return "";                       // 404 = unknown ZIP; don't cache, it may be a typo
+    const j = await r.json();
+    // Some ZIPs span several towns — join them, deduped, longest-first trimmed to 3.
+    const names = [...new Set((j.places || []).map(p => p["place name"]).filter(Boolean))];
+    const city = names.slice(0, 3).join(" / ");
+    try { localStorage.setItem(CITY_KEY(zip), city); } catch (e) {}
+    return city;
+  } catch (e) { return ""; }                    // offline / blocked / CORS — silent
 }
 
 // ————— Verdict presentation —————
@@ -486,7 +545,13 @@ function partnerHTML(s, kind, zip) {
 }
 
 function show(el, on) { el.classList.toggle("hidden", !on); }
-let lastVerdict = null;
+let lastVerdict = null, reqSeq = 0;
+
+// "20874 — Germantown, MD", degrading to "20874 — MD" then "20874".
+function setLocationLine(zip, st, city) {
+  const where = [city, st].filter(Boolean).join(", ");
+  $("v-loc").textContent = where ? zip + " — " + where : zip;
+}
 
 async function run() {
   const zip = $("zip").value;
@@ -494,6 +559,16 @@ async function run() {
   show($("verdict"), false); $("waitcard").style.display = "none"; show($("crunch"), true);
   $("crunch-zip").textContent = zip;
   const started = Date.now();
+  // City lookup runs alongside the verdict and is never awaited before the
+  // reveal. It lands either before the reveal (used via cityHint) or after
+  // (patched straight into the line) — and if it never lands, nothing waits.
+  const req = ++reqSeq;
+  let cityHint = "";
+  cityFor(zip).then(city => {
+    if (req !== reqSeq || !city) return;        // superseded by a newer check
+    cityHint = city;
+    if (lastVerdict && lastVerdict.zip === zip) setLocationLine(zip, lastVerdict.st, city);
+  });
   const d = applyStrong(await lookup(zip));
   // let the crunch animation breathe, then reveal
   setTimeout(() => {
@@ -507,6 +582,7 @@ async function run() {
     }
     const insufficient = (d.r || []).some(x => x[0] === "insufficient_data");
     const k = KINDS[d.l];
+    setLocationLine(zip, d.st || "", cityHint);
     $("v-head").style.background = k.soft;
     $("verdict").style.borderColor = k.line;
     $("v-dot").style.background = k.hex;
@@ -519,14 +595,17 @@ async function run() {
       ? "Smaller markets report few transactions, so we hold the verdict at HOLD until signals are statistically reliable. Here's what we can see:"
       : k.sub.replace("{zip}", zip);
     $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
-    $("v-stamp").textContent = zip + (d.st ? " · " + d.st : "") +
-      (META ? " · data through " + META.period + " · " + META.attribution : "");
-    $("mform").style.display = "none"; $("mf-ok").style.display = "none"; $("mf-err").style.display = "none";
+    // The ZIP and state now lead the block, so the stamp carries only the
+    // data vintage and the required Redfin attribution.
+    $("v-stamp").textContent = META ? "Data through " + META.period + " · " + META.attribution : "";
+    $("cta-report").href = "subscribe.html?plan=report&zip=" + zip;
+    $("cta-monitor").href = "subscribe.html?plan=monitor&zip=" + zip;   // annual is subscribe.html's default
+    resetShare();
     const sp = sponsorFor(zip);
     const pt = $("partner");
-    if (sp && d.l !== "green") { pt.innerHTML = partnerHTML(sp, k.key, zip); pt.style.display = "flex"; }
+    if (SHOW_AGENT_CTA_IN_RESULTS && sp && d.l !== "green") { pt.innerHTML = partnerHTML(sp, k.key, zip); pt.style.display = "flex"; }
     else { pt.style.display = "none"; }
-    lastVerdict = { zip, tag: k.tag, level: d.l };
+    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l };
     show($("verdict"), true);
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
   }, Math.max(0, 1600 - (Date.now() - started)));
@@ -545,8 +624,11 @@ function buyMonitor(fromPricing) {
   return false;
 }
 
+// Pairs with the commented-out #mform markup above — kept wired, but a no-op
+// while that form is out of the results block.
 async function subMonitor(e) {
   e.preventDefault();
+  if (!$("mf-email")) return false;
   const email = $("mf-email").value, address = $("mf-address").value;
   if (!email || !/@/.test(email)) { $("mf-email").focus(); return false; }
   if (!$("mf-tos").checked) { $("mf-tos").focus(); return false; }
@@ -573,19 +655,45 @@ async function joinWaitlist(e) {
 }
 
 // ————— Share —————
+// Native share sheet where the device has one; clipboard elsewhere, with the
+// confirmation shown on the button itself rather than in an alert().
+let shareTimer = null;
+function resetShare() {
+  clearTimeout(shareTimer);
+  const b = $("share-btn");
+  b.textContent = "Share"; b.classList.remove("copied");
+}
 $("share-btn").addEventListener("click", () => {
   if (!lastVerdict) return;
   const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
   const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.tag +
     " this month on ShouldISellYet.com — check yours free.";
-  if (navigator.share) { navigator.share({ text }); }
-  else { navigator.clipboard.writeText(text).then(() => alert("Copied! Paste it anywhere.")); }
+  if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
+  const b = $("share-btn");
+  const done = ok => {
+    clearTimeout(shareTimer);
+    b.textContent = ok ? "Copied ✓" : "Couldn't copy";
+    b.classList.toggle("copied", ok);
+    shareTimer = setTimeout(resetShare, 2400);
+  };
+  const legacyCopy = () => {                  // no clipboard API (older Safari, insecure context)
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    done(ok);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => done(true)).catch(legacyCopy);
+  } else { legacyCopy(); }
 });
 
 $("go").addEventListener("click", run);
 $("zip").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
 $("zip").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 5); });
-$("again").addEventListener("click", () => { show($("verdict"), false); $("zip").value = ""; $("zip").focus(); });
 
 // ————— Live-desk feed line (truthful facts, rotating) —————
 function feedLines() {
