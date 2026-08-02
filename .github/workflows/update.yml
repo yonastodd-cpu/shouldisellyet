@@ -153,9 +153,14 @@ jobs:
       # refresh would make a site-only push deploy a web/ with no zip/ —
       # silently removing ~18.6k live URLs. Reads committed web/data only, so
       # it needs no download and takes ~4s.
-      - name: Build ZIP pages, hubs and sitemaps
+      - name: Build ZIP pages, hubs, sitemaps and share cards
         if: steps.check.outputs.deploy == 'true'
-        run: python3 pipeline/build_pages.py
+        run: |
+          # Pillow renders the OG share cards. Without it build_pages warns and
+          # falls back to the brand card for every ZIP — silently losing the
+          # per-ZIP previews — so install it rather than let that happen.
+          pip install --quiet Pillow
+          python3 pipeline/build_pages.py
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'
