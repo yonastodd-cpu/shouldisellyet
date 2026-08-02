@@ -6,3 +6,8 @@ __pycache__/
 # Raw source snapshots — kept as workflow artifacts, never committed
 # (the Redfin tracker alone is ~1.5GB). See docs/DATA.md.
 archive/
+
+# Supabase CLI local state (written by `supabase link` / `functions deploy`).
+# Machine-specific, and the CLI also caches credentials here on some flows —
+# never commit it.
+supabase/.temp/
