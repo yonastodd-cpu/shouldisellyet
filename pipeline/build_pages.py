@@ -230,6 +230,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     updated = meta.get("generated", date.today().isoformat())
     state_name = STATE_NAMES.get(st, st)
     stat = card_stat(m)
+    emoji = {"green": "\U0001F7E2", "yellow": "\U0001F7E1", "strong": "\U0001F535"}.get(e["l"], "\U0001F534")
 
     rows = "".join(
         f'<div class="metric"><span class="name">{esc(n)}</span>'
@@ -327,6 +328,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE}</div>
 </div>
 <div class="ctas">
+  <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-tag="{k['tag']}" data-place="{esc(city)} ({z})" data-emoji="{emoji}">Share this verdict</button>
   <a class="btn btn-primary" href="/?zip={z}&amp;{UTM}">Check this ZIP live</a>
   <a class="btn btn-outline" href="/subscribe.html?plan=monitor&amp;zip={z}&amp;{UTM}">Set up notifications</a>
   <a class="btn btn-ghost" href="/subscribe.html?plan=report&amp;zip={z}&amp;{UTM}">Get the full report</a>
@@ -337,7 +339,36 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <ul class="nearby">{nb}</ul>
 <p style="margin-top:16px"><a href="/zip/{st}/">All {esc(state_name)} markets →</a></p>
 {FOOTER.format(cite=CITE)}
-</div></body></html>"""
+</div>
+<script>
+// Share this ZIP's verdict. PUBLIC DATA ONLY — the button carries the ZIP,
+// the verdict word and the place name, all of which are already on the page.
+// No personal input exists on this page and none may be introduced here.
+(function(){{
+  var b = document.getElementById("share-btn"), t;
+  if (!b) return;
+  var url = "https://shouldisellyet.com/zip/" + b.dataset.zip + "/?utm_source=share";
+  var text = b.dataset.emoji + " My ZIP says " + b.dataset.tag + " — " + b.dataset.place + ". What does yours say?";
+  b.addEventListener("click", function(){{
+    if (navigator.share) {{ navigator.share({{ text: text, url: url }}).catch(function(){{}}); return; }}
+    var payload = text + " " + url, done = function(ok){{
+      clearTimeout(t); b.textContent = ok ? "Copied ✓" : "Couldn't copy";
+      t = setTimeout(function(){{ b.textContent = "Share this verdict"; }}, 2400);
+    }};
+    if (navigator.clipboard && navigator.clipboard.writeText) {{
+      navigator.clipboard.writeText(payload).then(function(){{ done(true); }}).catch(function(){{ done(false); }});
+    }} else {{
+      var ta = document.createElement("textarea");
+      ta.value = payload; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try {{ ok = document.execCommand("copy"); }} catch (e) {{}}
+      document.body.removeChild(ta); done(ok);
+    }}
+  }});
+}})();
+</script>
+</body></html>"""
 
 
 def state_hub(st, entries, meta):

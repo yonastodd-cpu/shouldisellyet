@@ -528,6 +528,9 @@ function sponsorFor(zip) {
 // line renders with the ZIP immediately and the city is filled in when (if) it
 // arrives. Any failure is silent — the ZIP alone is a fine location line.
 const CITY_KEY = zip => "sisy_city_" + zip;
+// Already-resolved city, if any — used to name the place in share text
+// without blocking on a lookup.
+function cachedCity(zip){ try { return localStorage.getItem(CITY_KEY(zip)) || ""; } catch(e){ return ""; } }
 async function cityFor(zip) {
   try {
     const hit = localStorage.getItem(CITY_KEY(zip));
@@ -697,7 +700,7 @@ async function run() {
   cityFor(zip).then(city => {
     if (req !== reqSeq || !city) return;        // superseded by a newer check
     cityHint = city;
-    if (lastVerdict && lastVerdict.zip === zip) setLocationLine(zip, lastVerdict.st, city);
+    if (lastVerdict && lastVerdict.zip === zip) { lastVerdict.city = city; setLocationLine(zip, lastVerdict.st, city); }
   });
   const d = applyStrong(await lookup(zip));
   // let the crunch animation breathe, then reveal
@@ -735,7 +738,7 @@ async function run() {
     const pt = $("partner");
     if (SHOW_AGENT_CTA_IN_RESULTS && sp && d.l !== "green") { pt.innerHTML = partnerHTML(sp, k.key, zip); pt.style.display = "flex"; }
     else { pt.style.display = "none"; }
-    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l };
+    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l, city: cachedCity(zip) };
     show($("verdict"), true);
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
   }, Math.max(0, 1600 - (Date.now() - started)));
@@ -795,10 +798,20 @@ function resetShare() {
 }
 $("share-btn").addEventListener("click", () => {
   if (!lastVerdict) return;
+  // Share the ZIP PAGE, not the homepage: the homepage is a single URL and
+  // cannot carry a per-ZIP preview card, so a homepage link previews as
+  // generic brand chrome. /zip/{zip}/ carries the verdict card.
+  //
+  // PRIVACY: lastVerdict holds {zip, st, tag, level} only. No personal input
+  // (value, balance, equity, walk-away, rate) is in scope here, and none may
+  // ever be added to the shared text or URL.
   const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
-  const text = emoji + " My ZIP (" + lastVerdict.zip + ") is rated " + lastVerdict.tag +
-    " this month on ShouldISellYet.com — check yours free.";
-  if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
+  const city = (lastVerdict.city || "").trim();
+  const where = city ? city + " (" + lastVerdict.zip + ")" : "ZIP " + lastVerdict.zip;
+  const url = "https://shouldisellyet.com/zip/" + lastVerdict.zip + "/?utm_source=share";
+  const text = emoji + " My ZIP says " + lastVerdict.tag + " — " + where + ". What does yours say?";
+  if (navigator.share) { navigator.share({ text, url }).catch(() => {}); return; }
+  const payload = text + " " + url;
   const b = $("share-btn"), lbl = $("share-label");
   const done = ok => {
     clearTimeout(shareTimer);
@@ -808,7 +821,7 @@ $("share-btn").addEventListener("click", () => {
   };
   const legacyCopy = () => {                  // no clipboard API (older Safari, insecure context)
     const ta = document.createElement("textarea");
-    ta.value = text; ta.setAttribute("readonly", "");
+    ta.value = payload; ta.setAttribute("readonly", "");
     ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
     document.body.appendChild(ta); ta.select();
     let ok = false;
@@ -817,7 +830,7 @@ $("share-btn").addEventListener("click", () => {
     done(ok);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => done(true)).catch(legacyCopy);
+    navigator.clipboard.writeText(payload).then(() => done(true)).catch(legacyCopy);
   } else { legacyCopy(); }
 });
 
