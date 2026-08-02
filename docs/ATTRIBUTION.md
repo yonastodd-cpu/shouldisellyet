@@ -92,9 +92,15 @@ when referring to a data source.
 site, and that relationship is disclosed in `terms.html`. That's a real
 disclosure about our own business, not a data-source claim.)
 
-## Operator task — not automated
+## Operator task — not automated, and it cannot be
 
 Keep a compliance record of the terms as published: save an
 [archive.org](https://web.archive.org/) capture of the Redfin Data Center
 page and keep a dated screenshot alongside this `docs/` folder. Redo it
 whenever their terms page changes.
+
+**This genuinely can't be automated.** Redfin rate-limits datacenter IPs —
+the refresh workflow's attempt gets a bot wall ("Are You a Robot?", HTTP
+429), not the page. The workflow checks the response content and refuses to
+save a block page as if it were a record, warning instead. So the only
+reliable capture is a human on a normal browser connection.

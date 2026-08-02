@@ -84,24 +84,40 @@ Each refresh writes dated copies of every raw source to
 `archive/{YYYY-MM}/`, **in addition to** the normal working data — archives
 are never overwritten and the working data path is unchanged.
 
-**Stored as workflow artifacts with 730-day retention, not committed.** The
-Redfin tracker alone is ~1.5 GB per month against a 20 MB repo; committing
-it would make the repo unusable within a year. `archive/` is gitignored.
-Download from the run's artifacts page (`raw-sources-YYYY-MM`).
+**Stored as workflow artifacts, not committed.** The Redfin tracker alone
+is ~1.5 GB per month against a 20 MB repo; committing it would make the
+repo unusable within a year. `archive/` is gitignored. Download from the
+run's artifacts page (`raw-sources-YYYY-MM`).
 
-Archived per month:
+⚠️ **Retention is 90 days, not longer.** 90 days is GitHub's hard cap for
+artifacts on public repositories — a larger `retention-days` is silently
+reduced (observed: "Retention days cannot be greater than the maximum
+allowed retention set within the repository. Using 90 instead"). So the
+archive protects against a *recent* upstream revision, **not** against
+long-term discontinuation.
 
-- `zip_code_market_tracker.tsv000.gz` — Redfin
-- `RDC_Inventory_Core_Metrics_Zip.csv` — Realtor.com
-- `PMMS_history.csv` — Freddie Mac
-- `redfin-data-center.html` — the terms page as published, a compliance
-  record. Reachable from CI at time of writing (HTTP 200); if it ever
-  starts failing the step logs a warning and continues, and the operator
-  captures it manually.
+**For durable retention, move the upload to an S3/R2 bucket.** The archive
+step already writes plain files into a dated folder, so only the upload
+target changes. This is the single highest-value follow-up in this doc: at
+90 days, an upstream file that disappears and isn't noticed within a
+quarter is gone.
 
-**If longer retention is needed** (artifacts expire at 730 days), move the
-uploads to an S3/R2 bucket — the archive step already writes plain files to
-a dated folder, so only the upload target changes.
+Archived per month (verified on run 30729033579, 2026-08-02):
+
+| File | Source | Size |
+| --- | --- | --- |
+| `zip_code_market_tracker.tsv000.gz` | Redfin | 1.5 GB |
+| `RDC_Inventory_Core_Metrics_Zip.csv` | Realtor.com | 7.1 MB |
+| `PMMS_history.csv` | Freddie Mac | 95 KB |
+| `redfin-data-center.html` | terms page | *see below* |
+
+⚠️ **The terms-page capture does not work from CI.** Redfin rate-limits
+datacenter IPs: a HEAD request returns 200, but the GET body is a bot wall
+("Are You a Robot?", HTTP 429, ~1.9 KB) containing none of the citation
+terms. The step now checks the *content* and deletes the file if it's a
+block page, so a saved bot wall can never masquerade as a compliance
+record — it logs a warning instead. **The capture is therefore an operator
+task, below.**
 
 ### Operator task — not automated
 
