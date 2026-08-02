@@ -123,6 +123,25 @@ def fastest_month(h):
     return MONTHS[min(cand, key=lambda t: t[1])[0]] if cand else None
 
 
+def pretty_month(period):
+    return f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
+
+
+def card_stat(m):
+    """ONE public market stat for the share card. Public feed values only —
+    never a personal input (see og_card.py's privacy note)."""
+    spy, dom = m.get("spy"), m.get("dom")
+    if spy is not None and spy <= -0.02:
+        return f"Prices are down {abs(spy)*100:.1f}% from a year ago"
+    if spy is not None and spy >= 0.05:
+        return f"Prices are up {spy*100:.1f}% from a year ago"
+    if dom is not None:
+        return f"Homes here sell in {round(dom)} days"
+    if spy is not None:
+        return f"Prices are {'up' if spy >= 0 else 'down'} {abs(spy)*100:.1f}% from a year ago"
+    return "See the four signals for this ZIP"
+
+
 def percentile(spy, deciles):
     if not deciles or len(deciles) != 11 or spy is None:
         return None
@@ -203,13 +222,14 @@ FOOTER = """<footer>
 </footer>"""
 
 
-def zip_page(z, e, place, meta, neighbours):
+def zip_page(z, e, place, meta, neighbours, has_card=False):
     city, st, _ = place
     k = KINDS[e["l"]]; m = e.get("m", {}); strong = e["l"] == "strong"
     period = meta.get("period", "")
     pretty_period = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
     updated = meta.get("generated", date.today().isoformat())
     state_name = STATE_NAMES.get(st, st)
+    stat = card_stat(m)
 
     rows = "".join(
         f'<div class="metric"><span class="name">{esc(n)}</span>'
@@ -240,6 +260,13 @@ def zip_page(z, e, place, meta, neighbours):
         facts.append(f"Prices here are rising faster than about <b>{p}%</b> of U.S. ZIP codes — {pack}.")
     facts_html = "".join(f"<li>{s}</li>" for s in facts)
 
+    # Share card: per-ZIP where we render one, generic brand card otherwise.
+    # The data month is in the path so a new month is a NEW url — that is the
+    # cache-busting strategy: scrapers key on the image url, so cards refresh
+    # exactly when the data does and never go stale behind a CDN.
+    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card else f"{SITE}/og/default.png")
+    og_title = f"Should I sell in {city}? {z} says {k['tag']}"
+    og_alt = f"{k['tag']} — {z}, {city}, {st}. {stat}"
     title = f"Should I Sell My House in {city}, {st}? — {z} Verdict ({pretty_period})"
     desc = (f"{k['tag']} — {city}, {st} ({z}). "
             + (f"Prices {pct(m['spy'])} vs. a year ago; " if m.get("spy") is not None else "")
@@ -271,8 +298,13 @@ def zip_page(z, e, place, meta, neighbours):
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{url}">
-<meta property="og:type" content="article"><meta property="og:title" content="{esc(title)}">
+<meta property="og:type" content="article"><meta property="og:title" content="{esc(og_title)}">
 <meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{url}">
+<meta property="og:site_name" content="ShouldISellYet"><meta property="og:image" content="{og_img}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{esc(og_alt)}">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(og_title)}">
+<meta name="twitter:description" content="{esc(desc)}"><meta name="twitter:image" content="{og_img}">
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <script type="application/ld+json">{ld}</script>
@@ -413,6 +445,9 @@ def main():
     ap.add_argument("--web", default=str(ROOT / "web"))
     ap.add_argument("--limit", type=int, default=0, help="cap pages (smoke tests)")
     ap.add_argument("--only", default="", help="comma-separated ZIPs (smoke tests)")
+    ap.add_argument("--top-cards", type=int, default=2500,
+                    help="share cards for the top N ZIPs by homes sold, plus all DMV")
+    ap.add_argument("--no-cards", action="store_true", help="skip card rendering")
     args = ap.parse_args()
     web = Path(args.web)
     data = web / "data"
@@ -451,12 +486,48 @@ def main():
         by_prefix[z[:3]].append(z)
     lookup = dict(eligible)
 
+    # ——— share cards ———
+    # Rendering all 18.5k costs ~6.5 min and 238MB on EVERY deploy (measured),
+    # which is untenable for a step that also runs on a one-line copy fix. So a
+    # bounded set gets a real card and everyone else gets the brand card — the
+    # brief's fallback, chosen because this host has no serverless runtime for
+    # a dynamic /api/og endpoint (GitHub Pages, static only).
+    # The set: every DMV ZIP (our home market) + the top N by homes sold, which
+    # concentrates cards where real selling activity — and so real sharing — is.
+    dmv = {z for z, e in eligible if places[z][1] in ("DC", "MD", "VA")}
+    top = {z for z, _ in sorted(eligible, key=lambda t: -(t[1].get("m", {}).get("sold") or 0))[:args.top_cards]}
+    card_set = dmv | top
+    period = meta.get("period", "")
+    og_dir = web / "og"
+    cards_made = 0
+    if not args.no_cards:
+        try:
+            from og_card import render_card
+        except ImportError as exc:
+            print(f"WARNING: Pillow missing ({exc}) — skipping cards, pages fall back to the brand card")
+            card_set = set()
+        else:
+            if og_dir.exists():
+                shutil.rmtree(og_dir)      # drop stale data-month dirs
+            (og_dir / period).mkdir(parents=True, exist_ok=True)
+            render_card("", "", "", "green", "Is your ZIP's market turning?", " ",
+                        og_dir / "default.png")     # generic brand card
+            for z, e in eligible:
+                if z not in card_set:
+                    continue
+                city, st, _ = places[z]
+                render_card(z, city, st, e["l"], card_stat(e.get("m", {})),
+                            pretty_month(period), og_dir / period / f"{z}.png")
+                cards_made += 1
+    else:
+        card_set = set()
+
     by_state, total_bytes, biggest = defaultdict(list), 0, 0
     for z, e in eligible:
         city, st, county = places[z]
         sibs = [s for s in by_prefix[z[:3]] if s != z][:6]
         nb = [(s, places[s][0]) for s in sibs]
-        page = zip_page(z, e, places[z], meta, nb)
+        page = zip_page(z, e, places[z], meta, nb, has_card=(z in card_set))
         d = stage / z
         d.mkdir(parents=True, exist_ok=True)
         (d / "index.html").write_text(page, encoding="utf-8")
@@ -485,6 +556,10 @@ def main():
     print(f"skipped: {dict(skipped)}")
     print(f"html: {total_bytes/1e6:.1f} MB total · avg {total_bytes/max(1,len(eligible))/1024:.1f} KB · largest {biggest/1024:.1f} KB")
     print(f"sitemap: index + {chunks} chunk(s), {len(urls):,} URLs, lastmod {lastmod}")
+    if cards_made:
+        cb = sum(f.stat().st_size for f in og_dir.rglob("*.png"))
+        print(f"og cards: {cards_made:,} rendered ({len(dmv):,} DMV + top {args.top_cards:,}) "
+              f"· {cb/1e6:.0f} MB · /og/{period}/ · {len(eligible)-cards_made:,} ZIPs use the brand card")
 
 
 if __name__ == "__main__":
