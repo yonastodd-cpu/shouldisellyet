@@ -123,6 +123,65 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python pipeline/check_watches.py --data web/data
+      # Digest failure must never fail the refresh: the site data is already
+      # good at this point and a broken marketing email is not worth losing a
+      # deploy over. continue-on-error plus an explicit fallback notice.
+      - name: Growth Ops digest
+        id: digest
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+        run: python3 pipeline/growth_digest.py
+
+      - name: Notify if the digest failed (refresh itself is fine)
+        if: steps.check.outputs.changed == 'true' && steps.digest.outcome == 'failure'
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          key = os.environ.get("RESEND_API_KEY", "")
+          to = [x.strip() for x in os.environ.get("OPS_DIGEST_RECIPIENTS", "").split(",") if x.strip()] \
+               or ["naomi@shouldisellyet.com"]
+          if not key:
+              raise SystemExit("no RESEND_API_KEY — cannot send the fallback notice")
+          html = ("<p><b>Data refresh succeeded; the Growth Ops digest failed.</b></p>"
+                  "<p>The site data and deploy are fine — only the digest email did not "
+                  f"generate. Run log: <a href=\"{os.environ['RUN_URL']}\">{os.environ['RUN_URL']}</a></p>")
+          req = urllib.request.Request(
+              "https://api.resend.com/emails",
+              data=json.dumps({"from": os.environ.get("ALERT_FROM",
+                                                      "EquityWatch <alerts@shouldisellyet.com>"),
+                               "to": to, "subject": "Refresh OK — Growth Ops digest failed",
+                               "html": html}).encode(),
+              method="POST",
+              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+          urllib.request.urlopen(req, timeout=30).read()
+          print("fallback notice sent")
+          PY
+
+      - name: Commit verdict snapshot
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          git config user.name "sisy-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add pipeline/snapshots || true
+          git diff --cached --quiet && { echo "no snapshot change"; exit 0; }
+          git commit -m "Verdict snapshot $(date +%Y-%m)"
+          for i in 1 2 3; do
+            git push && exit 0
+            git pull --rebase --autostash origin main || true
+          done
+          echo "::warning::snapshot push failed — next digest falls back to baseline"
+
       - name: Run tests
         if: steps.check.outputs.changed == 'true'
         run: |

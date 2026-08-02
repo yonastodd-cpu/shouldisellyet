@@ -1,0 +1,22 @@
+name: Rate watch (weekly — emails only on a big move)
+
+on:
+  schedule:
+    - cron: "0 14 * * 5"   # Fridays 14:00 UTC, after Freddie Mac's Thursday PMMS release
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Silence is the expected outcome. This only emails when the 30-year rate
+      # has moved >= 0.25 points since the last monthly digest's stamp.
+      - name: Check the rate
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+        run: python3 pipeline/rate_watch.py
