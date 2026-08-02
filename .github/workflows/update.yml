@@ -77,23 +77,31 @@ jobs:
             echo "::warning::PMMS archive fetch failed"
 
           # Compliance record: the terms page as published this month.
-          # If this 403s from CI, the operator captures it manually
-          # (archive.org + dated screenshot — see docs/ATTRIBUTION.md).
+          # Redfin rate-limits datacenter-agent traffic — a HEAD returns 200 but
+          # the GET body is a bot wall ("Are You a Robot?", HTTP 429). Verified
+          # 2026-08-02. So check CONTENT, not just that a file landed: a saved
+          # block page is worse than no file, because it looks like a record.
           curl -sSL --retry 2 -o "$DIR/redfin-data-center.html" \
-            "https://www.redfin.com/news/data-center/" || \
-            echo "::warning::TODO terms-page capture blocked from CI — capture manually"
-          if [ ! -s "$DIR/redfin-data-center.html" ]; then
-            echo "::warning::TODO terms-page capture empty — capture manually"
+            "https://www.redfin.com/news/data-center/" || true
+          if grep -qi "national real estate brokerage\|data center" "$DIR/redfin-data-center.html" 2>/dev/null; then
+            echo "terms page captured ($(wc -c < "$DIR/redfin-data-center.html") bytes)"
+          else
+            rm -f "$DIR/redfin-data-center.html"
+            echo "::warning::TODO terms-page capture blocked by Redfin bot protection — \
+          operator must capture manually (archive.org + dated screenshot, see docs/ATTRIBUTION.md)"
           fi
           ls -lh "$DIR"
 
-      - name: Upload raw-source archive (2-year retention)
+      - name: Upload raw-source archive (90-day retention)
         if: steps.check.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: raw-sources-${{ steps.archive.outputs.month }}
           path: ${{ steps.archive.outputs.dir }}
-          retention-days: 730
+          # 90 is the hard cap for public repos — GitHub silently reduces
+          # anything larger. Longer retention needs an external bucket;
+          # see docs/DATA.md.
+          retention-days: 90
           compression-level: 0   # inputs are already compressed
 
       - name: Run pipeline (all states)
