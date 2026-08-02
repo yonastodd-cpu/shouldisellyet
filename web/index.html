@@ -33,17 +33,22 @@
      lightest tone allowed to carry words. */
   --faint-ink:#6b6558;
 
-  /* Homepage type scale. rem-based, so it still tracks the reader's browser
-     font-size setting; nothing here changes the root font-size. */
-  --fs-body:1.25rem;                    /* 20 — base body copy */
-  --fs-body-sm:1.125rem;                /* 18 — the brief's floor, for denser copy */
-  --fs-ui:1.0625rem;                    /* 17 — buttons and inputs; ≥16 avoids iOS zoom-on-focus */
-  --fs-meta:1rem;                       /* 16 — nav, fine print, footer */
-  --fs-micro:.8125rem;                  /* 13 — mono eyebrows, stamps, legends */
-  --fs-h1:clamp(2rem,4.6vw,3.5rem);     /* 32 → 56 */
-  --fs-h2:clamp(1.75rem,2.8vw,2.25rem); /* 28 → 36 */
-  --fs-h3:1.375rem;                     /* 22 */
-  --fs-verdict:clamp(2.25rem,5.5vw,3.25rem); /* 36 → 52 — the payoff, largest thing in the block */
+  /* Homepage type scale, set at 90% of the original pass (the whole page had
+     been pushed too large). rem-based, so it still tracks the reader's browser
+     font-size setting; nothing here changes the root font-size.
+     Comments show the 100% value → the 90% value now in effect. */
+  --fs-body:1.125rem;                   /* 20 → 18 — base body copy */
+  --fs-body-sm:1rem;                    /* 18 → 16 — denser copy */
+  --fs-ui:.9375rem;                     /* 17 → 15 — button text (see --fs-input) */
+  --fs-meta:.9375rem;                   /* 16 → 15 — nav, fine print, footer */
+  --fs-micro:.75rem;                    /* 13 → 12 — mono eyebrows, stamps, legends */
+  --fs-h1:clamp(1.8rem,4.14vw,3.15rem);      /* 32→29 … 56→50 */
+  --fs-h2:clamp(1.575rem,2.52vw,2.025rem);   /* 28→25 … 36→32 */
+  --fs-h3:1.25rem;                      /* 22 → 20 */
+  --fs-verdict:clamp(2.025rem,4.95vw,2.925rem); /* 36→32 … 52→47 — still the payoff */
+  /* NOT scaled: form fields hold at 16px. Below that, iOS Safari zooms the
+     page on focus — a functional regression, not a style choice. */
+  --fs-input:1rem;
   --lh-body:1.6;
 }
 *{box-sizing:border-box}
@@ -75,7 +80,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h1);line-he
 h1 em{font-style:italic;color:var(--navy)}
 .sub{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);margin:0;max-width:52ch}
 .zipform{display:flex;gap:10px;max-width:540px}
-.zipform input{flex:1;font-size:1.25rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;padding:14px 18px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;color:var(--ink)}
+.zipform input{flex:1;font-size:var(--fs-input);font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;padding:14px 18px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;color:var(--ink)}
 .zipform .btn{min-height:56px;padding-left:26px;padding-right:26px;white-space:nowrap}
 .fineprint{font-size:var(--fs-meta);line-height:1.55;color:var(--muted)}
 .card{border:1px solid var(--hairline);border-radius:10px;background:#fff}
@@ -154,7 +159,7 @@ h1 em{font-style:italic;color:var(--navy)}
 .waitcard .t{font-family:'Newsreader',serif;font-size:var(--fs-h3);font-weight:600;margin-bottom:6px}
 .waitcard p{font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);margin:0 0 14px}
 .waitcard form{display:flex;gap:10px;flex-wrap:wrap}
-.waitcard input{flex:1;min-width:220px;font-size:var(--fs-ui);padding:13px 15px;border:1.5px solid #d7d0c2;border-radius:7px;font-family:inherit}
+.waitcard input{flex:1;min-width:220px;font-size:var(--fs-input);padding:13px 15px;border:1.5px solid #d7d0c2;border-radius:7px;font-family:inherit}
 .waitcard .ok{display:none;font-size:var(--fs-body-sm);font-weight:600;color:var(--green-ink)}
 
 .mapcard{border:none;border-radius:0;background:transparent;overflow:visible;min-width:0}
