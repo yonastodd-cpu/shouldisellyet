@@ -817,6 +817,15 @@ $("share-btn").addEventListener("click", () => {
 });
 
 $("go").addEventListener("click", run);
+
+// Deep link from the generated /zip/{zip}/ pages: prefill and run immediately,
+// so "Check this ZIP live" lands on the answer rather than an empty form.
+(function prefillFromQuery(){
+  const z = (new URLSearchParams(location.search).get("zip") || "").replace(/\D/g, "").slice(0, 5);
+  if (!/^\d{5}$/.test(z)) return;
+  $("zip").value = z;
+  run();
+})();
 $("zip").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
 $("zip").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 5); });
 

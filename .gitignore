@@ -11,3 +11,10 @@ archive/
 # Machine-specific, and the CLI also caches credentials here on some flows —
 # never commit it.
 supabase/.temp/
+
+# Generated at deploy time by pipeline/build_pages.py from committed web/data.
+# ~18.6k pages / 147MB — never committed (9.8MB gzipped in the Pages artifact).
+web/zip/
+web/sitemaps/
+web/sitemap.xml
+web/robots.txt

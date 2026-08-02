@@ -47,7 +47,7 @@ jobs:
           fi
 
       - uses: actions/setup-python@v5
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.deploy == 'true'
         with:
           python-version: "3.12"
 
@@ -147,6 +147,15 @@ jobs:
             sleep $((RANDOM % 5 + 2))
           done
           echo "::error::could not push data refresh after 5 attempts"; exit 1
+
+      # Must run on every deploy, not just data refreshes: the Pages artifact is
+      # the whole of web/, and these pages aren't committed. Building only on
+      # refresh would make a site-only push deploy a web/ with no zip/ —
+      # silently removing ~18.6k live URLs. Reads committed web/data only, so
+      # it needs no download and takes ~4s.
+      - name: Build ZIP pages, hubs and sitemaps
+        if: steps.check.outputs.deploy == 'true'
+        run: python3 pipeline/build_pages.py
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'
