@@ -4,458 +4,630 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EquityWatch Report — Sample | ShouldISellYet</title>
-<meta name="description" content="A sample EquityWatch property report: your home's warning level, equity position, and net-proceeds breakdown — in one infographic.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%23101828'/><circle cx='50' cy='26' r='11' fill='%23e03e36'/><circle cx='50' cy='50' r='11' fill='%23e8a317'/><circle cx='50' cy='74' r='11' fill='%2312a150'/></svg>">
+<meta name="description" content="A sample EquityWatch property report: the four market dials with their full methodology, your equity and walk-away number, lock-in cost, rate context, stress test, and what it all means.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <style>
-  :root{
-    --ink:#1c2430; --ink-2:#3a4450; --muted:#5c6673;
-    --paper:#faf8f4; --card:#fff; --line:#e7e2d8;
-    --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
-    --accent:#1f3a5f; --accent-ink:#172d4b; --navy:#1f3a5f;
-    --shadow-md:0 6px 16px -4px rgba(16,24,40,.10);
-    --shadow-lg:0 24px 48px -12px rgba(16,24,40,.16);
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
-  .serif{font-family:'Newsreader',serif}
-  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
 
-  .topbar{background:var(--navy);color:#fff;font-size:13px;font-weight:600;text-align:center;padding:9px 16px}
-  .topbar a{color:#bcd2ec}
+:root{
+  --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
+  --hairline:#e7e2d8; --hairline2:#f0ebe0; --navy:#1f3a5f; --navy-dark:#172d4b; --gold:#8a7a55; --track:#efe9dc;
+  --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
+  --green-soft:#e9f4ee; --amber-soft:#faf1dd; --red-soft:#fbe9e9;
+  --green-line:#bcdcc9; --amber-line:#e8d5a8; --red-line:#ecc3c3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+a{color:var(--navy);text-decoration:none}
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:'Newsreader',serif}
+input:focus{outline:none;border-color:var(--navy)!important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px 60px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline);max-width:860px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px}
+.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
+.btn{display:inline-block;background:var(--navy);color:#faf8f4!important;padding:10px 18px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:14.5px;font-family:inherit}
+.btn:hover{background:var(--navy-dark)}
+.btn-outline{background:none;border:1.5px solid var(--navy);color:var(--navy)!important;border-radius:6px;padding:10px 18px;font-weight:600;cursor:pointer;font-size:14.5px;font-family:inherit}
+.paidband{display:none;background:var(--green-soft);border:1px solid var(--green-line);color:#1e6b3f;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:600;margin:20px 0 0}
+.card{border:1px solid var(--hairline);border-radius:12px;background:#fff}
+.setup{padding:26px;margin-top:24px}
+.setup h1{font-family:'Newsreader',serif;font-weight:500;font-size:30px;margin:0 0 6px}
+.setup .lede{font-size:14.5px;color:var(--muted);margin:0 0 20px;line-height:1.6}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.f label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
+.f input{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit}
+.f .hint{font-size:11.5px;color:var(--fainter);margin-top:5px}
+details#adv{border:1px dashed var(--hairline);border-radius:10px;padding:12px 16px;margin-top:4px}
+details#adv summary{font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
+details#adv[open] summary{margin-bottom:4px}
+.report{display:none;animation:fadeUp .35s ease;margin-top:26px}
+.r-head{display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:12px 12px 0 0;flex-wrap:wrap}
+.v-dot{width:14px;height:14px;border-radius:50%;flex:none}
+.v-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.16em}
+.v-title{font-family:'Newsreader',serif;font-size:21px;font-weight:600}
+.r-addr{width:100%;font-size:13px;color:var(--muted)}
+.sec{padding:22px 24px;border-top:1px solid var(--hairline2);scroll-margin-top:52px}
+.sec .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:6px}
+/* Big display numeral — assigned at render time (sections come and go, so
+   numbering is computed, never hardcoded; anchors stay semantic). Structures
+   the page without shouting: the title stays the strongest text. */
+.secnum{font-family:'Newsreader',serif;font-size:3.25rem;line-height:.9;font-weight:500;color:var(--gold);opacity:.26;margin:2px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+/* Sticky jump-nav mirroring the rendered section order */
+.jumpnav{position:sticky;top:0;z-index:6;display:flex;gap:16px;overflow-x:auto;white-space:nowrap;
+  padding:11px 24px;background:rgba(250,248,244,.95);backdrop-filter:blur(5px);
+  border-bottom:1px solid var(--hairline);font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;scrollbar-width:none}
+.jumpnav::-webkit-scrollbar{display:none}
+.jumpnav a{color:var(--muted);flex:none}
+.jumpnav a b{color:var(--gold);font-weight:600;margin-right:4px}
+.jumpnav a:hover{color:var(--ink)}
+.sec .title{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 3px}
+.sec .subt{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 16px!important}
+.gauge-legend{display:flex;gap:18px;font-size:11px;color:var(--fainter);margin-top:10px;font-family:'IBM Plex Mono',monospace}
+.gauge-legend i.dotk{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--navy);margin-right:5px;vertical-align:-1px}
+.gauge-legend i.thk{display:inline-block;width:2px;height:11px;background:#9a9384;margin-right:6px;vertical-align:-2px}
+.strow{display:grid;grid-template-columns:1.7fr 1fr 1fr 1.1fr;gap:8px;padding:11px 16px;font-size:13.5px;border-bottom:1px solid var(--hairline2);background:#fff;align-items:baseline}
+.strow.head{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--faint);background:#faf9f5}
+.strow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.strow .net{font-weight:700;color:var(--navy)}
+.strow.today{background:#f4f7fb}
+.strow.stress .net{color:var(--red)}
+@media(max-width:640px){ .strow{grid-template-columns:1.4fr 1fr 1.1fr} .strow span:nth-child(3){display:none} .strow.head span:nth-child(3){display:none} }
+.sec p{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
+.metric{display:grid;grid-template-columns:180px 70px 1fr 110px;gap:12px;align-items:center}
+.metric-block{margin-bottom:12px}
+.dials-intro{font-size:13.5px;color:var(--muted);margin:0 0 14px!important}
+/* independent listing-feed cross-check strip (Realtor.com) */
+.xcheck{margin-top:14px;border:1px solid var(--hairline);border-radius:10px;padding:14px 17px;background:#fbfaf6;font-size:13px;line-height:1.6;color:var(--muted)}
+.xcheck .xk{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
+.xcheck b{color:#3a4450}
+.xcheck .agree{color:var(--green);font-weight:650}
+.xcheck .differ{color:var(--amber);font-weight:650}
+/* per-dial methodology disclosure — collapsed by default, quiet when open */
+details.how{margin:4px 0 0 0;padding-left:0}
+details.how summary{font-size:12px;color:var(--faint);cursor:pointer;list-style:none;display:inline-block;text-decoration:underline dotted;text-underline-offset:3px}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary::before{content:"+ "}
+details.how[open] summary::before{content:"− "}
+details.how .how-body{margin:8px 0 10px;padding:12px 14px;border-left:2px solid var(--hairline);font-size:13px;line-height:1.6;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+details.how .how-body b{color:#3a4450}
+.metric .name{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
+.metric .val{font-size:14px;font-weight:650}
+.metric .track{height:6px;border-radius:3px;background:var(--track);position:relative}
+.metric .fill{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.metric .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#9a9384;border-radius:1px}
+.metric .note{font-size:11px;color:var(--fainter)}
+.eqgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.eqcard{border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7)}
+.eqcard .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)}
+.eqcard .big{font-family:'Newsreader',serif;font-size:30px;font-weight:600;margin:4px 0 2px}
+.eqcard .sub2{font-size:12.5px;color:var(--muted)}
+.eqbar{height:12px;border-radius:6px;background:var(--track);overflow:hidden;display:flex;margin-top:12px}
+.eqbar .loan{background:#cfc8b8;height:100%}
+.eqbar .eq{background:var(--navy);height:100%}
+.eqlegend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+/* watch toggle — sits in the left margin of a watchable number, params reveal underneath */
+.watchable{display:grid;grid-template-columns:50px 1fr;gap:16px;align-items:start}
+.watch-rail{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:3px}
+.watch-switch-label{position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;flex:none}
+.watch-switch-label input{opacity:0;width:0;height:0;position:absolute}
+.watch-switch-track{position:absolute;inset:0;background:#d7d0c2;border-radius:999px;transition:background .18s}
+.watch-switch-track::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.28)}
+.watch-switch-label input:checked + .watch-switch-track{background:var(--navy)}
+.watch-switch-label input:checked + .watch-switch-track::before{transform:translateX(16px)}
+.watch-switch-label input:disabled + .watch-switch-track{opacity:.45;cursor:not-allowed}
+.watch-switch-label input:disabled{cursor:not-allowed}
+.watch-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.07em;color:var(--faint);text-align:center;line-height:1.35;max-width:52px}
+.watch-panel{margin-top:14px;padding:15px 17px;border:1px solid var(--hairline);border-radius:10px;background:#fbf9f5}
+.watch-panel .locked-msg{font-size:13px;color:var(--muted);line-height:1.55}
+.watch-panel .locked-msg a{font-weight:600;text-decoration:underline}
+@media(max-width:640px){
+  .watchable{grid-template-columns:1fr}
+  .watch-rail{flex-direction:row;padding-top:0;margin-bottom:10px;justify-content:flex-start}
+  .watch-tag{max-width:none;text-align:left}
+}
+.eqlegend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.prtable{border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.prrow{display:flex;justify-content:space-between;padding:11px 18px;font-size:14px;border-bottom:1px solid var(--hairline2);background:#fff}
+.prrow.minus span:last-child{color:var(--red)}
+.prrow.total{background:#f4f7fb;border:none}
+.prrow.total span:first-child{font-weight:700}
+.prrow.total span:last-child{font-family:'Newsreader',serif;font-size:21px;font-weight:600;color:var(--navy)}
+.prrow span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.prnote{font-size:11.5px;color:var(--fainter);margin-top:8px}
+.say{border-left:3px solid var(--navy);background:#f4f6fa;border-radius:0 10px 10px 0;padding:16px 20px;font-size:14px;line-height:1.6;color:#3a4450}
+/* locked-card: a personal section whose input is missing. Visible, reduced,
+   honest — states what it answers and asks for exactly one input. Never
+   renders placeholder numbers. */
+.locked-card{border:1.5px dashed #d7d0c2;border-radius:10px;padding:18px 20px;background:#fbfaf6}
+.locked-card p{margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--muted)}
+.locked-card .lc-priv{color:var(--fainter);font-size:12.5px}
+.locked-card .lc-priv a{text-decoration:underline;color:inherit}
+.locked-card .lc-row{display:flex;gap:10px;align-items:flex-end;max-width:420px}
+.locked-card .lc-row .f{flex:1}
+.locked-card .btn{flex:none}
+.strow.slim{grid-template-columns:1.7fr 1fr}
+/* "More answers" optional-analysis cards */
+.moregrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mcard{border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7);display:flex;flex-direction:column;gap:10px}
+.mcard .mt{font-weight:700;font-size:15px}
+.mcard p{font-size:13.5px}
+.mcard .big2{font-family:'Newsreader',serif;font-size:24px;font-weight:600}
+.mcard .locked-card{border:none;background:none;padding:0}
+.mcard-watch{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px}
+.mcard-watch .watch-tag{max-width:none}
+@media(max-width:640px){ .moregrid{grid-template-columns:1fr} }
+@media(max-width:640px){ .strow.slim{grid-template-columns:1.4fr 1fr} .locked-card .lc-row{flex-direction:column;align-items:stretch} }
+.partner{display:none;gap:24px;align-items:flex-start;border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
+.partner .pframe{flex:none;background:#fff;padding:6px;border:1px solid var(--hairline);border-radius:10px;box-shadow:0 12px 26px -14px rgba(31,42,63,.4)}
+.partner img{width:112px;height:139px;border-radius:6px;object-fit:cover;display:block}
+.partner .p-name{font-family:'Newsreader',serif;font-size:23px;font-weight:600;line-height:1.2}
+.partner .p-name small{font-family:system-ui;font-weight:400;font-size:13px;color:var(--faint);display:block;margin-top:3px}
+.partner .p-blurb{font-size:14.5px;line-height:1.65;color:#3a4450;margin:10px 0 14px;max-width:52ch}
+.partner .p-ctas{display:flex;gap:10px;flex-wrap:wrap}
+.partner .p-ctas a{font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:8px}
+@media(max-width:640px){ .partner{flex-direction:column;align-items:center;text-align:center} .partner .p-ctas{justify-content:center} }
+/* Get Connected — neutral card + request modal (no agent identity on page) */
+.connect-card{border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
+.connect-card h3{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 8px}
+.connect-card p{margin:0 0 16px;max-width:60ch}
+.modal-veil{position:fixed;inset:0;background:rgba(28,36,48,.45);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:26px;box-shadow:0 24px 60px -20px rgba(16,24,40,.45)}
+.modal h3{font-family:'Newsreader',serif;font-size:22px;font-weight:600;margin:0 0 4px}
+.modal .sub{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.55}
+.modal .mrow{display:flex;gap:10px;justify-content:flex-end}
+@media print{ .connect-card,.modal-veil{display:none!important} }
+.stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fainter);letter-spacing:.05em;padding:16px 24px;border-top:1px solid var(--hairline2);line-height:1.6}
+.actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.err{display:none;color:var(--red);font-size:13.5px;font-weight:600;margin-top:10px}
+.callouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.co{border:1px solid var(--hairline);border-radius:10px;padding:12px 14px;background:linear-gradient(180deg,#fff,#fcfbf7)}
+.co .cv{font-family:'Newsreader',serif;font-size:22px;font-weight:600}
+.co .cl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--faint);margin-top:2px}
+.ctxgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ctx{border:1px solid var(--hairline);border-radius:10px;padding:16px 18px;background:#fff}
+.ctx .ch{font-size:13.5px;font-weight:700;margin-bottom:5px}
+.ctx p{font-size:13px!important;line-height:1.55}
+@media(max-width:640px){ .ctxgrid{grid-template-columns:1fr} }
+.gate{margin-top:40px;padding:44px 32px;text-align:center}
+.gate .lock{font-size:34px;margin-bottom:8px}
+.gate h1{font-family:'Newsreader',serif;font-weight:500;font-size:30px;margin:0 0 8px}
+.gate .lede{font-size:14.5px;color:var(--muted);line-height:1.6;max-width:52ch;margin:0 auto 22px}
+.gate-ctas{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.gate-ctas a{text-decoration:none}
+.gate .back-link{display:inline-block;margin-top:20px;font-size:13px;color:var(--faint)}
+@media(max-width:640px){ .gate-ctas{flex-direction:column} .gate-ctas a{width:100%;text-align:center} }
+@media(max-width:640px){
+  .frow{grid-template-columns:1fr}
+  .eqgrid{grid-template-columns:1fr}
+  .metric{grid-template-columns:130px 58px 1fr;gap:8px}
+  .metric .note{display:none}
+}
+@media print{
+  nav,.setup,.actions,.paidband,#site-foot,.jumpnav{display:none!important}
+  body{background:#fff}
+  .report{margin-top:0}
+  .card{border-color:#ddd}
+}
 
-  nav{background:#fff;border-bottom:1px solid var(--line)}
-  .nav-in{max-width:860px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;color:var(--ink);text-decoration:none}
-  .sample-pill{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);border:1.5px solid var(--amber);padding:4px 12px;border-radius:999px}
-
-  .report{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow-lg);margin:34px auto 26px;overflow:hidden}
-
-  /* Report header */
-  .r-head{background:linear-gradient(165deg,#182c47,var(--navy));color:#fff;padding:38px 40px 34px;position:relative}
-  .r-head .rh-label{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#bcd2ec;margin-bottom:10px}
-  .r-head h1{font-family:'Newsreader',serif;font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
-  .r-head .rh-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#94a8c0}
-  .r-head .lamp{position:absolute;right:38px;top:50%;transform:translateY(-50%)}
-  @media(max-width:640px){ .r-head .lamp{display:none} .r-head{padding:30px 24px} }
-
-  .r-body{padding:36px 40px 40px}
-  @media(max-width:640px){ .r-body{padding:26px 20px 30px} }
-
-  /* Alert-triggered band */
-  .alertband{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:linear-gradient(90deg,#fdf3dd,#fbecc9);border-bottom:1px solid #f1dfb7;padding:16px 40px}
-  @media(max-width:640px){ .alertband{padding:14px 20px} }
-  .alertband .ring{flex:none;width:38px;height:38px;border-radius:50%;background:#c8891f;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 5px rgba(232,163,23,.22);animation:ringpulse 2.2s infinite}
-  @keyframes ringpulse{50%{box-shadow:0 0 0 9px rgba(232,163,23,.10)}}
-  .alertband .at-copy{flex:1;min-width:240px;font-size:13.5px;color:#7a5a10;line-height:1.5}
-  .alertband .at-copy b{color:#5c430b}
-  .alertband .at-change{font-weight:800;white-space:nowrap;font-size:13px;color:#5c430b;background:#fff;border:1px solid #f1dfb7;padding:6px 12px;border-radius:999px}
-
-  .sec{margin-bottom:38px}
-  .sec-title{display:flex;align-items:center;gap:10px;font-family:'Newsreader',serif;font-size:20px;font-weight:700;margin-bottom:4px}
-  .sec-title .num{font-family:system-ui;font-size:12px;font-weight:800;color:var(--accent-ink);background:#eaf5f3;border:1px solid #d5eae6;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
-  .sec-sub{font-size:13.5px;color:var(--muted);margin-bottom:20px}
-
-  /* Verdict banner */
-  .v-banner{display:flex;align-items:center;gap:20px;background:linear-gradient(160deg,#fdf6e8,#fbf1da);border:1px solid #f1dfb7;border-radius:18px;padding:22px 26px;flex-wrap:wrap}
-  .v-word{font-family:'Newsreader',serif;font-size:44px;font-weight:900;color:var(--amber);line-height:1}
-  .v-copy{flex:1;min-width:220px;font-size:14.5px;color:var(--ink-2)}
-  .v-score{text-align:center}
-  .v-score .vs-num{font-family:'Newsreader',serif;font-size:30px;font-weight:900}
-  .v-score .vs-lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-
-  /* Equity blocks */
-  .eq-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:640px){ .eq-grid{grid-template-columns:1fr} }
-  .eq-card{border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8)}
-  .eq-card .label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .eq-card .big{font-family:'Newsreader',serif;font-size:34px;font-weight:900;letter-spacing:-.01em;margin:4px 0 2px}
-  .eq-card .delta{font-size:13px;font-weight:600}
-  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
-  .eq-bar{height:14px;border-radius:8px;background:#f1efe9;overflow:hidden;display:flex;margin-top:14px}
-  .eq-bar .seg-loan{background:#c9c5ba;height:100%}
-  .eq-bar .seg-equity{background:linear-gradient(90deg,var(--accent),#12a394);height:100%}
-  .eq-legend{display:flex;gap:16px;margin-top:9px;font-size:12px;color:var(--muted)}
-  .eq-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
-
-  /* watch toggle — left-margin control, illustrative on this sample page */
-  .watchable{display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:start}
-  .watch-rail{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
-  .watch-switch-label{position:relative;display:inline-block;width:38px;height:22px;flex:none}
-  .watch-switch-label input{opacity:0;width:0;height:0;position:absolute}
-  .watch-switch-track{position:absolute;inset:0;background:#d7d0c2;border-radius:999px;opacity:.6;cursor:not-allowed}
-  .watch-switch-track::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.28)}
-  .watch-tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.35;max-width:60px;text-transform:uppercase}
-  .watch-note{margin-top:14px;padding:14px 18px;border:1px dashed var(--line);border-radius:14px;background:#faf8f4;font-size:13px;color:var(--muted);line-height:1.55}
-  .watch-note a{font-weight:700;color:var(--accent-ink)}
-  @media(max-width:640px){
-    .watchable{grid-template-columns:1fr}
-    .watch-rail{flex-direction:row;padding-top:0;margin-bottom:10px;justify-content:flex-start}
-    .watch-tag{max-width:none;text-align:left}
-  }
-
-  /* Indicator dashboard */
-  .ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media(max-width:640px){ .ind-grid{grid-template-columns:1fr} }
-  .ind{border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px}
-  .ind .i-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
-  .ind .i-name{font-size:13.5px;font-weight:700}
-  .ind .i-val{font-family:'Newsreader',serif;font-size:22px;font-weight:900}
-  .ind .i-note{font-size:12.5px;color:var(--muted);margin-bottom:12px}
-  .meter{position:relative;height:8px;border-radius:6px;background:linear-gradient(90deg,#d9f2e3 0%,#fdeeca 62%,#f9d9d4 100%)}
-  .meter .pin{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(16,24,40,.35);transform:translateX(-8px)}
-  .meter .th{position:absolute;top:-3px;width:2px;height:14px;background:#a49d8d;border-radius:2px}
-  .meter-cap{display:flex;justify-content:space-between;font-size:10.5px;color:#a49d8d;margin-top:7px;letter-spacing:.02em}
-  .pin.g{background:var(--green)} .pin.a{background:var(--amber)} .pin.r{background:var(--red)}
-  .i-status{font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
-  .i-status.g{color:var(--green);background:#e7f6ed} .i-status.a{color:#b07f0e;background:#fdf3dd} .i-status.r{color:var(--red);background:#fdeae9}
-
-  /* Trend chart */
-  .chart-card{border:1px solid var(--line);border-radius:16px;padding:22px 24px}
-  .chart-card svg{width:100%;height:auto;display:block}
-
-  /* Proceeds */
-  .pr-table{border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  .pr-row{display:flex;justify-content:space-between;align-items:center;padding:13px 22px;font-size:14.5px;border-bottom:1px solid var(--line);background:#fff}
-  .pr-row.minus .amt{color:var(--red)}
-  .pr-row.total{background:linear-gradient(160deg,#f0faf7,#e8f5f1);border:none}
-  .pr-row.total .lbl{font-weight:800}
-  .pr-row.total .amt{font-family:'Newsreader',serif;font-size:24px;font-weight:900;color:var(--accent-ink)}
-  .pr-row .amt{font-weight:700;font-variant-numeric:tabular-nums}
-  .pr-note{font-size:12px;color:#a49d8d;margin-top:10px}
-
-  /* What now / partner */
-  .say{border-left:3px solid var(--accent);background:#f7fbfa;border-radius:0 14px 14px 0;padding:18px 22px;font-size:14.5px;color:var(--ink-2)}
-  .say b{color:var(--ink)}
-
-  .partner{display:flex;gap:18px;align-items:flex-start;border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:18px;background:linear-gradient(180deg,#fff,#faf8f4)}
-  .partner img{flex:none;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent),var(--shadow-md);background:var(--navy)}
-  .partner .p-name{font-family:'Newsreader',serif;font-size:18px;font-weight:700}
-  .partner .p-name small{font-family:system-ui;font-size:12.5px;font-weight:600;color:var(--muted)}
-  .partner .p-brok{font-size:13px;font-weight:600;color:var(--accent-ink)}
-  .partner p{font-size:13.5px;color:var(--ink-2);margin-top:8px}
-  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:12px;text-decoration:none;transition:.15s;border:none;cursor:pointer}
-  .btn.primary{background:linear-gradient(180deg,#11a292,var(--accent-ink));color:#fff;box-shadow:var(--shadow-md)}
-  .btn.primary:hover{transform:translateY(-1px)}
-  .btn.dark{background:linear-gradient(180deg,#1d2939,#1c2430);color:#fff}
-  .btn.dark:hover{transform:translateY(-1px)}
-  .btn.ghost{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
-  .btn.ghost:hover{border-color:var(--ink)}
-
-  /* Purchase band */
-  .buy{background:linear-gradient(165deg,#182c47,var(--navy));color:#fff;border-radius:22px;padding:40px 38px;text-align:center;margin:8px auto 40px;box-shadow:var(--shadow-lg)}
-  .buy h2{font-family:'Newsreader',serif;font-size:clamp(22px,3.5vw,30px);font-weight:700;margin-bottom:8px}
-  .buy p{color:#94a8c0;font-size:14.5px;max-width:520px;margin:0 auto 22px}
-  .buy .price{font-family:'Newsreader',serif;font-size:44px;font-weight:900;color:#bcd2ec}
-  .buy .price small{font-family:system-ui;font-size:13px;font-weight:600;color:#94a8c0}
-  .buy .btn-row{justify-content:center;margin-top:18px}
-
-  footer{padding:30px 0 56px;text-align:center;font-size:12px;color:#a49d8d}
-  footer .disc{max-width:660px;margin:0 auto;line-height:1.6}
-  .watermark{position:fixed;bottom:18px;right:18px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--amber);padding:6px 14px;border-radius:999px;box-shadow:var(--shadow-md);z-index:60}
-
-  /* ——— Mobile ——— */
-  @media(max-width:560px){
-    .wrap{padding:0 14px}
-    .btn-row{flex-direction:column}
-    .btn{width:100%;min-width:0;white-space:normal;line-height:1.35}
-    .buy{padding:30px 20px}
-    .buy .price{font-size:34px}
-    .buy .price small{display:inline-block}
-    .partner{flex-direction:column;align-items:center;text-align:center;padding:20px 16px}
-    .partner .btn-row{width:100%}
-    .v-banner{padding:18px 16px}
-    .v-word{font-size:36px}
-    .sec-title{font-size:18px}
-    .pr-row{padding:12px 14px;font-size:13.5px}
-    .pr-row.total .amt{font-size:20px}
-    .eq-card .big{font-size:28px}
-    .ind{padding:15px 14px}
-    .alertband .at-change{white-space:normal}
-    .nav-in{flex-wrap:wrap;gap:8px}
-  }
+/* ——— sample-page only ——— */
+.samplebar{background:#fbf8f1;border:1px solid #e6dcc3;border-radius:10px;padding:14px 18px;margin:20px 0 0;font-size:var(--fs-body-sm,1rem);line-height:1.55}
+.samplebar b{color:var(--ink)}
+.samplebar a{text-decoration:underline}
+.sec .k{margin-bottom:2px}
+.demo-note{font-size:.8125rem;color:var(--fainter);font-style:italic}
 </style>
 </head>
 <body>
-
-<div class="topbar">This is a <b>sample</b> EquityWatch report with illustrative numbers — <a href="index.html">get one for your home →</a></div>
 <nav>
-  <div class="nav-in">
-    <a class="brand" href="index.html">
-      <svg width="20" height="27" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="#1c2430"/><circle cx="50" cy="34" r="15" fill="#d64545"/><circle cx="50" cy="70" r="15" fill="#c8891f"/><circle cx="50" cy="106" r="15" fill="#2e9e5b"/></svg>
-      EquityWatch <span style="color:var(--muted);font-weight:600;font-size:13px">by ShouldISellYet</span>
-    </a>
-    <span class="sample-pill">Sample</span>
-  </div>
+  <a class="logo" href="index.html" style="text-decoration:none">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+  </a>
+  <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">SAMPLE REPORT</span>
 </nav>
 
 <div class="wrap">
-  <div class="report">
-    <div class="r-head">
-      <div class="rh-label">EquityWatch™ Property Report</div>
-      <h1>1234 Aspen Knolls Way<br>Silver Spring, MD 20906</h1>
-      <div class="rh-meta"><span>Report date: July 2026</span><span>Market data through: May 2026</span><span>Report #SAMPLE-0001</span></div>
-      <div class="lamp">
-        <svg width="58" height="80" viewBox="0 0 100 140"><rect x="18" y="4" width="64" height="132" rx="18" fill="rgba(255,255,255,.12)"/><circle cx="50" cy="34" r="15" fill="#3a4459"/><circle cx="50" cy="70" r="15" fill="#c8891f" style="filter:drop-shadow(0 0 12px #c8891faa)"/><circle cx="50" cy="106" r="15" fill="#3a4459"/></svg>
-      </div>
-    </div>
-
-    <div class="alertband">
-      <div class="ring">🔔</div>
-      <div class="at-copy"><b>Automated alert — July 14, 2026, 9:02 AM.</b> EquityWatch monitoring detected a change in 20906 and generated this report the same morning. This is what subscribers receive the moment their market moves — not weeks later.</div>
-      <div class="at-change">🟢 HOLD → 🟡 WATCH</div>
-    </div>
-    <div class="r-body">
-
-      <!-- 1. Verdict -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">1</span> What changed — and your new verdict</div>
-        <p class="sec-sub">Your ZIP was rated 🟢 HOLD for 9 months. On July 14, the year-over-year price signal crossed its danger line, tripping the verdict to 🟡 WATCH.</p>
-        <div class="v-banner">
-          <div class="v-word">WATCH</div>
-          <div class="v-copy"><b>Why the alert fired:</b> median prices in 20906 crossed from flat to –7.1% year-over-year in the latest data. As the sections below show, condo-mix effects overstate the decline — your home isn't losing value yet. But this is exactly the moment to know your numbers and have a plan, not six months from now.</div>
-          <div class="v-score"><div class="vs-num">3<span style="font-size:16px;color:var(--muted)">/8</span></div><div class="vs-lab">Warning score</div></div>
-        </div>
-      </div>
-
-      <!-- 2. Equity -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">2</span> Your equity position</div>
-        <p class="sec-sub">Estimated from your home's value trend and typical loan amortization. Connect your actual mortgage balance for precision.</p>
-        <div class="watchable">
-          <div class="watch-rail">
-            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
-            <span class="watch-tag">Watch</span>
-          </div>
-          <div>
-            <div class="eq-grid">
-              <div class="eq-card">
-                <div class="label">Estimated home value</div>
-                <div class="big">$412,000</div>
-                <div class="delta down">▾ $9,300 (–2.2%) vs. 12 months ago</div>
-              </div>
-              <div class="eq-card">
-                <div class="label">Estimated equity</div>
-                <div class="big" style="color:var(--accent-ink)">$144,000</div>
-                <div class="delta flat">Mortgage balance ≈ $268,000</div>
-                <div class="eq-bar"><div class="seg-loan" style="width:65%"></div><div class="seg-equity" style="width:35%"></div></div>
-                <div class="eq-legend"><span><i style="background:#c9c5ba"></i>Loan 65%</span><span><i style="background:var(--accent)"></i>Your equity 35%</span></div>
-              </div>
-            </div>
-            <div class="watch-note">🔒 <b>Get alerted</b> when your equity crosses a number you choose — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Value trend -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">3</span> 24-month value trend</div>
-        <p class="sec-sub">Your home's estimated value against the 20906 ZIP median.</p>
-        <div class="chart-card">
-          <svg viewBox="0 0 720 220" role="img" aria-label="Value trend chart">
-            <defs>
-              <linearGradient id="fillA" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#1f3a5f" stop-opacity=".18"/><stop offset="1" stop-color="#1f3a5f" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <g stroke="#e7e2d8" stroke-width="1">
-              <line x1="50" y1="30" x2="700" y2="30"/><line x1="50" y1="80" x2="700" y2="80"/>
-              <line x1="50" y1="130" x2="700" y2="130"/><line x1="50" y1="180" x2="700" y2="180"/>
-            </g>
-            <g font-family="Inter" font-size="11" fill="#a49d8d">
-              <text x="8" y="34">$430K</text><text x="8" y="84">$415K</text><text x="8" y="134">$400K</text><text x="8" y="184">$385K</text>
-              <text x="52" y="205">Jul '24</text><text x="215" y="205">Jan '25</text><text x="380" y="205">Jul '25</text><text x="545" y="205">Jan '26</text><text x="660" y="205">May '26</text>
-            </g>
-            <!-- ZIP median (muted) -->
-            <path d="M50,120 C120,112 180,104 250,100 C330,96 390,92 460,98 C540,104 620,118 700,128" fill="none" stroke="#c9c5ba" stroke-width="2.5" stroke-dasharray="5 5"/>
-            <!-- Your home -->
-            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101 L700,180 L50,180 Z" fill="url(#fillA)"/>
-            <path d="M50,96 C130,88 200,78 270,74 C350,70 420,66 490,72 C560,78 640,92 700,101" fill="none" stroke="#1f3a5f" stroke-width="3.5" stroke-linecap="round"/>
-            <circle cx="700" cy="101" r="6" fill="#1f3a5f" stroke="#fff" stroke-width="2.5"/>
-            <g font-family="Inter" font-size="11.5" font-weight="600">
-              <text x="500" y="52" fill="#172d4b">Your home (est.)</text>
-              <text x="560" y="150" fill="#a49d8d">ZIP 20906 median</text>
-            </g>
-          </svg>
-        </div>
-      </div>
-
-      <!-- 4. Indicators -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">4</span> The five warning indicators</div>
-        <p class="sec-sub">Each dot is your ZIP today. The tick mark is the danger threshold — trouble starts when dots cross ticks.</p>
-        <div class="ind-grid">
-          <div class="ind">
-            <div class="i-top"><span class="i-name">Months of supply</span><span class="i-val">2.8</span></div>
-            <div class="i-note">Danger line: 4.0 — sellers still hold the pricing power here.</div>
-            <div class="meter"><span class="th" style="left:62%"></span><span class="pin g" style="left:34%"></span></div>
-            <div class="meter-cap"><span>0</span><span>4.0 threshold</span><span>8+</span></div>
-            <div style="margin-top:10px"><span class="i-status g">HEALTHY</span></div>
-          </div>
-          <div class="ind">
-            <div class="i-top"><span class="i-name">Median price, year over year</span><span class="i-val" style="color:var(--red)">–7.1%</span></div>
-            <div class="i-note">Tripped — but see section 5: mostly condo-mix, not house-value decline.</div>
-            <div class="meter" style="background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)"><span class="th" style="left:38%"></span><span class="pin r" style="left:14%"></span></div>
-            <div class="meter-cap"><span>–10%</span><span>–2% threshold</span><span>+10%</span></div>
-            <div style="margin-top:10px"><span class="i-status r">TRIPPED</span></div>
-          </div>
-          <div class="ind">
-            <div class="i-top"><span class="i-name">Price per square foot, YoY</span><span class="i-val" style="color:var(--green)">+8.6%</span></div>
-            <div class="i-note">What buyers pay for the home itself — still rising in 20906.</div>
-            <div class="meter" style="background:linear-gradient(90deg,#f9d9d4 0%,#fdeeca 40%,#d9f2e3 100%)"><span class="th" style="left:38%"></span><span class="pin g" style="left:84%"></span></div>
-            <div class="meter-cap"><span>–10%</span><span>0%</span><span>+10%</span></div>
-            <div style="margin-top:10px"><span class="i-status g">STRONG</span></div>
-          </div>
-          <div class="ind">
-            <div class="i-top"><span class="i-name">Days on market</span><span class="i-val">46</span></div>
-            <div class="i-note">Up 12 days vs. last year (+35%). Flags at +40% — close, worth watching.</div>
-            <div class="meter"><span class="th" style="left:66%"></span><span class="pin a" style="left:58%"></span></div>
-            <div class="meter-cap"><span>faster</span><span>+40% threshold</span><span>slower</span></div>
-            <div style="margin-top:10px"><span class="i-status a">WATCH</span></div>
-          </div>
-          <div class="ind">
-            <div class="i-top"><span class="i-name">Active listings, YoY</span><span class="i-val">+31%</span></div>
-            <div class="i-note">More competition is coming to market. Flags at +50%.</div>
-            <div class="meter"><span class="th" style="left:70%"></span><span class="pin a" style="left:46%"></span></div>
-            <div class="meter-cap"><span>0%</span><span>+50% threshold</span><span>+100%</span></div>
-            <div style="margin-top:10px"><span class="i-status a">RISING</span></div>
-          </div>
-          <div class="ind" style="display:flex;flex-direction:column;justify-content:center;background:#f7fbfa;border-color:#d5eae6">
-            <div style="font-size:13px;color:var(--ink-2)"><b>Reading the board:</b> one red, two ambers, two greens. That's a market losing steam, not one falling apart. The verdict stays WATCH until a second indicator trips red.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. What it means -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">5</span> What this actually means for you</div>
-        <p class="sec-sub">Plain English, no hedging.</p>
-        <div class="say">
-          <b>The –7.1% headline is mostly an illusion for houses like yours.</b> 20906 includes a large stock of condos (especially around Leisure World), and more of them sold this year — dragging the ZIP's "typical price" down while price per square foot rose 8.6%. A single-family home in good condition is not down 7%.<br><br>
-          <b>But three things deserve your attention:</b> homes take ~12 more days to sell than last year, listings are up 31%, and the DC region's federal job losses are still working through the market. If you're thinking of selling in the next 12–18 months, the data says sooner beats later — and pricing correctly on day one matters more than any year since 2019.
-        </div>
-      </div>
-
-      <!-- 6. Walk-away number -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">6</span> If you sold today: your walk-away number</div>
-        <p class="sec-sub">The estimated check you'd receive at closing after selling costs and payoff — shown as a range because no estimate is exact. This is the number to protect.</p>
-        <div class="watchable">
-          <div class="watch-rail">
-            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
-            <span class="watch-tag">Watch</span>
-          </div>
-          <div>
-            <div style="border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfbf8);margin-bottom:16px">
-              <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Estimated walk-away range</div>
-              <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:900;color:var(--accent-ink);margin:4px 0 2px">$99,000 – $123,000</div>
-              <div style="font-size:13px;color:var(--muted)">Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.</div>
-            </div>
-            <div class="pr-table">
-              <div class="pr-row"><span class="lbl">Estimated sale price</span><span class="amt">$412,000</span></div>
-              <div class="pr-row minus"><span class="lbl">Selling costs (8% — adjustable 6–10% in your report)</span><span class="amt">– $32,960</span></div>
-              <div class="pr-row minus"><span class="lbl">Mortgage payoff</span><span class="amt">– $268,000</span></div>
-              <div class="pr-row total"><span class="lbl">Estimated walk-away (midpoint)</span><span class="amt">$111,040</span></div>
-            </div>
-            <p class="pr-note">Selling costs cover commission, transfer taxes, prep, and closing costs — your real report has a slider so you can adjust this for your situation.</p>
-            <div class="watch-note">🔒 <b>Get alerted</b> the moment this crosses a number you choose — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. Lock-in cost + capital gains -->
-      <div class="sec">
-        <div class="sec-title"><span class="num">7</span> What staying costs — your rate vs. today's</div>
-        <p class="sec-sub">If you sold and financed the same loan amount at today's market rate, this is how your monthly principal &amp; interest would change. A low locked-in rate is an asset — this puts a number on it.</p>
-        <div class="watchable">
-          <div class="watch-rail">
-            <label class="watch-switch-label"><input type="checkbox" disabled><span class="watch-switch-track"></span></label>
-            <span class="watch-tag">Watch</span>
-          </div>
-          <div>
-            <div class="eq-grid">
-              <div class="eq-card">
-                <div class="label">Your current P&amp;I (estimated)</div>
-                <div class="big">$1,241<span style="font-size:16px;color:var(--muted)">/mo</span></div>
-                <div class="delta flat">At your 3.75% rate, on your $268,000 balance</div>
-              </div>
-              <div class="eq-card">
-                <div class="label">Same loan at today's 30-yr rate</div>
-                <div class="big">$1,708<span style="font-size:16px;color:var(--muted)">/mo</span></div>
-                <div class="delta flat">Borrowing $268,000 at ~6.58% over 30 years</div>
-              </div>
-            </div>
-            <div class="say" style="margin-top:16px"><b>Your locked-in rate is worth about $467 a month</b> (≈ $5,603 a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving.</div>
-            <div class="watch-note">🔒 <b>Get alerted</b> if today's rate drops close to yours — available with <a href="subscribe.html?plan=monitor">EquityWatch monitoring</a>, not the free check or one-time report.</div>
-            <div class="say" style="margin-top:12px;border-left-color:var(--amber);background:#fbf8f1"><b>A note on taxes:</b> if your gain (sale price minus what you paid) exceeds $250,000 as a single filer or $500,000 filing jointly, it may exceed the capital-gains exclusion — worth discussing with a tax professional. <span style="color:#a49d8d">Illustrative example: purchased 2011 for $150,000 → estimated gain ≈ $262,000.</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8. Next step / partner -->
-      <div class="sec" style="margin-bottom:0">
-        <div class="sec-title"><span class="num">8</span> Your next step</div>
-        <p class="sec-sub">A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month.</p>
-        <!-- REALTOR MATCH (flagged OFF 2026-08-01, mirrors SHOW_REALTOR_MATCH
-             in my-report.html — sample shows the same neutral card buyers see).
-             Original sponsored-agent markup retained for a possible return:
-        <div class="partner">
-          <img src="img/naomi.jpg" alt="Naomi, NTRealty">
-          <div style="flex:1">
-            <div class="p-name">Naomi <small>Realtor&#174; &#183; Montgomery County, MD</small></div>
-            <div class="p-brok">NTRealty</div>
-            <p>Naomi will walk through this report with you, pull real comparable sales for your street, and give you a straight answer on timing &#8212; free, no obligation.</p>
-            <div class="btn-row">
-              <a class="btn primary" href="tel:+12404772110">Call Naomi (240) 477-2110</a>
-              <a class="btn ghost" href="mailto:naomi@shouldisellyet.com?subject=EquityWatch%20report%20consult">Email Naomi</a>
-              <a class="btn ghost" href="https://www.ntrealtyhomes.com" target="_blank" rel="noopener">ntrealtyhomes.com &#8594;</a>
-            </div>
-          </div>
-        </div>
-        -->
-        <div style="border:1px solid #e6dcc3;border-radius:14px;padding:24px;background:linear-gradient(180deg,#fffdf8,#faf4e8)">
-          <div style="font-family:'Newsreader',serif;font-size:20px;font-weight:600;margin-bottom:8px">Get Connected With a Local Expert Realtor</div>
-          <p style="margin:0 0 14px;max-width:60ch">A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month. We'll personally match you with a vetted agent for your area — only when you ask. The conversation is free, no obligation.</p>
-          <span class="btn primary" style="cursor:default">Request an introduction</span>
-          <div style="font-size:11.5px;color:#a49d8d;margin-top:10px">In your report, this opens a short request form — nothing is shared until you submit it.</div>
-        </div>
-      </div>
-
+  <div class="samplebar">
+    <b>This is a sample.</b> Every number below belongs to one made-up home in ZIP 20874 so you can see exactly what you get — the market data is real, the homeowner's inputs are not. Your report is built from your own numbers, and only the address is required.
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="index.html#check">Check your ZIP free →</a>
+      <a class="btn-outline" href="subscribe.html?plan=monitor">Full report + notifications · <span data-price="monthly-mo">$5.99/mo</span></a>
     </div>
   </div>
 
-  <!-- Purchase -->
-  <div class="buy" id="buy">
-    <h2>Get this report for <em style="color:#bcd2ec">your</em> home</h2>
-    <p>EquityWatch monitoring includes this full report free, refreshed monthly — and taps you on the shoulder the moment your market turns. Prefer one deep look? The report alone is <span data-price="report">$9.99</span>.</p>
-    <div class="price"><span data-price="annual">$39</span><small>/yr · EquityWatch monitoring (<span data-price="annual-permo">$3.25/mo, billed annually</span> — <span data-price="monthly-line">or $5.99/mo billed monthly</span>)</small></div>
-    <p style="margin-top:6px;font-size:13px;color:#bcd2ec">Or just this report, one-time: <span data-price="report">$9.99</span> — upgrade to EquityWatch within 30 days and it's credited toward your first year (<span data-price="upgrade">$29</span> instead of <span data-price="annual">$39</span>).</p>
-    <div class="btn-row">
-      <a class="btn primary" href="#" onclick="return buyMonitor()">🔔 Set up alerts · <span data-price="annual-yr">$39/yr</span></a>
-      <a class="btn ghost" style="background:#fff" id="buy-btn" href="#" onclick="return buyReport()">Just this report · <span data-price="report">$9.99</span></a>
-      <a class="btn ghost" style="background:#fff" href="my-report.html">Get your walk-away number →</a>
-      <a class="btn ghost" style="background:transparent;color:#cfe8e4;border-color:rgba(255,255,255,.25)" href="index.html">← Free ZIP check</a>
+  <div class="card report" style="display:block">
+    <div class="r-head" id="r-head" style="background:#e9f4ee">
+      <span class="v-dot" style="background:#2e9e5b;box-shadow:0 0 0 4px #e9f4ee,0 0 0 5px #2e9e5b"></span>
+      <span class="v-tag" style="color:#2e9e5b">HOLD</span>
+      <span class="v-title">No warning signs in 20874</span>
+      <span class="r-addr">15118 Callohan Ct · Germantown, MD 20874 · generated July 31, 2026</span>
     </div>
+    <nav class="jumpnav" id="jumpnav" aria-label="Report sections"></nav>
+
+    <div class="sec" id="signals" data-nav="signals">
+      <div class="k">MARKET SIGNALS IN YOUR ZIP</div>
+      <div class="title">The four dials that predict price moves</div>
+      <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
+      <p class="dials-intro">Four numbers, all public data, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
+      <div id="metrics">
+      <div class="metric-block">
+        <div class="metric"><span class="name">MONTHS OF SUPPLY</span>
+          <span class="val" style="color:#2e9e5b">0.8 mo</span>
+          <span class="track"><span class="fill" style="width:10%;background:#2e9e5b"></span><span class="th" style="left:50%"></span></span>
+          <span class="note">line: 4.0 mo</span></div>
+        <details class="how"><summary>How this is measured</summary><div class="how-body">
+          <div>If no new homes were listed, how long until everything currently for sale is sold.</div>
+          <div><b>What goes in:</b> 119 homes listed for sale · 140 homes sold in the latest month — ZIP 20874, through 2026-05.</div>
+          <div><b>The math:</b> homes for sale ÷ homes sold per month.</div>
+          <div><b>Why the line is there:</b> Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 36.5% of the time, vs. 11.5% for markets inside it.</div>
+          <div><b>Yours: 0.8 mo</b> — well inside healthy.</div>
+        </div></details>
+      </div>
+      <div class="metric-block">
+        <div class="metric"><span class="name">PRICES VS. LAST YR</span>
+          <span class="val" style="color:#2e9e5b">+1.7%</span>
+          <span class="track"><span class="fill" style="width:43%;background:#2e9e5b"></span><span class="th" style="left:58.3%"></span></span>
+          <span class="note">holding or rising</span></div>
+        <details class="how"><summary>How this is measured</summary><div class="how-body">
+          <div>What the typical home sells for now, compared with the same month a year ago.</div>
+          <div><b>What goes in:</b> the sale prices of the 140 homes sold in the latest month, and of the homes sold the same month last year — ZIP 20874, through 2026-05.</div>
+          <div><b>The math:</b> this month's typical sale price ÷ the typical price 12 months ago, as a percent change.</div>
+          <div><b>Why the line is there:</b> A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19.8% of the time, vs. 9.9% for markets inside it.</div>
+          <div><b>Yours: +1.7%</b> — well inside healthy.</div>
+        </div></details>
+      </div>
+      <div class="metric-block">
+        <div class="metric"><span class="name">TIME TO SELL</span>
+          <span class="val" style="color:#2e9e5b">31 days</span>
+          <span class="track"><span class="fill" style="width:31%;background:#2e9e5b"></span><span class="th" style="left:60%"></span></span>
+          <span class="note">as fast as last yr</span></div>
+        <details class="how"><summary>How this is measured</summary><div class="how-body">
+          <div>How many days the typical home sits on the market before a buyer commits.</div>
+          <div><b>What goes in:</b> days from listing to contract for the 140 homes sold in the latest month, and for last year's sales — ZIP 20874, through 2026-05.</div>
+          <div><b>The math:</b> the middle (median) days-on-market among homes that sold, and how that compares with a year ago.</div>
+          <div><b>Why the line is there:</b> Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19.0% of the time, vs. 11.2% for markets inside it.</div>
+          <div><b>Yours: 31 days</b> — well inside healthy.</div>
+        </div></details>
+      </div>
+      <div class="metric-block">
+        <div class="metric"><span class="name">NEW SUPPLY VS. LAST YR</span>
+          <span class="val" style="color:#2e9e5b">+0%</span>
+          <span class="track"><span class="fill" style="width:17%;background:#2e9e5b"></span><span class="th" style="left:58.3%"></span></span>
+          <span class="note">line: +50% y/y</span></div>
+        <details class="how"><summary>How this is measured</summary><div class="how-body">
+          <div>How many homes are coming up for sale, compared with a year ago.</div>
+          <div><b>What goes in:</b> 119 homes for sale now vs. about 119 a year ago — ZIP 20874, through 2026-05.</div>
+          <div><b>The math:</b> homes for sale this month ÷ homes for sale the same month last year.</div>
+          <div><b>Why the line is there:</b> A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 18.8% of the time, vs. 11.5% for markets inside it.</div>
+          <div><b>Yours: +0%</b> — well inside healthy.</div>
+        </div></details>
+      </div>
+      </div>
+      <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
+      <p id="v-sub" style="margin-top:6px">Nothing in the current data says this market is turning. Your equity isn't under pressure from market conditions right now.</p>
+      <div class="xcheck">
+        <div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM LISTING FEED · JUNE 2026 (ONE MONTH NEWER THAN THE SALES DATA ABOVE)</div>
+        <b>111</b> homes listed (+6% vs. last year) · typical listing <b>23 days</b> on the market (−5%) · <b>54</b> price cuts (22% of listings it tracks).
+        <div class="agree" style="margin-top:6px">✓ Both feeds read this market the same direction.</div>
+      </div>
+    </div>
+
+    <div class="sec" id="value-trend" data-nav="value trend">
+      <div class="k">YOUR HOME'S VALUE TREND — 3 YEARS</div>
+      <div class="title">What your home has been doing</div>
+      <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today shows how much prices have already cooled.</p>
+      <div id="trend-chart"></div>
+      <div class="callouts" id="trend-callouts">
+        <div class="co"><div class="cv">$468,800</div><div class="cl">EST. PEAK · MAY '26</div></div>
+        <div class="co"><div class="cv">At the high</div><div class="cl">TODAY — THE 3-YEAR HIGH</div></div>
+        <div class="co"><div class="cv">+1.7%</div><div class="cl">LAST 12 MONTHS</div></div>
+        <div class="co"><div class="cv">+2.4%</div><div class="cl">LAST 3 MONTHS</div></div>
+      </div>
+      <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary. Each month's point is the middle sale price of the homes sold that month (140 in the latest month).</p>
+      <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Official check — FHFA's government price index for this ZIP: +8.9% in 2023, averaging +9.6%/yr over its last three reported years. Annual data through 2023 — it lags the sales feed above and won't catch turns early; that's what the dials are for.</p>
+    </div>
+
+    <div class="sec" id="equity" data-nav="equity">
+      <div class="k">YOUR EQUITY POSITION</div>
+      <div class="title">What you actually own</div>
+      <p class="subt">Your equity is the part of the home that is yours: value minus mortgage. This is the number the market can grow — or shrink — without you doing anything.</p>
+      <div class="eqgrid">
+        <div class="eqcard">
+          <div class="label">ESTIMATED VALUE (YOUR INPUT)</div>
+          <div class="big">$468,800</div>
+          <div class="sub2">If your home tracked the ZIP median, it's up ≈ $7,836 vs. a year ago.</div>
+        </div>
+        <div class="eqcard">
+          <div class="label">YOUR EQUITY</div>
+          <div class="big" style="color:var(--navy)">$246,800</div>
+          <div class="sub2">Mortgage balance: $222,000 <i style="color:var(--fainter)">(your input)</i></div>
+          <div class="eqbar"><div class="loan" style="width:47%"></div><div class="eq" style="width:53%"></div></div>
+          <div class="eqlegend"><span><i style="background:#cfc8b8"></i>Loan <b>47%</b></span><span><i style="background:var(--navy)"></i>Equity <b>53%</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" id="walk-away" data-nav="walk-away">
+      <div class="k">IF YOU SOLD TODAY — YOUR NET</div>
+      <div class="title">Your walk-away number</div>
+      <p class="subt">The estimated check you would receive at closing after selling costs and payoff. Shown as a range because no estimate is exact. This is the number to protect.</p>
+      <div style="border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7);margin-bottom:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)">ESTIMATED WALK-AWAY RANGE</div>
+        <div class="serif" style="font-size:32px;font-weight:600;color:var(--navy);margin:4px 0 2px">$200,000 – $228,000</div>
+        <div style="font-size:12.5px;color:var(--muted)">Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.</div>
+      </div>
+      <div class="prtable">
+        <div class="prrow"><span>Estimated sale price <i style="color:var(--fainter)">(your input)</i></span><span>$468,800</span></div>
+        <div class="prrow minus"><span>Selling costs (7% — your setting)</span><span>− $32,816</span></div>
+        <div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">(your input)</i></span><span>− $222,000</span></div>
+        <div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>$213,984</span></div>
+      </div>
+      <div class="prnote">As of July 31, 2026 · market data through 2026-05 · all figures estimated · selling timeline: 6 months (your input)</div>
+      <p class="demo-note" style="margin-top:10px">In your own report a slider adjusts selling costs from 6–10% and every number here updates live, and a toggle lets you set an email alert on this figure.</p>
+    </div>
+
+    <div class="sec" id="lock-in" data-nav="lock-in">
+      <div class="k">WHAT STAYING COSTS — YOUR RATE VS. TODAY'S</div>
+      <div class="title">Your lock-in cost</div>
+      <p class="subt">If you borrowed the same amount at today's rate instead of yours, this is what would happen to your monthly P&amp;I — principal and interest, the loan part of your payment. A low locked-in rate is an asset; this puts a number on it.</p>
+      <div class="eqgrid">
+        <div class="eqcard">
+          <div class="label">YOUR CURRENT P&amp;I (ESTIMATED)</div>
+          <div class="big">$1,060/mo</div>
+          <div class="sub2">At your 4% rate, on your current balance (your input) · your full PITI: $2,100 — P&amp;I excludes taxes &amp; insurance</div>
+        </div>
+        <div class="eqcard">
+          <div class="label">SAME LOAN AT TODAY'S 30-YR RATE</div>
+          <div class="big">$1,427/mo</div>
+          <div class="sub2">Borrowing $222,000 at ~6.66% over 30 years</div>
+        </div>
+      </div>
+      <div class="say" style="margin-top:14px"><b>Your locked-in rate is worth about $367 a month</b> (≈ $4,401 a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving.</div>
+      <div class="prnote">As of July 31, 2026 · your rate &amp; loan: your input · market rate: Freddie Mac PMMS 30-yr weekly average, 2026-07-30 (market data) · estimated — not a loan quote.</div>
+    </div>
+
+    <div class="sec" id="rates-buyers" data-nav="rates">
+      <div class="k">RATES AND YOUR BUYERS</div>
+      <div class="title">The money your buyer borrows</div>
+      <p class="subt">Whoever buys your home almost certainly needs a mortgage. The price of that loan sets what they can pay for your house — this is the weather your sale happens in.</p>
+      <div class="eqgrid">
+        <div class="eqcard">
+          <div class="label">TODAY'S 30-YEAR RATE</div>
+          <div class="big">6.66%</div>
+          <div class="sub2">About flat vs. 6.63% a year ago</div>
+        </div>
+        <div class="eqcard">
+          <div class="label">THE BUYER OF THIS HOME (AT YOUR VALUE)</div>
+          <div>
+            <div class="prrow" style="padding:8px 0;border:none"><span>Buys at</span><span>$468,800</span></div>
+            <div class="prrow" style="padding:8px 0;border:none"><span>Puts 20% down</span><span>$93,760</span></div>
+            <div class="prrow" style="padding:8px 0;border:none"><span>Pays monthly (loan part)</span><span><b>$2,410/mo</b></span></div>
+            <div class="prrow" style="padding:8px 0;border:none"><span>Income that takes</span><span><b>≈ $103,290/yr</b></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="say" style="margin-top:14px"><b>Why you care:</b> each 1-point drop in rates gives buyers roughly 10% more buying power — cheaper money tends to support prices, expensive money pressures them. (An approximation, not a forecast.)</div>
+      <div class="prnote">Rules of thumb: 20% down and a payment near 28% of income — real buyers vary. Market rate: Freddie Mac PMMS 30-yr weekly average, 2026-07-30 (market data).</div>
+    </div>
+
+    <div class="sec" id="stress-test" data-nav="stress test">
+      <div class="k">STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
+      <div class="title">Three futures for your walk-away number</div>
+      <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
+      <div class="prtable">
+        <div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>
+        <div class="strow today"><span>Today</span><span>$468,800</span><span>$246,800</span><span class="net">$213,984</span></div>
+        <div class="strow"><span>6 mo · 12-mo trend continues (+0.9%)</span><span>$472,785</span><span>$250,785</span><span class="net">$217,690</span></div>
+        <div class="strow"><span>6 mo · prices go flat</span><span>$468,800</span><span>$246,800</span><span class="net">$213,984</span></div>
+        <div class="strow stress"><span>6 mo · stress: prices fall 5%</span><span>$445,360</span><span>$223,360</span><span class="net">$192,185</span></div>
+      </div>
+      <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
+      <div class="say" style="margin-top:14px"><b>Your safety margin is about 49%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. That's a comfortable cushion.</div>
+    </div>
+
+    <div class="sec" id="selling-conditions" data-nav="selling">
+      <div class="k">SELLING CONDITIONS IN YOUR ZIP</div>
+      <div class="title">How long selling takes here — and when it goes fastest</div>
+      <p class="subt">How long homes take to sell is the earliest visible crack in any housing market — it moves months before prices do. The seasonal pattern below can be worth thousands in timing.</p>
+      <div id="dom-chart"></div>
+      <p id="season-note" style="margin-top:10px">How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales (140 sold in the latest month). Historically, homes here have sold fastest in <b>July</b> — worth knowing when you plan your listing.</p>
+    </div>
+
+    <div class="sec" id="bigger-picture" data-nav="big picture">
+      <div class="k">THE BIGGER PICTURE</div>
+      <div class="title">Your market in national context</div>
+      <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
+      <div class="ctxgrid">
+        <div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Prices here are rising faster than about <b>49%</b> of U.S. ZIP codes — squarely mid-pack. Across the country right now: 16,368 ZIPs read HOLD · 5,533 WATCH · 2,718 ACT.</p></div>
+        <div class="ctx"><div class="ch">The financing backdrop</div><p>30-year rates: <b>6.66%</b> now vs. 6.63% a year ago — buyers of your home can afford about <b>−0.3%</b> house for the same monthly payment. Roughly neutral for your buyer pool right now.</p></div>
+      </div>
+    </div>
+
+    <div class="sec" id="more-answers" data-nav="more answers">
+      <div class="k">MORE ANSWERS, IF YOU WANT THEM</div>
+      <div class="title">Questions you didn't think to ask</div>
+      <p class="subt">All optional. Each card needs one number from you — add it and the answer appears. Everything stays in your browser unless you save an alert.</p>
+      <div class="moregrid">
+        <div class="mcard">
+          <div class="mt">Your rate vs. the market</div>
+          <div>
+            <div class="big2">2.7 points below market</div>
+            <p>Your 4% vs. today's ~6.66%.</p>
+            <p>That gap is an asset worth about <b>$367 a month</b> on your loan — replacing it at today's rate would cost that much more.</p>
+            <p style="color:var(--muted)">The alert below answers the real question: when does the market come close enough to your rate that moving stops being expensive?</p>
+          </div>
+          <div class="mcard-watch"><span class="watch-tag">ALERT · TELL ME IF THE MARKET COMES WITHIN ___ POINTS OF MINE</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mt">Capital gains clock</div>
+          <div>
+            <div class="big2">$148,800 gain so far</div>
+            <p>9 years owned — your 2017 purchase at $320,000 vs. your $468,800 estimate today: inside both federal exclusions ($250K single / $500K married filing jointly).</p>
+            <p style="color:var(--fainter);font-size:12px">Informational only — not tax advice. Exclusions have ownership and residency rules.</p>
+          </div>
+          <div class="mcard-watch"><span class="watch-tag">ALERT · TELL ME IF MY ESTIMATED GAIN CROSSES ___</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mt">Sell — or rent it out?</div>
+          <div>
+            <div class="big2">+$500/mo cash flow</div>
+            <p>Your rent estimate $2,600 − your $2,100 payment (PITI — principal, interest, taxes, insurance).</p>
+            <p>Gross yield: rent × 12 ÷ home value ≈ <b>6.7%</b> a year, before costs.</p>
+            <p style="color:var(--fainter);font-size:12px">Honest caveat: vacancies, maintenance, and management aren't in this math — real landlording nets less than the headline.</p>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="mt">What waiting builds</div>
+          <div>
+            <div class="big2">≈ $3,910 in a year</div>
+            <p>Waiting a year adds about that much to your equity from loan payments alone — before any price change.</p>
+            <p style="color:var(--muted)">Stack that against the price scenarios in the stress test above: payments build equity slowly and surely; the market moves it faster, in either direction.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" id="bottom-line" data-nav="bottom line">
+      <div class="k">WHAT THIS MEANS</div>
+      <div class="title">The plain-English bottom line</div>
+      <p class="subt">One paragraph, no hedging.</p>
+      <div class="say">The market is not a reason to sell today. If you're considering selling, it should be about your plans — a move, an upgrade, a life change — not about beating a downturn. Set up an alert and you'll hear the moment that changes.</div>
+    </div>
+
+    <div class="sec" id="next-step" data-nav="next step">
+      <div class="k">YOUR NEXT STEP</div>
+      <div class="title">Turn numbers into a decision</div>
+      <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
+      <div class="connect-card">
+        <h3>Get Connected With a Local Expert Realtor</h3>
+        <p>A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month. We'll personally match you with a vetted agent for your area — only when you ask. The conversation is free, no obligation.</p>
+        <a class="btn" href="index.html#check">Request an introduction</a>
+        <div style="font-size:11.5px;color:var(--fainter);margin-top:10px">In your own report this opens a short request form — nothing is shared until you submit it.</div>
+      </div>
+    </div>
+
+    <div class="stamp">EquityWatch™ · shouldisellyet.com · market data through 2026-05 · Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage · Listing data from Realtor.com
+      <br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.</div>
   </div>
 
-  <footer>
-    <div style="margin-bottom:10px">© 2026 ShouldISellYet.com · <a href="terms.html" style="color:inherit">Terms</a> · <a href="privacy.html" style="color:inherit">Privacy</a> · <a href="refunds.html" style="color:inherit">Refunds & Cancellation</a> · <a href="partners.html" style="color:inherit">For real estate professionals</a></div>
-    <div class="disc">Sample report with illustrative figures for demonstration. EquityWatch estimates are computed from public market data (Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage) and standard assumptions; they are not an appraisal. Not financial, legal, or real-estate advice. Consult licensed professionals before making decisions.</div>
-    <div class="disc" style="margin-top:8px">ShouldISellYet.com is operated by Yayday LLC. NTRealty is an affiliated partner.</div>
-  </footer>
+  <div class="actions" style="display:flex">
+    <a class="btn" href="index.html#check">Check your ZIP free →</a>
+    <a class="btn-outline" href="subscribe.html?plan=monitor" style="text-decoration:none;display:inline-block">Full report + notifications · <span data-price="monthly-mo">$5.99/mo</span></a>
+    <a class="btn-outline" href="subscribe.html?plan=report" style="text-decoration:none;display:inline-block">Just the full report · <span data-price="report">$9.99</span> once</a>
+  </div>
+
+  <div id="site-foot" style="margin-top:36px;border-top:1px solid var(--hairline);padding-top:16px;font-size:12px;color:var(--fainter)">
+    © 2026 ShouldISellYet.com · operated by Yayday LLC ·
+    <a href="terms.html" style="color:inherit">Terms</a> ·
+    <a href="privacy.html" style="color:inherit">Privacy</a> ·
+    <a href="refunds.html" style="color:inherit">Refunds &amp; cancellation</a> ·
+    <a href="partners.html" style="color:inherit">For real estate professionals</a>
+    <div style="margin-top:8px;line-height:1.5">Sample report with illustrative homeowner figures. Verdicts and reports are generated from public housing-market data (Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage · Listing data from Realtor.com) and are for general information only — not financial, legal, or real-estate advice.</div>
+  </div>
 </div>
 
-<div class="watermark">Sample report</div>
-
 <script>
-// Sample-page CTAs route through the plan-details page (describes the plan +
-// collects Terms consent) before handing off to Stripe.
-function buyReport(){ window.location.href = "subscribe.html?plan=report"; return false; }
-function buyMonitor(){ window.location.href = "subscribe.html?plan=monitor"; return false; }
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
+
+function monthLabel(startYM, i){
+  const y = +startYM.slice(0,4), m = +startYM.slice(5,7);
+  const t = (y*12 + (m-1)) + i;
+  return MONTHS[t%12] + " '" + String(Math.floor(t/12)).slice(2);
+}
+function lastIdx(arr){ for (let i=arr.length-1;i>=0;i--) if (arr[i]!=null) return i; return -1; }
+function lineSVG(series, startYM, opts){
+  const o = Object.assign({w:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
+  const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
+  if (pts.length < 6) return "";
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y1===y0) y1 = y0*1.01+1;
+  const pad = (y1-y0)*0.14; y0-=pad; y1+=pad;
+  const L=58, R=64, T=14, B=30;
+  const X = i => L + (i-x0)/(x1-x0)*(o.w-L-R);
+  const Y = v => T + (1-(v-y0)/(y1-y0))*(o.h-T-B);
+  // gridlines: 4 evenly spaced levels
+  let grid = "";
+  for (let g=0; g<4; g++){
+    const gv = y0+pad + (g/3)*((y1-pad)-(y0+pad));
+    grid += '<line x1="'+L+'" y1="'+Y(gv).toFixed(1)+'" x2="'+(o.w-R)+'" y2="'+Y(gv).toFixed(1)+'" stroke="#f0ebe0"/>'+
+            '<text x="4" y="'+(Y(gv)+3.5).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(gv)+'</text>';
+  }
+  // x ticks every 6 months
+  let ticks = "";
+  for (let i=x0; i<=x1; i++){
+    if ((i-x0)%6===0 && i<=x1-2){
+      ticks += '<line x1="'+X(i).toFixed(1)+'" y1="'+(o.h-B+2)+'" x2="'+X(i).toFixed(1)+'" y2="'+(o.h-B+6)+'" stroke="#d7d0c2"/>'+
+               '<text x="'+X(i).toFixed(1)+'" y="'+(o.h-8)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,i)+'</text>';
+    }
+  }
+  // path + optional area
+  let path = "", pen = false, area = "";
+  series.forEach((v,i)=>{
+    if (v==null){ pen=false; return; }
+    path += (pen?"L":"M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); pen=true;
+  });
+  if (o.area){
+    let ap = "", apen = false, firstX=null, lastX=null;
+    series.forEach((v,i)=>{
+      if (v==null){ apen=false; return; }
+      if (!apen && firstX===null) firstX = X(i);
+      ap += (apen?"L":(ap?"M":"M")) + X(i).toFixed(1) + "," + Y(v).toFixed(1); apen=true;
+      lastX = X(i);
+    });
+    if (firstX!==null) area = '<path d="'+ap+' L'+lastX.toFixed(1)+','+(o.h-B)+' L'+firstX.toFixed(1)+','+(o.h-B)+' Z" fill="'+o.color+'" opacity="0.06"/>';
+  }
+  // peak marker
+  let peakSvg = "";
+  if (o.peak){
+    let pi=-1, pv=-Infinity;
+    series.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
+    if (pi>=0) peakSvg = '<line x1="'+X(pi).toFixed(1)+'" y1="'+Y(pv).toFixed(1)+'" x2="'+X(pi).toFixed(1)+'" y2="'+T+'" stroke="#c8891f" stroke-dasharray="2 3" opacity="0.6"/>'+
+      '<circle cx="'+X(pi).toFixed(1)+'" cy="'+Y(pv).toFixed(1)+'" r="4" fill="#c8891f"/>'+
+      '<text x="'+Math.min(Math.max(X(pi),L+38),o.w-R-40).toFixed(1)+'" y="'+(T-2+12)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#8a7a55">PEAK '+monthLabel(startYM,pi).toUpperCase()+' · '+o.fmt(pv)+'</text>';
+  }
+  // end-value tag
+  const li = lastIdx(series);
+  let endTag = "";
+  if (li>=0){
+    endTag = '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="4.5" fill="'+o.color+'"/>'+
+      '<text x="'+(o.w-4)+'" y="'+(Y(series[li])+3.5).toFixed(1)+'" text-anchor="end" font-size="10.5" font-weight="bold" font-family="IBM Plex Mono,monospace" fill="'+o.color+'">'+o.fmt(series[li])+'</text>';
+  }
+  return '<svg viewBox="0 0 '+o.w+' '+o.h+'" style="width:100%;height:auto;display:block">'+
+    grid + ticks + area +
+    '<path d="'+path+'" fill="none" stroke="'+o.color+'" stroke-width="2.4" stroke-linecap="round"/>'+
+    peakSvg + endTag + '</svg>';
+}
+
+const TREND_SERIES = [389000, 397158, 398398, 400537, 401227, 399230, 403937, 410650, 413445, 417918, 419334, 415754, 417499, 421733, 424397, 431015, 434921, 432337, 432701, 433950, 434364, 441061, 447067, 447116, 448556, 448281, 445839, 450419, 456434, 458737, 462885, 463518, 459629, 461423, 465223, 468800];
+const DOM_SERIES = [46, 49, 49, 45, 39, 32, 27, 25, 27, 33, 39, 44, 47, 46, 43, 38, 33, 30, 28, 29, 31, 34, 36, 39, 40, 41, 41, 40, 37, 33, 29, 26, 25, 27, 31, 31];
+document.getElementById("trend-chart").innerHTML =
+  lineSVG(TREND_SERIES, "2023-06", {fmt: v => "$" + Math.round(v/1000) + "K"});
+document.getElementById("dom-chart").innerHTML =
+  lineSVG(DOM_SERIES, "2023-06", {color:"#8a7a55", h:150, fmt: v => Math.round(v) + "d", peak:false});
+
+// Same dynamic numbering + jump-nav the real report uses, so the sample can
+// never drift out of step with it.
+(function renumberSections(){
+  let n = 0; const nav = [];
+  document.querySelectorAll(".report .sec").forEach(sec => {
+    if (sec.style.display === "none") return;
+    n++;
+    const num = String(n).padStart(2, "0");
+    let el = sec.querySelector(".secnum");
+    if (!el) { el = document.createElement("div"); el.className = "secnum"; sec.prepend(el); }
+    el.textContent = num;
+    if (sec.id && sec.dataset.nav) nav.push({id: sec.id, num, label: sec.dataset.nav});
+  });
+  document.getElementById("jumpnav").innerHTML = nav.map(x =>
+    '<a href="#' + x.id + '"><b>' + x.num + '</b>' + x.label + '</a>').join("");
+})();
 </script>
 </body>
 </html>
