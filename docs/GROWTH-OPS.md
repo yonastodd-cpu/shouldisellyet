@@ -93,6 +93,22 @@ python3 pipeline/rate_watch.py --dry-run --force-rate 6.70   # small move → si
 python3 pipeline/rate_watch.py --dry-run --force-rate 6.20   # big move → would email
 ```
 
+## Previewing it
+
+`--demo` renders the digest with synthetic month-over-month flips and
+synthetic subscriber counts, so every section is populated without waiting for
+a real diff:
+
+```bash
+python3 pipeline/growth_digest.py --demo --out /tmp/demo
+open /tmp/demo/digest-2026-05.html
+```
+
+The market data is real; only the flips and counts are invented. Demo renders
+carry a red **DEMO PREVIEW** banner, never email, and never write a snapshot —
+a preview must not be mistakable for a real digest, and must not poison the
+real month-over-month diff.
+
 ## Snapshots, and why they're in the repo
 
 Month-over-month diffing needs last month's verdicts.

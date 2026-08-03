@@ -336,6 +336,38 @@ def write_rate_stamp(period, now, asof):
         json.dumps({"now": now, "asof": asof}, separators=(",", ":")))
 
 
+# ————— demo mode —————
+
+def demo_inputs(entries, period):
+    """Synthetic prior-month verdicts and Supabase counts so the digest can be
+    previewed in full without waiting for a real month-over-month diff.
+
+    Seeded, so the same data always yields the same preview. Every demo render
+    carries a banner — a preview must never be mistakable for a real digest.
+    """
+    import random
+    rnd = random.Random(20874)
+    zips = sorted(entries)
+    dmv_z = [z for z in zips if is_dmv(z)]
+    flipped = set(rnd.sample(dmv_z, min(44, len(dmv_z)))) | set(rnd.sample(zips, min(330, len(zips))))
+    swap = {"green": "yellow", "yellow": "green", "red": "yellow", "strong": "green"}
+    prev = {z: (swap[entries[z]["l"]] if z in flipped else entries[z]["l"]) for z in zips}
+
+    # counts land on ZIPs that actually flipped, which is what makes sections
+    # 4 and 5 interesting; weighted toward the DMV, as real signups are.
+    subs, alerts, mreq = Counter(), Counter(), Counter()
+    pool = [z for z in flipped if is_dmv(z)] or list(flipped)
+    for z in rnd.sample(pool, min(12, len(pool))):
+        subs[z] = rnd.randint(2, 19)
+        alerts[z] = rnd.randint(0, subs[z])
+    for z in rnd.sample(pool, min(5, len(pool))):
+        mreq[z] = rnd.randint(1, 4)
+    counts = {"subscribers": subs, "alerts": alerts, "match_requests": mreq,
+              "recent": {"new_subscribers_30d": 63, "equitywatch_signups_30d": 21,
+                         "report_purchases_30d": 14, "match_requests_30d": 6}}
+    return prev, counts
+
+
 # ————— HTML —————
 
 H = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
@@ -357,7 +389,7 @@ def _chip(level, text):
 
 
 def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
-                  rate_now, rate_prior, rate_asof, places, baseline=False):
+                  rate_now, rate_prior, rate_asof, places, baseline=False, demo=False):
     pm = pretty_month(period)
     n_flips = sum(len(v) for v in flips.values())
     dmv_flips = [(b, z) for b, zs in flips.items() for z in zs if is_dmv(z)]
@@ -376,6 +408,11 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
              f'<div style="color:#5c6673;font-size:13px;margin-bottom:6px">'
              f'{len(entries):,} scored ZIPs · data through {H(pm)}</div>']
 
+    if demo:
+        parts.append('<div style="background:#fbe9e9;border:1px solid #ecc3c3;border-radius:8px;'
+                     'padding:12px 14px;margin:14px 0;font-size:14px"><b>DEMO PREVIEW — not a real digest.</b> '
+                     'Market data is real; the month-over-month flips and all subscriber counts are '
+                     'synthetic sample data, generated to show every section populated.</div>')
     if baseline:
         parts.append('<div style="background:#faf1dd;border:1px solid #e8d5a8;border-radius:8px;'
                      'padding:12px 14px;margin:14px 0;font-size:14px"><b>Baseline run.</b> '
@@ -531,6 +568,8 @@ def main():
     ap.add_argument("--out", default="", help="archive dir for the digest + csv (default archive/{period})")
     ap.add_argument("--dry-run", action="store_true", help="render, don't email")
     ap.add_argument("--force-period", default="", help="override the data period (testing)")
+    ap.add_argument("--demo", action="store_true",
+                    help="preview with synthetic flips and counts; never emails, never writes snapshots")
     args = ap.parse_args()
 
     meta = json.loads(Path(args.data, "meta.json").read_text())
@@ -544,22 +583,33 @@ def main():
     flips = diff_verdicts(prev or {}, entries) if prev else \
             {"to_watch": [], "to_act": [], "to_hold": [], "to_strong": []}
 
-    counts, gaps = supabase_counts()
+    if args.demo:
+        prev, counts = demo_inputs(entries, period)
+        baseline = False
+        flips = diff_verdicts(prev, entries)
+        gaps = []
+    else:
+        counts, gaps = supabase_counts()
     rate_now, rate_prior, rate_asof = rate_now_and_prior(args.data, prev_period(period))
     angles = build_angles(entries, flips, places, period)
     hook = press_hook(flips, entries, places) if not baseline else None
     hook_csv = write_hook_csv(hook, entries, places, out_dir, period)
 
+    if args.demo and rate_prior is None and rate_now is not None:
+        rate_prior = round(rate_now - 0.31, 2)      # show the burst banner
     html = render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
-                         rate_now, rate_prior, rate_asof, places, baseline=baseline)
+                         rate_now, rate_prior, rate_asof, places,
+                         baseline=baseline, demo=args.demo)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"digest-{period}.html").write_text(html, encoding="utf-8")
 
     # Snapshots written LAST: if anything above throws, this month's snapshot
     # isn't recorded and the next run still has a clean prior to diff against.
-    write_snapshot(entries, period)
-    write_rate_stamp(period, rate_now, rate_asof)
+    # Demo renders never touch them — a preview must not poison the real diff.
+    if not args.demo:
+        write_snapshot(entries, period)
+        write_rate_stamp(period, rate_now, rate_asof)
 
     n = sum(len(v) for v in flips.values())
     dmv = sum(1 for zs in flips.values() for z in zs if is_dmv(z))
@@ -568,6 +618,9 @@ def main():
     print(f"  angles {len(angles)} · hook {(hook or {}).get('state', '—')} "
           f"{len((hook or {}).get('zips', []))} · gaps {len(gaps)}")
     print(f"  written {out_dir / f'digest-{period}.html'}")
+    if args.demo:
+        print("  --demo: synthetic flips/counts, nothing emailed, no snapshot written")
+        return
     if args.dry_run:
         print("  --dry-run: not emailed")
         return
