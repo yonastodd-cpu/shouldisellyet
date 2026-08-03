@@ -85,8 +85,38 @@ sentinel for manual follow-up, exactly as before.
 
 ## 3. Webhook events
 
-No change needed. `checkout.session.completed` and
-`customer.subscription.deleted` are already wired to
-`supabase/functions/stripe-webhook`. If you create *new* Payment Links
-(step 1), confirm the same webhook endpoint still receives their events —
-it is account-wide, so it should, but check one live test payment.
+`checkout.session.completed` and `customer.subscription.deleted` are already
+wired to `supabase/functions/stripe-webhook`. If you create *new* Payment
+Links (step 1), confirm the same webhook endpoint still receives their
+events — it is account-wide, so it should, but check one live test payment.
+
+---
+
+## 4. Deploy order — SQL before function
+
+The webhook now depends on two migrations. **Run the SQL first.** Without
+`stripe_session_id` every delivery of the same event looks like a new
+purchase, which is exactly the duplicate-row bug the migration fixes.
+
+```bash
+# 1. Supabase SQL Editor: paste and run, in order
+#    supabase/schema-v6.sql   (structured address)
+#    supabase/schema-v7.sql   (stripe_session_id, report_email_sent_at)
+
+# 2. then the functions
+npx supabase functions deploy stripe-webhook
+npx supabase functions deploy verify-access
+```
+
+`RESEND_API_KEY` must be set in **Edge Functions → Secrets** or no email
+sends. That case is logged loudly and the send is left *unclaimed*, so the
+mail goes out on a later retry rather than being silently marked delivered.
+
+### Checking the once-only behaviour on live
+
+In the Stripe dashboard, open the webhook endpoint, find a
+`checkout.session.completed` delivery and hit **Resend**. Expected:
+
+- the `subscribers` table gains **no** new row
+- the customer gets **no** second email
+- the function log prints `post-purchase email already sent for cs_… — skipping`
