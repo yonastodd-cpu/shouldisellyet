@@ -67,6 +67,8 @@ KINDS = {
                "sub":"Buyers are competing for homes here. If selling was already on your mind, conditions favor you right now."},
 }
 
+from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
+
 esc = lambda s: html.escape(str(s), quote=True)
 clamp = lambda x: max(3, min(97, x))
 tcol = lambda t: "#d64545" if t == "r" else "#c8891f" if t == "a" else "#1f3a5f" if t == "s" else "#2e9e5b"
@@ -166,6 +168,13 @@ nav.top{display:flex;align-items:center;justify-content:space-between;max-width:
 .lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
 .brand{font-family:Georgia,'Newsreader',serif;font-style:italic;font-weight:600;font-size:17px}
 .crumb{font-size:.8125rem;color:var(--muted);padding:14px 0 0}
+/* Arrival banner for shared links — slim, dismissible, no modal, no gate. */
+#share-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;
+  padding:11px 14px;background:#f4f6fa;border:1px solid #c3d2e8;border-radius:9px;font-size:.9375rem}
+#share-banner[hidden]{display:none}
+#share-banner a{font-weight:600}
+#share-banner button{margin-left:auto;background:none;border:none;font-size:20px;line-height:1;
+  color:var(--muted);cursor:pointer;padding:0 4px}
 .crumb a{color:var(--muted)}
 h1{font-family:Georgia,'Newsreader',serif;font-weight:500;font-size:clamp(1.6rem,3.6vw,2.3rem);line-height:1.18;margin:14px 0 6px;letter-spacing:-.01em}
 .vcard{border:1px solid var(--hairline);border-radius:12px;overflow:hidden;margin:18px 0 22px;background:#fff}
@@ -230,7 +239,12 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     updated = meta.get("generated", date.today().isoformat())
     state_name = STATE_NAMES.get(st, st)
     stat = card_stat(m)
-    emoji = {"green": "\U0001F7E2", "yellow": "\U0001F7E1", "strong": "\U0001F535"}.get(e["l"], "\U0001F534")
+    vc = vcopy(e["l"])          # shared verdict copy: word, translation, emoji
+    # T3: share text introduces the site before the card even loads. Built
+    # from the same map, so the translation can never drift from the card.
+    share_text = (f"{vc['emoji']} Just ran a free checkup on my ZIP's housing market — "
+                  f"{city} ({z}) says {vc['word']}: {vc['translation'].split(' — ')[0].lower()}. "
+                  f"Check yours:")
 
     rows = "".join(
         f'<div class="metric"><span class="name">{esc(n)}</span>'
@@ -266,8 +280,22 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # cache-busting strategy: scrapers key on the image url, so cards refresh
     # exactly when the data does and never go stale behind a CDN.
     og_img = (f"{SITE}/og/{period}/{z}.png" if has_card else f"{SITE}/og/default.png")
-    og_title = f"Should I sell in {city}? {z} says {k['tag']}"
-    og_alt = f"{k['tag']} — {z}, {city}, {st}. {stat}"
+    # T2: the CARD asks the question, so the TITLE states the finding —
+    # together they read as Q then A in the preview stack. Drop the state
+    # before the city if the 70-char budget is tight.
+    # ≤70 chars so nothing truncates in a preview. Degrade in order: drop the
+    # state, then shorten the label, then drop the trailing ZIP (it is already
+    # on the card and in the URL).
+    def _title(place, label="housing market check", show_zip=True):
+        tail = f" ({z})" if show_zip else ""
+        return f"{place} {label}: {vc['word']} — {vc['short']}{tail}"
+    for cand in (_title(f"{city}, {st}"), _title(city), _title(city, "market check"),
+                 _title(city, "market check", False)):
+        og_title = cand
+        if len(cand) <= 70:
+            break
+    og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+    og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
     title = f"Should I Sell My House in {city}, {st}? — {z} Verdict ({pretty_period})"
     desc = (f"{k['tag']} — {city}, {st} ({z}). "
             + (f"Prices {pct(m['spy'])} vs. a year ago; " if m.get("spy") is not None else "")
@@ -300,18 +328,21 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{url}">
 <meta property="og:type" content="article"><meta property="og:title" content="{esc(og_title)}">
-<meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{url}">
+<meta property="og:description" content="{esc(og_desc)}"><meta property="og:url" content="{url}">
 <meta property="og:site_name" content="ShouldISellYet"><meta property="og:image" content="{og_img}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="{esc(og_alt)}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(og_title)}">
-<meta name="twitter:description" content="{esc(desc)}"><meta name="twitter:image" content="{og_img}">
+<meta name="twitter:description" content="{esc(og_desc)}"><meta name="twitter:image" content="{og_img}">
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
 <script type="application/ld+json">{ld}</script>
 </head><body>
 {NAVBAR}
 <div class="wrap">
+<div id="share-banner" hidden>Someone shared this ZIP's market checkup with you.
+  <a href="/?{UTM}#check">Check your own ZIP free</a> — takes 5 seconds.
+  <button type="button" id="share-banner-x" aria-label="Dismiss">&times;</button></div>
 <div class="crumb"><a href="/">Home</a> › <a href="/zip/">Markets</a> › <a href="/zip/{st}/">{esc(state_name)}</a> › {z}</div>
 <h1>Should I sell my house in {esc(city)}, {esc(st)}? ({z})</h1>
 <div class="vcard" style="border-color:{k['line']}">
@@ -328,7 +359,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE}</div>
 </div>
 <div class="ctas">
-  <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-tag="{k['tag']}" data-place="{esc(city)} ({z})" data-emoji="{emoji}">Share this verdict</button>
+  <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-text="{esc(share_text)}">Share this checkup</button>
   <a class="btn btn-primary" href="/?zip={z}&amp;{UTM}">Check this ZIP live</a>
   <a class="btn btn-outline" href="/subscribe.html?plan=monitor&amp;zip={z}&amp;{UTM}">Set up notifications</a>
   <a class="btn btn-ghost" href="/subscribe.html?plan=report&amp;zip={z}&amp;{UTM}">Get the full report</a>
@@ -344,16 +375,31 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 // Share this ZIP's verdict. PUBLIC DATA ONLY — the button carries the ZIP,
 // the verdict word and the place name, all of which are already on the page.
 // No personal input exists on this page and none may be introduced here.
+// T4: close the loop for a shared arrival. Banner only — no modal, no email
+// gate; the page below already explains itself. Dismissal sticks per session.
+(function(){{
+  try {{
+    var shared = new URLSearchParams(location.search).get("utm_source") === "share";
+    var el = document.getElementById("share-banner");
+    if (shared && el && !sessionStorage.getItem("sisy_share_banner_x")) {{
+      el.hidden = false;
+      document.getElementById("share-banner-x").addEventListener("click", function(){{
+        el.hidden = true;
+        try {{ sessionStorage.setItem("sisy_share_banner_x", "1"); }} catch (e) {{}}
+      }});
+    }}
+  }} catch (e) {{}}
+}})();
 (function(){{
   var b = document.getElementById("share-btn"), t;
   if (!b) return;
   var url = "https://shouldisellyet.com/zip/" + b.dataset.zip + "/?utm_source=share";
-  var text = b.dataset.emoji + " My ZIP says " + b.dataset.tag + " — " + b.dataset.place + ". What does yours say?";
+  var text = b.dataset.text;
   b.addEventListener("click", function(){{
     if (navigator.share) {{ navigator.share({{ text: text, url: url }}).catch(function(){{}}); return; }}
     var payload = text + " " + url, done = function(ok){{
       clearTimeout(t); b.textContent = ok ? "Copied ✓" : "Couldn't copy";
-      t = setTimeout(function(){{ b.textContent = "Share this verdict"; }}, 2400);
+      t = setTimeout(function(){{ b.textContent = "Share this checkup"; }}, 2400);
     }};
     if (navigator.clipboard && navigator.clipboard.writeText) {{
       navigator.clipboard.writeText(payload).then(function(){{ done(true); }}).catch(function(){{ done(false); }});
@@ -511,6 +557,8 @@ def main():
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
     (stage / "zip.css").write_text(CSS, encoding="utf-8")
+    # Same canonical map the cards and titles use, for hand-written pages.
+    (Path(web) / "verdict-copy.js").write_text(vcopy_js(), encoding="utf-8")
 
     by_prefix = defaultdict(list)
     for z, e in eligible:

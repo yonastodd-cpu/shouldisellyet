@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="verdict-copy.js"></script>
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
 <style>
@@ -805,11 +806,17 @@ $("share-btn").addEventListener("click", () => {
   // PRIVACY: lastVerdict holds {zip, st, tag, level} only. No personal input
   // (value, balance, equity, walk-away, rate) is in scope here, and none may
   // ever be added to the shared text or URL.
-  const emoji = lastVerdict.level === "green" ? "🟢" : lastVerdict.level === "yellow" ? "🟡" : "🔴";
+  // Wording comes from the shared map (verdict-copy.js, generated from
+  // pipeline/data/verdict_copy.json) so the share text, the card and the OG
+  // title can never disagree about what a verdict means.
+  const vc = (window.VERDICT_COPY || {})[lastVerdict.level] || {};
   const city = (lastVerdict.city || "").trim();
   const where = city ? city + " (" + lastVerdict.zip + ")" : "ZIP " + lastVerdict.zip;
   const url = "https://shouldisellyet.com/zip/" + lastVerdict.zip + "/?utm_source=share";
-  const text = emoji + " My ZIP says " + lastVerdict.tag + " — " + where + ". What does yours say?";
+  const meaning = (vc.translation || "").split(" — ")[0].toLowerCase();
+  const text = (vc.emoji || "") + " Just ran a free checkup on my ZIP's housing market — " +
+    where + " says " + (vc.word || lastVerdict.tag) +
+    (meaning ? ": " + meaning : "") + ". Check yours:";
   if (navigator.share) { navigator.share({ text, url }).catch(() => {}); return; }
   const payload = text + " " + url;
   const b = $("share-btn"), lbl = $("share-label");
