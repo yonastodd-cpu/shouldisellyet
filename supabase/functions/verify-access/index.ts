@@ -14,8 +14,9 @@
 //   200 { ok:false }                                                   — unknown/revoked
 // `watches` (from schema-v4.sql) lets the report page restore each metric's
 // toggle to its last-saved state instead of always starting unchecked.
-// NOTE: prices quoted in the webhook's emails are hardcoded there — keep them
-// in sync with web/prices.js when pricing changes.
+// NOTE: prices quoted in the webhook's emails come from its own PRICES block
+// (edge functions can't import web/prices.js) — keep the two in sync when
+// pricing changes; pipeline/test_prices.py checks that they agree.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";

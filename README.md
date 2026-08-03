@@ -71,11 +71,14 @@ and emails each `monitor`-plan subscriber whose ZIP changed color. If secrets
 aren't configured it dry-runs (prints what it would send) and never fails the build.
 
 **Billing:** consumer prices live in `web/prices.js` (single source of truth:
-$39/yr annual · $5.99/mo monthly · $9.99 one-time report · $29 first-year
-upgrade for report buyers within 30 days). Create the matching Stripe Payment
-Links and paste them into `LINKS` in `web/subscribe.html` — see the TODO there
-for exactly which links are missing. Until a link exists, that option captures
-the signup as `status='pending'` in Supabase for manual follow-up.
+$29/yr annual · $3.99/mo monthly · $5.99 one-time report · $23 first-year
+upgrade for report buyers within 30 days). Annual is the highlighted default
+on every surface. Create the matching Stripe Payment Links and paste them into
+`LINKS` in `web/subscribe.html` — see the ⚠️ block there; as of the 2026-08-03
+reprice all four links still carry the old amounts. Until a link exists, that
+option captures the signup as `status='pending'` in Supabase for manual
+follow-up. `pipeline/test_prices.py` fails the build if the un-scripted legal
+pages drift from `prices.js`.
 
 ## Stripe webhook — automatic activation (no manual steps after payment)
 

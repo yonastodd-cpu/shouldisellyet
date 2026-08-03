@@ -319,8 +319,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
         <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
 
         <div class="v-ctas">
-          <a class="vbtn vbtn-primary" id="cta-monitor" href="subscribe.html?plan=monitor"><span>Full Report + Notifications</span><span class="vbtn-price" data-price="monthly-mo">$5.99/mo</span></a>
-          <a class="vbtn vbtn-secondary" id="cta-report" href="subscribe.html?plan=report"><span>Just the Full Report</span><span class="vbtn-price"><span data-price="report">$9.99</span> once</span></a>
+          <a class="vbtn vbtn-primary" id="cta-monitor" href="subscribe.html?plan=monitor"><span>Full Report + Notifications</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
+          <a class="vbtn vbtn-secondary" id="cta-report" href="subscribe.html?plan=report"><span>Just the Full Report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
           <button class="vbtn vbtn-tertiary" id="share-btn" type="button"><span class="share-face"><svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="share-label">Share</span></span></button>
         </div>
 
@@ -332,7 +332,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
              since checkout moved there. subMonitor() below is kept intact and
              pairs with this markup — restore both together if it ever returns.
         <div class="mform" id="mform">
-          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b><span data-price="annual">$39</span>/yr (<span data-price="annual-permo">$3.25/mo, billed annually</span>), or <span data-price="monthly-mo">$5.99/mo</span>. Cancel anytime.</b></div>
+          <div style="font-size:13px;color:var(--muted)">EquityWatch monitoring — tell us your home and get an email the moment the market for it shifts. <b><span data-price="annual">$29</span>/yr (<span data-price="annual-permo">$2.42/mo, billed annually</span>), or <span data-price="monthly-mo">$3.99/mo</span>. Cancel anytime.</b></div>
           <input type="email" id="mf-email" placeholder="you@email.com" required>
           <input type="text" id="mf-address" placeholder="Property address (optional)">
           <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</label>
@@ -423,7 +423,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
     <div class="price-card">
       <div class="card-title">Full report — one time</div>
-      <div class="price"><span data-price="report">$9.99</span> <small>once</small></div>
+      <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
       <div class="price-note">Credited toward EquityWatch if you upgrade within 30 days</div>
       <div class="price-feats">Your home's full report: every signal gauge · your estimated equity · your walk-away number if you sold today · printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
       <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
@@ -431,8 +431,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
       <div class="card-title">EquityWatch — full report &amp; notifications</div>
-      <div class="price"><span data-price="monthly">$5.99</span> <small>/mo</small></div>
-      <div class="price-note">Cancel anytime · <span data-price="annual-alt">or $39/yr — save $32</span></div>
+      <div class="price"><span data-price="annual">$29</span> <small>/yr</small></div>
+      <div class="price-note"><span data-price="annual-permo">$2.42/mo, billed annually</span> · <span data-price="save-line">Save $18.88 vs monthly</span></div>
+      <div class="price-note" style="margin-top:4px">Cancel anytime · <span data-price="monthly-line">or $3.99/mo billed monthly</span></div>
       <div class="price-feats">Everything in the one-time report, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
       <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Full Report + Notifications</a>
     </div>
@@ -472,10 +473,11 @@ const SHOW_AGENT_CTA_IN_RESULTS = false;
 // ————— Backend config —————
 // Stripe Payment Links: paste and the buttons go straight to checkout.
 // TODO: payment-provider price IDs must be updated to match web/prices.js
-// ($39/yr annual, $5.99/mo monthly, $9.99 one-time report, $29 upgrade).
+// ($29/yr annual, $3.99/mo monthly, $5.99 one-time report, $23 upgrade).
 // Checkout is wired through subscribe.html (see LINKS there); this constant
-// is legacy.
-const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // $5.99/mo EquityWatch
+// is legacy and unreferenced — the link below still points at the OLD $5.99/mo
+// price, so do not wire anything new to it.
+const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";   // stale: old $5.99/mo link
 // Supabase (Settings → API). Anon key is publish-safe: RLS allows INSERT only.
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";

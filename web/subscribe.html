@@ -79,7 +79,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
     <div class="card">
       <div class="zipnote mono" id="zipnote"></div>
       <h2 id="planname">EquityWatch monitoring</h2>
-      <div class="price" id="price"><span data-price="annual">$39</span> <small>/year · cancel anytime</small></div>
+      <div class="price" id="price"><span data-price="annual">$29</span> <small>/year · cancel anytime</small></div>
       <div id="upgrade-note" style="display:none;font-size:13px;color:#1e6b3f;background:var(--green-soft);border:1px solid var(--green-line);border-radius:8px;padding:10px 14px;margin:10px 0 0;line-height:1.5"></div>
       <div class="billing" id="billing">
         <button type="button" id="bill-annual" class="on" onclick="setBilling('annual')"></button>
@@ -129,18 +129,26 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
 <script>
 // Stripe Payment Links. Prices themselves live in web/prices.js — these are
-// the provider-side counterparts, all now created and live (2026-07-26).
-//   annual_upgrade reuses the monitor_annual Payment Link with a $10-off
-//   promo code prefilled (UPGRADE10) rather than a distinct price — depends
-//   on "Allow promotion codes" being enabled on that link in Stripe, and on
-//   UPGRADE10 being a flat $10.00 discount (not a percentage). Confirmed
-//   correct in the Stripe dashboard as of this pricing pass; re-verify if
-//   either link or coupon is ever touched again.
+// the provider-side counterparts.
+//
+// ⚠️ STALE AS OF THE 2026-08-03 REPRICE. Every link below still charges the
+// OLD amount. The site now advertises $29/yr, $3.99/mo, $5.99 once, $23
+// upgrade; these links charge $39/yr, $5.99/mo, $9.99 once, $29 upgrade.
+// The one-time link is the urgent one — it OVERCHARGES a buyer by $4.00
+// against the advertised price, which is a chargeback and a trust problem,
+// not just a bookkeeping one. Do not announce the new pricing until these
+// four are recreated in live mode and repasted here.
+//
+//   annual_upgrade reuses the monitor_annual Payment Link with a promo code
+//   prefilled rather than a distinct price. UPGRADE10 is a flat $10 coupon,
+//   sized for the old $39 → $29. Against a new $29 annual link it would
+//   charge $19 — UNDERcharging by $4 — so it must be resized to $5.99 off
+//   (→ $23.01) or replaced with a dedicated $23 first-year link.
 const LINKS = {
-  monitor_annual:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03", // $39/yr
-  monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // $5.99/mo
-  annual_upgrade:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03?prefilled_promo_code=UPGRADE10", // $29 first yr
-  report:          "https://buy.stripe.com/7sY5kE60V1kZ8DEezx2go02"  // $9.99 one-time
+  monitor_annual:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03", // STALE: charges $39/yr
+  monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // STALE: charges $5.99/mo
+  annual_upgrade:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03?prefilled_promo_code=UPGRADE10", // STALE: charges $29 first yr
+  report:          "https://buy.stripe.com/7sY5kE60V1kZ8DEezx2go02"  // STALE: charges $9.99 — OVERCHARGES
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
@@ -152,8 +160,8 @@ const COPY = {
     headline: "Full report & notifications",
     planname: "EquityWatch — full report & notifications",
     // Monitor renders its price through setBilling() below; this is the
-    // pre-toggle value and leads with monthly to match the homepage card.
-    price: PRICES.usd(PRICES.MONTHLY) + ' <small>/month · cancel anytime</small>',
+    // pre-toggle value and leads with annual to match the homepage card.
+    price: PRICES.usd(PRICES.ANNUAL) + ' <small>/year · cancel anytime</small>',
     propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
       "Your full EquityWatch property report, included and refreshed monthly",
@@ -182,10 +190,12 @@ const q = new URLSearchParams(location.search);
 const plan = q.get("plan") === "report" ? "report" : "monitor";
 const zip = (q.get("zip") || "").replace(/\D/g,"").slice(0,5);
 const c = COPY[plan];
-// Billing interval for the monitor plan — monthly is the default, matching the
-// $5.99 the homepage buttons advertise. ?billing=annual still opts in, and the
-// report-credit upgrade below forces annual since the credit only applies there.
-let billing = q.get("billing") === "annual" ? "annual" : "monthly";
+// Billing interval for the monitor plan — annual is the default, matching the
+// $29/yr the homepage buttons advertise. Arriving on a different interval than
+// the price you clicked is a bait-and-switch, so these two must move together.
+// ?billing=monthly opts out; the report-credit upgrade below forces annual,
+// since the credit only buys down the first year.
+let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
 
 // ————— Report-credit upgrade (report buyer → annual within 30 days) —————
 // Purchase timestamps are recorded client-side at checkout handoff (see go()).
