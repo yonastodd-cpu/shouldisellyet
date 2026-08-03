@@ -1,0 +1,7 @@
+{
+  "_comment": "CANONICAL verdict copy. Single source of truth for the word, its plain-English translation, and the status emoji. Read by the OG card renderer, the ZIP-page generator, the share text on every surface, and the homepage (via the generated web/verdict-copy.js). Change wording HERE and nowhere else — a translation that drifts between the card and the share text is exactly the confusion this map exists to prevent.",
+  "green":  {"word": "HOLD",   "translation": "No warning signs right now",        "short": "no warning signs",        "emoji": "🟢", "ink": "#1e7a42", "band": "#e9f4ee", "edge": "#bcdcc9"},
+  "yellow": {"word": "WATCH",  "translation": "Early warning signs — worth watching", "short": "early warning signs", "emoji": "🟡", "ink": "#96650c", "band": "#faf1dd", "edge": "#e8d5a8"},
+  "red":    {"word": "ACT",    "translation": "Warning signs building — pay attention", "short": "warning signs building", "emoji": "🔴", "ink": "#c02f2f", "band": "#fbe9e9", "edge": "#ecc3c3"},
+  "strong": {"word": "STRONG", "translation": "Seller's market — conditions favor you", "short": "a seller's market", "emoji": "🔵", "ink": "#1f3a5f", "band": "#e8eef7", "edge": "#c3d2e8"}
+}
