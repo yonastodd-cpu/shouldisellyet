@@ -829,7 +829,27 @@ function saveProfile(){
   PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && el.value) p[id] = el.value; });
   p.costPct = costPct;
   try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch(e){}
-  ADDRESS.save(readAddrForm());
+  pushAddress(ADDRESS.save(readAddrForm()));
+}
+
+// Corrections made here have to reach the ROW, not just this browser —
+// otherwise "one canonical address" is true only until the first edit, and
+// the customer's next device shows the old one. Fire-and-forget: the mirror
+// is already written, so a failed sync degrades to device-local rather than
+// blocking the report. Skipped when there's no token (an ungated preview has
+// no row to write to).
+let lastPushed = "";
+function pushAddress(a){
+  if (!SAVE_ADDR_FN || !TOKEN) return;
+  const v = ADDRESS.validate(a);
+  if (!v.ok) return;                       // never sync a half-typed address
+  const sig = JSON.stringify(a);
+  if (sig === lastPushed) return;          // nothing changed since the last push
+  lastPushed = sig;
+  fetch(SAVE_ADDR_FN, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ token: TOKEN }, a))
+  }).catch(() => { lastPushed = ""; });    // let the next save retry
 }
 function loadProfile(){
   let p = null;
@@ -1653,6 +1673,7 @@ $("cost-slider").addEventListener("input", function(){
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : "";
 const SAVE_WATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-watch" : "";
+const SAVE_ADDR_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-address" : "";
 const MATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/match-request" : "";
 // Realtor Match (sponsored-agent card) is feature-flagged OFF — the neutral
 // Get Connected flow below replaces it. Flip to true to bring the card back;
