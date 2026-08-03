@@ -393,7 +393,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 (function(){{
   var b = document.getElementById("share-btn"), t;
   if (!b) return;
-  var url = "https://shouldisellyet.com/zip/" + b.dataset.zip + "/?utm_source=share";
+  var url = "https://shouldisellyet.com/s/" + b.dataset.zip;
   var text = b.dataset.text;
   b.addEventListener("click", function(){{
     if (navigator.share) {{ navigator.share({{ text: text, url: url }}).catch(function(){{}}); return; }}
@@ -414,6 +414,64 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   }});
 }})();
 </script>
+</body></html>"""
+
+
+def share_stub(z, e, place, meta, has_card):
+    """/s/{zip} — the share destination.
+
+    Carries the full per-ZIP OG card so the preview still shows the SENDER's
+    verdict (that's the hook), then bounces the human to the homepage.
+
+    The redirect deliberately does NOT carry the ZIP as `zip=`: that param
+    prefills and auto-runs the checker, which would satisfy the recipient's
+    curiosity with someone else's result. `from=` is context only. The whole
+    point of the share is to get the recipient to type their OWN ZIP.
+
+    Scrapers read meta and never execute JS or follow the refresh, so they get
+    the card; humans get the redirect. noindex + absent from the sitemap so
+    these never compete with the real /zip/ pages in search.
+    """
+    city, st, _ = place
+    vc = vcopy(e["l"])
+    stat = card_stat(e.get("m", {}))
+    period = meta.get("period", "")
+    og_img = f"{SITE}/og/{period}/{z}.png" if has_card else f"{SITE}/og/default.png"
+
+    def _title(p_, label="housing market check", show_zip=True):
+        return f"{p_} {label}: {vc['word']} — {vc['short']}" + (f" ({z})" if show_zip else "")
+    for cand in (_title(f"{city}, {st}"), _title(city), _title(city, "market check"),
+                 _title(city, "market check", False)):
+        og_title = cand
+        if len(cand) <= 70:
+            break
+    og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+    dest = f"/?from={z}&amp;utm_source=share"
+    dest_js = f"/?from={z}&utm_source=share"
+
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{esc(og_title)}</title>
+<meta name="description" content="{esc(og_desc)}">
+<link rel="canonical" href="{SITE}/">
+<meta property="og:type" content="website"><meta property="og:title" content="{esc(og_title)}">
+<meta property="og:description" content="{esc(og_desc)}"><meta property="og:url" content="{SITE}/s/{z}">
+<meta property="og:site_name" content="ShouldISellYet">
+<meta property="og:image" content="{og_img}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{esc(city)}, {esc(st)} {z}: {vc['word']} — {esc(vc['translation'])}. {esc(stat)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{esc(og_title)}">
+<meta name="twitter:description" content="{esc(og_desc)}">
+<meta name="twitter:image" content="{og_img}">
+<script>location.replace({dest_js!r});</script>
+<meta http-equiv="refresh" content="0;url={dest}">
+<style>body{{font-family:system-ui,-apple-system,sans-serif;background:#faf8f4;color:#5c6673;
+padding:40px 20px;text-align:center;font-size:16px}}a{{color:#1f3a5f}}</style>
+</head><body>
+<p>Taking you to the free ZIP checker… <a href="{dest}">continue</a></p>
 </body></html>"""
 
 
@@ -614,6 +672,20 @@ def main():
         k = KINDS[e["l"]]
         by_state[st].append((z, city, county, k["tag"], k["hex"]))
 
+    # Share stubs live outside the staged /zip tree, at /s/{zip}.
+    s_stage = web / ".s-build"
+    if s_stage.exists():
+        shutil.rmtree(s_stage)
+    s_stage.mkdir(parents=True)
+    for z, e in eligible:
+        (s_stage / z).mkdir(parents=True, exist_ok=True)
+        (s_stage / z / "index.html").write_text(
+            share_stub(z, e, places[z], meta, z in card_set), encoding="utf-8")
+    s_final = web / "s"
+    if s_final.exists():
+        shutil.rmtree(s_final)
+    s_stage.rename(s_final)
+
     for st, entries in by_state.items():
         d = stage / st
         d.mkdir(parents=True, exist_ok=True)
@@ -635,6 +707,7 @@ def main():
     print(f"skipped: {dict(skipped)}")
     print(f"html: {total_bytes/1e6:.1f} MB total · avg {total_bytes/max(1,len(eligible))/1024:.1f} KB · largest {biggest/1024:.1f} KB")
     print(f"sitemap: index + {chunks} chunk(s), {len(urls):,} URLs, lastmod {lastmod}")
+    print(f"share stubs: {len(eligible):,} at /s/{{zip}} · noindex, not in sitemap")
     if cards_made:
         cb = sum(f.stat().st_size for f in og_dir.rglob("*.png"))
         print(f"og cards: {cards_made:,} rendered ({len(dmv):,} DMV + top {args.top_cards:,}) "

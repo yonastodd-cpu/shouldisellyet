@@ -85,6 +85,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
 h1{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h1);line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1 em{font-style:italic;color:var(--navy)}
 .sub{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);margin:0;max-width:52ch}
+/* Friend-context line for a shared arrival. Sits ABOVE the input so the
+   on-screen keyboard can't push it out of view on mobile. */
+#from-ctx{display:flex;align-items:flex-start;gap:10px;max-width:540px;margin:0 0 4px;
+  padding:11px 14px;background:#f4f6fa;border:1px solid #c3d2e8;border-radius:9px;
+  font-size:var(--fs-body-sm);line-height:1.5}
+#from-ctx[hidden]{display:none}
+#from-ctx b{white-space:nowrap}
+#from-ctx button{margin-left:auto;background:none;border:none;font-size:20px;line-height:1;
+  color:var(--muted);cursor:pointer;padding:0 2px;flex:none}
 .zipform{display:flex;gap:10px;max-width:540px}
 .zipform input{flex:1;font-size:var(--fs-input);font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;padding:14px 18px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;color:var(--ink)}
 .zipform .btn{min-height:56px;padding-left:26px;padding-right:26px;white-space:nowrap}
@@ -278,6 +287,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
     <h1>The market turns quietly. <em>Hear it early.</em></h1>
     <p class="sub">Prices are the last thing to fall. We crunch the newest inventory, price-cut and days-on-market data for your ZIP into one plain-English verdict — months before it shows up in headlines.</p>
+    <div id="from-ctx" hidden></div>
     <div class="zipform">
       <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
       <button class="btn" id="go">Get my verdict</button>
@@ -442,7 +452,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 <footer>
   <div class="foot-row">
     <span>© 2026 ShouldISellYet.com · operated by Yayday LLC · NTRealty is an affiliated partner</span>
-    <span style="display:flex;gap:18px"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="press.html">Press</a><a href="partners.html">For real estate professionals</a></span>
+    <span style="display:flex;gap:14px;flex-wrap:wrap"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="press.html">Press</a><a href="partners.html">For real estate professionals</a></span>
   </div>
   <div class="disclaimer">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
   <!-- Source citation — exact wording required by Redfin Data Center terms;
@@ -812,7 +822,7 @@ $("share-btn").addEventListener("click", () => {
   const vc = (window.VERDICT_COPY || {})[lastVerdict.level] || {};
   const city = (lastVerdict.city || "").trim();
   const where = city ? city + " (" + lastVerdict.zip + ")" : "ZIP " + lastVerdict.zip;
-  const url = "https://shouldisellyet.com/zip/" + lastVerdict.zip + "/?utm_source=share";
+  const url = "https://shouldisellyet.com/s/" + lastVerdict.zip;
   const meaning = (vc.translation || "").split(" — ")[0].toLowerCase();
   const text = (vc.emoji || "") + " Just ran a free checkup on my ZIP's housing market — " +
     where + " says " + (vc.word || lastVerdict.tag) +
@@ -845,6 +855,55 @@ $("go").addEventListener("click", run);
 
 // Deep link from the generated /zip/{zip}/ pages: prefill and run immediately,
 // so "Check this ZIP live" lands on the answer rather than an empty form.
+// ————— Shared arrival: context only, never a prefill —————
+// A share exists to make the RECIPIENT check their own ZIP. Rendering the
+// sender's verdict here would satisfy that curiosity and end the visit, so
+// `from` drives exactly one line of copy: no prefill, no auto-run, no dials.
+// (The separate `zip=` param below is the ZIP-page "check this live" CTA — a
+// different intent, and that one does still run.)
+(async function sharedArrival(){
+  const q = new URLSearchParams(location.search);
+  if (q.get("utm_source") !== "share") return;
+  const from = (q.get("from") || "").replace(/\D/g, "");
+  const input = $("zip");
+  const focusChecker = () => {
+    // Scroll the context line (or the input) close to the TOP, not the centre:
+    // with an on-screen keyboard eating ~45% of a phone viewport, centring
+    // leaves both the line and the field under the keyboard. Measured at 375.
+    const ctx = $("from-ctx");
+    const anchor = (ctx && !ctx.hidden) ? ctx : input;
+    try {
+      anchor.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -14);
+    } catch(e) {}
+    input.focus({ preventScroll: true });   // preventScroll: no second jump
+  };
+  if (!/^\d{5}$/.test(from)) { focusChecker(); return; }
+  let seen = null;
+  try { seen = sessionStorage.getItem("sisy_from_ctx_x"); } catch(e) {}
+  if (seen) { focusChecker(); return; }
+
+  let d = null;
+  try { d = applyStrong(await lookup(from)); } catch(e) {}
+  if (!d) { focusChecker(); return; }        // unknown/unscored -> clean homepage
+
+  const vc = (window.VERDICT_COPY || {})[d.l] || {};
+  let city = "";
+  try { city = await cityFor(from); } catch(e) {}
+  const where = city ? city + " (" + from + ")" : from;
+  const el = $("from-ctx");
+  el.innerHTML = "<span>Your friend's ZIP \u2014 <b>" + where + "</b> \u2014 says <b>" +
+    (vc.word || "") + "</b>: " + (vc.translation || "").toLowerCase() +
+    ". What does yours say?</span>" +
+    '<button type="button" aria-label="Dismiss">&times;</button>';
+  el.hidden = false;
+  el.querySelector("button").addEventListener("click", () => {
+    el.hidden = true;
+    try { sessionStorage.setItem("sisy_from_ctx_x", "1"); } catch(e) {}
+  });
+  focusChecker();
+})();
+
 (function prefillFromQuery(){
   const z = (new URLSearchParams(location.search).get("zip") || "").replace(/\D/g, "").slice(0, 5);
   if (!/^\d{5}$/.test(z)) return;
