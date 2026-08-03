@@ -10,8 +10,13 @@
 // No extra secrets needed — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected.
 //
 // GET  /verify-access?token=<uuid>
-//   200 { ok:true, plan, zip, status, address, purchased_at, watches }  — valid token
+//   200 { ok:true, plan, zip, status, purchased_at, watches,
+//         address_street, address_unit, address_city, address_state }  — valid token
 //   200 { ok:false }                                                   — unknown/revoked
+// The address_* fields are the canonical structured address (schema-v6) — the
+// report page prefills its intake from them, so a buyer never retypes it and
+// it works on a device that has never seen them. `address` (the deprecated
+// freeform column) is still returned for rows written before v6.
 // `watches` (from schema-v4.sql) lets the report page restore each metric's
 // toggle to its last-saved state instead of always starting unchecked.
 // NOTE: prices quoted in the webhook's emails come from its own PRICES block
@@ -46,7 +51,8 @@ Deno.serve(async (req) => {
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/subscribers` +
-        `?select=plan,zip,status,address,created_at,watches&access_token=eq.${token}` +
+        `?select=plan,zip,status,address,address_street,address_unit,address_city,` +
+        `address_state,created_at,watches&access_token=eq.${token}` +
         `&status=in.(active,report)&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
     );
@@ -55,7 +61,12 @@ Deno.serve(async (req) => {
       const s = rows[0];
       // purchased_at powers the report page's 30-day upgrade-credit countdown
       return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status,
-                    address: s.address ?? "", purchased_at: s.created_at ?? null,
+                    address_street: s.address_street ?? "",
+                    address_unit: s.address_unit ?? "",
+                    address_city: s.address_city ?? "",
+                    address_state: s.address_state ?? "",
+                    address: s.address ?? "",   // deprecated, pre-v6 rows only
+                    purchased_at: s.created_at ?? null,
                     watches: s.watches ?? [] });
     }
     return json({ ok: false });

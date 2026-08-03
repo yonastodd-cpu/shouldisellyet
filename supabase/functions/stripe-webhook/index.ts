@@ -116,14 +116,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // fall back to the billing-address postal code.
   const refZip = (session.client_reference_id ?? "").replace(/\D/g, "").slice(0, 5);
   const zip = /^\d{5}$/.test(refZip) ? refZip : (addr?.postal_code ?? "").slice(0, 5);
-  const address = [addr?.line1, addr?.city, addr?.state].filter(Boolean).join(", ");
   const plan = session.mode === "subscription" ? "monitor" : "report";
   const token = crypto.randomUUID();  // report access token
 
   // Activate an existing pending signup for this email, else insert fresh.
-  // NOTE: we do NOT overwrite `address` here — the pending row already holds the
-  // exact property the customer chose on the subscribe page. Billing address is
-  // only a fallback for the fresh-insert path below.
+  //
+  // The address columns are NOT touched on this path, on purpose. The pending
+  // row already holds the structured address the customer entered on the
+  // subscribe page — the property they want watched. Stripe's address is the
+  // BILLING address, which is a different thing and often a different place
+  // (a second home, a PO box, a parent's house). Overwriting one with the
+  // other would silently retarget the report to the wrong property.
   const patch = await sb(
     `subscribers?email=eq.${encodeURIComponent(email)}&status=eq.pending`,
     {
@@ -139,12 +142,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   );
   const updated = patch.ok ? await patch.json() : [];
   if (!Array.isArray(updated) || updated.length === 0) {
+    // No pending row — the customer reached Stripe some other way, so the
+    // billing address is genuinely all we have. Map it into the structured
+    // columns rather than the deprecated freeform one, so the report reads it
+    // through the same path as everything else. The report page lets them
+    // correct it, and the ZIP mismatch guard catches a billing/property split.
     await sb("subscribers", {
       method: "POST",
       body: JSON.stringify({
         email,
         zip: /^\d{5}$/.test(zip) ? zip : "00000",
-        address,
+        address_street: addr?.line1 ?? null,
+        address_unit: addr?.line2 ?? null,
+        address_city: addr?.city ?? null,
+        address_state: addr?.state ?? null,
         plan,
         status: "active",
         source: "stripe",
