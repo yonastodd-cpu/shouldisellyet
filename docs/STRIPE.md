@@ -106,7 +106,12 @@ purchase, which is exactly the duplicate-row bug the migration fixes.
 # 2. then the functions
 npx supabase functions deploy stripe-webhook
 npx supabase functions deploy verify-access
+npx supabase functions deploy save-address
 ```
+
+`save-address` is new. Set **Enforce JWT verification → off** for it, as with
+`verify-access` and `save-watch`: it authenticates with the report access
+token, not a Supabase JWT.
 
 `RESEND_API_KEY` must be set in **Edge Functions → Secrets** or no email
 sends. That case is logged loudly and the send is left *unclaimed*, so the
