@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="address.js"></script>
 <style>
 :root{
   --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
@@ -41,9 +42,14 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 .aside .row b{color:var(--ink)}
 .propform{margin:20px 0 4px;border-top:1px solid var(--hairline2);padding-top:18px}
 .propform .pf-k{font-size:10px;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
-.propform input{width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;margin-bottom:9px}
-.propform .pf-two{display:grid;grid-template-columns:110px 1fr;gap:9px}
+.propform input,.propform select{width:100%;font-size:15px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink);margin-bottom:9px}
+.propform select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235c6673' stroke-width='1.6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.propform input.bad,.propform select.bad{border-color:var(--red);background:#fdf6f6}
+.propform .pf-two{display:grid;grid-template-columns:1fr 118px;gap:9px}
 .propform .pf-hint{font-size:11.5px;color:var(--fainter);line-height:1.5;margin-top:2px}
+.propform .pf-zipnote{font-size:12px;line-height:1.5;margin:-3px 0 9px;min-height:0}
+.propform .pf-zipnote.ok{color:#1e6b3f}
+.propform .pf-zipnote.warn{color:var(--red)}
 .billing{display:none;gap:8px;margin:14px 0 2px}
 .billing button{flex:1;font-family:inherit;font-size:13px;font-weight:600;padding:10px 12px;border-radius:8px;border:1.5px solid var(--hairline);background:#fff;color:var(--muted);cursor:pointer;text-align:left;line-height:1.4}
 .billing button.on{border-color:var(--navy);color:var(--ink);background:#f4f7fb}
@@ -89,12 +95,23 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
       <div class="propform">
         <div class="pf-k mono" id="pf-title">THE HOME YOU WANT MONITORED</div>
-        <input id="pf-addr" type="text" placeholder="Property address — 1234 Aspen Knolls Way, Silver Spring, MD">
+        <!-- The ONE address capture on the site. Structured, not freeform:
+             the ZIP drives every verdict, so it is a validated field here
+             rather than something parsed out of a sentence later. Stripe's
+             own address collection is turned off per link (see docs) so this
+             is asked once and only once. -->
+        <input id="pf-street" type="text" autocomplete="street-address" name="street-address" placeholder="Street address">
         <div class="pf-two">
-          <input id="pf-zip" inputmode="numeric" maxlength="5" placeholder="ZIP">
-          <input id="pf-email" type="email" placeholder="you@email.com">
+          <input id="pf-unit" type="text" autocomplete="address-line2" placeholder="Unit / Apt (optional)">
+          <input id="pf-zip" inputmode="numeric" maxlength="5" autocomplete="postal-code" name="postal-code" placeholder="ZIP">
         </div>
-        <div class="pf-hint" id="pf-hint">We'll monitor the market conditions for this home and alert you the moment they shift. Use the same email at checkout.</div>
+        <div class="pf-two">
+          <input id="pf-city" type="text" autocomplete="address-level2" placeholder="City">
+          <select id="pf-state" autocomplete="address-level1"><option value="">State</option></select>
+        </div>
+        <div class="pf-zipnote" id="pf-zipnote"></div>
+        <input id="pf-email" type="email" autocomplete="email" placeholder="you@email.com">
+        <div class="pf-hint" id="pf-hint">Enter the ZIP and we'll fill in the city and state. We'll monitor this home's market and alert you the moment it shifts — and you won't be asked for the address again.</div>
       </div>
 
       <label class="consent">
@@ -107,8 +124,8 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
     <div class="aside">
       <div class="k">WHAT HAPPENS NEXT</div>
-      <div class="row"><b>1.</b><span>You tell us the home to watch, then pay securely on Stripe's page.</span></div>
-      <div class="row"><b>2.</b><span>You're brought straight back to build your home's full property report.</span></div>
+      <div class="row"><b>1.</b><span>You tell us the home to watch — once, here — then pay securely on Stripe's page. Stripe asks only for your card; it won't ask for the address again.</span></div>
+      <div class="row"><b>2.</b><span>You're brought straight back to build your home's full property report, with the address already filled in.</span></div>
       <div class="row"><b>3.</b><span>We send a confirmation email with your private report link.</span></div>
       <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment the market for your home shifts — up or down. No news is good news.</span></div>
       <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. We monitor local market conditions (from public Redfin data) for the area your home is in — this is general market information, not an appraisal of your specific home, and not financial advice.</p>
@@ -138,6 +155,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 // against the advertised price, which is a chargeback and a trust problem,
 // not just a bookkeeping one. Do not announce the new pricing until these
 // four are recreated in live mode and repasted here.
+// Step-by-step, including the coupon maths: docs/STRIPE.md.
 //
 //   annual_upgrade reuses the monitor_annual Payment Link with a promo code
 //   prefilled rather than a distinct price. UPGRADE10 is a flat $10 coupon,
@@ -247,13 +265,83 @@ document.getElementById("planname").textContent = c.planname;
 document.getElementById("price").innerHTML = c.price;
 document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").join("");
 document.getElementById("pf-title").textContent = c.propTitle;
-if (zip) { document.getElementById("zipnote").textContent = "FOR ZIP " + zip; document.getElementById("pf-zip").value = zip; }
+if (zip) document.getElementById("zipnote").textContent = "FOR ZIP " + zip;
 if (plan === "report") document.getElementById("row4").style.display = "none";
 if (plan === "monitor") { document.getElementById("billing").style.display = "flex"; setBilling(billing); }
-document.getElementById("pf-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
 document.getElementById("tos").addEventListener("change", function(){
   document.getElementById("cta").disabled = !this.checked;
 });
+
+// ————— The address form (see web/address.js) —————
+const F = id => document.getElementById("pf-" + id);
+const el = id => document.getElementById(id);
+
+ADDRESS.STATES.forEach(s => {
+  const o = document.createElement("option"); o.value = o.textContent = s;
+  F("state").appendChild(o);
+});
+
+function readForm(){
+  return { street: F("street").value, unit: F("unit").value, city: F("city").value,
+           state: F("state").value, zip: F("zip").value };
+}
+function writeForm(a){
+  ADDRESS.FIELDS.forEach(f => { if (a[f] && !F(f).value) F(f).value = a[f]; });
+}
+function clearBad(){ ["street","unit","city","state","zip"].forEach(f => F(f).classList.remove("bad")); }
+
+// Prefill from the mirror, then let ?zip= win — arriving from a ZIP page means
+// that ZIP is what they just looked at, which beats a stale saved one.
+const storedAddr = ADDRESS.load();
+writeForm(storedAddr);
+if (zip) {
+  F("zip").value = zip;
+  // A different ZIP than the saved address means a different property (or a
+  // corrected ZIP), so the saved city/state describe somewhere else — drop
+  // them and let the lookup refill. The street stays: it's the one field
+  // that can't be derived, and it's visible and editable before they pay.
+  if (storedAddr.zip && storedAddr.zip !== zip) { F("city").value = ""; F("state").value = ""; }
+}
+
+// ————— ZIP → city/state —————
+// Fires when the ZIP reaches 5 digits. Two rules:
+//   * FIRST resolve (prefill, ?zip=) — fill only empty fields, so a city the
+//     customer already curated survives.
+//   * ZIP CHANGES to a different ZIP — overwrite. The old city belongs to a
+//     different place now, and a stale one would be saved as this property's
+//     address.
+let lastResolved = "";
+async function resolveZip(){
+  const z = F("zip").value.replace(/\D/g,"").slice(0,5);
+  const note = el("pf-zipnote");
+  if (z.length < 5) { note.textContent = ""; note.className = "pf-zipnote"; lastResolved = ""; return null; }
+  if (z === lastResolved) return null;
+  const changed = lastResolved !== "";
+  lastResolved = z;
+  note.className = "pf-zipnote"; note.textContent = "Looking up " + z + "…";
+  const r = await ADDRESS.resolve(z);
+  if (F("zip").value.replace(/\D/g,"").slice(0,5) !== z) return null;  // they kept typing
+  if (r.state && (changed || !F("state").value)) F("state").value = r.state;
+  if (r.city && (changed || !F("city").value)) F("city").value = r.city;
+  if (r.known) {
+    note.className = "pf-zipnote ok";
+    note.textContent = "✓ " + [r.city, r.state].filter(Boolean).join(", ") + " — we track this ZIP.";
+  } else if (r.checked) {
+    note.className = "pf-zipnote warn";
+    note.textContent = "We don't have market data for " + z + " yet — too few reported sales. " +
+      "Check the ZIP, or email naomi@shouldisellyet.com and we'll tell you when it's covered.";
+  } else {
+    note.textContent = "";   // lookup unavailable — say nothing rather than something wrong
+  }
+  return r;
+}
+F("zip").addEventListener("input", function(){
+  this.value = this.value.replace(/\D/g,"").slice(0,5);
+  if (this.value.length === 5) resolveZip();
+  else { el("pf-zipnote").textContent = ""; lastResolved = ""; }
+});
+F("zip").addEventListener("blur", resolveZip);
+if (F("zip").value.length === 5) resolveZip();
 
 async function savePending(rec){
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
@@ -270,19 +358,40 @@ async function savePending(rec){
 
 async function go(){
   if (!document.getElementById("tos").checked) return;
-  const addr = document.getElementById("pf-addr").value.trim();
-  const pfZip = document.getElementById("pf-zip").value.replace(/\D/g,"").slice(0,5) || zip;
-  const email = document.getElementById("pf-email").value.trim();
   const cta = document.getElementById("cta");
   const hint = document.getElementById("pf-hint");
-  if (!/^\d{5}$/.test(pfZip)) { hint.textContent = "Please enter the 5-digit ZIP for the home you want monitored."; hint.style.color = "var(--red)"; document.getElementById("pf-zip").focus(); return; }
-  if (!email || !/@/.test(email)) { hint.textContent = "Please enter your email so we can send alerts and your report link."; hint.style.color = "var(--red)"; document.getElementById("pf-email").focus(); return; }
+  const email = F("email").value.trim();
+  clearBad();
+  const fail = (msg, id) => {
+    hint.textContent = msg; hint.style.color = "var(--red)";
+    const t = document.getElementById(id); if (t) { t.classList.add("bad"); t.focus(); }
+  };
+
+  const a = ADDRESS.normalize(readForm());
+  const v = ADDRESS.validate(a);
+  if (!v.ok) return fail(v.msg, "pf-" + v.field);
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return fail("Please enter your email so we can send alerts and your report link.", "pf-email");
+
+  // Coverage check before we take money. A ZIP we don't score produces an
+  // empty report, and after payment is far too late to discover that.
+  // `checked` false means the lookup itself failed — fail OPEN there; a JSON
+  // fetch blip must never block a paying customer.
+  const r = await ADDRESS.resolve(a.zip);
+  if (r.checked && !r.known)
+    return fail("We don't have market data for " + a.zip + " yet, so we can't build a report for it. " +
+                "Please check the ZIP — or email naomi@shouldisellyet.com and we'll tell you when it's covered.", "pf-zip");
+
+  hint.style.color = "";
   cta.disabled = true; cta.textContent = "Saving…";
+  ADDRESS.save(a);   // mirror, so the report can prefill before the row syncs
   // `plan` is constrained by the DB to monitor|report|waitlist, so the billing
   // interval (and the upgrade flag) ride along in `source` (free text).
   const sourceTag = "subscribe-page" +
     (plan === "monitor" ? ":" + billing + (upgrade && billing === "annual" ? "-upgrade" : "") : "");
-  const saved = await savePending({ email, zip: pfZip, address: addr, plan, source: sourceTag });
+  const pfZip = a.zip;
+  const saved = await savePending(Object.assign(
+    { email, plan, source: sourceTag }, ADDRESS.toRow(a)));
   // Record the purchase locally (email + timestamp) — this is what powers the
   // 30-day report-credit countdown on the report page. See the TODO backend
   // note above for the fields needed to make this durable server-side.

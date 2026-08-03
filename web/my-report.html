@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="address.js"></script>
 <style>
 :root{
   --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
@@ -38,7 +39,13 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .setup .lede{font-size:14.5px;color:var(--muted);margin:0 0 20px;line-height:1.6}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .f label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px}
-.f input{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit}
+.f input,.f select{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;font-family:inherit;color:var(--ink)}
+.f select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235c6673' stroke-width='1.6'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:34px}
+.f input.bad,.f select.bad{border-color:var(--red);background:#fdf6f6}
+#addr-block{gap:10px 14px;margin-bottom:14px}
+#addr-block .hint{margin-top:0}
+.zipnote{font-size:12.5px;line-height:1.5;margin:-4px 0 0;grid-column:1/-1}
+.zipnote.ok{color:#1e6b3f}.zipnote.warn{color:var(--red)}
 .f .hint{font-size:11.5px;color:var(--fainter);margin-top:5px}
 details#adv{border:1px dashed var(--hairline);border-radius:10px;padding:12px 16px;margin-top:4px}
 details#adv summary{font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
@@ -249,12 +256,24 @@ details.how .how-body b{color:#3a4450}
   <div class="card setup" id="setup">
     <h1>Your report, from your own numbers</h1>
     <p class="lede">Your numbers beat any purchased estimate. Only the address is required &mdash; everything else sharpens your walk-away number, and you can come back and adjust any of it anytime (this is also your profile). Nothing you type here leaves your browser: it's saved on this device only.</p>
-    <div class="frow">
+    <!-- Structured, matching the capture on subscribe.html. Both write the
+         same five fields through web/address.js, so a purchaser sees this
+         already filled in and never types the address twice. The ZIP is its
+         own validated field: it drives the verdict and must not be a parse
+         result. -->
+    <div class="frow" id="addr-block">
       <div class="f" style="grid-column:1/-1">
-        <label>1 · PROPERTY ADDRESS (INCLUDE ZIP)</label>
-        <input id="in-addr" type="text" placeholder="1234 Aspen Knolls Way, Silver Spring, MD 20906"
+        <label>1 · PROPERTY ADDRESS</label>
+        <input id="in-street" type="text" placeholder="Street address"
                autocomplete="street-address" name="street-address" autofocus>
-        <div class="hint">Your browser can autofill this. We read the ZIP right off the end of the address &mdash; the ZIP drives your market verdict.</div>
+      </div>
+      <div class="f"><input id="in-unit" type="text" placeholder="Unit / Apt (optional)" autocomplete="address-line2"></div>
+      <div class="f"><input id="in-zip" inputmode="numeric" maxlength="5" placeholder="ZIP" autocomplete="postal-code" name="postal-code"></div>
+      <div class="f"><input id="in-city" type="text" placeholder="City" autocomplete="address-level2"></div>
+      <div class="f"><select id="in-state" autocomplete="address-level1"><option value="">State</option></select></div>
+      <div class="zipnote" id="zipnote"></div>
+      <div class="f" style="grid-column:1/-1">
+        <div class="hint" id="addr-hint">Your browser can autofill this. Enter the ZIP and we'll fill in the city and state &mdash; the ZIP drives your market verdict.</div>
       </div>
     </div>
     <div id="zip-mismatch" class="locked-card" style="display:none;margin-bottom:14px"></div>
@@ -317,7 +336,6 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
     <input type="hidden" id="in-rent">
-    <input type="hidden" id="in-zip">
     <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
   </div>
@@ -778,22 +796,45 @@ function balanceAfter(principal, ratePct, yearsElapsed, years){
 }
 
 // ————— Profile persistence (device-local) —————
-// TODO backend: there is no user-data store beyond the email-capture row in
-// Supabase. To make this profile follow the subscriber across devices, add
-// these fields to the subscribers table (or a linked profile table):
-//   address, zip, value, year_purchased, purchase_price, balance,
-//   orig_loan_amount, orig_loan_year, rate, piti, timeline, cost_pct
+// TODO backend: the financial inputs below have no user-data store — by
+// design, they never leave the browser (see the privacy note on the intake).
+// To make them follow the subscriber across devices they'd need columns on
+// subscribers (or a linked table): value, year_purchased, purchase_price,
+// balance, orig_loan_amount, orig_loan_year, rate, piti, timeline, cost_pct.
+//
+// The ADDRESS is deliberately NOT in that list. It lives in its own store
+// (web/address.js → localStorage mirror + the Supabase row) because it is the
+// one thing we do keep server-side, and it must read back identically here,
+// on the subscribe page, and in the report header.
 const PROFILE_KEY = "sisy_profile";
-const PROFILE_FIELDS = ["in-addr","in-zip","in-val","in-yr","in-pp","in-bal","in-rate","in-origamt","in-origyr","in-piti","in-timeline","in-rent"];
+const PROFILE_FIELDS = ["in-val","in-yr","in-pp","in-bal","in-rate","in-origamt","in-origyr","in-piti","in-timeline","in-rent"];
+function readAddrForm(){
+  return { street: $("in-street").value, unit: $("in-unit").value, city: $("in-city").value,
+           state: $("in-state").value, zip: $("in-zip").value };
+}
+function writeAddrForm(a, force){
+  ADDRESS.FIELDS.forEach(f => {
+    const el = $("in-" + f);
+    if (el && a[f] && (force || !el.value)) el.value = a[f];
+  });
+  // A prefilled ZIP counts as ALREADY RESOLVED. The city sitting beside it
+  // came from the same saved address, so the next ZIP the customer types is a
+  // change — and must take the city with it — rather than a first fill that
+  // politely leaves the old city in place.
+  const z = ($("in-zip").value || "").replace(/\D/g, "").slice(0, 5);
+  if (z.length === 5) lastZipResolved = z;
+}
 function saveProfile(){
   const p = {};
   PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && el.value) p[id] = el.value; });
   p.costPct = costPct;
   try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch(e){}
+  ADDRESS.save(readAddrForm());
 }
 function loadProfile(){
   let p = null;
   try { p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null"); } catch(e){}
+  writeAddrForm(ADDRESS.load());
   if (!p) return;
   PROFILE_FIELDS.forEach(id => { const el = $(id); if (el && p[id] && !el.value) el.value = p[id]; });
   if (p.costPct >= 6 && p.costPct <= 10) { costPct = p.costPct; }
@@ -1300,30 +1341,35 @@ function renderMoreAnswers(o){
 }
 
 async function generate(noScroll){
-  const addr = $("in-addr").value.trim();
-  // The address is the single source of the ZIP: take the LAST 5-digit group
-  // (streets have numbers too), tolerating ZIP+4.
-  const zipsInAddr = addr.match(/\b\d{5}(?:-\d{4})?\b/g) || [];
-  const zipFromAddr = zipsInAddr.length ? zipsInAddr[zipsInAddr.length - 1].slice(0, 5) : "";
-  const zipStored = ($("in-zip").value || "").trim() || (q.get("zip") || "");
   const err = $("err"); err.style.display = "none";
-  // Mismatch guard: an address ZIP that disagrees with the ZIP this report
-  // was set up for NEVER renders silently — the user picks, we remember the
-  // pick for exactly that pair, and the header is composed from the chosen
-  // ZIP so header and address can't disagree.
-  let zip;
-  if (zipFromAddr && zipStored && zipFromAddr !== zipStored) {
+  ADDRESS.FIELDS.forEach(f => { const el = $("in-" + f); if (el) el.classList.remove("bad"); });
+
+  // The ZIP is a validated field now, not something parsed off the end of a
+  // sentence. It comes straight from the form.
+  const addr = ADDRESS.normalize(readAddrForm());
+  const v = ADDRESS.validate(addr);
+  if (!v.ok) {
+    err.textContent = v.msg; err.style.display = "block";
+    const t = $("in-" + v.field); if (t) { t.classList.add("bad"); t.focus(); }
+    return;
+  }
+
+  // Mismatch guard: an address ZIP that disagrees with the ZIP this report was
+  // PURCHASED for never renders silently — the user picks, we remember the
+  // pick for exactly that pair, and the header is composed from the chosen ZIP
+  // so header and address can't disagree.
+  const zipPaid = REPORT_ZIP;
+  let zip = addr.zip;
+  if (zipPaid && addr.zip !== zipPaid) {
+    // The memo records "for address ZIP X the customer chose Y" — and Y may be
+    // EITHER ZIP. Requiring Y to be the purchased one would re-prompt forever
+    // for anyone who picked their own address, since picking it leaves the
+    // two ZIPs disagreeing by definition.
     const memo = window.__zipKeep;
-    if (memo && memo.addr === zipFromAddr && memo.zip === zipStored) zip = zipStored;
-    else { showZipMismatch(zipFromAddr, zipStored); return; }
-  } else {
-    zip = zipFromAddr || zipStored;
+    if (memo && memo.addr === addr.zip) zip = memo.zip;
+    else { showZipMismatch(addr.zip, zipPaid); return; }
   }
   $("zip-mismatch").style.display = "none";
-  if (!/^\d{5}$/.test(zip)) {
-    err.textContent = "Please include the 5-digit ZIP at the end of the address.";
-    err.style.display = "block"; $("in-addr").focus(); return;
-  }
   const d = applyStrong(await lookup(zip));
   if (!d) { err.textContent = "We're not scoring " + zip + " yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
 
@@ -1366,7 +1412,6 @@ async function generate(noScroll){
     err.style.display = "block"; return;
   }
   const hasVal = val != null, hasBal = bal != null;
-  $("in-zip").value = zip;
   window.__prov = { balEstimated };
   saveProfile();
 
@@ -1378,7 +1423,7 @@ async function generate(noScroll){
   $("v-dot").style.boxShadow = "0 0 0 4px "+k.soft+",0 0 0 5px "+k.hex;
   $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
   $("v-title").textContent = k.title.replace("{zip}", zip);
-  renderAddrLine(streetFrom(addr), zip, d.st);
+  renderAddrLine(addr, zip, d.st);
   $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
   renderCrossCheck(d);
   $("v-sub").textContent = k.sub.replace("{zip}", zip);
@@ -1615,7 +1660,48 @@ const MATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/match-request" : "
 const SHOW_REALTOR_MATCH = false;
 const q = new URLSearchParams(location.search);
 
-$("in-zip").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,5); });
+// ————— Address field wiring (shared shape — see web/address.js) —————
+ADDRESS.STATES.forEach(s => {
+  const o = document.createElement("option"); o.value = o.textContent = s;
+  $("in-state").appendChild(o);
+});
+
+// ZIP → city/state, same behaviour as the subscribe page.
+//
+// Two rules, and the difference between them matters:
+//   * FIRST time a ZIP resolves (page load, prefill) — fill only empty fields,
+//     so a city the customer curated ("Wheaton" rather than "Silver Spring")
+//     survives.
+//   * ZIP CHANGES from one resolved ZIP to another — overwrite. The old city
+//     now belongs to a different place, and leaving it produces a header like
+//     "Germantown, MD 20906", which is the exact disagreement between address
+//     and ZIP that this whole task exists to remove.
+let lastZipResolved = "";
+async function fillFromZip(){
+  const z = $("in-zip").value.replace(/\D/g,"").slice(0,5);
+  const note = $("zipnote");
+  if (z.length < 5) { note.textContent = ""; note.className = "zipnote"; lastZipResolved = ""; return; }
+  if (z === lastZipResolved) return;
+  const changed = lastZipResolved !== "";
+  lastZipResolved = z;
+  const r = await ADDRESS.resolve(z);
+  if ($("in-zip").value.replace(/\D/g,"").slice(0,5) !== z) return;   // they kept typing
+  if (r.state && (changed || !$("in-state").value)) $("in-state").value = r.state;
+  if (r.city && (changed || !$("in-city").value)) $("in-city").value = r.city;
+  if (r.known) {
+    note.className = "zipnote ok";
+    note.textContent = "✓ " + [r.city, r.state].filter(Boolean).join(", ");
+  } else if (r.checked) {
+    note.className = "zipnote warn";
+    note.textContent = "We're not scoring " + z + " yet — too few reported sales.";
+  } else { note.textContent = ""; note.className = "zipnote"; }
+}
+$("in-zip").addEventListener("input", function(){
+  this.value = this.value.replace(/\D/g,"").slice(0,5);
+  if (this.value.length === 5) fillFromZip(); else { $("zipnote").textContent = ""; lastZipResolved = ""; }
+});
+$("in-zip").addEventListener("blur", fillFromZip);
+
 ["in-val","in-bal","in-pp","in-origamt","in-piti"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/[^0-9]/g,""); }));
 ["in-yr","in-origyr"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); }));
 $("in-rate").addEventListener("input", function(){ this.value = this.value.replace(/[^0-9.]/g,""); });
@@ -1623,6 +1709,14 @@ $("in-rate").addEventListener("input", function(){ this.value = this.value.repla
 function adjustNums(){
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();
+  return false;
+}
+// The single edit-address affordance. There is one address form on this page
+// and it IS the profile, so "edit" scrolls to it rather than opening a second
+// copy — two places to change an address is how they end up disagreeing.
+function editAddress(){
+  $("setup").scrollIntoView({behavior:"smooth"});
+  $("in-street").focus();
   return false;
 }
 
@@ -1636,8 +1730,8 @@ function openConnect(){
   $("cm-form").style.display = "block";
   $("cm-done").style.display = "none";
   $("cm-err").style.display = "none";
-  const addr = $("in-addr").value.trim(), zip = $("in-zip").value.trim();
-  if (!$("cm-addr").value) $("cm-addr").value = addr || zip;
+  const a = ADDRESS.normalize(readAddrForm());
+  if (!$("cm-addr").value) $("cm-addr").value = ADDRESS.oneLine(a) || a.zip;
   if ($("in-timeline").value && !$("cm-timeline").value) $("cm-timeline").value = $("in-timeline").value;
   $("connect-veil").style.display = "flex";
   $("cm-name").focus();
@@ -1650,8 +1744,10 @@ async function submitConnect(){
   const errEl = $("cm-err"); errEl.style.display = "none";
   const name = $("cm-name").value.trim(), email = $("cm-email").value.trim();
   const addrField = $("cm-addr").value.trim();
+  // The canonical ZIP wins; the free-text box is only a fallback for someone
+  // who opened the modal before filling the intake.
   const zips = addrField.match(/\b\d{5}(?:-\d{4})?\b/g) || [];
-  const zip = (zips.length ? zips[zips.length-1].slice(0,5) : "") || $("in-zip").value.trim();
+  const zip = ($("in-zip").value || "").trim() || (zips.length ? zips[zips.length-1].slice(0,5) : "");
   const fail = msg => { errEl.textContent = msg; errEl.style.display = "block"; return false; };
   if (!name) { $("cm-name").focus(); return fail("Please add your name."); }
   if (!/@/.test(email)) { $("cm-email").focus(); return fail("Please add a working email."); }
@@ -1680,10 +1776,13 @@ async function submitConnect(){
   return false;
 }
 
-// ————— ZIP-from-address helpers (Task 7) —————
+// ————— Address ZIP vs. purchased ZIP —————
+// The mismatch is now between two known ZIPs — the validated one in the form
+// and the one the report was bought for — rather than between a stored ZIP and
+// one guessed out of a text blob. Same choose-and-regenerate prompt.
 function showZipMismatch(addrZip, reportZip){
   const el = $("zip-mismatch");
-  el.innerHTML = '<p><b>Your address says ' + addrZip + '; this report was set up for ' + reportZip + '.</b> Which should we use?</p>' +
+  el.innerHTML = '<p><b>Your address is in ' + addrZip + '; this report was set up for ' + reportZip + '.</b> Which should we use?</p>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
     '<button class="btn" onclick="return chooseZip(\'' + addrZip + '\',\'' + addrZip + '\')">Use ' + addrZip + ' — my address</button>' +
     '<button class="btn-outline" onclick="return chooseZip(\'' + reportZip + '\',\'' + addrZip + '\')">Keep ' + reportZip + '</button></div>';
@@ -1691,42 +1790,36 @@ function showZipMismatch(addrZip, reportZip){
   el.scrollIntoView({behavior:"smooth", block:"center"});
 }
 function chooseZip(chosen, addrZip){
-  window.__zipKeep = { addr: addrZip, zip: chosen };  // remember for this pair only
-  $("in-zip").value = chosen;
-  $("zip-mismatch").style.display = "none";
-  generate(true);
+  applyChosenZip(chosen, addrZip);   // async; the handler itself stays sync
   return false;
 }
-// Street only: the address with its ", City, ST 12345" tail stripped, so the
-// header can be recomposed from the CHOSEN zip and never disagree with it.
-function streetFrom(addr){
-  if (!addr) return "";
-  let t = addr.replace(/[\s,]+$/, "");
-  t = t.replace(/,?\s*[A-Za-z .'’-]+,?\s+[A-Za-z]{2}\.?\s*\d{5}(?:-\d{4})?\s*$/, "");
-  t = t.replace(/,?\s*\d{5}(?:-\d{4})?\s*$/, "");
-  return t.trim().replace(/,+$/, "");
+async function applyChosenZip(chosen, addrZip){
+  window.__zipKeep = { addr: addrZip, zip: chosen };  // remember for this pair only
+  $("zip-mismatch").style.display = "none";
+  // Keeping the purchased ZIP means the city/state must move with it — and
+  // must land BEFORE the report regenerates. The header composes from those
+  // fields, so regenerating first would print the old city beside the new ZIP.
+  if (chosen !== addrZip) {
+    $("in-zip").value = chosen;
+    const r = await ADDRESS.resolve(chosen);
+    if (r.city) $("in-city").value = r.city;
+    if (r.state) $("in-state").value = r.state;
+    lastZipResolved = chosen;
+    saveProfile();
+  }
+  generate(true);
 }
-// City for the header — shares the homepage's Zippopotam cache (sisy_city_*).
-// Never blocks the report: renders ZIP-only first, patches the city in.
-function cityCache(zip){ try { return localStorage.getItem("sisy_city_" + zip) || ""; } catch(e){ return ""; } }
-async function cityFor(zip){
-  const hit = cityCache(zip);
-  if (hit) return hit;
-  try {
-    const r = await fetch("https://api.zippopotam.us/us/" + zip);
-    if (!r.ok) return "";
-    const j = await r.json();
-    const names = [...new Set((j.places || []).map(p => p["place name"]).filter(Boolean))];
-    const city = names.join(" / ");
-    if (city) { try { localStorage.setItem("sisy_city_" + zip, city); } catch(e){} }
-    return city;
-  } catch(e){ return ""; }
-}
-function renderAddrLine(street, zip, st){
+// The header composes from the structured address, so it can't disagree with
+// the form. City falls back to the shared Zippopotam cache when the customer
+// hasn't filled it in (a legacy row, or a ZIP typed straight in).
+function renderAddrLine(a, zip, st){
   const gen = " · generated " + new Date().toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric"});
-  const line = c => (street ? street + " · " : "") + (c ? c + ", " : "") + (st ? st + " " : "") + zip + gen;
-  $("r-addr").textContent = line(cityCache(zip));
-  cityFor(zip).then(c => { if (c) $("r-addr").textContent = line(c); });
+  const street = ADDRESS.streetLine(a);
+  const edit = ' · <a href="#" onclick="return editAddress()" style="color:inherit;text-decoration:underline">edit</a>';
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const line = c => esc((street ? street + " · " : "") + (c ? c + ", " : "") + (st ? st + " " : "") + zip + gen) + edit;
+  $("r-addr").innerHTML = line(a.city || ADDRESS.cityCache(zip));
+  if (!a.city) ADDRESS.cityFor(zip).then(c => { if (c) $("r-addr").innerHTML = line(c); });
 }
 
 // ————— Locked-card state (Task 2) —————
@@ -1792,13 +1885,29 @@ function renderUpgradeBand(access){
     "<a href=\"subscribe.html?plan=monitor&upgrade=report-credit" + ($("in-zip").value ? "&zip=" + $("in-zip").value : "") + "\" style=\"font-weight:600;text-decoration:underline\">Upgrade →</a>";
   band.style.display = "block";
 }
-function unlock(zip, justPaid, address, access){
+// The ZIP this report was PAID for. Set once, in unlock(), from the server row
+// (or the ?zip= the checkout redirect carried). It is the mismatch guard's
+// reference point and is never written by the form.
+let REPORT_ZIP = "";
+
+function unlock(zip, justPaid, access){
   $("gate").style.display = "none";
   $("paid-area").style.display = "block";
   if (justPaid) $("paidband").style.display = "block";
-  loadProfile();  // prefill the intake from this device's saved profile
-  if (zip) $("in-zip").value = String(zip).replace(/\D/g,"").slice(0,5);
-  if (address && !$("in-addr").value) $("in-addr").value = address;
+  loadProfile();  // prefill the intake (address comes from ADDRESS.load())
+
+  // The server row is canonical — it's the address captured at checkout, and
+  // it's what makes this work on a device that has never seen this customer.
+  // adopt() merges it over the local mirror without clobbering fields the
+  // server doesn't have.
+  if (access && (access.address_street || access.address_city || access.zip)) {
+    writeAddrForm(ADDRESS.adopt(access), true);
+  }
+  REPORT_ZIP = String(zip || "").replace(/\D/g, "").slice(0, 5);
+  if (REPORT_ZIP && !$("in-zip").value) {
+    $("in-zip").value = REPORT_ZIP;
+    fillFromZip();   // a bare ?zip= with no stored address still gets city/state
+  }
   try { if (TOKEN) localStorage.setItem("sisy_token", TOKEN); } catch(e){}
   SUB_PLAN = (access && access.plan) || null;
   window.__savedWatches = (access && access.watches) || [];
@@ -1946,11 +2055,14 @@ const justPaid = q.get("paid") === "1" || q.get("checkout");
   // If verification isn't configured, don't hard-lock buyers out — open the page.
   if (!VERIFY_FN) { unlock(q.get("zip"), justPaid); return; }
   // A valid token (from the welcome email) is the durable unlock.
+  // The row's zip beats ?zip= here: REPORT_ZIP means "the ZIP this report was
+  // paid for", and only the row knows that. A ?zip= pointing somewhere else
+  // now surfaces the mismatch prompt instead of silently retargeting.
   if (TOKEN) {
     try {
       const r = await fetch(VERIFY_FN + "?token=" + encodeURIComponent(TOKEN));
       const j = await r.json();
-      if (j && j.ok) { unlock(q.get("zip") || j.zip, justPaid, j.address, j); return; }
+      if (j && j.ok) { unlock(j.zip || q.get("zip"), justPaid, j); return; }
     } catch(e) {
       // network hiccup on a real token — fail open rather than block a paying customer
       unlock(q.get("zip"), justPaid); return;
