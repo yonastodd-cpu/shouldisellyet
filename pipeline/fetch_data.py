@@ -1,20 +1,26 @@
 """
 ShouldISellYet — data pipeline.
 
-Downloads the Redfin Data Center ZIP-code market tracker, computes a
-verdict for every ZIP with sufficient data, and writes:
+Downloads Redfin's ZIP-level housing data (the Data Center "Download Hub"
+files — plus its price-drops dataset), computes a verdict for every ZIP
+with sufficient data, and writes:
 
   web/data/index.json          — 3-digit ZIP prefix → state (for routing)
   web/data/zips/{STATE}.json   — per-state verdict maps
   web/data/meta.json           — generation date, data period, attribution
 
 Run monthly (locally or via GitHub Actions):
-  python pipeline/fetch_data.py [--states MD,VA,DC] [--input path.tsv.gz]
+  python pipeline/fetch_data.py [--states MD,VA,DC] [--input path.csv]
+
+Both Redfin schemas are read (auto-detected): the current data-center hub
+CSVs, and the pre-2026-06 market-tracker TSVs for archived copies — see
+load_rows() for the differences and docs/DATA.md for the migration story.
 
 NOTE ON LICENSING: Redfin makes this data available for use with proper
 citation ("Data provided by Redfin, a national real estate brokerage",
-linked to redfin.com on first reference — see docs/ATTRIBUTION.md). Before
-charging customers, get written confirmation from press@redfin.com.
+linked to redfin.com on first reference — see docs/ATTRIBUTION.md). A
+written-confirmation request went to press@redfin.com in 2026-08; no reply
+yet — the citation terms on their site remain the operative permission.
 Zillow research data is NOT used here — its terms restrict commercial use.
 """
 
@@ -32,7 +38,27 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from verdict import ZipMetrics, evaluate, to_compact
 
+# Redfin rebuilt the Data Center as a "Download Hub" in mid-2026. The old
+# redfin_market_tracker/*.tsv000.gz files froze on 2026-06-02 (every file's
+# Last-Modified stamps within one five-minute batch window) while the page
+# kept advertising monthly updates — the data had MOVED, not stopped. The
+# hub's own Download button fetches these static files from the same public
+# bucket and filters them client-side, so pulling them directly is exactly
+# what the official download does. Verified current on 2026-08-03
+# (Last-Modified 2026-07-30, rows through period end 2026-06-30).
 REDFIN_ZIP_TRACKER = (
+    "https://redfin-public-data.s3.us-west-2.amazonaws.com/"
+    "redfin_data_center/housing_market/monthly/all_zips.csv"
+)
+# Price drops moved into their own dataset in the new layout. The old
+# tracker's price_drops column shipped empty for years — this file finally
+# lights up the "price cuts widespread" signal (see verdict.py).
+REDFIN_PRICE_DROPS = (
+    "https://redfin-public-data.s3.us-west-2.amazonaws.com/"
+    "redfin_data_center/price_drops/monthly/all_zips.csv"
+)
+# The pre-2026-06 tracker URL, kept for --input against archived copies.
+REDFIN_ZIP_TRACKER_LEGACY = (
     "https://redfin-public-data.s3.us-west-2.amazonaws.com/"
     "redfin_market_tracker/zip_code_market_tracker.tsv000.gz"
 )
@@ -55,21 +81,191 @@ def _f(row, key):
         return None
 
 
-def load_rows(source: str):
-    """Stream rows from a local file or the Redfin URL (gzipped TSV)."""
+def _open_stream(source: str):
+    """Binary stream for a local path or URL, transparently gunzipping by
+    MAGIC BYTES, not filename — the legacy tracker is gzipped, the new hub
+    CSVs are plain, and a URL tells you nothing either way."""
     if source.startswith("http"):
         req = urllib.request.Request(source, headers={"User-Agent": "shouldisellyet-pipeline"})
-        raw = urllib.request.urlopen(req, timeout=600)
-        stream = gzip.GzipFile(fileobj=raw)
-    elif source.endswith(".gz"):
-        stream = gzip.open(source, "rb")
+        raw = urllib.request.urlopen(req, timeout=600, context=_ssl_context())
     else:
-        stream = open(source, "rb")
+        raw = open(source, "rb")
+    buf = io.BufferedReader(raw)
+    if buf.peek(2)[:2] == b"\x1f\x8b":
+        return gzip.GzipFile(fileobj=buf)
+    return buf
+
+
+def load_rows(source: str):
+    """Stream rows from either Redfin schema, presented as the LEGACY shape.
+
+    Two generations of the same dataset:
+      v1 — market tracker: gzipped TSV, lowercase-able headers
+           (period_end, region "Zip Code: 20874", state_code,
+           property_type, yoy columns as fractions / DOM in days).
+      v2 — data-center hub: plain CSV, headers like
+           "MEDIAN SALE PRICE NSA YOY (%)", region name is the bare ZIP,
+           NO state column, NO property_type (all-residential only),
+           "NA" for missing.
+
+    Detected by header; v2 rows are translated to v1 key names so the rest
+    of the pipeline has exactly one schema to think about.
+    """
+    stream = _open_stream(source)
     text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace")
-    reader = csv.DictReader(text, delimiter="\t")
+    first = text.readline()
+    delim = "\t" if "\t" in first else ","
+    from itertools import chain
+    reader = csv.DictReader(chain([first], text), delimiter=delim)
     # Redfin ships UPPERCASE headers; normalize so lookups are case-proof.
     reader.fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+    if "region name" in reader.fieldnames:
+        return _adapt_v2(reader)
     return reader
+
+
+# v2 header → legacy key. Values are (legacy_key, transform).
+#   pct   — the column is a true percent (verified against the national file:
+#           price +2.22% actual → column 2.22); legacy wants a fraction, ÷100.
+#   days  — the DOM YoY column claims "(%)" but actually holds Δdays × 100
+#           (national file: +1 day actual → column 100.0, +3 days → 300.0 —
+#           a percent would have read 2.08 / 6.52). ÷100 restores the
+#           absolute-days semantics the legacy column had and verdict.py
+#           documents. The ZIP's own history recomputes this downstream
+#           wherever a year-ago month exists, so this value is only the
+#           fallback — but keep the ÷100 right regardless.
+_V2_MAP = {
+    "period begin": ("period_begin", None),
+    "period end": ("period_end", None),
+    "homes sold": ("homes_sold", None),
+    "median sale price nsa ($)": ("median_sale_price", None),
+    "median sale price nsa yoy (%)": ("median_sale_price_yoy", "pct"),
+    "median days on market (days)": ("median_dom", None),
+    "median days on market yoy (%)": ("median_dom_yoy", "days"),
+    "inventory": ("inventory", None),
+    "inventory yoy (%)": ("inventory_yoy", "pct"),
+    "months of supply": ("months_of_supply", None),
+}
+
+
+def _v2_value(v, kind):
+    v = (v or "").strip()
+    if v in ("", "NA"):
+        return ""
+    if kind in ("pct", "days"):
+        try:
+            return str(float(v) / 100.0)
+        except ValueError:
+            return ""
+    return v
+
+
+def _adapt_v2(reader):
+    import re
+    zip_states = load_zip_states()
+    metro_st = re.compile(r", ([A-Z]{2}) metro area$")
+    for row in reader:
+        if (row.get("region type") or "").strip().lower() != "zip":
+            continue
+        z = (row.get("region name") or "").strip()
+        st = zip_states.get(z, "")
+        if not st:
+            # Whole metros exist in v2 that v1 never covered (Albuquerque —
+            # every 871xx ZIP), so the committed map and its prefix fallback
+            # can both come up empty. The metro name's own state is the last
+            # resort. It is deliberately LAST: metros straddle state lines
+            # (07002 is NJ inside the "New York, NY" metro), so this is only
+            # trusted where we know nothing else — for a v1-era coverage gap
+            # the metro is almost always single-state.
+            m = metro_st.search((row.get("metro") or "").strip())
+            if m:
+                st = m.group(1)
+        out = {"region": z, "property_type": "", "is_seasonally_adjusted": "",
+               "state_code": st, "_schema": "2"}
+        for src, (dst, kind) in _V2_MAP.items():
+            out[dst] = _v2_value(row.get(src), kind)
+        yield out
+
+
+def load_zip_states(base=None):
+    """pipeline/zip_states.csv → {zip: STATE}, with a 3-digit-prefix majority
+    fallback for ZIPs the file has never seen.
+
+    The v2 feed dropped the state column (only a metro name, and metros
+    straddle state lines — 07002 sits in the "New York, NY metro area" but is
+    New Jersey), while the whole site routes by state. This mapping was
+    extracted once from the last v1-derived site data and is committed; ZIP
+    assignments to states are effectively permanent, so a static file is the
+    right shape, not a per-run lookup.
+    """
+    global _ZIP_STATES
+    if _ZIP_STATES is not None:
+        return _ZIP_STATES
+    path = Path(base or Path(__file__).parent) / "zip_states.csv"
+    exact, prefix_votes = {}, defaultdict(lambda: defaultdict(int))
+    if path.exists():
+        for line in path.read_text().splitlines()[1:]:
+            z, _, st = line.partition(",")
+            if len(z) == 5 and st:
+                exact[z] = st
+                prefix_votes[z[:3]][st] += 1
+    prefix = {p: max(v, key=v.get) for p, v in prefix_votes.items()}
+
+    class _Lookup(dict):
+        def get(self, z, default=""):
+            return super().get(z) or prefix.get(z[:3], default)
+
+    _ZIP_STATES = _Lookup(exact)
+    if not exact:
+        print("WARNING: pipeline/zip_states.csv missing — v2 rows will have no state")
+    return _ZIP_STATES
+
+
+_ZIP_STATES = None
+
+
+def load_price_drops(source: str):
+    """price_drops/monthly/all_zips.csv → {zip: (YYYY-MM, share_fraction)}.
+
+    Newest period per ZIP. "PERCENT ACTIVE WITH PRICE DROPS (%)" is a true
+    percent; the verdict wants the fraction the legacy price_drops column
+    was documented to carry. Any failure returns {} — the price-cuts signal
+    just stays unavailable, exactly as it was while the legacy column
+    shipped empty.
+
+    SISY_SKIP_PD=1 skips it (unit tests — the default arg is a 337MB URL,
+    and an end-to-end test that quietly downloads it would work but take
+    minutes; same pattern as SISY_SKIP_RDC / SISY_SKIP_MORTGAGE).
+    """
+    import os
+    if os.environ.get("SISY_SKIP_PD"):
+        print("price-drops fetch skipped (SISY_SKIP_PD)")
+        return {}
+    try:
+        stream = _open_stream(source)
+        text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace")
+        reader = csv.DictReader(text)
+        reader.fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+        col = "percent active with price drops (%)"
+        out = {}
+        for row in reader:
+            if (row.get("region type") or "").strip().lower() != "zip":
+                continue
+            z = (row.get("region name") or "").strip()
+            period = (row.get("period end") or "")[:7]
+            v = (row.get(col) or "").strip()
+            if not (len(z) == 5 and period) or v in ("", "NA"):
+                continue
+            if z not in out or period > out[z][0]:
+                try:
+                    out[z] = (period, float(v) / 100.0)
+                except ValueError:
+                    continue
+        print(f"price drops: {len(out)} ZIPs")
+        return out
+    except Exception as e:
+        print("price-drops fetch failed — signal stays unavailable:", e)
+        return {}
 
 
 def latest_by_zip(rows, states=None, months_back=36):
@@ -394,7 +590,11 @@ def fetch_mortgage_rates():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", default=REDFIN_ZIP_TRACKER,
-                    help="Local TSV(.gz) path or URL (default: Redfin ZIP tracker)")
+                    help="Local CSV/TSV(.gz) path or URL (default: Redfin ZIP file, "
+                         "data-center hub layout; the legacy tracker schema is "
+                         "auto-detected for archived copies)")
+    ap.add_argument("--price-drops", default=REDFIN_PRICE_DROPS,
+                    help="Redfin price-drops ZIP csv path or URL ('' to disable)")
     ap.add_argument("--states", default="",
                     help="Comma-separated state codes to limit output (e.g. MD,VA,DC)")
     ap.add_argument("--rdc", default=RDC_ZIP_URL,
@@ -411,6 +611,9 @@ def main():
             "Check the COLUMNS/SAMPLE ROW diagnostics above for a schema mismatch."
         )
 
+    # v2 feeds price drops from its own file (the legacy column shipped empty).
+    pd_map = load_price_drops(args.price_drops) if args.price_drops else {}
+
     rdc = load_rdc(args.rdc) if args.rdc else {}
     fhfa = load_fhfa_compact()
 
@@ -419,6 +622,25 @@ def main():
     period_seen = ""
     spys = []
     for zip_code, (period, state, row) in best.items():
+        if row.get("_schema") == "2":
+            # Price-drop join, same month only — these files publish together,
+            # and a stale share is worse than an absent one.
+            pdv = pd_map.get(zip_code)
+            if pdv and pdv[0] == period[:7]:
+                row["price_drops"] = str(pdv[1])
+            # DOM year-over-year, recomputed from OUR month history when the
+            # year-ago month exists. The v2 column's ÷100 mapping was verified
+            # empirically (see _V2_MAP), but Redfin could silently fix that
+            # column to true percent someday, and days-vs-fraction is not
+            # distinguishable per-row. Self-computed Δdays is immune; the
+            # mapped column stays as fallback for ZIPs with a history gap.
+            hm = hist.get(zip_code) or {}
+            mo = period[:7]
+            ago = f"{int(mo[:4]) - 1:04d}-{mo[5:7]}"
+            now_d = hm.get(mo, (None, None))[1]
+            ago_d = hm.get(ago, (None, None))[1]
+            if now_d is not None and ago_d is not None:
+                row["median_dom_yoy"] = str(now_d - ago_d)
         m = row_to_metrics(zip_code, period, state, row)
         v = evaluate(m)
         entry = to_compact(v, m)
