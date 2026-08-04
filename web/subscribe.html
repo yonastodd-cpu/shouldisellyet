@@ -146,27 +146,33 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
 <script>
 // Stripe Payment Links. Prices themselves live in web/prices.js — these are
-// the provider-side counterparts.
+// the provider-side counterparts. Repriced 2026-08-03; the three below were
+// checked against their live checkout pages, not just pasted:
+//   report          $5.99  one-time
+//   monitor_monthly $3.99  per month
+//   monitor_annual  $29.00 per year ("$2.42 / month billed annually")
+// All three collect no address — the site asks once, before checkout.
 //
-// ⚠️ STALE AS OF THE 2026-08-03 REPRICE. Every link below still charges the
-// OLD amount. The site now advertises $29/yr, $3.99/mo, $5.99 once, $23
-// upgrade; these links charge $39/yr, $5.99/mo, $9.99 once, $29 upgrade.
-// The one-time link is the urgent one — it OVERCHARGES a buyer by $4.00
-// against the advertised price, which is a chargeback and a trust problem,
-// not just a bookkeeping one. Do not announce the new pricing until these
-// four are recreated in live mode and repasted here.
-// Step-by-step, including the coupon maths: docs/STRIPE.md.
+// ⚠️ annual_upgrade is INTENTIONALLY EMPTY. It is the report-buyer's credited
+// first year ($23), and there is no link that charges that yet. Every wrong
+// value here is worse than none:
+//   * the old $39 link + UPGRADE10  → charges $29, OVERcharges by $6
+//   * the new $29 link + UPGRADE10  → charges $19, UNDERcharges by $4
+//     (UPGRADE10 is a flat $10 coupon sized for the old $39 → $29)
+//   * the new $29 link, no coupon   → charges $29, OVERcharges by $6
+// Empty makes go() take its manual-follow-up branch: the signup is saved as
+// pending, the customer is told we'll email their payment link and that they
+// have not been charged. Honest, and honourable by hand.
 //
-//   annual_upgrade reuses the monitor_annual Payment Link with a promo code
-//   prefilled rather than a distinct price. UPGRADE10 is a flat $10 coupon,
-//   sized for the old $39 → $29. Against a new $29 annual link it would
-//   charge $19 — UNDERcharging by $4 — so it must be resized to $5.99 off
-//   (→ $23.01) or replaced with a dedicated $23 first-year link.
+// To finish: make a $5.99-off / duration-Once coupon (promotion codes are
+// already enabled on the annual link), then set this to the annual link plus
+// ?prefilled_promo_code=<CODE> → first charge $23.01. Or paste a dedicated
+// $23 first-year link. See docs/STRIPE.md.
 const LINKS = {
-  monitor_annual:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03", // STALE: charges $39/yr
-  monitor_monthly: "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00", // STALE: charges $5.99/mo
-  annual_upgrade:  "https://buy.stripe.com/4gM00k1KF2p36vwajh2go03?prefilled_promo_code=UPGRADE10", // STALE: charges $29 first yr
-  report:          "https://buy.stripe.com/7sY5kE60V1kZ8DEezx2go02"  // STALE: charges $9.99 — OVERCHARGES
+  monitor_annual:  "https://buy.stripe.com/8x200kexraVzbPQ7752go06", // $29/yr
+  monitor_monthly: "https://buy.stripe.com/9B6bJ274Z7JndXYgHF2go05", // $3.99/mo
+  annual_upgrade:  "",                                              // $23 first yr — see above
+  report:          "https://buy.stripe.com/8x214ocpj0gVaLMcrp2go04"  // $5.99 one-time
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
