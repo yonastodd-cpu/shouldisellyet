@@ -602,7 +602,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="bigger-picture" data-nav="big picture" style="display:none">
       <div class="k">THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
-      <p class="subt">How your area compares to 24,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
+      <p class="subt" id="ctx-subt">How your area compares to U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
@@ -867,7 +867,15 @@ const DEMO = {
   "20906": {l:"yellow", st:"MD", m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
 };
 fetch("data/index.json").then(r=>r.ok?r.json():null).then(j=>{ if(j&&Object.keys(j).length) INDEX=j; });
-fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{ META=m; });
+fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
+  META = m;
+  // Counted, not typed — the national ZIP total moves with each refresh.
+  const c = m && m.national && m.national.counts;
+  const n = c ? Object.keys(c).reduce((a,k)=>a+(Number(c[k])||0),0) : 0;
+  if (n >= 1000) $("ctx-subt").textContent =
+    "How your area compares to " + Math.floor(n/1000).toLocaleString("en-US") +
+    ",000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.";
+});
 fetch("sponsors.json").then(r=>r.ok?r.json():null).then(j=>{ SPONSORS=j; });
 
 async function lookup(zip){

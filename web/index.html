@@ -366,7 +366,11 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="maphead">
         <div style="display:flex;align-items:center;gap:9px">
           <span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite"></span>
-          <span class="map-label">TRACKING 24,000+ ZIP MARKETS</span>
+          <!-- Count is stamped in from the data once meta.json lands (see
+               scoredZips). The literal here is only what shows for the
+               fraction of a second before that, and it is deliberately
+               vague rather than a number that can go stale. -->
+          <span class="map-label" id="map-label">TRACKING U.S. ZIP MARKETS</span>
         </div>
         <div class="legend">
           <span><i style="background:var(--green)"></i>hold</span>
@@ -512,6 +516,13 @@ fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
     META = m;
     document.getElementById("eyebrow").textContent =
       "FREE ZIP CHECK · MARKET DATA THROUGH " + (m.period || "").toUpperCase();
+    // Same counted total as the ticker — one source, so the hero and the feed
+    // can never quote different sizes of the same product.
+    const n = scoredZips();
+    if (n >= 1000) {
+      document.getElementById("map-label").textContent =
+        "TRACKING " + Math.floor(n / 1000).toLocaleString("en-US") + ",000+ ZIP MARKETS";
+    }
   }
 }).catch(() => {});
 fetch("sponsors.json").then(r => r.ok ? r.json() : null).then(j => { SPONSORS = j; }).catch(() => {});
