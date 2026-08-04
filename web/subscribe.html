@@ -146,32 +146,22 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 
 <script>
 // Stripe Payment Links. Prices themselves live in web/prices.js — these are
-// the provider-side counterparts. Repriced 2026-08-03; the three below were
-// checked against their live checkout pages, not just pasted:
+// the provider-side counterparts. Repriced 2026-08-03; every entry was
+// checked against its live checkout page, not just pasted:
 //   report          $5.99  one-time
 //   monitor_monthly $3.99  per month
 //   monitor_annual  $29.00 per year ("$2.42 / month billed annually")
-// All three collect no address — the site asks once, before checkout.
-//
-// ⚠️ annual_upgrade is INTENTIONALLY EMPTY. It is the report-buyer's credited
-// first year ($23), and there is no link that charges that yet. Every wrong
-// value here is worse than none:
-//   * the old $39 link + UPGRADE10  → charges $29, OVERcharges by $6
-//   * the new $29 link + UPGRADE10  → charges $19, UNDERcharges by $4
-//     (UPGRADE10 is a flat $10 coupon sized for the old $39 → $29)
-//   * the new $29 link, no coupon   → charges $29, OVERcharges by $6
-// Empty makes go() take its manual-follow-up branch: the signup is saved as
-// pending, the customer is told we'll email their payment link and that they
-// have not been charged. Honest, and honourable by hand.
-//
-// To finish: make a $5.99-off / duration-Once coupon (promotion codes are
-// already enabled on the annual link), then set this to the annual link plus
-// ?prefilled_promo_code=<CODE> → first charge $23.01. Or paste a dedicated
-// $23 first-year link. See docs/STRIPE.md.
+//   annual_upgrade  $23.01 first year, "Then $29.00 per year starting next
+//                   year" — the annual link with the UPGRADEPATH promotion
+//                   code prefilled ($5.99 off, duration Once, on the
+//                   "Upgrade Path" coupon). The $0.01 vs the advertised $23
+//                   is UNDER, never over. If that coupon or its code is ever
+//                   edited in Stripe, re-verify this line renders $23.01.
+// None of the four collect an address — the site asks once, before checkout.
 const LINKS = {
   monitor_annual:  "https://buy.stripe.com/8x200kexraVzbPQ7752go06", // $29/yr
   monitor_monthly: "https://buy.stripe.com/9B6bJ274Z7JndXYgHF2go05", // $3.99/mo
-  annual_upgrade:  "",                                              // $23 first yr — see above
+  annual_upgrade:  "https://buy.stripe.com/8x200kexraVzbPQ7752go06?prefilled_promo_code=UPGRADEPATH", // $23.01 first yr
   report:          "https://buy.stripe.com/8x214ocpj0gVaLMcrp2go04"  // $5.99 one-time
 };
 // Supabase — save the property to monitor before checkout (anon key: INSERT-only)

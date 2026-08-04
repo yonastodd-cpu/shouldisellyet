@@ -9,54 +9,35 @@ Links in code: the `LINKS` object in [`web/subscribe.html`](../web/subscribe.htm
 
 ---
 
-## 1. Reprice — three of four done
+## 1. Reprice — complete ✅ (2026-08-03/04)
 
-Repriced 2026-08-03. Three links are live and verified against their own
-checkout pages (price, interval, and no address fields):
+All four paths are live and were verified against their own checkout pages
+(price, interval, no address fields, params intact):
 
-| Offer | Charges | Status |
+| Offer | Charges | Verified rendering |
 | --- | --- | --- |
-| One-time report | **$5.99** one-time | ✅ live |
-| EquityWatch monthly | **$3.99**/month | ✅ live |
-| EquityWatch annual | **$29.00**/year | ✅ live |
-| Upgrade, first year | **$23** | ⛔ **no link yet** |
+| One-time report | **$5.99** one-time | "$5.99" |
+| EquityWatch monthly | **$3.99**/month | "$3.99 per month" |
+| EquityWatch annual | **$29.00**/year | "$29.00 per year · $2.42 / month billed annually" |
+| Upgrade, first year | **$23.01** | "$23.01 · Then $29.00 per year starting next year" |
 
-### The one that's left: the $23 upgrade
+The upgrade path is the **$29 annual link + `?prefilled_promo_code=UPGRADEPATH`**
+("Upgrade Path" coupon: $5.99 off, duration Once). The $0.01 against the
+advertised $23 is UNDER, never over.
 
-This is what a report buyer is offered — their $5.99 credited against the
-annual plan, for 30 days after purchase.
+**If the coupon, its code, or the annual link is ever edited in Stripe,
+re-verify** that the upgrade URL still renders $23.01 — a coupon resized or
+detached fails silently to full price. (The old flat-$10 `UPGRADE10` coupon
+is superseded; if it still exists, delete it so nobody reuses it against the
+$29 link, where it would charge $19.)
 
-`annual_upgrade` in `LINKS` is deliberately **empty**, because every wrong
-value is worse than none:
-
-| If it pointed at… | It would charge | |
-| --- | --- | --- |
-| old $39 link + `UPGRADE10` | $29 | over by $6 |
-| new $29 link + `UPGRADE10` | $19 | under by $4 |
-| new $29 link, no coupon | $29 | over by $6 |
-
-Empty makes `go()` take its manual-follow-up branch: the signup saves as
-`pending` with source `subscribe-page:annual-upgrade`, and the customer is
-told we'll email their payment link and that they haven't been charged.
-
-To finish it — **promotion codes are already enabled on the annual link**, so:
-
-1. Product catalog → Coupons → New → **amount off $5.99**, duration **Once**.
-2. Set `annual_upgrade` to the annual link + `?prefilled_promo_code=<CODE>`.
-   First charge **$23.01**, renewals $29.
-
-Or paste a dedicated flat **$23** first-year link instead ($23.00 exactly).
-
-**`UPGRADE10` must not survive as-is** — it's a flat $10 built for the old
-$39 → $29. Delete it, or resize it to $5.99 and reuse it above.
-
-### After pasting, check
+### Regression checks after any Stripe-side edit
 
 - `subscribe.html?plan=report` → Stripe shows **$5.99**
 - `subscribe.html?plan=monitor` → **$29/yr** (annual is the default)
 - `subscribe.html?plan=monitor&billing=monthly` → **$3.99/mo**
-- `subscribe.html?plan=monitor&upgrade=report-credit` → first charge **$23.01**
-  (or $23.00 on a dedicated link), renewing at $29
+- `subscribe.html?plan=monitor&upgrade=report-credit` → first charge
+  **$23.01**, renewing at $29
 
 ---
 
