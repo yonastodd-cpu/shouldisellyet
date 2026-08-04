@@ -413,7 +413,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <p class="lede" style="margin:10px 0 10px">Add your home if you want to hear the moment its market shifts — no checking back required.</p>
   <!-- Borrowed-weight line (one placement only, data grammar — never "powered
        by", never beside our logo). See docs/ATTRIBUTION.md. -->
-  <p class="lede" style="margin:0 0 34px">Built on the same public market data Redfin's economists publish — recomputed for your ZIP and your numbers.</p>
+  <p class="lede" style="margin:0 0 34px">Built on the same public data the industry's economists publish — Redfin, Realtor.com, FHFA — recomputed for your ZIP and your numbers.</p>
   <div class="pricing">
     <div class="price-card">
       <div class="card-title">Free check</div>
@@ -456,9 +456,10 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <span style="display:flex;gap:14px;flex-wrap:wrap"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="press.html">Press</a><a href="partners.html">For real estate professionals</a></span>
   </div>
   <div class="disclaimer">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
-  <!-- Source citation — exact wording required by Redfin Data Center terms;
-       linked on first reference, text-only. Do not reword: see docs/ATTRIBUTION.md -->
-  <div class="disclaimer" id="attribution">Verdicts are generated from public housing-market data (Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage) and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
+  <!-- No source citation here on purpose. The page carries exactly ONE, in
+       the results stamp beside the data it credits (see citeHTML). A second
+       copy down here would be the duplicate the attribution rule forbids. -->
+  <div class="disclaimer" id="attribution">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
 </footer>
 </div>
 
@@ -921,7 +922,7 @@ function feedLines() {
   return [
     "scoring 24,000+ ZIP markets · data through " + period,
     "signals: supply · price trend · time to sell · price cuts",
-    "source: public market data (Redfin Data Center) · refreshed on publication",
+    "source: public housing-market data · refreshed on publication",
     "verdicts recompute automatically when new figures publish",
   ];
 }

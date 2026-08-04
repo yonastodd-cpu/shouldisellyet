@@ -79,7 +79,7 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
   <p style="font-size:14px;color:#667085">{home} · changed from {WORDS[old_level]} → {word}</p>
   <p style="font-size:16px;line-height:1.6"><b>{headline}</b> {action}</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your home's report →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions (from public Redfin data) for the area your home is in — this is general market information, not an appraisal of your specific home. Not financial advice. You receive these because you set up EquityWatch monitoring for this home.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions for the area your home is in — this is general market information, not an appraisal of your specific home. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice. You receive these because you set up EquityWatch monitoring for this home.</p>
 </div>"""
     return subject, html
 
