@@ -6,7 +6,7 @@ A free home-equity warning system. Enter a ZIP code, get a traffic-light verdict
 ## Architecture ($0/month)
 
 ```
-Redfin Data Center (ZIP tracker, gzipped TSV)
+Redfin Data Center hub (ZIP housing-market + price-drops CSVs)
         │  monthly, via GitHub Actions cron
         ▼
 pipeline/fetch_data.py  ──►  pipeline/verdict.py (threshold engine)

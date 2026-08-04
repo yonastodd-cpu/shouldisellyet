@@ -182,7 +182,8 @@ def test_pipeline_end_to_end(tmp_path):
         [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
          "--input", str(fixture)],
         check=True, capture_output=True,
-        env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_RDC": "1"},  # no network in unit tests
+        env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_RDC": "1",
+             "SISY_SKIP_PD": "1"},  # no network in unit tests
     )
 
     data_dir = repo / "web" / "data"
@@ -274,7 +275,7 @@ def test_rdc_never_touches_verdict(tmp_path):
             [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
              "--input", str(fixture), "--rdc", rdc_arg],
             check=True, capture_output=True,
-            env={**os.environ, "SISY_SKIP_MORTGAGE": "1"},
+            env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_PD": "1"},
         )
         return json.loads((repo / "web" / "data" / "zips" / "MD.json").read_text())
 
