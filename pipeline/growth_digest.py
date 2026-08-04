@@ -528,10 +528,18 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
                      'border-radius:8px;font-size:13px;color:#5c6673"><b>Gaps this run:</b><ul style="margin:6px 0 0;'
                      'padding-left:18px">' + "".join(f"<li>{H(g)}</li>" for g in gaps) + '</ul></div>')
 
+    # The citation belongs here even though the digest is internal: the angle
+    # bank exists to be pasted verbatim into public posts, so the credit has to
+    # travel with the numbers to wherever they end up. Exactly once, linked —
+    # see docs/ATTRIBUTION.md.
     parts.append('<div style="margin-top:26px;padding-top:12px;border-top:1px solid #e7e2d8;'
                  'font-size:12px;color:#8a8578">Counts are per ZIP only — this digest never contains '
                  'subscriber names, emails, addresses, or any personal financial input. '
-                 f'Generated automatically from the {H(pm)} data refresh.</div></div>'
+                 f'Generated automatically from the {H(pm)} data refresh. '
+                 'Market figures: Data provided by '
+                 '<a href="https://www.redfin.com" style="color:#8a8578">Redfin</a>, '
+                 'a national real estate brokerage — keep this credit on anything you '
+                 'post from the angle bank.</div></div>'
                  '</body></html>')
     return "".join(parts)
 

@@ -143,7 +143,7 @@ function welcomeMonitorEmail(zip: string, token: string) {
   <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included. Open your private report page below, enter your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access to the report and it works only for you.</p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">Cancel anytime — just reply "cancel" or use the link in any Stripe billing email. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">Cancel anytime — just reply "cancel" or use the link in any Stripe billing email. Not financial advice.</p>
 </div>`,
   };
 }

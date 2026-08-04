@@ -221,13 +221,17 @@ NAVBAR = """<nav class="top">
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 
+# The one linked citation. Each generated page carries it EXACTLY ONCE:
+# a ZIP page in its stamp (beside the data it credits, so its footer passes
+# cite=""), a state hub or the markets index in its footer, since neither has
+# a stamp. See docs/ATTRIBUTION.md.
 CITE = ('Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, '
         'a national real estate brokerage')
 
 FOOTER = """<footer>
   <a href="/">Home</a> · <a href="/zip/">Browse markets by state</a> · <a href="/press.html">Press</a> ·
   <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
-  <div class="disc">{cite}. Verdicts are computed from public housing-market data and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
+  <div class="disc">{cite}Verdicts are computed from public housing-market data and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
 </footer>"""
 
 
@@ -369,7 +373,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <h2>Nearby markets</h2>
 <ul class="nearby">{nb}</ul>
 <p style="margin-top:16px"><a href="/zip/{st}/">All {esc(state_name)} markets →</a></p>
-{FOOTER.format(cite=CITE)}
+{FOOTER.format(cite="")}
 </div>
 <script>
 // Share this ZIP's verdict. PUBLIC DATA ONLY — the button carries the ZIP,
@@ -513,7 +517,7 @@ def state_hub(st, entries, meta):
 <h1>{esc(name)} housing markets</h1>
 <p class="method">A free HOLD / WATCH / ACT verdict for each of the {len(entries)} {esc(name)} ZIP codes with enough reported sales to score. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
 {''.join(body)}
-{FOOTER.format(cite=CITE)}
+{FOOTER.format(cite=CITE + ". ")}
 </div></body></html>"""
 
 
@@ -543,7 +547,7 @@ def markets_index(states, meta):
 <h1>Browse markets by state</h1>
 <p class="method">{total:,} U.S. ZIP codes with enough reported sales to score, each with a free verdict from public market data. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
 <ul class="statecols">{items}</ul>
-{FOOTER.format(cite=CITE)}
+{FOOTER.format(cite=CITE + ". ")}
 </div></body></html>"""
 
 

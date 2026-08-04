@@ -21,36 +21,53 @@ construction.
 Data provided by Redfin, a national real estate brokerage
 ```
 
-- **Link `Redfin` to <https://www.redfin.com> on the first reference on each
-  page.** Later references on the same page may be plain text.
+- **Exactly once per surface, linked to <https://www.redfin.com>.** Required
+  on every page or email that displays Redfin-derived market data, and
+  present nowhere else on it. A second copy is not extra compliance — it is
+  the duplicate this rule exists to prevent.
 - The wording is verbatim. Do not paraphrase it to "Data from Redfin",
-  "Redfin data", "Source: Redfin", or anything else.
+  "Redfin data", "Source: Redfin", "from public Redfin data", or anything
+  else.
 - **Text only.** No Redfin logo, wordmark, or brand image — the repo
   contains none, and none may be added.
 - This wording must not be edited without re-checking the Redfin Data
   Center's current citation guidance. If their terms change, change this
   file in the same commit.
 
-### Where it lives
+### Where it lives — one per surface
 
-| Surface | File |
-| --- | --- |
-| Homepage footer disclaimer | `web/index.html` |
-| Homepage results stamp (runtime) | `web/index.html` → `citeHTML()` |
-| Report footer + stamp | `web/my-report.html` |
-| Sample report | `web/report.html` |
-| Checkout page | `web/subscribe.html` |
-| Purchase / receipt emails | `supabase/functions/stripe-webhook/index.ts` |
-| Data layer (plain text, no markup) | `pipeline/fetch_data.py` → `meta.attribution` |
+Where a page has a stamp beside its data, the stamp carries the citation and
+the footer carries none. Where there is no stamp, the footer carries it.
+
+| Surface | Placement | File |
+| --- | --- | --- |
+| Homepage | results stamp (runtime) | `web/index.html` → `citeHTML()` |
+| Personal report | report stamp (runtime) | `web/my-report.html` → `citeHTML()` |
+| Sample report | report stamp | `web/report.html` |
+| Press page | body text | `web/press.html` |
+| Generated ZIP page | stamp (`CITE`; footer passes `cite=""`) | `pipeline/build_pages.py` |
+| State hub / markets index | footer (no stamp on these) | `pipeline/build_pages.py` |
+| Verdict-change alert email | footer line | `pipeline/notify_changes.py` |
+| Growth Ops digest | footer line | `pipeline/growth_digest.py` |
+| Data layer (plain text, no markup) | — | `pipeline/fetch_data.py` → `meta.attribution` |
+
+**Carrying none, on purpose** — no Redfin-derived market data is displayed:
+`subscribe.html`, `partners.html`, `privacy.html`, `refunds.html`, the
+`/s/{zip}` share stubs, and both `stripe-webhook` purchase emails.
+
+`terms.html` names Redfin once inside a methodology clause ("Ratings are
+computed from public market data (including data from Redfin…)"). That is
+contract text describing how the product works, not an attribution, so it
+stays and is exempt from the one-per-surface count.
 
 The pipeline writes the citation as **plain text** into
 `web/data/meta.json`. A data file should not carry markup, so the two render
 sites call `citeHTML()` to add the required link. If you add a third render
 site, use the same helper — don't hand-write the anchor.
 
-**Pages that show no source-derived numbers do not carry the citation**
-(e.g. `partners.html`, `refunds.html`, `privacy.html`). Adding it there
-would be noise, not compliance.
+**Pages that show no source-derived numbers do not carry the citation.**
+Adding it there would be noise, not compliance — and it dilutes the credit
+on the pages that genuinely need it.
 
 ## Other sources
 
@@ -73,8 +90,8 @@ The strip carries this line verbatim:
 
 ## The one marketing line
 
-> Built on the same public market data Redfin's economists publish —
-> recomputed for your ZIP and your numbers.
+> Built on the same public data the industry's economists publish —
+> Redfin, Realtor.com, FHFA — recomputed for your ZIP and your numbers.
 
 - **One placement only** (pricing section). Do not repeat it elsewhere.
 - It is a claim about *data*, not about a relationship.
