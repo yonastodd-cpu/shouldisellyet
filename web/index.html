@@ -917,10 +917,26 @@ $("zip").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
 $("zip").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 5); });
 
 // ————— Live-desk feed line (truthful facts, rotating) —————
+// The ZIP total is COUNTED from the data, never typed. It was hardcoded at
+// "24,000+" and was still saying that after the 2026-08 source migration took
+// coverage to 33,426 — understating by 9,000 markets on a line whose whole
+// job is to be true. meta.national.counts holds one bucket per verdict level
+// and every scored ZIP lands in exactly one, so its sum is the total.
+function scoredZips() {
+  const c = META && META.national && META.national.counts;
+  if (!c) return 0;
+  return Object.keys(c).reduce((n, k) => n + (Number(c[k]) || 0), 0);
+}
 function feedLines() {
   const period = META && META.period ? META.period : "the latest release";
+  // Rounded DOWN to the thousand, so "33,000+" is always an understatement,
+  // never a claim we can't back. Below 1,000 (or with meta missing) it falls
+  // back to "U.S. ZIP markets" — a sentence that still reads, rather than a
+  // guessed number or the gap left by dropping one.
+  const n = scoredZips();
+  const scale = n >= 1000 ? Math.floor(n / 1000).toLocaleString("en-US") + ",000+" : "U.S.";
   return [
-    "scoring 24,000+ ZIP markets · data through " + period,
+    "scoring " + scale + " ZIP markets · data through " + period,
     "signals: supply · price trend · time to sell · price cuts",
     "source: public housing-market data · refreshed on publication",
     "verdicts recompute automatically when new figures publish",
