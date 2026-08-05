@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="market-render.js"></script>
 <style>
 
 :root{
@@ -244,7 +245,7 @@ details.how .how-body b{color:#3a4450}
       <span class="v-dot" style="background:#c8891f;box-shadow:0 0 0 4px #faf1dd,0 0 0 5px #c8891f"></span>
       <span class="v-tag" style="color:#c8891f">WATCH</span>
       <span class="v-title">Early signals moving in 20906</span>
-      <span class="r-addr">4218 Bel Pre Rd · Silver Spring, MD 20906 · generated August 2, 2026</span>
+      <span class="r-addr">4218 Bel Pre Rd · Silver Spring, MD 20906 · generated August 4, 2026</span>
     </div>
     <nav class="jumpnav" id="jumpnav" aria-label="Report sections"></nav>
 
@@ -254,63 +255,12 @@ details.how .how-body b{color:#3a4450}
       <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
       <p class="dials-intro">Four numbers, all public data, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
       <div id="metrics">
-      <div class="metric-block">
-        <div class="metric"><span class="name">MONTHS OF SUPPLY</span>
-          <span class="val" style="color:#2e9e5b">1.0 mo</span>
-          <span class="track"><span class="fill" style="width:12.9%;background:#2e9e5b"></span><span class="th" style="left:50%"></span></span>
-          <span class="note">line: 4.0 mo</span></div>
-        <details class="how"><summary>How this is measured</summary><div class="how-body">
-          <div>If no new homes were listed, how long until everything currently for sale is sold.</div>
-          <div><b>What goes in:</b> 207 homes listed for sale · 200 homes sold in the latest month — ZIP 20906, through 2026-05.</div>
-          <div><b>The math:</b> homes for sale ÷ homes sold per month.</div>
-          <div><b>Why the line is there:</b> Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 36.5% of the time, vs. 11.5% for markets inside it.</div>
-          <div><b>Yours: 1.0 mo</b> — well inside healthy.</div>
-        </div></details>
-      </div>
-      <div class="metric-block">
-        <div class="metric"><span class="name">PRICES VS. LAST YR</span>
-          <span class="val" style="color:#d64545">−7.1%</span>
-          <span class="track"><span class="fill" style="width:79.6%;background:#d64545"></span><span class="th" style="left:58.3%"></span></span>
-          <span class="note">line: −2% y/y</span></div>
-        <details class="how"><summary>How this is measured</summary><div class="how-body">
-          <div>What the typical home sells for now, compared with the same month a year ago.</div>
-          <div><b>What goes in:</b> the sale prices of the 200 homes sold in the latest month, and of the homes sold the same month last year — ZIP 20906, through 2026-05.</div>
-          <div><b>The math:</b> this month's typical sale price ÷ the typical price 12 months ago, as a percent change.</div>
-          <div><b>Why the line is there:</b> A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19.8% of the time, vs. 9.9% for markets inside it.</div>
-          <div><b>Yours: −7.1%</b> — past the danger line.</div>
-        </div></details>
-      </div>
-      <div class="metric-block">
-        <div class="metric"><span class="name">TIME TO SELL</span>
-          <span class="val" style="color:#2e9e5b">46 days</span>
-          <span class="track"><span class="fill" style="width:56.9%;background:#2e9e5b"></span><span class="th" style="left:60%"></span></span>
-          <span class="note">+12 days y/y</span></div>
-        <details class="how"><summary>How this is measured</summary><div class="how-body">
-          <div>How many days the typical home sits on the market before a buyer commits.</div>
-          <div><b>What goes in:</b> days from listing to contract for the 200 homes sold in the latest month, and for last year's sales — ZIP 20906, through 2026-05.</div>
-          <div><b>The math:</b> the middle (median) days-on-market among homes that sold, and how that compares with a year ago.</div>
-          <div><b>Why the line is there:</b> Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19.0% of the time, vs. 11.2% for markets inside it.</div>
-          <div><b>Yours: 46 days</b> — well inside healthy.</div>
-        </div></details>
-      </div>
-      <div class="metric-block">
-        <div class="metric"><span class="name">NEW SUPPLY VS. LAST YR</span>
-          <span class="val" style="color:#2e9e5b">+31%</span>
-          <span class="track"><span class="fill" style="width:42.5%;background:#2e9e5b"></span><span class="th" style="left:58.3%"></span></span>
-          <span class="note">line: +50% y/y</span></div>
-        <details class="how"><summary>How this is measured</summary><div class="how-body">
-          <div>How many homes are coming up for sale, compared with a year ago.</div>
-          <div><b>What goes in:</b> 207 homes for sale now vs. about 158 a year ago — ZIP 20906, through 2026-05.</div>
-          <div><b>The math:</b> homes for sale this month ÷ homes for sale the same month last year.</div>
-          <div><b>Why the line is there:</b> A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 18.8% of the time, vs. 11.5% for markets inside it.</div>
-          <div><b>Yours: +31%</b> — well inside healthy.</div>
-        </div></details>
-      </div>
+<div class="metric-block"><div class="metric"><span class="name">MONTHS OF SUPPLY</span><span class="val" style="color:#2e9e5b">2.6 mo</span><span class="track"><span class="fill" style="width:32.5%;background:#2e9e5b"></span><span class="th" style="left:50%"></span></span><span class="note">line: 4.0 mo</span></div><details class="how"><summary>How this is measured</summary><div class="how-body"><div>If no new homes were listed, how long until everything currently for sale is sold.</div><div><b>What goes in:</b> 211 homes listed for sale · 243 homes sold in the latest month — ZIP 20906, through 2026-06.</div><div><b>The math:</b> homes for sale ÷ homes sold per month.</div><div><b>Why the line is there:</b> Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 36.5% of the time, vs. 11.5% for markets inside it.</div><div><b>Yours: 2.6 mo</b> — well inside healthy.</div></div></details></div><div class="metric-block"><div class="metric"><span class="name">PRICES VS. LAST YR</span><span class="val" style="color:#d64545">−5.7%</span><span class="track"><span class="fill" style="width:73.75%;background:#d64545"></span><span class="th" style="left:58.3%"></span></span><span class="note">line: −2% y/y</span></div><details class="how"><summary>How this is measured</summary><div class="how-body"><div>What the typical home sells for now, compared with the same month a year ago.</div><div><b>What goes in:</b> the sale prices of the 243 homes sold in the latest month, and of the homes sold the same month last year — ZIP 20906, through 2026-06.</div><div><b>The math:</b> this month's typical sale price ÷ the typical price 12 months ago, as a percent change.</div><div><b>Why the line is there:</b> A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19.8% of the time, vs. 9.9% for markets inside it.</div><div><b>Yours: −5.7%</b> — past the danger line.</div></div></details></div><div class="metric-block"><div class="metric"><span class="name">TIME TO SELL</span><span class="val" style="color:#2e9e5b">43 days</span><span class="track"><span class="fill" style="width:50.98039215686274%;background:#2e9e5b"></span><span class="th" style="left:60%"></span></span><span class="note">+9 days y/y</span></div><details class="how"><summary>How this is measured</summary><div class="how-body"><div>How many days the typical home sits on the market before a buyer commits.</div><div><b>What goes in:</b> days from listing to contract for the 243 homes sold in the latest month, and for last year's sales — ZIP 20906, through 2026-06.</div><div><b>The math:</b> the middle (median) days-on-market among homes that sold, and how that compares with a year ago.</div><div><b>Why the line is there:</b> Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move. In our backtest (2012–2026 year-end signals vs. FHFA's official ZIP price indexes the following year), markets past this line saw prices fall the next year 19% of the time, vs. 11.2% for markets inside it.</div><div><b>Yours: 43 days</b> — well inside healthy.</div></div></details></div><div class="metric-block"><div class="metric"><span class="name">LISTINGS W/ PRICE CUTS</span><span class="val" style="color:#2e9e5b">32%</span><span class="track"><span class="fill" style="width:45.57142857142858%;background:#2e9e5b"></span><span class="th" style="left:50%"></span></span><span class="note">line: 35%</span></div><details class="how"><summary>How this is measured</summary><div class="how-body"><div>The share of homes for sale that have already dropped their asking price at least once.</div><div><b>What goes in:</b> about 67 of the 211 homes for sale have cut their asking price — ZIP 20906, through 2026-06.</div><div><b>The math:</b> listings with a price cut ÷ all active listings.</div><div><b>Why the line is there:</b> Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.</div><div><b>Yours: 32%</b> — well inside healthy.</div></div></details></div>
       </div>
       <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px">A warning signal has tripped. Not a crisis — but this is how turns start, months before prices move.</p>
-      <div class="xcheck">
-        <div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM LISTING FEED · JUNE 2026 (ONE MONTH NEWER THAN THE SALES DATA ABOVE)</div>
+      <div class="xcheck" id="xcheck">
+        <div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM LISTING FEED · JUNE 2026</div>
         <b>167</b> homes listed · typical listing <b>38 days</b> on the market · <b>58</b> price cuts (17% of listings it tracks).
         <div style="margin-top:6px;color:var(--fainter);font-size:12px">Year-over-year comparisons withheld this month — the feed flags this ZIP's comparability.</div>
       </div>
@@ -322,12 +272,12 @@ details.how .how-body b{color:#3a4450}
       <p class="subt">Your home's estimated value over the last three years, month by month. The gold dot marks the peak; the gap between the peak and today shows how much prices have already cooled.</p>
       <div id="trend-chart"></div>
       <div class="callouts" id="trend-callouts">
-        <div class="co"><div class="cv">$486,392</div><div class="cl">EST. PEAK · NOV '25</div></div>
-        <div class="co"><div class="cv">−14.7%</div><div class="cl">FROM THE NOV '25 PEAK</div></div>
-        <div class="co"><div class="cv">−7.1%</div><div class="cl">LAST 12 MONTHS</div></div>
-        <div class="co"><div class="cv">−4.7%</div><div class="cl">LAST 3 MONTHS</div></div>
+        <div class="co"><div class="cv">$460,787</div><div class="cl">EST. PEAK · NOV '25</div></div>
+        <div class="co"><div class="cv">−9.9%</div><div class="cl">FROM THE NOV '25 PEAK</div></div>
+        <div class="co"><div class="cv">−5.7%</div><div class="cl">LAST 12 MONTHS</div></div>
+        <div class="co"><div class="cv">+0.6%</div><div class="cl">LAST 3 MONTHS</div></div>
       </div>
-      <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary. Each month's point is the middle sale price of the homes sold that month (200 in the latest month).</p>
+      <p style="margin-top:10px;font-size:12px;color:var(--fainter)" id="trend-foot">Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary. Each month's point is the middle sale price of the homes sold that month (243 in the latest month).</p>
       <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Official check — FHFA's government price index for this ZIP: +8.7% in 2023, averaging +9.0%/yr over its last three reported years. Annual data through 2023 — it lags the sales feed above and won't catch turns early; that's what the dials are for.</p>
     </div>
 
@@ -339,7 +289,7 @@ details.how .how-body b{color:#3a4450}
         <div class="eqcard">
           <div class="label">ESTIMATED VALUE (YOUR INPUT)</div>
           <div class="big">$415,000</div>
-          <div class="sub2">If your home tracked the ZIP median, it's down ≈ $31,717 vs. a year ago.</div>
+          <div class="sub2">If your home tracked the ZIP median, it's <span id="equity-yoy">down ≈ $25,085 vs. a year ago</span>.</div>
         </div>
         <div class="eqcard">
           <div class="label">YOUR EQUITY</div>
@@ -366,7 +316,7 @@ details.how .how-body b{color:#3a4450}
         <div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">(your input)</i></span><span>− $268,000</span></div>
         <div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>$113,800</span></div>
       </div>
-      <div class="prnote">As of August 2, 2026 · market data through 2026-05 · all figures estimated · selling timeline: 1–2 years (your input)</div>
+      <div class="prnote">As of August 4, 2026 · market data through <span class="js-period">2026-06</span> · all figures estimated · selling timeline: 1–2 years (your input)</div>
       <p class="demo-note" style="margin-top:10px">In your own report a slider adjusts selling costs from 6–10% and every number here updates live, and a toggle lets you set an email alert on this figure.</p>
     </div>
 
@@ -387,7 +337,7 @@ details.how .how-body b{color:#3a4450}
         </div>
       </div>
       <div class="say" style="margin-top:14px"><b>Your locked-in rate is worth about $519 a month</b> (≈ $6,226 a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving.</div>
-      <div class="prnote">As of August 2, 2026 · your rate &amp; loan: your input · market rate: Freddie Mac PMMS 30-yr weekly average, 2026-07-30 (market data) · estimated — not a loan quote.</div>
+      <div class="prnote">As of August 4, 2026 · your rate &amp; loan: your input · market rate: Freddie Mac PMMS 30-yr weekly average, 2026-07-30 (market data) · estimated — not a loan quote.</div>
     </div>
 
     <div class="sec" id="rates-buyers" data-nav="rates">
@@ -421,12 +371,12 @@ details.how .how-body b{color:#3a4450}
       <div class="prtable">
         <div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>
         <div class="strow today"><span>Today</span><span>$415,000</span><span>$147,000</span><span class="net">$113,800</span></div>
-        <div class="strow"><span>6 mo · 12-mo trend continues (−3.6%)</span><span>$400,179</span><span>$132,179</span><span class="net">$100,164</span></div>
+        <div class="strow" id="stress-trend"><span>6 mo · 12-mo trend continues (−2.8%)</span><span>$403,258</span><span>$135,258</span><span class="net">$102,997</span></div>
         <div class="strow"><span>6 mo · prices go flat</span><span>$415,000</span><span>$147,000</span><span class="net">$113,800</span></div>
         <div class="strow stress"><span>6 mo · stress: prices fall 5%</span><span>$394,250</span><span>$126,250</span><span class="net">$94,710</span></div>
       </div>
       <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
-      <div class="say" style="margin-top:14px"><b>Your safety margin is about 30%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. A real but not unlimited cushion — one more reason to stay alert.</div>
+      <div class="say" style="margin-top:14px"><b>Your safety margin is about 30%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. That's a comfortable cushion.</div>
     </div>
 
     <div class="sec" id="selling-conditions" data-nav="selling">
@@ -434,15 +384,15 @@ details.how .how-body b{color:#3a4450}
       <div class="title">How long selling takes here — and when it goes fastest</div>
       <p class="subt">How long homes take to sell is the earliest visible crack in any housing market — it moves months before prices do. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
-      <p id="season-note" style="margin-top:10px">How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales (200 sold in the latest month). Historically, homes here have sold fastest in <b>June</b> — worth knowing when you plan your listing.</p>
+      <p id="season-note" style="margin-top:10px">How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales (243 sold in the latest month). Historically, homes here have sold fastest in <b>August</b> — worth knowing when you plan your listing.</p>
     </div>
 
     <div class="sec" id="bigger-picture" data-nav="big picture">
       <div class="k">THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
       <p class="subt">How your area compares to 33,000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
-      <div class="ctxgrid">
-        <div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Prices here are rising faster than about <b>26%</b> of U.S. ZIP codes — behind most markets. Across the country right now: 16,368 ZIPs read HOLD · 5,533 WATCH · 2,718 ACT.</p></div>
+      <div class="ctxgrid" id="ctxgrid">
+        <div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Prices here are rising faster than about <b>29%</b> of U.S. ZIP codes — behind most markets. Across the country right now: 15,471 ZIPs read HOLD · 7,110 WATCH · 9,485 ACT.</p></div>
         <div class="ctx"><div class="ch">The financing backdrop</div><p>30-year rates: <b>6.66%</b> now vs. 6.63% a year ago — buyers of your home can afford about <b>−0.3%</b> house for the same monthly payment. Roughly neutral for your buyer pool right now.</p></div>
       </div>
     </div>
@@ -510,7 +460,7 @@ details.how .how-body b{color:#3a4450}
       </div>
     </div>
 
-    <div class="stamp">EquityWatch™ · shouldisellyet.com · market data through 2026-05 · Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage · Listing data from Realtor.com
+    <div class="stamp">EquityWatch™ · shouldisellyet.com · market data through <span class="js-period">2026-06</span> · Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage · Listing data from Realtor.com
       <br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.</div>
   </div>
 
@@ -542,77 +492,119 @@ function monthLabel(startYM, i){
   return MONTHS[t%12] + " '" + String(Math.floor(t/12)).slice(2);
 }
 function lastIdx(arr){ for (let i=arr.length-1;i>=0;i--) if (arr[i]!=null) return i; return -1; }
-function lineSVG(series, startYM, opts){
-  const o = Object.assign({w:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
-  const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
-  if (pts.length < 6) return "";
-  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs);
-  let y0 = Math.min(...ys), y1 = Math.max(...ys);
-  if (y1===y0) y1 = y0*1.01+1;
-  const pad = (y1-y0)*0.14; y0-=pad; y1+=pad;
-  const L=58, R=64, T=14, B=30;
-  const X = i => L + (i-x0)/(x1-x0)*(o.w-L-R);
-  const Y = v => T + (1-(v-y0)/(y1-y0))*(o.h-T-B);
-  // gridlines: 4 evenly spaced levels
-  let grid = "";
-  for (let g=0; g<4; g++){
-    const gv = y0+pad + (g/3)*((y1-pad)-(y0+pad));
-    grid += '<line x1="'+L+'" y1="'+Y(gv).toFixed(1)+'" x2="'+(o.w-R)+'" y2="'+Y(gv).toFixed(1)+'" stroke="#f0ebe0"/>'+
-            '<text x="4" y="'+(Y(gv)+3.5).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(gv)+'</text>';
-  }
-  // x ticks every 6 months
-  let ticks = "";
-  for (let i=x0; i<=x1; i++){
-    if ((i-x0)%6===0 && i<=x1-2){
-      ticks += '<line x1="'+X(i).toFixed(1)+'" y1="'+(o.h-B+2)+'" x2="'+X(i).toFixed(1)+'" y2="'+(o.h-B+6)+'" stroke="#d7d0c2"/>'+
-               '<text x="'+X(i).toFixed(1)+'" y="'+(o.h-8)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,i)+'</text>';
+
+// ————— The sample renders itself from the SAME committed data ————————
+// This page used to hold a hand-typed snapshot of one month's market. It went
+// stale silently: by August 2026 it was still showing May's numbers, and a
+// dial ("NEW SUPPLY VS. LAST YR") that the live product had already replaced
+// with price cuts. A sample that misrepresents the product is worse than no
+// sample, so it now reads web/data/ through the same renderer the real report
+// uses (market-render.js).
+//
+// The HOMEOWNER's numbers stay invented — that is the point of a sample, and
+// the page says so. Only the market half is live.
+//
+// If the fetch fails the page keeps the markup it shipped with, which is a
+// correct render of the last build. Degrading to slightly-old real numbers
+// beats degrading to a blank page.
+const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
+
+(async function renderSample(){
+  let meta = null, d = null;
+  try {
+    const [mr, zr] = await Promise.all([
+      fetch("data/meta.json"), fetch("data/zips/" + SAMPLE.state + ".json")
+    ]);
+    if (!mr.ok || !zr.ok) return;
+    meta = await mr.json();
+    d = (await zr.json())[SAMPLE.zip];
+  } catch (e) { return; }
+  if (!meta || !d || !d.m) return;
+
+  MARKET.setMeta(meta);
+  d = MARKET.applyStrong(d);
+  const m = d.m, h = d.h, strong = d.l === "strong";
+  let y12v = null;   // 12-months-ago point on the INDEXED series — the stress row reuses it
+  const $ = id => document.getElementById(id);
+
+  // 01 · the four dials, with their methodology disclosures
+  $("metrics").innerHTML = MARKET.renderMetrics(MARKET.buildMetricRows(d, strong), SAMPLE.zip);
+
+  // 01b · independent listing-feed cross-check
+  MARKET.renderCrossCheck(d);   // writes into #xcheck itself
+
+  // 02 · value trend — the ZIP series indexed to the sample's value estimate
+  if (h && h.p) {
+    const li = MARKET.lastIdx(h.p), base = li >= 0 ? h.p[li] : null;
+    if (base) {
+      const scale = SAMPLE.val / base;
+      const home = h.p.map(v => v != null ? v * scale : null);
+      $("trend-chart").innerHTML = MARKET.lineSVG(home, h.s, {fmt: v => "$" + Math.round(v/1000) + "K"});
+      let pi = -1, pv = -Infinity;
+      home.forEach((v,i) => { if (v != null && v > pv) { pv = v; pi = i; } });
+      const y12 = MARKET.atOrNear(home, li-12), q3 = MARKET.atOrNear(home, li-3);
+      y12v = y12;
+      const fromPeak = SAMPLE.val/pv - 1;
+      const cos = [{v: MARKET.fmt(pv), l: "EST. PEAK · " + MARKET.monthLabel(h.s, pi).toUpperCase()}];
+      cos.push(fromPeak >= -0.005
+        ? {v: "At the high", l: "TODAY — THE 3-YEAR HIGH"}
+        : {v: MARKET.pctf(fromPeak), l: "FROM THE " + MARKET.monthLabel(h.s, pi).toUpperCase() + " PEAK"});
+      if (y12) cos.push({v: MARKET.pctf(SAMPLE.val/y12-1), l: "LAST 12 MONTHS"});
+      if (q3)  cos.push({v: MARKET.pctf(SAMPLE.val/q3-1),  l: "LAST 3 MONTHS"});
+      $("trend-callouts").innerHTML = cos.map(c =>
+        '<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
+      $("trend-foot").textContent =
+        "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price " +
+        "(indexed to your value estimate). Individual homes vary." +
+        (m.sold != null
+          ? " Each month's point is the middle sale price of the homes sold that month (" + m.sold.toLocaleString() + " in the latest month)."
+          : " Each month's point is the middle sale price of the homes sold that month.");
     }
   }
-  // path + optional area
-  let path = "", pen = false, area = "";
-  series.forEach((v,i)=>{
-    if (v==null){ pen=false; return; }
-    path += (pen?"L":"M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); pen=true;
-  });
-  if (o.area){
-    let ap = "", apen = false, firstX=null, lastX=null;
-    series.forEach((v,i)=>{
-      if (v==null){ apen=false; return; }
-      if (!apen && firstX===null) firstX = X(i);
-      ap += (apen?"L":(ap?"M":"M")) + X(i).toFixed(1) + "," + Y(v).toFixed(1); apen=true;
-      lastX = X(i);
-    });
-    if (firstX!==null) area = '<path d="'+ap+' L'+lastX.toFixed(1)+','+(o.h-B)+' L'+firstX.toFixed(1)+','+(o.h-B)+' Z" fill="'+o.color+'" opacity="0.06"/>';
-  }
-  // peak marker
-  let peakSvg = "";
-  if (o.peak){
-    let pi=-1, pv=-Infinity;
-    series.forEach((v,i)=>{ if(v!=null&&v>pv){pv=v;pi=i;} });
-    if (pi>=0) peakSvg = '<line x1="'+X(pi).toFixed(1)+'" y1="'+Y(pv).toFixed(1)+'" x2="'+X(pi).toFixed(1)+'" y2="'+T+'" stroke="#c8891f" stroke-dasharray="2 3" opacity="0.6"/>'+
-      '<circle cx="'+X(pi).toFixed(1)+'" cy="'+Y(pv).toFixed(1)+'" r="4" fill="#c8891f"/>'+
-      '<text x="'+Math.min(Math.max(X(pi),L+38),o.w-R-40).toFixed(1)+'" y="'+(T-2+12)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#8a7a55">PEAK '+monthLabel(startYM,pi).toUpperCase()+' · '+o.fmt(pv)+'</text>';
-  }
-  // end-value tag
-  const li = lastIdx(series);
-  let endTag = "";
-  if (li>=0){
-    endTag = '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="4.5" fill="'+o.color+'"/>'+
-      '<text x="'+(o.w-4)+'" y="'+(Y(series[li])+3.5).toFixed(1)+'" text-anchor="end" font-size="10.5" font-weight="bold" font-family="IBM Plex Mono,monospace" fill="'+o.color+'">'+o.fmt(series[li])+'</text>';
-  }
-  return '<svg viewBox="0 0 '+o.w+' '+o.h+'" style="width:100%;height:auto;display:block">'+
-    grid + ticks + area +
-    '<path d="'+path+'" fill="none" stroke="'+o.color+'" stroke-width="2.4" stroke-linecap="round"/>'+
-    peakSvg + endTag + '</svg>';
-}
 
-const TREND_SERIES = [421965, 413752, 374371, 356320, 392190, 394685, 405133, 394685, 402811, 379594, 393524, 412098, 452727, 460853, 462304, 460853, 464336, 470140, 475944, 465497, 441119, 431252, 446923, 446923, 464336, 435315, 441119, 463755, 475944, 486392, 467238, 464220, 435315, 438217, 406294, 415000]; //[389000, 397158, 398398, 400537, 401227, 399230, 403937, 410650, 413445, 417918, 419334, 415754, 417499, 421733, 424397, 431015, 434921, 432337, 432701, 433950, 434364, 441061, 447067, 447116, 448556, 448281, 445839, 450419, 456434, 458737, 462885, 463518, 459629, 461423, 465223, 468800];
-const DOM_SERIES = [26, 25, 26, 28, 28, 28, 27, 30, 34, 35, 29, 27, 26, 25, 24, 22, 22, 25, 30, 32, 37, 33, 33, 34, 35, 38, 37, 37, 37, 38, 44, 50, 55, 62, 49, 46]; //[46, 49, 49, 45, 39, 32, 27, 25, 27, 33, 39, 44, 47, 46, 43, 38, 33, 30, 28, 29, 31, 34, 36, 39, 40, 41, 41, 40, 37, 33, 29, 26, 25, 27, 31, 31];
-document.getElementById("trend-chart").innerHTML =
-  lineSVG(TREND_SERIES, "2023-06", {fmt: v => "$" + Math.round(v/1000) + "K"});
-document.getElementById("dom-chart").innerHTML =
-  lineSVG(DOM_SERIES, "2023-06", {color:"#8a7a55", h:150, fmt: v => Math.round(v) + "d", peak:false});
+  // 06 · time-to-sell chart + the seasonality note
+  if (h && h.d && h.d.some(x => x != null)) {
+    $("dom-chart").innerHTML = MARKET.lineSVG(h.d, h.s, {color:"#8a7a55", h:150, fmt: v => Math.round(v)+"d", peak:false});
+    const by = {};
+    h.d.forEach((v,i) => { if (v == null) return; const mo = (+h.s.slice(5,7)-1+i)%12; (by[mo] = by[mo] || []).push(v); });
+    let best = -1, bv = Infinity;
+    Object.entries(by).forEach(([mo, arr]) => {
+      if (arr.length >= 2) { const a = arr.reduce((x,y)=>x+y,0)/arr.length; if (a < bv) { bv = a; best = +mo; } }
+    });
+    $("season-note").innerHTML =
+      "How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales" +
+      (m.sold != null ? " (" + m.sold.toLocaleString() + " sold in the latest month)." : ".") +
+      (best >= 0 ? " Historically, homes here have sold fastest in <b>" + MARKET.MONTHS_LONG[best] +
+        "</b> — worth knowing when you plan your listing." : "");
+  }
+
+  // 09 · the national picture
+  const ctx = MARKET.contextBoxes(m);
+  if (ctx) $("ctxgrid").innerHTML = ctx;
+
+  // The few homeowner figures that blend in market data.
+  if (m.spy != null) {
+    const yearAgo = SAMPLE.val / (1 + m.spy);
+    const el = $("equity-yoy");
+    if (el) el.textContent = (m.spy < 0 ? "down ≈ " : "up ≈ ") + MARKET.fmt(Math.abs(yearAgo - SAMPLE.val)) + " vs. a year ago";
+  }
+  // Stress test: "trend continues" halves the 12-month move to project six
+  // months. It reads that move off the INDEXED series (as the real report
+  // does), not off m.spy — the two differ by rounding, and a sample that
+  // disagreed with the product by a few dollars would be its own bug report.
+  if (y12v) {
+    const mom12 = SAMPLE.val/y12v - 1;
+    const V = SAMPLE.val * (1 + mom12/2);
+    const row = $("stress-trend");
+    if (row) row.innerHTML =
+      '<span>6 mo · 12-mo trend continues (' + MARKET.pctf(mom12/2) + ')</span>' +
+      '<span>' + MARKET.fmt(V) + '</span><span>' + MARKET.fmt(Math.max(0, V - SAMPLE.bal)) + '</span>' +
+      '<span class="net">' + MARKET.fmt(V - SAMPLE.bal - V*0.08) + '</span>';
+  }
+
+  // data-vintage stamps
+  if (meta.period) document.querySelectorAll(".js-period").forEach(e => e.textContent = meta.period);
+})();
 
 // Same dynamic numbering + jump-nav the real report uses, so the sample can
 // never drift out of step with it.
