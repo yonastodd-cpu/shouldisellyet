@@ -29,13 +29,17 @@
 const REFERRAL = (function () {
   const AGENT_NAME = "Naomi Todd";
   const AGENT_TITLE = "Licensed Maryland Real Estate Agent";
-  // Optional, and NOT part of complete() — see below. Set it to add a
-  // "· <team> ·" segment; leave it empty and the line simply omits that part.
-  const TEAM_NAME = "";
-  const BROKERAGE = "NTRealty";
+  // Naomi's own company. Optional, and NOT part of complete() — see below.
+  const TEAM_NAME = "NTRealty, LLC";
+  // The BROKERAGE is the firm her licence hangs under, which is a different
+  // entity from her company. "Brokered by" is a statement about who holds the
+  // licence, so these two must not be conflated.
+  const BROKERAGE = "Samson Properties";
   const LICENSE_NO = "5011323";    // MD real estate licence
 
-  const DISCLOSURE_VERSION = "2026-08-05.v1";
+  // v2: added the company segment and corrected the brokerage (v1 named
+  // NTRealty as the brokerage; it is the agent's company, not her broker).
+  const DISCLOSURE_VERSION = "2026-08-05.v2";
 
   const NEXT_STEPS_FULL =
     "She'll reach out within 2 business days to make your introduction to a " +
