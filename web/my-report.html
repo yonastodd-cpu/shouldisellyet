@@ -168,15 +168,6 @@ details.how .how-body b{color:#3a4450}
 .mcard-watch .watch-tag{max-width:none}
 @media(max-width:640px){ .moregrid{grid-template-columns:1fr} }
 @media(max-width:640px){ .strow.slim{grid-template-columns:1.4fr 1fr} .locked-card .lc-row{flex-direction:column;align-items:stretch} }
-.partner{display:none;gap:24px;align-items:flex-start;border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
-.partner .pframe{flex:none;background:#fff;padding:6px;border:1px solid var(--hairline);border-radius:10px;box-shadow:0 12px 26px -14px rgba(31,42,63,.4)}
-.partner img{width:112px;height:139px;border-radius:6px;object-fit:cover;display:block}
-.partner .p-name{font-family:'Newsreader',serif;font-size:23px;font-weight:600;line-height:1.2}
-.partner .p-name small{font-family:system-ui;font-weight:400;font-size:13px;color:var(--faint);display:block;margin-top:3px}
-.partner .p-blurb{font-size:14.5px;line-height:1.65;color:#3a4450;margin:10px 0 14px;max-width:52ch}
-.partner .p-ctas{display:flex;gap:10px;flex-wrap:wrap}
-.partner .p-ctas a{font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:8px}
-@media(max-width:640px){ .partner{flex-direction:column;align-items:center;text-align:center} .partner .p-ctas{justify-content:center} }
 /* Get Connected — neutral card + request modal (no agent identity on page) */
 .connect-card{border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
 .connect-card h3{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 8px}
@@ -683,12 +674,6 @@ details.how .how-body b{color:#3a4450}
       <div class="k">YOUR NEXT STEP</div>
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
-      <!-- REALTOR MATCH (feature-flagged OFF 2026-08-01 — SHOW_REALTOR_MATCH).
-           The sponsored-agent card and its render path below are kept intact
-           for a possible return; while the flag is false the neutral
-           Get Connected card renders instead and no agent name, photo, or
-           brokerage appears anywhere in the consumer report. -->
-      <div class="partner" id="partner"></div>
       <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
       <div class="connect-card" id="connect-card">
         <h3>Get Connected With a Local Expert Realtor</h3>
@@ -755,7 +740,7 @@ details.how .how-body b{color:#3a4450}
     <a href="refunds.html" style="color:inherit">Refunds &amp; cancellation</a> ·
     <a href="zip/" style="color:inherit">Browse markets by state</a> ·
     <a href="press.html" style="color:inherit">Press</a> ·
-    <a href="partners.html" style="color:inherit">For real estate professionals</a>
+
     <!-- Source citation — see docs/ATTRIBUTION.md before rewording -->
     <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
   </div>
@@ -861,7 +846,7 @@ function loadProfile(){
   if (p.costPct >= 6 && p.costPct <= 10) { costPct = p.costPct; }
 }
 let costPct = 8;  // selling costs, % of sale price (user-adjustable 6–10)
-let INDEX = null, META = null, SPONSORS = null;
+let INDEX = null, META = null;   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
 const stateCache = {};
 const DEMO = {
   "20874": {l:"green", st:"MD", m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
@@ -878,7 +863,6 @@ fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
     "How your area compares to " + Math.floor(n/1000).toLocaleString("en-US") +
     ",000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.";
 });
-fetch("sponsors.json").then(r=>r.ok?r.json():null).then(j=>{ SPONSORS=j; });
 
 async function lookup(zip){
   if (INDEX){
@@ -892,11 +876,6 @@ async function lookup(zip){
     return stateCache[st][zip] || null;
   }
   return DEMO[zip] || null;
-}
-function sponsorFor(zip){
-  if (!SPONSORS) return null;
-  const k = SPONSORS.prefixes[zip.slice(0,3)];
-  return k ? SPONSORS.sponsors[k] : null;
 }
 
 const KINDS = {
@@ -1356,32 +1335,10 @@ async function generate(noScroll){
 
   $("meaning").textContent = k.meaning;
 
-  // partner / next step (sponsored card renders only behind the flag)
-  const sp = SHOW_REALTOR_MATCH ? sponsorFor(zip) : null, pt = $("partner");
-  if (sp) {
-    const phone = sp.phoneDisplay || (sp.phone ? sp.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
-    const real = v => (v && !/^\[/.test(v)) ? v : "";   // hide un-filled [PLACEHOLDER] fields
-    const fullName = (sp.name + " " + real(sp.lastName)).trim();
-    const desig = real(sp.designations);
-    const nameLine = fullName + (desig ? ", " + desig : "");
-    // credential line: title · brokerage · (broker of record) · (license #)
-    const credParts = [sp.title, sp.brokerage,
-                       real(sp.broker) ? "Broker of record: " + real(sp.broker) : "",
-                       real(sp.license) ? "MD Lic. " + real(sp.license) : ""].filter(Boolean);
-    const matchBadge = '<span style="display:inline-block;font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--gold);background:#fff;border:1px solid #e6dcc3;border-radius:5px;padding:3px 9px;margin-bottom:8px">✦ REALTOR MATCH</span>';
-    pt.innerHTML = '<div class="pframe"><img src="'+sp.photo+'" alt="'+fullName+'" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E\'"></div>'+
-      '<div>'+matchBadge+'<div class="p-name">'+nameLine+' <small>'+credParts.join(' · ')+'</small></div>'+
-      '<div class="p-blurb">'+(sp.blurb||"")+'</div>'+
-      (sp.affiliated ? '<div style="font-size:12px;color:var(--faint);line-height:1.55;margin:-6px 0 12px;max-width:52ch">Affiliated partner of ShouldISellYet.com — she also answers our support email. Verdicts are computed from public market data and are not influenced by sponsorship. <a href="terms.html" style="color:inherit;text-decoration:underline">Details</a>.</div>' : "")+
-      '<div class="p-ctas">'+
-      (sp.phone ? '<a class="btn" href="tel:'+sp.phone+'">Call '+fullName+' '+phone+'</a>' : "")+
-      '<a class="btn-outline" href="mailto:'+sp.email+'?subject='+encodeURIComponent("EquityWatch report consult — "+zip)+'">Request a free consult</a></div></div>';
-    pt.style.display = "flex";
-    $("nextstep-generic").style.display = "none";
-  } else {
-    pt.style.display = "none";
-    $("nextstep-generic").style.display = "none";  // the Get Connected card carries this section now
-  }
+  // The sponsored-agent card is gone — agent program paused, see decision
+  // log (2026-08-05). The Get Connected card carries this section now, and
+  // it names no agent until after the request is submitted.
+  $("nextstep-generic").style.display = "none";
 
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
     " · " + (META ? citeHTML(META.attribution) : "public market data") +
@@ -1444,10 +1401,6 @@ const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : 
 const SAVE_WATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-watch" : "";
 const SAVE_ADDR_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-address" : "";
 const MATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/match-request" : "";
-// Realtor Match (sponsored-agent card) is feature-flagged OFF — the neutral
-// Get Connected flow below replaces it. Flip to true to bring the card back;
-// sponsors.json, sponsorFor() and the render path are all still wired.
-const SHOW_REALTOR_MATCH = false;
 const q = new URLSearchParams(location.search);
 
 // ————— Address field wiring (shared shape — see web/address.js) —————
