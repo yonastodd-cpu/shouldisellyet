@@ -21,7 +21,7 @@ Usage:
 Required env (GitHub Actions secrets, already used by notify_changes.py):
   SUPABASE_URL, SUPABASE_SERVICE_KEY, RESEND_API_KEY
 Optional:
-  ALERT_FROM  default: "EquityWatch Alerts <alerts@shouldisellyet.com>"
+  ALERT_FROM  default: "ShouldISellYet <support@shouldisellyet.com>"
 """
 
 import argparse
@@ -258,7 +258,7 @@ def main():
     sb_url = os.environ.get("SUPABASE_URL", "")
     sb_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
     rs_key = os.environ.get("RESEND_API_KEY", "")
-    sender = os.environ.get("ALERT_FROM", "EquityWatch Alerts <alerts@shouldisellyet.com>")
+    sender = os.environ.get("ALERT_FROM", "ShouldISellYet <support@shouldisellyet.com>")
 
     if not (sb_url and sb_key):
         print("Supabase secrets not configured — DRY RUN, nothing to check.")

@@ -327,7 +327,7 @@ async function resolveZip(){
   } else if (r.checked) {
     note.className = "pf-zipnote warn";
     note.textContent = "We don't have market data for " + z + " yet — too few reported sales. " +
-      "Check the ZIP, or email naomi@shouldisellyet.com and we'll tell you when it's covered.";
+      "Check the ZIP, or email support@shouldisellyet.com and we'll tell you when it's covered.";
   } else {
     note.textContent = "";   // lookup unavailable — say nothing rather than something wrong
   }
@@ -378,7 +378,7 @@ async function go(){
   const r = await ADDRESS.resolve(a.zip);
   if (r.checked && !r.known)
     return fail("We don't have market data for " + a.zip + " yet, so we can't build a report for it. " +
-                "Please check the ZIP — or email naomi@shouldisellyet.com and we'll tell you when it's covered.", "pf-zip");
+                "Please check the ZIP — or email support@shouldisellyet.com and we'll tell you when it's covered.", "pf-zip");
 
   hint.style.color = "";
   cta.disabled = true; cta.textContent = "Saving…";
@@ -412,7 +412,7 @@ async function go(){
       cta.disabled = false; cta.textContent = "Continue to secure payment →";
       hint.style.color = "var(--red)";
       hint.innerHTML = "We couldn't save your signup just now. Please try again, or email " +
-        "<a href=\"mailto:naomi@shouldisellyet.com?subject=EquityWatch%20annual%20signup\">naomi@shouldisellyet.com</a> and we'll set it up by hand.";
+        "<a href=\"mailto:support@shouldisellyet.com?subject=EquityWatch%20annual%20signup\">support@shouldisellyet.com</a> and we'll set it up by hand.";
     }
     return;
   }

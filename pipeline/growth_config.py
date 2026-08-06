@@ -8,7 +8,7 @@ can be retargeted without touching generation logic. See docs/GROWTH-OPS.md.
 # ——— Who gets the monthly digest ———
 # Overridden at runtime by the OPS_DIGEST_RECIPIENTS env var (comma-separated),
 # which is how CI supplies it. This list is the fallback default.
-DIGEST_RECIPIENTS = ["naomi@shouldisellyet.com"]
+DIGEST_RECIPIENTS = ["admin@shouldisellyet.com"]
 
 # ——— The home market ———
 # DMV flips are listed individually and sorted first everywhere in the digest;
