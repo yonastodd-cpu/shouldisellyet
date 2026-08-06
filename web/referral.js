@@ -18,11 +18,9 @@
 //    MD License #". A partial credential reads as sloppy at best and as a
 //    misstated licence at worst.
 //
-// ⚠️ TEAM_NAME and LICENSE_NO are INTENTIONALLY EMPTY. I do not have those
-// values, and a licence number is a regulatory credential — inventing a
-// plausible-looking one would be far worse than showing the generic text.
-// Fill them in and the full disclosure turns on by itself; until then the
-// generic version ships, which is accurate and complete on its own terms.
+// TEAM_NAME is empty and optional — the line omits that segment rather than
+// leaving a dangling separator. Every REQUIRED credential is filled, so the
+// full disclosure is what ships.
 //
 // Bump DISCLOSURE_VERSION whenever the wording below changes. It is stored on
 // every match_requests row, so "which disclosure did this person actually
@@ -31,9 +29,11 @@
 const REFERRAL = (function () {
   const AGENT_NAME = "Naomi Todd";
   const AGENT_TITLE = "Licensed Maryland Real Estate Agent";
-  const TEAM_NAME = "";            // TODO: team/group name, if any
+  // Optional, and NOT part of complete() — see below. Set it to add a
+  // "· <team> ·" segment; leave it empty and the line simply omits that part.
+  const TEAM_NAME = "";
   const BROKERAGE = "NTRealty";
-  const LICENSE_NO = "";           // TODO: MD real estate licence number
+  const LICENSE_NO = "5011323";    // MD real estate licence
 
   const DISCLOSURE_VERSION = "2026-08-05.v1";
 
@@ -50,17 +50,28 @@ const REFERRAL = (function () {
     "brokerage may receive a standard broker-to-broker referral fee. This " +
     "never affects your verdict and never costs you anything.";
 
-  /** True only when every credential is present — see rule 2. */
+  /** True only when every REQUIRED credential is present — see rule 2.
+   *
+   *  TEAM_NAME is deliberately excluded. The fail-closed rule exists to stop a
+   *  broken or misstated LICENCE reaching a consumer; a missing team name
+   *  creates no such risk, and plenty of agents simply do not have one.
+   *  Requiring it would have held the whole disclosure at the generic fallback
+   *  forever over a cosmetic field — which would be the rule defeating its own
+   *  purpose. Name, title, brokerage and licence are the four that matter. */
   function complete() {
-    return [AGENT_NAME, AGENT_TITLE, TEAM_NAME, BROKERAGE, LICENSE_NO]
+    return [AGENT_NAME, AGENT_TITLE, BROKERAGE, LICENSE_NO]
       .every(v => typeof v === "string" && v.trim() !== "");
   }
 
-  /** The referring-agent sentence: full credentials, or the generic fallback. */
+  /** The referring-agent sentence: full credentials, or the generic fallback.
+   *  Segments are joined rather than templated, so an empty optional field
+   *  drops out cleanly instead of leaving a dangling " · ". */
   function agentLine() {
     if (!complete()) return "Your request will be handled personally by our licensed referring agent.";
-    return `Your request will be handled personally by ${AGENT_NAME}, ${AGENT_TITLE} · ` +
-           `${TEAM_NAME} · Brokered by ${BROKERAGE} · MD License #${LICENSE_NO}.`;
+    const parts = [`${AGENT_NAME}, ${AGENT_TITLE}`, TEAM_NAME,
+                   `Brokered by ${BROKERAGE}`, `MD License #${LICENSE_NO}`]
+      .filter(s => s && s.trim() !== "");
+    return `Your request will be handled personally by ${parts.join(" · ")}.`;
   }
 
   function nextSteps() {
