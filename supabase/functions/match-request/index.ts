@@ -6,8 +6,15 @@
 // any agent.
 //
 // Deploy as edge function `match-request`. Disable "Enforce JWT verification".
-// Secrets: RESEND_API_KEY (already used by stripe-webhook) and optionally
-// ALERT_FROM. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected.
+// Secrets: RESEND_API_KEY (already used by stripe-webhook); optionally
+// ALERT_FROM, MATCH_TEAM_TO, MATCH_ARCHIVE_BCC. SUPABASE_URL /
+// SUPABASE_SERVICE_ROLE_KEY are auto-injected.
+//
+// Two emails go out per request, both BCC'd to the archive address:
+//   1. the team notification, so someone can act on it
+//   2. a confirmation to the requester carrying the same disclosure they saw
+// The BCC is the record that each actually sent — a send that never happened
+// and a send that silently failed look identical without one.
 // TODO (Resend): confirm the sending domain is verified in Resend for
 // alerts@shouldisellyet.com — the insert still succeeds if email fails.
 //
@@ -25,7 +32,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("ALERT_FROM") ?? "EquityWatch <alerts@shouldisellyet.com>";
-const TEAM = "naomi@shouldisellyet.com";
+// Where introduction requests land, and where a copy is archived so there is
+// always a record that the mail actually went out. Both env-overridable so
+// recipients can change without a redeploy.
+const TEAM = Deno.env.get("MATCH_TEAM_TO") ?? "ntrealty314@gmail.com";
+const ARCHIVE = Deno.env.get("MATCH_ARCHIVE_BCC") ?? "alerts@shouldisellyet.com";
+// A blank env var must mean "no archive copy", not "send to the empty string".
+const bcc = ARCHIVE.trim() ? { bcc: [ARCHIVE.trim()] } : {};
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -118,7 +131,8 @@ Deno.serve(async (req) => {
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [TEAM], subject: `Introduction requested — ${zip}`, html }),
+        body: JSON.stringify({ from: FROM, to: [TEAM], ...bcc,
+          subject: `Introduction requested — ${zip}`, html }),
       });
       if (!r.ok) console.error("resend error", r.status, await r.text());
 
@@ -141,7 +155,7 @@ Deno.serve(async (req) => {
         const c = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from: FROM, to: [email],
+          body: JSON.stringify({ from: FROM, to: [email], ...bcc,
             subject: "Your introduction request is in", html: confirm }),
         });
         if (!c.ok) console.error("confirmation email failed", c.status, await c.text());
