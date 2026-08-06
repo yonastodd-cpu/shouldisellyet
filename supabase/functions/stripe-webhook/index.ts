@@ -4,7 +4,9 @@
 // Secrets required (Supabase dashboard → Edge Functions → Secrets):
 //   STRIPE_WEBHOOK_SECRET   from the Stripe webhook endpoint you create
 //   RESEND_API_KEY          from resend.com
-//   ALERT_FROM              e.g. "EquityWatch <alerts@shouldisellyet.com>" (optional)
+//   ALERT_FROM              e.g. "ShouldISellYet <support@shouldisellyet.com>" (optional)
+//                           MUST be a real mailbox: every email here invites a
+//                           reply. alerts@ was never one and Resend suppressed it.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 //
 // Stripe events handled:
@@ -26,7 +28,7 @@ const WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM = Deno.env.get("ALERT_FROM") ?? "EquityWatch <alerts@shouldisellyet.com>";
+const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
 const SITE = "https://shouldisellyet.com";
 
 // ————— Prices —————

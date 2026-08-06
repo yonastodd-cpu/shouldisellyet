@@ -548,7 +548,7 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
 
 def send_email(subject, html, recipients):
     key = os.environ.get("RESEND_API_KEY", "")
-    sender = os.environ.get("ALERT_FROM", "EquityWatch <alerts@shouldisellyet.com>")
+    sender = os.environ.get("ALERT_FROM", "ShouldISellYet <support@shouldisellyet.com>")
     if not key:
         print("RESEND_API_KEY unset — digest not emailed (rendered file still written)")
         return False

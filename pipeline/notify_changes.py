@@ -16,7 +16,7 @@ prints what it WOULD send and exits 0, so the pipeline never breaks:
   SUPABASE_SERVICE_KEY  service-role key (server-side only, never in the site)
   RESEND_API_KEY        from resend.com
 Optional:
-  ALERT_FROM            default: "EquityWatch Alerts <alerts@shouldisellyet.com>"
+  ALERT_FROM            default: "ShouldISellYet <support@shouldisellyet.com>"
 """
 
 import argparse
@@ -131,7 +131,7 @@ def main():
     sb_url = os.environ.get("SUPABASE_URL", "")
     sb_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
     rs_key = os.environ.get("RESEND_API_KEY", "")
-    sender = os.environ.get("ALERT_FROM", "EquityWatch Alerts <alerts@shouldisellyet.com>")
+    sender = os.environ.get("ALERT_FROM", "ShouldISellYet <support@shouldisellyet.com>")
 
     if not (sb_url and sb_key and rs_key):
         sample = list(changes.items())[:5]

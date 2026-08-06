@@ -241,7 +241,7 @@ details.how .how-body b{color:#3a4450}
         <a class="btn" href="subscribe.html?plan=monitor">Set up alerts + report · <span data-price="annual-yr">$29/yr</span></a>
         <a class="btn-outline" href="subscribe.html?plan=report">Just the report · <span data-price="report">$5.99</span></a>
       </div>
-      <p style="font-size:12.5px;color:var(--fainter);margin-top:16px">Already purchased? Use the <b>“Open my report”</b> link in your confirmation email — it carries your private access. Lost it? <a href="mailto:naomi@shouldisellyet.com?subject=EquityWatch%20report%20access">Email us</a> and we'll resend it.</p>
+      <p style="font-size:12.5px;color:var(--fainter);margin-top:16px">Already purchased? Use the <b>“Open my report”</b> link in your confirmation email — it carries your private access. Lost it? <a href="mailto:support@shouldisellyet.com?subject=EquityWatch%20report%20access">Email us</a> and we'll resend it.</p>
       <a class="back-link" href="index.html">← Check any ZIP free instead</a>
     </div>
   </div>
@@ -1508,7 +1508,7 @@ async function submitConnect(){
   if (!name) { $("cm-name").focus(); return fail("Please add your name."); }
   if (!/@/.test(email)) { $("cm-email").focus(); return fail("Please add a working email."); }
   if (!/^\d{5}$/.test(zip)) { $("cm-addr").focus(); return fail("Please include the property's 5-digit ZIP."); }
-  if (!MATCH_FN) return fail("Introductions aren't configured yet — email naomi@shouldisellyet.com and we'll set it up by hand.");
+  if (!MATCH_FN) return fail("Introductions aren't configured yet — email support@shouldisellyet.com and we'll set it up by hand.");
   const btn = $("cm-send"); btn.disabled = true; btn.textContent = "Sending…";
   try {
     const r = await fetch(MATCH_FN, {
@@ -1535,9 +1535,9 @@ async function submitConnect(){
       $("cm-form").style.display = "none";
       $("cm-done").style.display = "block";
     }
-    else fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
+    else fail("Couldn't send your request — please try again, or email support@shouldisellyet.com.");
   } catch (e) {
-    fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
+    fail("Couldn't send your request — please try again, or email support@shouldisellyet.com.");
   }
   btn.disabled = false; btn.textContent = "Request my introduction";
   return false;
@@ -1780,11 +1780,11 @@ async function saveWatch(metric){
       window.__savedWatches = (window.__savedWatches || []).filter(w => w.metric !== metric)
         .concat([{ metric, direction, threshold }]);
     } else {
-      errEl.textContent = "Couldn't save your alert — please try again, or write to naomi@shouldisellyet.com.";
+      errEl.textContent = "Couldn't save your alert — please try again, or write to support@shouldisellyet.com.";
       errEl.style.display = "block";
     }
   } catch (e) {
-    errEl.textContent = "Couldn't save your alert — please try again, or write to naomi@shouldisellyet.com.";
+    errEl.textContent = "Couldn't save your alert — please try again, or write to support@shouldisellyet.com.";
     errEl.style.display = "block";
   }
   return false;

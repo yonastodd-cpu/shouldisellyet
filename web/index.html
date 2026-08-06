@@ -343,7 +343,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
           <label><input type="checkbox" id="mf-tos" required> I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</label>
           <button class="btn" style="font-size:14px" onclick="subMonitor(event)">Activate my monitoring</button>
           <div class="ok" id="mf-ok">✓ You're on the founding list — we'll email your activation and payment link today.</div>
-          <div class="err" id="mf-err">Couldn't save your signup — please try again in a minute, or write to naomi@shouldisellyet.com.</div>
+          <div class="err" id="mf-err">Couldn't save your signup — please try again in a minute, or write to support@shouldisellyet.com.</div>
         </div>
         -->
       </div>
@@ -765,7 +765,7 @@ async function joinWaitlist(e) {
     e.target.style.display = "none";
     $("wl-ok").style.display = "block";
   } else {
-    $("wl-ok").textContent = "Couldn't save — please try again, or write to naomi@shouldisellyet.com";
+    $("wl-ok").textContent = "Couldn't save — please try again, or write to support@shouldisellyet.com";
     $("wl-ok").style.display = "block"; $("wl-ok").style.color = "var(--red)";
   }
   return false;

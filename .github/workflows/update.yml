@@ -161,7 +161,7 @@ jobs:
           import json, os, urllib.request
           key = os.environ.get("RESEND_API_KEY", "")
           to = [x.strip() for x in os.environ.get("OPS_DIGEST_RECIPIENTS", "").split(",") if x.strip()] \
-               or ["naomi@shouldisellyet.com"]
+               or ["admin@shouldisellyet.com"]
           if not key:
               raise SystemExit("no RESEND_API_KEY — cannot send the fallback notice")
           html = ("<p><b>Data refresh succeeded; the Growth Ops digest failed.</b></p>"
@@ -170,7 +170,7 @@ jobs:
           req = urllib.request.Request(
               "https://api.resend.com/emails",
               data=json.dumps({"from": os.environ.get("ALERT_FROM",
-                                                      "EquityWatch <alerts@shouldisellyet.com>"),
+                                                      "ShouldISellYet <support@shouldisellyet.com>"),
                                "to": to, "subject": "Refresh OK — Growth Ops digest failed",
                                "html": html}).encode(),
               method="POST",

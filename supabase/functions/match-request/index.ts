@@ -17,7 +17,7 @@
 // The BCC is the record that each actually sent — a send that never happened
 // and a send that silently failed look identical without one.
 // TODO (Resend): confirm the sending domain is verified in Resend for
-// alerts@shouldisellyet.com — the insert still succeeds if email fails.
+// support@shouldisellyet.com — the insert still succeeds if email fails.
 //
 // POST /match-request
 //   { name, email, phone?, zip, address?, timeline?, note?,
@@ -32,7 +32,7 @@
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM = Deno.env.get("ALERT_FROM") ?? "EquityWatch <alerts@shouldisellyet.com>";
+const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
 // Where introduction requests land.
 const TEAM = Deno.env.get("MATCH_TEAM_TO") ?? "ntrealty314@gmail.com";
 
