@@ -10,7 +10,8 @@
 // ALERT_FROM, MATCH_TEAM_TO, MATCH_ARCHIVE_BCC. SUPABASE_URL /
 // SUPABASE_SERVICE_ROLE_KEY are auto-injected.
 //
-// Two emails go out per request, both BCC'd to the archive address:
+// Two emails go out per request, BCC'd to the archive address when one is
+// configured (MATCH_ARCHIVE_BCC — see below; it must be a real mailbox):
 //   1. the team notification, so someone can act on it
 //   2. a confirmation to the requester carrying the same disclosure they saw
 // The BCC is the record that each actually sent — a send that never happened
@@ -32,12 +33,24 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("ALERT_FROM") ?? "EquityWatch <alerts@shouldisellyet.com>";
-// Where introduction requests land, and where a copy is archived so there is
-// always a record that the mail actually went out. Both env-overridable so
-// recipients can change without a redeploy.
+// Where introduction requests land.
 const TEAM = Deno.env.get("MATCH_TEAM_TO") ?? "ntrealty314@gmail.com";
-const ARCHIVE = Deno.env.get("MATCH_ARCHIVE_BCC") ?? "alerts@shouldisellyet.com";
-// A blank env var must mean "no archive copy", not "send to the empty string".
+
+// Archive copy — OFF unless explicitly configured, and that default is a
+// correction, not caution.
+//
+// It defaulted to alerts@shouldisellyet.com, which is the FROM address. A
+// sending identity is not a mailbox: alerts@ can send mail because Resend
+// holds the DKIM key for the domain, but nothing receives there — the domain's
+// actual mail is on Titan. So every BCC hard-bounced with "Recipient not
+// found", and Resend then SUPPRESSED the address, which is worse than the
+// original problem: bounces damage sending reputation for every other email
+// the domain sends.
+//
+// To turn the archive back on, set MATCH_ARCHIVE_BCC to an address that can
+// actually RECEIVE — either create a real alerts@ mailbox in Titan (and clear
+// the Resend suppression first), or point it at an existing inbox.
+const ARCHIVE = Deno.env.get("MATCH_ARCHIVE_BCC") ?? "";
 const bcc = ARCHIVE.trim() ? { bcc: [ARCHIVE.trim()] } : {};
 
 const CORS = {
