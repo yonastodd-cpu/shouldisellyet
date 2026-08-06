@@ -174,15 +174,6 @@ h1 em{font-style:italic;color:var(--navy)}
 .mform .ok,.mform .err{display:none;font-size:13.5px;font-weight:600}
 .mform .ok{color:var(--green)} .mform .err{color:var(--red)}
 
-/* partner */
-.partner{display:none;gap:14px;border-top:1px dashed var(--hairline);padding-top:16px;margin-top:6px}
-.partner img{width:58px;height:58px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold)}
-.partner .p-name{font-family:'Newsreader',serif;font-size:16.5px;font-weight:600}
-.partner .p-name small{font-family:system-ui,sans-serif;font-weight:400;font-size:12px;color:var(--faint)}
-.partner .p-blurb{font-size:12.5px;line-height:1.55;color:var(--muted);margin:4px 0 8px}
-.partner .p-ctas{display:flex;gap:8px;flex-wrap:wrap}
-.partner .p-ctas a{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:6px}
-.partner .p-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--fainter);border:1px solid var(--hairline);border-radius:4px;padding:2px 7px;vertical-align:2px;margin-left:6px}
 
 /* waitlist */
 .waitcard{display:none;padding:24px 26px;animation:fadeUp .3s ease}
@@ -279,7 +270,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .verdict-head{padding:20px 20px 22px}
   .verdict-body{padding:18px 20px 22px}
   .crunch-row span:nth-child(2){width:auto;flex:1}
-  .partner{flex-direction:column;align-items:flex-start}
   footer{padding:26px 20px 30px}
 }
 </style>
@@ -356,12 +346,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
           <div class="err" id="mf-err">Couldn't save your signup — please try again in a minute, or write to naomi@shouldisellyet.com.</div>
         </div>
         -->
-
-        <!-- Realtor introduction. Rendered only when SHOW_AGENT_CTA_IN_RESULTS
-             is true (off since 2026-07-31); sponsors.json, sponsorFor() and
-             partnerHTML() are all still wired. The match-request flow on the
-             report pages is unaffected. -->
-        <div class="partner" id="partner"></div>
       </div>
     </div>
 
@@ -471,8 +455,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 
 <footer>
   <div class="foot-row">
-    <span>© 2026 ShouldISellYet.com · operated by Yayday LLC · NTRealty is an affiliated partner</span>
-    <span style="display:flex;gap:14px;flex-wrap:wrap"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="press.html">Press</a><a href="partners.html">For real estate professionals</a></span>
+    <span>© 2026 ShouldISellYet.com · operated by Yayday LLC · NTRealty is an affiliated brokerage</span>
+    <span style="display:flex;gap:14px;flex-wrap:wrap"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="press.html">Press</a></span>
   </div>
   <div class="disclaimer">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
   <!-- No source citation here on purpose. The page carries exactly ONE, in
@@ -484,11 +468,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 
 <script>
 // ————— Feature flags —————
-// The realtor introduction is off in the results block as of 2026-07-31 — the
-// results are verdict + gauges + three actions and nothing else. Every piece of
-// wiring (sponsors.json, sponsorFor, partnerHTML, the #partner node) is intact:
-// flip this to true to bring the introduction back exactly as it was.
-const SHOW_AGENT_CTA_IN_RESULTS = false;
 
 // ————— Backend config —————
 // Stripe Payment Links: paste and the buttons go straight to checkout.
@@ -520,7 +499,7 @@ const DEMO = {
   "20874": {l:"green", st:"MD", s:0, m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
   "20906": {l:"yellow", st:"MD", s:3, m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
 };
-let INDEX = null, META = null, SPONSORS = null, live = false;
+let INDEX = null, META = null, live = false;   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
 const stateCache = {};
 
 fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
@@ -540,7 +519,6 @@ fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
     }
   }
 }).catch(() => {});
-fetch("sponsors.json").then(r => r.ok ? r.json() : null).then(j => { SPONSORS = j; }).catch(() => {});
 
 async function lookup(zip) {
   if (live && INDEX) {
@@ -554,11 +532,6 @@ async function lookup(zip) {
     return stateCache[st][zip] || null;
   }
   return DEMO[zip] || null;
-}
-function sponsorFor(zip) {
-  if (!SPONSORS) return null;
-  const key = SPONSORS.prefixes[zip.slice(0, 3)];
-  return key ? SPONSORS.sponsors[key] : null;
 }
 
 // ————— City name for a ZIP —————
@@ -692,30 +665,6 @@ function renderMetrics(rows) {
   ).join("");
 }
 
-function partnerHTML(s, kind, zip) {
-  const phone = s.phoneDisplay || (s.phone ? s.phone.replace(/^\+1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
-  const subject = encodeURIComponent("Free consult — ZIP " + zip + " rated " + kind.toUpperCase() + " on ShouldISellYet");
-  const real = v => (v && !/^\[/.test(v)) ? v : "";  // hide un-filled [PLACEHOLDER] fields
-  const fullName = (s.name + " " + real(s.lastName)).trim();
-  const desig = real(s.designations);
-  const nameLine = fullName + (desig ? ", " + desig : "");
-  const cred = [s.title, s.brokerage,
-                real(s.broker) ? "Broker of record: " + real(s.broker) : "",
-                real(s.license) ? "MD Lic. " + real(s.license) : ""].filter(Boolean).join(" · ");
-  return `
-    <img src="${s.photo}" alt="${fullName}, ${s.brokerage}"
-         onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2250%22 fill=%22%231f3a5f%22/%3E%3Ccircle cx=%2250%22 cy=%2240%22 r=%2215%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3Cpath d=%22M24 86c4-17 14-24 26-24s22 7 26 24%22 fill=%22%23faf8f4%22 opacity=%22.85%22/%3E%3C/svg%3E'">
-    <div>
-      <div class="p-name">${nameLine} <small>${cred}</small><span class="p-tag">REALTOR MATCH</span></div>
-      <div class="p-blurb">${s.blurb || ""}</div>
-      ${s.affiliated ? '<div style="font-size:11.5px;color:var(--fainter);line-height:1.5;margin:-4px 0 8px">Affiliated partner of ShouldISellYet.com — she also answers our support email. Verdicts are computed from public market data and are not influenced by sponsorship. <a href="terms.html" style="color:inherit;text-decoration:underline">Details</a>.</div>' : ""}
-      <div class="p-ctas">
-        ${s.phone ? '<a class="btn" style="font-size:12.5px;padding:8px 14px" href="tel:'+s.phone+'">Call '+fullName+' '+phone+'</a>' : ""}
-        <a class="btn-outline" style="border:1.5px solid var(--navy)" href="mailto:${s.email}?subject=${subject}">Request a free consult</a>
-        ${s.url ? '<a class="btn-outline" style="border:1.5px solid var(--hairline);color:var(--muted)!important" href="'+s.url+'" target="_blank" rel="noopener">'+s.brokerage+' →</a>' : ""}
-      </div>
-    </div>`;
-}
 
 function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null, reqSeq = 0;
@@ -773,12 +722,7 @@ async function run() {
     $("v-stamp").innerHTML = META ? "Data through " + META.period + " · " + citeHTML(META.attribution) : "";
     $("cta-report").href = "subscribe.html?plan=report&zip=" + zip;
     $("cta-monitor").href = "subscribe.html?plan=monitor&zip=" + zip;   // monthly is subscribe.html's default
-    resetShare();
-    const sp = sponsorFor(zip);
-    const pt = $("partner");
-    if (SHOW_AGENT_CTA_IN_RESULTS && sp && d.l !== "green") { pt.innerHTML = partnerHTML(sp, k.key, zip); pt.style.display = "flex"; }
-    else { pt.style.display = "none"; }
-    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l, city: cachedCity(zip) };
+    resetShare();    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l, city: cachedCity(zip) };
     show($("verdict"), true);
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
   }, Math.max(0, 1600 - (Date.now() - started)));
