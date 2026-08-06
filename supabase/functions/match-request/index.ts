@@ -13,8 +13,13 @@
 //
 // POST /match-request
 //   { name, email, phone?, zip, address?, timeline?, note?,
-//     consent_text, verdict?, source? }
+//     consent_text, disclosure_version, disclosure_text, verdict?, source? }
 //   200 { ok: true, id }  |  200 { ok: false, error }
+//
+// Requires schema-v8 (disclosure_* columns). The disclosure is what the person
+// is shown on submission — who handles the request, and that a referral fee
+// may be involved — and it is stored verbatim alongside the consent text so
+// "what was I told" is answerable from the row.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -58,6 +63,8 @@ Deno.serve(async (req) => {
   const timeline = str("timeline", 40);
   const note = str("note", 1000);
   const consent_text = str("consent_text", 500);
+  const disclosure_version = str("disclosure_version", 60);
+  const disclosure_text = str("disclosure_text", 1200);
   const verdict = str("verdict", 20);
   const source = str("source", 40) || "report";
 
@@ -77,7 +84,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({ name, email, phone: phone || null, zip, address: address || null,
         timeline: timeline || null, note: note || null, verdict: verdict || null,
-        source, consent_text }),
+        source, consent_text,
+        disclosure_version: disclosure_version || null,
+        disclosure_text: disclosure_text || null,
+        disclosure_shown_at: disclosure_version ? new Date().toISOString() : null }),
     });
     if (!ins.ok) {
       console.error("match_requests insert failed", ins.status, await ins.text());
@@ -103,6 +113,7 @@ Deno.serve(async (req) => {
   </table>
   <p style="font-size:14px;margin-top:16px"><b>Next action:</b> Make the introduction manually, then update the row's status.</p>
   <p style="font-size:12px;color:#98a2b3;margin-top:14px">Consent shown to the user: “${esc(consent_text)}”</p>
+  <p style="font-size:12px;color:#98a2b3;margin-top:6px">Disclosure shown (${esc(disclosure_version || "none recorded")}):<br>${esc(disclosure_text || "—").replace(/\n\n/g, "<br>")}</p>
 </div>`;
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -110,6 +121,31 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ from: FROM, to: [TEAM], subject: `Introduction requested — ${zip}`, html }),
       });
       if (!r.ok) console.error("resend error", r.status, await r.text());
+
+      // Confirmation to the requester, carrying the SAME disclosure text they
+      // saw on screen. A disclosure that exists only in a modal is one the
+      // person cannot re-read after they close it — so it goes in writing too.
+      // Skipped rather than faked if the client sent no disclosure: an email
+      // that invents its own wording would defeat the point of storing it.
+      if (disclosure_text) {
+        const paras = disclosure_text.split("\n\n")
+          .map((s) => `<p style="font-size:15px;line-height:1.65;margin:0 0 12px">${esc(s)}</p>`)
+          .join("");
+        const confirm = `
+<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">ShouldISellYet</p>
+  <h1 style="font-size:24px;margin:6px 0 14px">Your introduction request is in.</h1>
+  ${paras}
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">You're getting this because you asked for an introduction on shouldisellyet.com for ${esc(zip)}. Nothing else has been shared. Reply to this email if you'd rather we didn't proceed.</p>
+</div>`;
+        const c = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: FROM, to: [email],
+            subject: "Your introduction request is in", html: confirm }),
+        });
+        if (!c.ok) console.error("confirmation email failed", c.status, await c.text());
+      }
     } else {
       console.error("RESEND_API_KEY not set — match request saved but team email skipped");
     }

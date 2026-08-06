@@ -11,6 +11,7 @@
 <script src="prices.js"></script>
 <script src="address.js"></script>
 <script src="market-render.js"></script>
+<script src="referral.js"></script>
 <style>
 :root{
   --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
@@ -169,6 +170,11 @@ details.how .how-body b{color:#3a4450}
 @media(max-width:640px){ .moregrid{grid-template-columns:1fr} }
 @media(max-width:640px){ .strow.slim{grid-template-columns:1.4fr 1fr} .locked-card .lc-row{flex-direction:column;align-items:stretch} }
 /* Get Connected — neutral card + request modal (no agent identity on page) */
+/* The material-connection line. Set apart from the rest so it reads as a
+   disclosure rather than as more confirmation copy — but not alarm-coloured;
+   it is a normal fact about how the introduction works. */
+.cm-material{margin:14px 0 0;padding:12px 14px;border-left:2px solid var(--hairline);
+  background:#fbfaf6;font-size:13px;line-height:1.6;color:var(--muted)}
 .connect-card{border:1px solid #e6dcc3;border-radius:14px;padding:26px;background:linear-gradient(180deg,#fffdf8,#faf4e8)}
 .connect-card h3{font-family:'Newsreader',serif;font-size:21px;font-weight:600;margin:0 0 8px}
 .connect-card p{margin:0 0 16px;max-width:60ch}
@@ -725,9 +731,14 @@ details.how .how-body b{color:#3a4450}
           <button class="btn" id="cm-send" onclick="return submitConnect()">Request my introduction</button>
         </div>
       </div>
+      <!-- Post-submission ONLY. Nothing in this block renders until a request
+           has actually been sent — see web/referral.js for why that ordering
+           is the whole point. Text is built from config, never hardcoded. -->
       <div id="cm-done" style="display:none">
-        <h3>Done — introduction on the way</h3>
-        <p class="sub" style="margin-top:8px">We'll personally reach out within 2 business days with your introduction. We only shared what you saw above.</p>
+        <h3>Your introduction request is in.</h3>
+        <p class="sub" id="cm-agent" style="margin-top:10px"></p>
+        <p class="sub" id="cm-next" style="margin-top:10px"></p>
+        <p class="cm-material" id="cm-material"></p>
         <div class="mrow"><button class="btn" onclick="return closeConnect()">Close</button></div>
       </div>
     </div>
@@ -1470,6 +1481,8 @@ function editAddress(){
 // form IS the ask, so the gate came out and the audit trail stayed.
 const CONSENT_TEXT = "Requesting an introduction shares your name and contact details with one carefully chosen local agent — that's the whole point, and it's all we share. Free, no obligation, and we never sell your info.";
 function openConnect(){
+  // Always reopens on the form. The disclosure is a post-submission state and
+  // must never be what someone sees on the way in.
   $("cm-form").style.display = "block";
   $("cm-done").style.display = "none";
   $("cm-err").style.display = "none";
@@ -1505,12 +1518,23 @@ async function submitConnect(){
         name, email, phone: $("cm-phone").value.trim(), zip, address: addrField,
         timeline: $("cm-timeline").value, note: $("cm-note").value.trim(),
         consent_text: CONSENT_TEXT,
+        disclosure_version: REFERRAL.version(),
+        disclosure_text: REFERRAL.plainText(),
         verdict: (window.__lastVerdict && window.__lastVerdict.tag) || "",
         source: "report",
       }),
     });
     const j = await r.json();
-    if (j && j.ok) { $("cm-form").style.display = "none"; $("cm-done").style.display = "block"; }
+    if (j && j.ok) {
+      // Disclosure is rendered from config at the moment of success, and the
+      // SAME version string was sent with the request — so the row records
+      // which wording this person actually saw.
+      $("cm-agent").textContent = REFERRAL.agentLine();
+      $("cm-next").textContent = REFERRAL.nextSteps();
+      $("cm-material").textContent = REFERRAL.MATERIAL_CONNECTION;
+      $("cm-form").style.display = "none";
+      $("cm-done").style.display = "block";
+    }
     else fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
   } catch (e) {
     fail("Couldn't send your request — please try again, or email naomi@shouldisellyet.com.");
