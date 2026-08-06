@@ -194,6 +194,14 @@ jobs:
           done
           echo "::warning::snapshot push failed — next digest falls back to baseline"
 
+      # Search engines can't find a new domain with no inbound links, so tell
+      # them directly which pages changed rather than waiting for a crawl that
+      # may never come. Non-fatal by design — see pipeline/indexnow.py.
+      - name: Ping IndexNow with the changed ZIPs
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        run: python3 pipeline/indexnow.py --old /tmp/old_zips --new web/data/zips
+
       - name: Run tests
         if: steps.check.outputs.changed == 'true'
         run: |
