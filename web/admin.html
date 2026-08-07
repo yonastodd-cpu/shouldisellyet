@@ -182,8 +182,48 @@ table.grid tr:hover td{background:#faf9f5}
         <div class="note">Purchases stay unattributed on purpose: tying a payment to a browsing session is the identity linkage the privacy policy rules out. Clicks are the deepest attributable stage.</div>
       </div>
     </section>
-    <section id="sec-customers"><div class="placeholder">Customers loads here.</div></section>
-    <section id="sec-map"><div class="placeholder">Map loads here.</div></section>
+    <section id="sec-customers">
+      <div class="panel">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <input id="cu-q" placeholder="Search email or ZIP" style="flex:1;min-width:160px;font-size:14px;padding:9px 12px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
+          <select id="cu-plan" style="font-size:13px;padding:9px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
+            <option value="">All plans</option><option value="report">One-time report</option><option value="monitor">EquityWatch</option>
+          </select>
+          <select id="cu-status" style="font-size:13px;padding:9px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
+            <option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="canceled">Canceled</option>
+          </select>
+          <button class="tag" style="cursor:pointer;padding:8px 14px;font-size:11px" onclick="return exportCustomers()">Export CSV</button>
+        </div>
+        <div style="font-size:11.5px;color:var(--fainter);margin-bottom:8px" id="cu-count"></div>
+        <div style="overflow-x:auto">
+        <table class="grid"><thead><tr>
+          <th>Email</th><th>Plan</th><th>Status</th><th>ZIP</th><th>City</th>
+          <th>Created</th><th>Purchased</th><th class="num">Watches</th><th>Opt-out</th>
+        </tr></thead><tbody id="cu-rows"></tbody></table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="tag" style="cursor:pointer" onclick="return cuPage(-1)">‹ Prev</button>
+          <button class="tag" style="cursor:pointer" onclick="return cuPage(1)">Next ›</button>
+        </div>
+        <div class="note">Personal data behind admin auth. None of these fields ever flow into <span class="mono">events</span> or any public surface; the export is for your machine, treat it accordingly.</div>
+      </div>
+      <!-- detail drawer -->
+      <div id="cu-drawer" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,94vw);background:#fff;border-left:1px solid var(--hairline);box-shadow:-12px 0 30px rgba(28,36,48,.08);padding:24px;overflow-y:auto;z-index:40">
+        <button class="tag" style="cursor:pointer;float:right" onclick="return cuClose()">Close</button>
+        <div id="cu-detail"></div>
+      </div>
+    </section>
+    <section id="sec-map">
+      <div class="panel">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:10px">
+          <label><input type="checkbox" id="ly-customers" checked> Customers</label>
+          <label><input type="checkbox" id="ly-requests" checked> Match requests</label>
+          <label><input type="checkbox" id="ly-sponsored"> Sponsored ZIPs</label>
+          <span style="color:var(--fainter);font-size:11.5px">Markers are ZIP centroids sized by count — never street addresses, never identities.</span>
+        </div>
+        <div id="mapbox" style="height:64vh;border-radius:10px;border:1px solid var(--hairline)"></div>
+      </div>
+    </section>
     <section id="sec-requests"><div class="placeholder">Requests loads here.</div></section>
     <section id="sec-agents"><div class="placeholder">Agents loads here.</div></section>
     <section id="sec-health"><div class="placeholder">Data Health loads here.</div></section>
@@ -408,6 +448,147 @@ RENDER.funnel = async function () {
      <td class="num" style="color:var(--fainter)">—</td></tr>`).join("") ||
     '<tr><td colspan="5" style="color:var(--fainter)">No traffic in this window yet.</td></tr>';
 };
+
+// ————— Customers —————
+let CU = { off: 0, total: 0 };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const d10 = (t) => (t ? String(t).slice(0, 10) : "—");
+
+async function cuLoad() {
+  const data = await rpc("admin_customers", {
+    q: $("cu-q").value.trim(), plan_f: $("cu-plan").value,
+    status_f: $("cu-status").value, lim: 50, off: CU.off,
+  });
+  CU.total = data.total;
+  $("cu-count").textContent = data.total.toLocaleString() + " customer" +
+    (data.total === 1 ? "" : "s") + (CU.off ? " · from #" + (CU.off + 1) : "");
+  $("cu-rows").innerHTML = data.rows.map((r) => `
+    <tr style="cursor:pointer" onclick="cuOpen('${r.id}')">
+      <td>${esc(r.email)}</td>
+      <td>${r.plan === "monitor" ? "EquityWatch" + (r.billing_interval ? " · " + esc(r.billing_interval) : "") : "report"}</td>
+      <td><span class="tag ${r.status === "active" ? "green" : r.status === "pending" ? "amber" : ""}">${esc(r.status)}</span></td>
+      <td class="mono">${esc(r.zip)}</td><td>${esc(r.city) || "—"}</td>
+      <td class="mono">${d10(r.created_at)}</td><td class="mono">${d10(r.purchased_at)}</td>
+      <td class="num">${r.watches}</td><td>${r.marketing_opt_out ? "yes" : ""}</td>
+    </tr>`).join("") ||
+    '<tr><td colspan="9" style="color:var(--fainter)">No customers match.</td></tr>';
+}
+RENDER.customers = cuLoad;
+["cu-q", "cu-plan", "cu-status"].forEach((id) => {
+  document.addEventListener("DOMContentLoaded", () => {
+    $(id).addEventListener(id === "cu-q" ? "input" : "change",
+      () => { CU.off = 0; cuLoad().catch(showErr); });
+  });
+});
+function cuPage(dir) {
+  const next = CU.off + dir * 50;
+  if (next < 0 || next >= CU.total) return false;
+  CU.off = next; cuLoad().catch(showErr); return false;
+}
+async function cuOpen(id) {
+  const d = await rpc("admin_customer_detail", { cid: id });
+  const addr = [d.address_street, d.address_unit, d.address_city, d.address_state, d.zip]
+    .filter(Boolean).join(", ");
+  const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--hairline2);font-size:13px"><span style="color:var(--faint)">${k}</span><span style="text-align:right;word-break:break-all">${v || "—"}</span></div>`;
+  $("cu-detail").innerHTML =
+    `<h2 class="serif" style="font-size:19px;margin:0 0 4px">${esc(d.email)}</h2>
+     <div style="font-size:12px;color:var(--fainter);margin-bottom:14px">#${d.id} · ${esc(d.source || "")}</div>` +
+    row("Plan", d.plan === "monitor" ? "EquityWatch · " + (d.billing_interval || "interval unknown") : "One-time report") +
+    row("Status", d.status) +
+    row("Address", esc(addr)) +
+    row("Signed up", d10(d.created_at)) +
+    row("Purchased", d10(d.purchased_at)) +
+    row("Report email sent", d10(d.report_email_sent_at)) +
+    row("Current period ends", d10(d.current_period_end)) +
+    row("Renewal reminder sent for", d10(d.renewal_reminder_sent_for)) +
+    row("Marketing opt-out", d.marketing_opt_out ? "yes · " + d10(d.marketing_opt_out_at) : "no") +
+    row("Stripe customer", esc(d.stripe_customer_id)) +
+    row("Stripe session", esc((d.stripe_session_id || "").slice(0, 24)) + (d.stripe_session_id ? "…" : "")) +
+    `<div class="note" style="margin-top:12px">The report access token is deliberately not shown — the dashboard has no operation that needs it.</div>`;
+  $("cu-drawer").style.display = "block";
+}
+function cuClose() { $("cu-drawer").style.display = "none"; return false; }
+
+async function exportCustomers() {
+  // Current filters, one big page — the export mirrors what's on screen.
+  const data = await rpc("admin_customers", {
+    q: $("cu-q").value.trim(), plan_f: $("cu-plan").value,
+    status_f: $("cu-status").value, lim: 10000, off: 0,
+  });
+  const cols = ["email", "plan", "billing_interval", "status", "zip", "city",
+                "state", "created_at", "purchased_at", "watches", "marketing_opt_out"];
+  const csvCell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [cols.join(",")]
+    .concat(data.rows.map((r) => cols.map((c) => csvCell(r[c])).join(",")))
+    .join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "customers-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click(); URL.revokeObjectURL(a.href);
+  return false;
+}
+
+// ————— Map: ZIP centroids only —————
+let MAP = null, LAYERS = {};
+RENDER.map = async function () {
+  await loadLib("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+                "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+  await loadLib("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js",
+                "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css");
+  const [data, centroids] = await Promise.all([
+    rpc("admin_map_data"),
+    fetch("/data/zip_centroids.json").then((r) => r.json()),
+  ]);
+
+  if (!MAP) {
+    MAP = L.map("mapbox").setView([39.5, -98.35], 4);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 12,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(MAP);
+  }
+
+  const styles = {
+    customers: { color: "#1f3a5f", fill: "#1f3a5f" },
+    requests:  { color: "#8a5a12", fill: "#c8891f" },
+    sponsored: { color: "#1e6b3f", fill: "#2e9e5b" },
+  };
+  const bounds = [];
+  for (const key of ["customers", "requests", "sponsored"]) {
+    if (LAYERS[key]) { MAP.removeLayer(LAYERS[key]); }
+    const group = L.markerClusterGroup({ maxClusterRadius: 42 });
+    (data[key] || []).forEach((r) => {
+      const c = centroids[r.zip];
+      if (!c) return;                       // a ZIP with no centroid just isn't mapped
+      bounds.push(c);
+      const m = L.circleMarker(c, {
+        radius: Math.min(19, 5 + Math.sqrt(r.n) * 3.2),
+        color: styles[key].color, fillColor: styles[key].fill,
+        weight: 1.4, fillOpacity: 0.55,
+      });
+      m.bindPopup(`<b class="mono">${r.zip}</b> · ${r.n} ${key === "customers" ? "customer" : key === "requests" ? "request" : "claim"}${r.n === 1 ? "" : "s"}<br><span id="pop-${key}-${r.zip}">verdict…</span> · <a href="/zip/${r.zip}/" target="_blank" rel="noopener">market page</a>`);
+      m.on("popupopen", async () => {
+        const v = await verdictFor(r.zip);
+        const el = document.getElementById(`pop-${key}-${r.zip}`);
+        if (el) el.innerHTML = (v && VTAG[v.level]) || "no page";
+      });
+      group.addLayer(m);
+    });
+    LAYERS[key] = group;
+    if ($("ly-" + key).checked) MAP.addLayer(group);
+  }
+  if (bounds.length) MAP.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
+  setTimeout(() => MAP.invalidateSize(), 60);  // section was display:none a tick ago
+};
+["customers", "requests", "sponsored"].forEach((key) => {
+  document.addEventListener("DOMContentLoaded", () => {
+    $("ly-" + key).addEventListener("change", (e) => {
+      if (!MAP || !LAYERS[key]) return;
+      e.target.checked ? MAP.addLayer(LAYERS[key]) : MAP.removeLayer(LAYERS[key]);
+    });
+  });
+});
 
 // ————— tiny lazy loader for the chart/map libs (only when their section opens) —————
 const _libs = {};
