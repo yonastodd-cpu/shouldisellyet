@@ -454,6 +454,24 @@ async function go(){
   // `link` may already carry its own query string (e.g. annual_upgrade's
   // ?prefilled_promo_code=...) — join with & in that case, not a second ?,
   // which would corrupt the earlier param and drop these two entirely.
+  // Warm the function success.html will poll the moment they come back. An
+  // idle edge function cold-starts, and that start would otherwise land in the
+  // critical path — right when someone who has just paid is watching a
+  // spinner. Entering card details takes far longer than the warm window, so
+  // by the time Stripe redirects them it is ready.
+  //
+  // Fire and forget with a deliberately invalid id: it is rejected by the
+  // regex before any query, so this costs one boot and touches no data.
+  // keepalive so the navigation on the next line can't cancel it; every
+  // failure is ignored, since warming is an optimisation and never a step.
+  try {
+    fetch(SUPABASE_URL + "/functions/v1/checkout-session", {
+      method: "POST", keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "warm" })
+    }).catch(() => {});
+  } catch (e) {}
+
   const sep = link.includes("?") ? "&" : "?";
   window.location.href = link + sep + "client_reference_id=" + pfZip +
     "&prefilled_email=" + encodeURIComponent(email);

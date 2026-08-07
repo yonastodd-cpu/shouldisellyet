@@ -24,9 +24,18 @@
   --green:#2e9e5b;--green-soft:#e9f4ee;--green-line:#bcdcc9;
 }
 *{box-sizing:border-box}
+/* Column, not a centred grid: the brand sits at the top like every other page
+   and the card centres in what's left, so it stays put as the states swap. */
 body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;
-     display:grid;place-content:center;min-height:100vh;padding:24px}
+     display:flex;flex-direction:column;min-height:100vh}
 a{color:var(--navy)}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+    border-bottom:1px solid var(--hairline);max-width:760px;width:100%;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
+.serif{font-family:'Newsreader',serif}
+.mono{font-family:'IBM Plex Mono',monospace}
+main{flex:1;display:grid;place-content:center;padding:24px}
 .card{max-width:520px;background:#fff;border:1px solid var(--hairline);border-radius:16px;padding:34px 36px}
 .tick{width:46px;height:46px;border-radius:50%;background:var(--green-soft);border:1px solid var(--green-line);
       display:grid;place-content:center;margin-bottom:18px}
@@ -51,6 +60,15 @@ b{color:var(--ink)}
 </style>
 </head>
 <body>
+<nav>
+  <a class="logo" href="/">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:#c8891f"></span><span style="background:#d64545"></span></div>
+    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+  </a>
+  <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">CHECKOUT</span>
+</nav>
+
+<main>
 <div class="card">
   <div class="tick" aria-hidden="true"></div>
   <div class="eyebrow">PAYMENT RECEIVED</div>
@@ -89,6 +107,7 @@ b{color:var(--ink)}
        <a href="mailto:support@shouldisellyet.com">support@shouldisellyet.com</a>.</p>
   </div>
 </div>
+</main>
 
 <script>
 // Stripe redirects here with ?session_id={CHECKOUT_SESSION_ID}. Trade it for
@@ -106,20 +125,23 @@ const show = (id) => {
   ["working", "slow", "direct"].forEach(s => el(s).classList.toggle("hidden", s !== id));
 };
 
-if (!SESSION_RE.test(sessionId)) {
-  show("direct");
-} else {
-  // Drop the session id from the address bar immediately. It is a credential;
-  // it should not sit in the visible URL, get copied out of it, or ride along
-  // in a referrer. The value stays in memory for the poll below.
-  history.replaceState({}, "", location.pathname);
-  poll();
-}
-
-// ~40s of attempts, easing off so a slow webhook doesn't get hammered. Chosen
-// to outlast a normal Stripe delivery by a wide margin while still giving up
-// before the customer decides the page is stuck.
-const DELAYS = [800, 1200, 1600, 2000, 2000, 2500, 2500, 3000, 3000, 3500, 3500, 4000, 4000, 4500, 4500];
+// Front-loaded on purpose. The webhook almost always lands in the first few
+// seconds, so that window is where polling frequency decides how long someone
+// stares at a spinner.
+//
+// These are gaps BETWEEN a response and the next request, not a fixed cadence.
+// Measured against the deployed function, a round trip is ~600ms, so the real
+// interval is round-trip + delay: requests actually go out roughly every
+// second early on (observed: 0.01, 1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.6s).
+// Shortening these further would not buy much — the network, not this array,
+// is what sets the early pace, and stacking requests any tighter just puts
+// more of them in flight against a webhook that has not fired yet.
+//
+// The tail eases off because anything still missing at ~10s is a genuinely
+// slow delivery that gains nothing from being asked harder. ~40s of delay
+// total, so with round trips the fallback lands near a minute.
+const DELAYS = [350, 400, 450, 500, 600, 600, 700, 800, 1000, 1200, 1500, 2000,
+                2500, 3000, 3500, 4000, 4500, 5000, 5000, 5000];
 
 async function poll() {
   for (let i = 0; i < DELAYS.length; i++) {
@@ -144,10 +166,28 @@ async function poll() {
     // A malformed id can never become valid by waiting.
     if (data && data.error === "bad session") { show("direct"); return; }
 
-    if (i === 5) el("status-text").textContent = "Still preparing — hang on…";
+    // ~12s in once round trips are counted. Deliberately not earlier: a
+    // reassurance that arrives at 2s invents a problem the customer didn't have.
+    if (i === 11) el("status-text").textContent = "Almost there — just a moment…";
     await new Promise(r => setTimeout(r, DELAYS[i]));
   }
   show("slow");
+}
+
+// Kick off LAST, below every declaration it depends on. `const` is hoisted but
+// sits in the temporal dead zone until its line runs, so calling poll() above
+// the DELAYS declaration threw a ReferenceError before the first request went
+// out — and because the throw happened inside an async function nothing was
+// awaiting, it surfaced only as an unhandled rejection in the console while the
+// page sat on "Preparing your report…" for good. Start-up goes at the bottom.
+if (!SESSION_RE.test(sessionId)) {
+  show("direct");
+} else {
+  // Drop the session id from the address bar immediately. It is a credential;
+  // it should not sit in the visible URL, get copied out of it, or ride along
+  // in a referrer. The value stays in memory for the poll above.
+  history.replaceState({}, "", location.pathname);
+  poll();
 }
 </script>
 </body>
