@@ -14,7 +14,8 @@ sources, see [ATTRIBUTION.md](ATTRIBUTION.md).
 | **Freddie Mac** — Primary Mortgage Market Survey | `PMMS_history.csv` | Weekly (read on each refresh) | 30-year rate: lock-in math, buyer affordability, rate alerts. |
 | **FRED** (St. Louis Fed) | `fredgraph.csv?id=MORTGAGE30US` | Fallback only | Alternate transport for the *same* PMMS series. Not a separate publisher. |
 | **FHFA** — experimental annual ZIP5 house price index | `hpi_at_bdl_zip5.xlsx` | **Annual**, run by hand | Benchmark line on the value trend + the danger-line backtest. |
-| **Zippopotam.us** — place names (GeoNames-derived, CC BY 4.0) | live API + `pipeline/data/zip_places.csv` | On demand / committed | City names on report headers and generated pages. |
+| **GeoNames** — US postal codes (CC BY 4.0) | `export/zip/US.zip` → `pipeline/data/zip_places.csv` | Committed; re-run `fetch_places.py` on demand | City names on the ~18.6k generated ZIP pages and in the growth digest. Read from disk — the page build makes no network call. |
+| **Zippopotam.us** — live ZIP lookup (GeoNames-derived) | `api.zippopotam.us/us/{zip}` | On demand, client-side | City prefill in the browser only (homepage check, address form). Never used at build time. |
 
 `web/data/` (committed, ~14 MB) is derived output, not raw source.
 

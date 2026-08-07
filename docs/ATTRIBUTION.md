@@ -77,8 +77,11 @@ from the strip in the same commit; if one is added, add it.
 
 Currently: Redfin Data Center · Realtor.com® Economic Research · Federal
 Housing Finance Agency (FHFA) ZIP-level house price index · Freddie Mac
-Primary Mortgage Market Survey · Place names from Zippopotam.us, derived from
-GeoNames.org (CC BY 4.0).
+Primary Mortgage Market Survey · Place names from [GeoNames.org](https://www.geonames.org)
+(CC BY 4.0), with live ZIP lookups via Zippopotam.us.
+
+GeoNames is the one entry in the strip carrying a link, because it is the one
+source whose licence asks for one.
 
 ### What each source actually asks for
 
@@ -86,17 +89,44 @@ GeoNames.org (CC BY 4.0).
 | --- | --- | --- |
 | **Redfin** | `Data provided by Redfin, a national real estate brokerage`, linked on first reference | Their Data Center terms |
 | **Realtor.com** | `Realtor.com® Economic Research`, or `Realtor.com®` where space is limited | Verbatim from realtor.com/research/data: *"Please attribute to Realtor.com ® Economic Research (or shortened to Realtor.com ® in cases where space is limited)"* |
-| **GeoNames** | Attribution, under CC BY 4.0 | Place names reach us via Zippopotam.us, which is built on GeoNames — so the licence follows the data |
+| **GeoNames** | Credit to GeoNames; their readme accepts a link to www.geonames.org | Two paths, one licence. The bundled `zip_places.csv` is the **GeoNames US postal export directly**; the browser's live ZIP lookup calls **Zippopotam.us**, which is itself GeoNames-derived. Crediting GeoNames covers both |
 | **FHFA** | None required (US Government work, public domain) | Credited anyway, factually: "FHFA ZIP-level house price index" |
 | **Freddie Mac** | None strictly required | Credited as "Freddie Mac PMMS 30-yr weekly average" wherever the rate is shown |
 
-⚠️ **Provenance gap — `pipeline/data/zip_places.csv`.** That file (40,980 ZIP →
-city/state/county rows) is committed with no recorded source. Free ZIP→place
-datasets are almost always GeoNames-derived, which is why the GeoNames credit
-above is the safe reading — but *almost always* is not a licence audit. You
-cannot attribute what you cannot trace. **Operator: establish where that file
-came from and record it here**, or regenerate it from a source with known
-terms.
+### `pipeline/data/zip_places.csv` — traced and verified 2026-08-07
+
+An earlier revision of this file flagged the bundled place file as having no
+recorded provenance. **That was wrong, and the correction matters more than the
+flag did:** the source was recorded all along, in the commit message that added
+it (`3d2cdee`, 2026-08-02) — *"City names come from GeoNames US postal codes …
+(1.1MB, 40,979 ZIPs, CC-BY 4.0)"*. It was absent from this document, not from
+the repository. A provenance record that lives only in a commit message is not
+discoverable, which is the real defect; the entry below fixes that.
+
+| | |
+| --- | --- |
+| **Source** | GeoNames Postal Code dataset, United States (`US.txt`) |
+| **URL** | <https://download.geonames.org/export/zip/US.zip> |
+| **Licence** | Creative Commons Attribution 4.0 |
+| **Required credit** | Credit to GeoNames; their readme states *"a link on your website to www.geonames.org is ok"* |
+| **Verified** | 2026-08-07 against a fresh download |
+| **Regenerate** | `python3 pipeline/fetch_places.py` |
+
+**How it was verified.** The committed file was diffed field-by-field against a
+fresh `US.zip`. Of the 40,979 ZIPs it contains, **40,979 match GeoNames exactly
+on city, state, and county — 100.000%**, with zero ZIPs present in our file
+that GeoNames does not have. Three text fields agreeing across forty thousand
+rows is not a coincidence; this is that dataset.
+
+**The 509-row difference is a deliberate filter, not staleness.** Today's
+GeoNames carries 41,488 US postal codes to our 40,979. Every one of the 509
+extra rows is a military postal code — 424 `APO`, 85 `FPO` — and every one has
+an empty state *and* county in GeoNames. The build drops rows with no state,
+which is correct: overseas military addresses have no housing market, and the
+file's schema requires a state. No non-military ZIP is missing.
+
+**Column mapping** — `US.txt` is tab-delimited with no header; we keep four of
+its twelve fields: `2 → zip`, `3 → city`, `5 → state`, `6 → county`.
 
 Note on the mortgage rate: the publisher is **Freddie Mac (PMMS)**. FRED is
 only a fallback *transport* for that same series — crediting FRED as the
