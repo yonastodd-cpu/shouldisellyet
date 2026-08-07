@@ -216,7 +216,7 @@ footer a{color:var(--faint-ink)}
 """
 
 NAVBAR = """<nav class="top">
-  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="26" height="26" style="display:block;border-radius:7px"><span class="brand">Should I sell yet?</span></a>
+  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block"><span class="brand">Should I sell yet?</span></a>
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 

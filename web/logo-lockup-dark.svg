@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 60">
+<g transform="translate(0,2)">
+<path d="M28 6 L51 25 L46 25 L46 48 L10 48 L10 25 L5 25 Z" fill="none" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
+<g transform="translate(11.5,15) scale(0.63)"><path d="M26 7 C17.5 7 12.5 13.5 12.5 22 L12.5 31 L8.5 37.5 L43.5 37.5 L39.5 31 L39.5 22 C39.5 13.5 34.5 7 26 7 Z" fill="#f2f1ec" stroke="#141a14" stroke-width="5"></path><path d="M20.5 41.5 a5.5 5.5 0 0 0 11 0 Z" fill="#f2f1ec"></path><circle cx="39.5" cy="10.5" r="6.5" fill="#d99a2b"></circle></g>
+</g>
+<text x="68" y="30" font-family="Archivo, Helvetica, sans-serif" font-weight="700" font-size="27" letter-spacing="-0.5" fill="#f2f1ec">Should I Sell Yet</text>
+<text x="69" y="47" font-family="Archivo, Helvetica, sans-serif" font-weight="500" font-size="11" letter-spacing="2.4" fill="#9aa096">HOME EQUITY EARLY WARNING</text>
+</svg>
