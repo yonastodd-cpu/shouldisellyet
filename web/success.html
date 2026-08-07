@@ -20,7 +20,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;
@@ -60,13 +60,21 @@ b{color:var(--ink)}
 .btn:hover{background:var(--navy-dark)}
 .fine{font-size:13px;color:var(--faint);margin-top:18px}
 .hidden{display:none}
+
+/* Brand lockup — same construction as the homepage, one step down for the
+   narrower inner-page nav. Mark height tracks the two-line stack. */
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.logo-word{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:17px;
+           letter-spacing:-.022em;line-height:1;color:var(--ink)}
+.logo-tag{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:7.75px;
+          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+@media (max-width:400px){ .logo-tag{display:none} }
 </style>
 </head>
 <body>
 <nav>
   <a class="logo" href="/">
-    <img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block">
-    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+    <img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span>
   </a>
   <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">CHECKOUT</span>
 </nav>

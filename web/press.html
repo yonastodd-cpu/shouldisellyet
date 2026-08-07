@@ -20,7 +20,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
 :root{--bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
@@ -56,11 +56,20 @@ footer{border-top:1px solid var(--hairline);margin-top:36px;padding-top:16px;fon
 footer a{color:var(--faint-ink)}
 .disc{font-size:.8125rem;line-height:1.55;color:var(--faint-ink);margin-top:10px}
 @media(max-width:640px){.dial{grid-template-columns:1fr;gap:6px}.dial .line{font-size:.8125rem}}
+
+/* Brand lockup — same construction as the homepage, one step down for the
+   narrower inner-page nav. Mark height tracks the two-line stack. */
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.logo-word{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:17px;
+           letter-spacing:-.022em;line-height:1;color:var(--ink)}
+.logo-tag{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:7.75px;
+          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+@media (max-width:400px){ .logo-tag{display:none} }
 </style>
 </head>
 <body>
 <nav class="top">
-  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block"></span><span class="brand">Should I sell yet?</span></a>
+  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span></a>
   <span class="mono" style="font-size:.6875rem;letter-spacing:.14em;color:var(--gold)">PRESS</span>
 </nav>
 

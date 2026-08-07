@@ -164,8 +164,20 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple
 a{color:var(--navy)}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px 56px}
 nav.top{display:flex;align-items:center;justify-content:space-between;max-width:820px;margin:0 auto;padding:16px 20px;border-bottom:1px solid var(--hairline);flex-wrap:wrap;gap:10px}
-.logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink)}
-.brand{font-family:Georgia,'Newsreader',serif;font-style:italic;font-weight:600;font-size:17px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+/* Brand lockup — deliberately WITHOUT the Archivo webfont the rest of the
+   site uses. These 22.9k pages ship zero webfonts on purpose: they are the
+   SEO surface, and a font request in the head is paid on every one of them
+   for a 17px wordmark. system-ui is a neutral grotesque on every platform
+   (SF, Segoe, Roboto), so the lockup reads the same shape at the same
+   weight and tracking — near, not identical. If brand exactness beats the
+   request, add Archivo to the head here and drop the fallback. */
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.logo-word{font-family:system-ui,-apple-system,'Archivo',sans-serif;font-weight:700;font-size:17px;
+           letter-spacing:-.022em;line-height:1}
+.logo-tag{font-family:system-ui,-apple-system,'Archivo',sans-serif;font-weight:500;font-size:7.75px;
+          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+@media (max-width:400px){ .logo-tag{display:none} }
 .crumb{font-size:.8125rem;color:var(--muted);padding:14px 0 0}
 /* Arrival banner for shared links — slim, dismissible, no modal, no gate. */
 #share-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;
@@ -216,7 +228,7 @@ footer a{color:var(--faint-ink)}
 """
 
 NAVBAR = """<nav class="top">
-  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block"><span class="brand">Should I sell yet?</span></a>
+  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span></a>
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 

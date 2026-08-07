@@ -33,7 +33,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="/track.js" defer></script>
 <script src="verdict-copy.js"></script>
@@ -89,8 +89,41 @@ input:focus{outline:none;border-color:var(--navy)!important}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .wrap{max-width:1240px;margin:0 auto}
 nav{display:flex;align-items:center;justify-content:space-between;padding:18px 56px;border-bottom:1px solid var(--hairline)}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-word{font-family:'Newsreader',serif;font-style:italic;font-weight:600;font-size:1.375rem}
+/* ——— Brand lockup ———
+   Mark + two-line wordmark, matching the supplied logo-lockup.svg but set as
+   live text rather than an image: the SVG's type would fall back to Helvetica
+   unless the font loaded anyway, and text stays crisp at any zoom, selectable,
+   and readable to search engines.
+   Balance: the mark is sized to the height of the two-line stack (20px name +
+   9px tagline + leading ≈ 34px), so neither element towers over the other. */
+.logo{display:flex;align-items:center;gap:11px}
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+/* nowrap on both: a wordmark that breaks mid-name ("Should I Sell / Yet")
+   stops reading as a logo and starts reading as a layout bug. It scales
+   down instead. */
+.logo-word{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:1.25rem;
+           letter-spacing:-.022em;line-height:1;color:var(--ink);white-space:nowrap}
+.logo-tag{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:.5625rem;
+          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+/* The nav is one row: lockup + CTA. As it narrows, the descriptor goes
+   first (the name still identifies the site), then the whole lockup steps
+   down — measured against the CTA at 375px so the two never meet. */
+@media (max-width:560px){
+  .logo{gap:9px}
+  .logo img{width:30px;height:30px}
+  .logo-word{font-size:1.0625rem}
+  .logo-tag{font-size:.5rem;letter-spacing:.18em}
+}
+@media (max-width:430px){
+  .logo-tag{display:none}
+  .logo img{width:28px;height:28px}
+  .logo-word{font-size:1rem}
+  /* The nav CTA goes too. "Check my ZIP — free" cannot share a 375px row
+     with a logo — it was wrapping to two lines and running over the
+     wordmark. Nothing is lost: the identical hero button sits a few hundred
+     pixels below and is on screen the moment the page opens. */
+  .navlinks .btn{display:none}
+}
 .navlinks{display:flex;align-items:center;gap:26px;font-size:var(--fs-meta)}
 .navlinks a{color:var(--muted)}
 .btn{display:inline-block;background:var(--navy);color:#faf8f4!important;padding:12px 22px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:var(--fs-ui);font-family:inherit;line-height:1.25}
@@ -285,8 +318,11 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 <div class="wrap">
 <nav>
   <div class="logo">
-    <img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block">
-    <span class="logo-word">Should I sell yet?</span>
+    <img src="/logo-mark-chip.svg" alt="" width="34" height="34" style="display:block">
+    <span class="logo-text">
+      <span class="logo-word">Should I Sell Yet</span>
+      <span class="logo-tag">HOME EQUITY EARLY WARNING</span>
+    </span>
   </div>
   <div class="navlinks">
     <a href="#how">How it works</a><a href="#signals">The signals</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
