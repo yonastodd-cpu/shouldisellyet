@@ -13,7 +13,7 @@ sources, see [ATTRIBUTION.md](ATTRIBUTION.md).
 | **Realtor.com** — residential listings database | `RDC_Inventory_Core_Metrics_Zip.csv` (~7 MB) | Monthly | **Cross-check only.** Displayed beside the dials; never feeds the verdict. |
 | **Freddie Mac** — Primary Mortgage Market Survey | `PMMS_history.csv` | Weekly (read on each refresh) | 30-year rate: lock-in math, buyer affordability, rate alerts. |
 | **FRED** (St. Louis Fed) | `fredgraph.csv?id=MORTGAGE30US` | Fallback only | Alternate transport for the *same* PMMS series. Not a separate publisher. |
-| **FHFA** — experimental annual ZIP5 house price index | `hpi_at_bdl_zip5.xlsx` | **Annual**, run by hand | Benchmark line on the value trend + the danger-line backtest. |
+| **FHFA** — experimental annual ZIP5 house price index | `/hpi/download/annual/hpi_at_zip5.xlsx` | **Annual**, run by hand | Benchmark line on the value trend + the danger-line backtest. Through **2025** (release of 2026-03-31). The old `/document/hpi_at_bdl_zip5.xlsx` still returns 200 but is **frozen at 2023** — check the [datasets page](https://www.fhfa.gov/data/hpi/datasets) if `thru` ever stops advancing. |
 | **GeoNames** — US postal codes (CC BY 4.0) | `export/zip/US.zip` → `pipeline/data/zip_places.csv` | Committed; re-run `fetch_places.py` on demand | City names on the ~18.6k generated ZIP pages and in the growth digest. Read from disk — the page build makes no network call. |
 | **Zippopotam.us** — live ZIP lookup (GeoNames-derived) | `api.zippopotam.us/us/{zip}` | On demand, client-side | City prefill in the browser only (homepage check, address form). Never used at build time. |
 

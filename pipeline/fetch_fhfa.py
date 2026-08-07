@@ -41,7 +41,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from fetch_data import _ssl_context  # same CA handling as the main pipeline
 
-FHFA_ZIP5_URL = "https://www.fhfa.gov/document/hpi_at_bdl_zip5.xlsx"
+# FHFA moved this file. The old /document/hpi_at_bdl_zip5.xlsx still returns
+# 200 with a valid workbook — it is simply FROZEN at the March 2024 release
+# (data through 2023), which is the worst way for a source to break: nothing
+# errors, the numbers just quietly stop advancing. The live file is the one
+# linked from fhfa.gov/data/hpi/datasets, under /hpi/download/annual/, and
+# dropped "bdl" from its name.
+#
+# Checked 2026-08-07: this URL served "Last updated: March 31, 2026", data
+# through 2025. If a future run reports a `thru` year that has not moved,
+# re-check the datasets page for another move before assuming FHFA skipped
+# a year.
+FHFA_ZIP5_URL = "https://www.fhfa.gov/hpi/download/annual/hpi_at_zip5.xlsx"
+FHFA_ZIP5_URL_LEGACY = "https://www.fhfa.gov/document/hpi_at_bdl_zip5.xlsx"  # frozen at 2023
 HERE = Path(__file__).parent
 
 
