@@ -681,7 +681,13 @@ details.how .how-body b{color:#3a4450}
       <div class="title">Turn numbers into a decision</div>
       <p class="subt">A report tells you when to pay attention. A local professional tells you what your exact home would sell for this month.</p>
       <p id="nextstep-generic" style="display:none">Want a professional read on these numbers? A local agent can pull actual comparable sales for your street — usually free, no obligation.</p>
-      <div class="connect-card" id="connect-card">
+      <!-- Hidden in the MARKUP, not just by script. The render path that
+           applies AGENT_INTRO_ENABLED only runs after a token verifies, so a
+           card that starts visible is exposed on every load where that never
+           happens — a bad token, a failed verify call, someone reading the
+           page with JS blocked — and flashes before render even on a good
+           one. Default off, revealed only when the flag is on. -->
+      <div class="connect-card" id="connect-card" style="display:none">
         <h3>Get Connected With a Local Expert Realtor</h3>
         <p>A report tells you when to pay attention. A local expert tells you what your exact home would sell for this month. We'll personally match you with a vetted agent for your area — only when you ask. The conversation is free, no obligation.</p>
         <button class="btn" onclick="return openConnect()">Request an introduction</button>
@@ -769,6 +775,25 @@ details.how .how-body b{color:#3a4450}
 
 <script>
 const $ = id => document.getElementById(id);
+
+// ————— Agent introductions: OFF —————
+// Turned off 2026-08-07. The report may not offer to introduce anyone until a
+// licensed real estate professional is contracted in writing to receive those
+// referrals. Collecting a customer's name, phone, and property address on the
+// promise of an introduction we cannot yet make is the part that matters —
+// the disclosure naming the agent is only correct while that agent is
+// actually engaged.
+//
+// Flip to true to restore it. Everything stays wired: the modal markup, the
+// disclosure block, match-request, and the archive BCC are all untouched, so
+// re-enabling is this one line and nothing else. The backend is deliberately
+// left deployed — a dormant function costs nothing and rebuilding one under
+// time pressure is how disclosure text goes stale.
+//
+// Declared at the top of the script on purpose: it is read inside the render
+// path, and a `const` referenced before its declaration line has run throws
+// rather than reading undefined.
+const AGENT_INTRO_ENABLED = false;
 // Links the brand name inside the pipeline's plain-text citation. The exact
 // wording lives in the data (meta.attribution); this only adds the required
 // redfin.com link. See docs/ATTRIBUTION.md.
@@ -1357,9 +1382,16 @@ async function generate(noScroll){
   $("meaning").textContent = k.meaning;
 
   // The sponsored-agent card is gone — agent program paused, see decision
-  // log (2026-08-05). The Get Connected card carries this section now, and
-  // it names no agent until after the request is submitted.
-  $("nextstep-generic").style.display = "none";
+  // log (2026-08-05). The Get Connected card carried this section after that,
+  // and is itself switched off now (see AGENT_INTRO_ENABLED): offering to hand
+  // someone's contact details to a named agent is a promise we cannot keep
+  // until that agent is contracted in writing.
+  //
+  // The generic line takes over when the card is off. It suggests talking to
+  // a local agent WITHOUT offering to make the introduction — advice, not a
+  // referral — so the section still ends on a next step.
+  $("connect-card").style.display = AGENT_INTRO_ENABLED ? "block" : "none";
+  $("nextstep-generic").style.display = AGENT_INTRO_ENABLED ? "none" : "block";
 
   $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
     " · " + (META ? citeHTML(META.attribution) : "public market data") +
@@ -1530,6 +1562,15 @@ function editAddress(){
 // form IS the ask, so the gate came out and the audit trail stayed.
 const CONSENT_TEXT = "Requesting an introduction shares your name and contact details with one carefully chosen local agent — that's the whole point, and it's all we share. Free, no obligation, and we never sell your info.";
 function openConnect(){
+  // Second gate, not a redundant one. Hiding the card hides the ONE button
+  // that calls this; the guard covers everything else that could still reach
+  // it — a stale bookmark of an inline handler, a browser extension, someone
+  // in devtools, or a future edit that adds another entry point without
+  // noticing the programme is paused. The cost of the collection happening
+  // while it is switched off is a customer's contact details sent to an agent
+  // with no agreement in place, so it is worth two locks.
+  if (!AGENT_INTRO_ENABLED) return false;
+
   // Always reopens on the form. The disclosure is a post-submission state and
   // must never be what someone sees on the way in.
   $("cm-form").style.display = "block";
