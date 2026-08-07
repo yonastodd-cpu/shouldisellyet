@@ -5,7 +5,7 @@
 -- The distinction this column enforces: TRANSACTIONAL mail keeps flowing to
 -- everyone (the report link they paid for, verdict alerts they subscribed to,
 -- billing notices before a renewal). Only PROMOTIONAL content is suppressed —
--- today that is exactly one thing, the EquityWatch upsell block inside the
+-- today that is exactly one thing, the MyMarketCheckup upsell block inside the
 -- report-access email.
 --
 -- Opting out of marketing must not silently cancel the product. Someone who

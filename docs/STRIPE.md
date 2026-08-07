@@ -17,8 +17,8 @@ All four paths are live and were verified against their own checkout pages
 | Offer | Charges | Verified rendering |
 | --- | --- | --- |
 | One-time report | **$5.99** one-time | "$5.99" |
-| EquityWatch monthly | **$3.99**/month | "$3.99 per month" |
-| EquityWatch annual | **$29.00**/year | "$29.00 per year · $2.42 / month billed annually" |
+| MyMarketCheckup monthly | **$3.99**/month | "$3.99 per month" |
+| MyMarketCheckup annual | **$29.00**/year | "$29.00 per year · $2.42 / month billed annually" |
 | Upgrade, first year | **$23.01** | "$23.01 · Then $29.00 per year starting next year" |
 
 The upgrade path is the **$29 annual link + `?prefilled_promo_code=UPGRADEPATH`**

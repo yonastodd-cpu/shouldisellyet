@@ -141,7 +141,7 @@ watchable numbers (equity, walk-away number, lock-in cost) lets a
 subscriber set a threshold and get emailed when that specific number
 crosses it — separate from the ZIP-level HOLD/WATCH/ACT alert everyone on
 the monitor plan already gets. A subscriber can watch all three at once;
-each toggle saves/clears independently. Gated to the EquityWatch monitoring
+each toggle saves/clears independently. Gated to the MyMarketCheckup monitoring
 plan (a one-time report has no ongoing check-in for a monthly recompute to
 attach to) — a report-plan subscriber sees an upgrade prompt instead of the
 form. This is opt-in: saving a watch is the only thing on the site that

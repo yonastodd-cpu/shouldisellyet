@@ -514,7 +514,7 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
         return f'<tr><td style="padding:4px 14px 4px 0;color:#5c6673">{H(lbl)}</td><td style="padding:4px 0"><b>{val}</b></td></tr>'
     body = ('<table style="border-collapse:collapse;font-size:14px">'
             + cell("New subscribers", "new_subscribers_30d")
-            + cell("EquityWatch signups", "equitywatch_signups_30d")
+            + cell("MyMarketCheckup signups", "equitywatch_signups_30d")
             + cell("Report purchases", "report_purchases_30d")
             + cell("Match requests", "match_requests_30d")
             + '<tr><td style="padding:4px 14px 4px 0;color:#5c6673">Visits by utm_source</td>'

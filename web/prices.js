@@ -15,8 +15,8 @@
 // numbers — see LINKS in subscribe.html for exactly which links to create.
 
 const PRICES = {
-  ANNUAL: 29,      // EquityWatch, billed annually ($/yr) — the highlighted default
-  MONTHLY: 3.99,   // EquityWatch, billed monthly ($/mo)
+  ANNUAL: 29,      // MyMarketCheckup, billed annually ($/yr) — the highlighted default
+  MONTHLY: 3.99,   // MyMarketCheckup, billed monthly ($/mo)
   REPORT: 5.99,    // one-time full report
   UPGRADE: 23,     // annual price for a report buyer upgrading within 30 days
   UPGRADE_WINDOW_DAYS: 30,

@@ -87,6 +87,16 @@ def due(window_days=30):
     return out
 
 
+# ————— Preheader —————
+# Third inbox slot (after sender and subject). Without it a client scrapes the
+# visible brand header and the preview repeats the name instead of saying the
+# one thing that matters here: the date and the amount.
+def preheader(text):
+    return ('<div style="display:none;font-size:1px;color:#faf8f4;line-height:1px;'
+            'max-height:0;max-width:0;opacity:0;overflow:hidden">' + text
+            + "&#8204;&nbsp;" * 60 + "</div>")
+
+
 def render(row):
     when = row["current_period_end"][:10]
     try:
@@ -97,15 +107,15 @@ def render(row):
     token = row.get("access_token") or ""
     manage = f"{SITE}/my-report.html?token={token}" if token else f"{SITE}/refunds.html"
     zip_code = row.get("zip") or "your ZIP"
-    subject = f"Your EquityWatch subscription renews on {pretty}"
-    html = f"""
+    subject = f"MyMarketCheckup renews {pretty} — {usd(PRICE_ANNUAL)} for the year"
+    html = f"""{preheader(f"No action needed — this is a courtesy notice so the charge is not a surprise. Cancel any time before {pretty}.")}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
-  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">EquityWatch</p>
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">MyMarketCheckup</p>
   <h1 style="font-size:24px;margin:6px 0 14px">A heads-up before your renewal.</h1>
-  <p style="font-size:16px;line-height:1.65">Your EquityWatch monitoring for <b>{zip_code}</b> renews on <b>{pretty}</b> at <b>{usd(PRICE_ANNUAL)} for the year</b>. Nothing is needed from you — this is just so the charge isn't a surprise.</p>
+  <p style="font-size:16px;line-height:1.65">Your monitoring for <b>{zip_code}</b> renews on <b>{pretty}</b> at <b>{usd(PRICE_ANNUAL)} for the year</b>. Nothing is needed from you — this is just so the charge isn't a surprise.</p>
   <p style="font-size:16px;line-height:1.65">If you'd rather not continue, you can cancel yourself in a couple of clicks. Canceling stops the renewal; your monitoring runs to {pretty} either way.</p>
   <p style="margin:22px 0"><a href="{manage}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;display:inline-block">Manage or cancel my subscription →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">You're getting this because you have an active EquityWatch subscription — it's a billing notice, not marketing, so it's sent regardless of your email preferences. Questions? Just reply.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">You're getting this because you have an active MyMarketCheckup subscription — it's a billing notice, not marketing, so it's sent regardless of your email preferences. Questions? Just reply.</p>
 </div>"""
     return subject, html
 

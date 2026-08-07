@@ -186,7 +186,7 @@ table.grid tr:hover td{background:#faf9f5}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
           <input id="cu-q" placeholder="Search email or ZIP" style="flex:1;min-width:160px;font-size:14px;padding:9px 12px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
           <select id="cu-plan" style="font-size:13px;padding:9px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
-            <option value="">All plans</option><option value="report">One-time report</option><option value="monitor">EquityWatch</option>
+            <option value="">All plans</option><option value="report">One-time report</option><option value="monitor">MyMarketCheckup</option>
           </select>
           <select id="cu-status" style="font-size:13px;padding:9px;border:1.5px solid #d7d0c2;border-radius:8px;font-family:inherit">
             <option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="canceled">Canceled</option>
@@ -437,7 +437,7 @@ RENDER.overview = async function () {
     ["ZIP checks", fmt(ev.zip_check), "free verdicts served"],
     ["Purchase clicks", fmt(clicksR + clicksM), fmt(clicksR) + " report · " + fmt(clicksM) + " monitor"],
     ["Reports sold", fmt(o.reports_sold), "$" + PRICES.REPORT + " one-time"],
-    ["New subs", fmt(o.new_subs), "EquityWatch, in window"],
+    ["New subs", fmt(o.new_subs), "MyMarketCheckup, in window"],
     ["Active subs", fmt(o.active_subs),
       fmt(o.active_monthly) + " mo · " + fmt(o.active_annual) + " yr" +
       (o.active_unknown ? " · " + fmt(o.active_unknown) + " ?" : "")],
@@ -530,7 +530,7 @@ async function cuLoad() {
   $("cu-rows").innerHTML = data.rows.map((r) => `
     <tr style="cursor:pointer" onclick="cuOpen('${r.id}')">
       <td>${esc(r.email)}</td>
-      <td>${r.plan === "monitor" ? "EquityWatch" + (r.billing_interval ? " · " + esc(r.billing_interval) : "") : "report"}</td>
+      <td>${r.plan === "monitor" ? "MyMarketCheckup" + (r.billing_interval ? " · " + esc(r.billing_interval) : "") : "report"}</td>
       <td><span class="tag ${r.status === "active" ? "green" : r.status === "pending" ? "amber" : ""}">${esc(r.status)}</span></td>
       <td class="mono">${esc(r.zip)}</td><td>${esc(r.city) || "—"}</td>
       <td class="mono">${d10(r.created_at)}</td><td class="mono">${d10(r.purchased_at)}</td>
@@ -558,7 +558,7 @@ async function cuOpen(id) {
   $("cu-detail").innerHTML =
     `<h2 class="serif" style="font-size:19px;margin:0 0 4px">${esc(d.email)}</h2>
      <div style="font-size:12px;color:var(--fainter);margin-bottom:14px">#${d.id} · ${esc(d.source || "")}</div>` +
-    row("Plan", d.plan === "monitor" ? "EquityWatch · " + (d.billing_interval || "interval unknown") : "One-time report") +
+    row("Plan", d.plan === "monitor" ? "MyMarketCheckup · " + (d.billing_interval || "interval unknown") : "One-time report") +
     row("Status", d.status) +
     row("Address", esc(addr)) +
     row("Signed up", d10(d.created_at)) +

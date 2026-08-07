@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Set up EquityWatch monitoring for your home: a full property report plus an email the moment your ZIP's housing market shifts. $29/yr or $3.99/mo, cancel anytime.">
-<title>Set up your EquityWatch alert — ShouldISellYet</title>
+<meta name="description" content="Set up MyMarketCheckup monitoring for your home: a full property report plus an email the moment your ZIP's housing market shifts. $29/yr or $3.99/mo, cancel anytime.">
+<title>Set up MyMarketCheckup — ShouldISellYet</title>
 <link rel="canonical" href="https://shouldisellyet.com/subscribe.html">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -92,7 +92,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
   <div class="grid">
     <div class="card">
       <div class="zipnote mono" id="zipnote"></div>
-      <h2 id="planname">EquityWatch monitoring</h2>
+      <h2 id="planname">MyMarketCheckup monitoring</h2>
       <div class="price" id="price"><span data-price="annual">$29</span> <small>/year · cancel anytime</small></div>
       <div id="upgrade-note" style="display:none;font-size:13px;color:#1e6b3f;background:var(--green-soft);border:1px solid var(--green-line);border-radius:8px;padding:10px 14px;margin:10px 0 0;line-height:1.5"></div>
       <div class="billing" id="billing">
@@ -188,13 +188,13 @@ const COPY = {
   monitor: {
     eyebrow: "EQUITYWATCH — FULL REPORT & NOTIFICATIONS",
     headline: "Full report & notifications",
-    planname: "EquityWatch — full report & notifications",
+    planname: "MyMarketCheckup — full report & notifications",
     // Monitor renders its price through setBilling() below; this is the
     // pre-toggle value and leads with annual to match the homepage card.
     price: PRICES.usd(PRICES.ANNUAL) + ' <small>/year · cancel anytime</small>',
     propTitle: "THE HOME YOU WANT MONITORED",
     feats: [
-      "Your full EquityWatch property report, included and refreshed monthly",
+      "Your full MyMarketCheckup property report, included and refreshed monthly",
       "An email the moment the market for your home shifts — up or down",
       "Your estimated equity and walk-away-if-you-sold number",
       "Every signal for your home's area: supply, price trend, time to sell, price cuts",
@@ -204,8 +204,8 @@ const COPY = {
   report: {
     eyebrow: "EQUITYWATCH REPORT",
     headline: "Get your home's report",
-    planname: "EquityWatch property report",
-    price: PRICES.usd(PRICES.REPORT) + ' <small>one-time · credited toward annual EquityWatch within 30 days</small>',
+    planname: "MyMarketCheckup property report",
+    price: PRICES.usd(PRICES.REPORT) + ' <small>one-time · credited toward annual MyMarketCheckup within 30 days</small>',
     propTitle: "THE HOME THIS REPORT IS FOR",
     feats: [
       "Your home's verdict with every market signal gauge",
@@ -288,13 +288,13 @@ document.getElementById("bill-monthly").innerHTML =
 if (upgrade) {
   const days = reportCreditDaysLeft();
   document.getElementById("upgrade-note").innerHTML =
-    "Your " + PRICES.usd(PRICES.REPORT) + " report counts toward EquityWatch — first year " +
+    "Your " + PRICES.usd(PRICES.REPORT) + " report counts toward MyMarketCheckup — first year " +
     PRICES.usd(PRICES.UPGRADE) + " (" + PRICES.usd(PRICES.ANNUAL) + " − " + PRICES.usd(PRICES.REPORT) + " credit, rounded)" +
     (days != null && days > 0 ? ", available for <b>" + days + " more day" + (days === 1 ? "" : "s") + "</b>." :
      ". We confirm eligibility (report purchased within the last 30 days) against your purchase email.");
 }
 document.getElementById("eyebrow").textContent = c.eyebrow;
-document.getElementById("headline").textContent = upgrade ? "Upgrade to EquityWatch" : c.headline;
+document.getElementById("headline").textContent = upgrade ? "Upgrade to MyMarketCheckup" : c.headline;
 document.getElementById("planname").textContent = c.planname;
 document.getElementById("price").innerHTML = c.price;
 document.getElementById("feats").innerHTML = c.feats.map(f => "<li>"+f+"</li>").join("");
@@ -449,7 +449,7 @@ async function go(){
       cta.disabled = false; cta.textContent = "Continue to secure payment →";
       hint.style.color = "var(--red)";
       hint.innerHTML = "We couldn't save your signup just now. Please try again, or email " +
-        "<a href=\"mailto:support@shouldisellyet.com?subject=EquityWatch%20annual%20signup\">support@shouldisellyet.com</a> and we'll set it up by hand.";
+        "<a href=\"mailto:support@shouldisellyet.com?subject=MyMarketCheckup%20annual%20signup\">support@shouldisellyet.com</a> and we'll set it up by hand.";
     }
     return;
   }
