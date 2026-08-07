@@ -156,8 +156,32 @@ table.grid tr:hover td{background:#faf9f5}
     </header>
     <div class="err-note" id="err"></div>
 
-    <section id="sec-overview"><div class="placeholder">Overview loads here.</div></section>
-    <section id="sec-funnel"><div class="placeholder">Funnel loads here.</div></section>
+    <section id="sec-overview">
+      <div class="cards" id="ov-cards"></div>
+      <div class="panel">
+        <h2>Most-checked ZIPs</h2>
+        <table class="grid"><thead><tr><th>ZIP</th><th>State</th><th class="num">Checks</th><th>Verdict</th></tr></thead>
+        <tbody id="ov-topzips"><tr><td colspan="4" style="color:var(--fainter)">Loading…</td></tr></tbody></table>
+        <div class="note">Demand signal: which markets people are actually worried about. Verdicts join client-side from the site's own published data.</div>
+      </div>
+    </section>
+    <section id="sec-funnel">
+      <div class="panel">
+        <h2>Stages</h2>
+        <div id="fn-stages"></div>
+        <div class="note">Sessions are new-session page views — <b>sessions, not people</b> (no cookies, no identity). Clicks count every CTA press, so one visitor can click twice; purchases are webhook-written Supabase rows, never a Stripe API call from the browser.</div>
+      </div>
+      <div class="panel">
+        <h2>Daily</h2>
+        <canvas id="fn-chart" height="120"></canvas>
+      </div>
+      <div class="panel">
+        <h2>By channel</h2>
+        <table class="grid"><thead><tr><th>utm_source</th><th class="num">Sessions</th><th class="num">Checks</th><th class="num">Clicks</th><th class="num">Purchases</th></tr></thead>
+        <tbody id="fn-utm"></tbody></table>
+        <div class="note">Purchases stay unattributed on purpose: tying a payment to a browsing session is the identity linkage the privacy policy rules out. Clicks are the deepest attributable stage.</div>
+      </div>
+    </section>
     <section id="sec-customers"><div class="placeholder">Customers loads here.</div></section>
     <section id="sec-map"><div class="placeholder">Map loads here.</div></section>
     <section id="sec-requests"><div class="placeholder">Requests loads here.</div></section>
@@ -269,6 +293,121 @@ function route() {
   if (fn) fn().catch(showErr);
 }
 window.addEventListener("hashchange", route);
+
+// ————— verdict join: the site's own published data, fetched client-side —————
+// /data/index.json maps 3-digit ZIP prefixes to states; /data/zips/{ST}.json
+// holds each ZIP's verdict level. Shards cache for the session.
+let _prefix = null;
+const _shards = {};
+async function verdictFor(zip) {
+  try {
+    if (!_prefix) _prefix = await (await fetch("/data/index.json")).json();
+    const st = _prefix[zip.slice(0, 3)];
+    if (!st) return null;
+    if (!_shards[st]) _shards[st] = (await fetch("/data/zips/" + st + ".json")).json();
+    const shard = await _shards[st];
+    return { st, level: (shard[zip] || {}).l || null };
+  } catch (e) { return null; }
+}
+const VTAG = {
+  green:  '<span class="tag green">HOLD</span>',
+  strong: '<span class="tag green">STRONG HOLD</span>',
+  yellow: '<span class="tag amber">WATCH</span>',
+  red:    '<span class="tag red">ACT</span>',
+};
+const fmt = (n) => (n ?? 0).toLocaleString("en-US");
+const usd0 = (n) => "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+// ————— Overview —————
+RENDER.overview = async function () {
+  const o = await rpc("admin_overview", { days: DAYS });
+  const ev = o.events || {};
+  const clicksR = ev.purchase_click_report || 0, clicksM = ev.purchase_click_monitor || 0;
+  // Estimated MRR from the site's own price constants (prices.js) — never a
+  // Stripe call. Unknown-interval subs (rows from before v9 recorded the
+  // interval) are counted at the annual rate and the label says so.
+  const mrr = (o.active_monthly * PRICES.MONTHLY) +
+              ((o.active_annual + o.active_unknown) * PRICES.ANNUAL / 12);
+  const cards = [
+    ["Sessions", fmt(o.sessions), "sessions, not people"],
+    ["ZIP checks", fmt(ev.zip_check), "free verdicts served"],
+    ["Purchase clicks", fmt(clicksR + clicksM), fmt(clicksR) + " report · " + fmt(clicksM) + " monitor"],
+    ["Reports sold", fmt(o.reports_sold), "$" + PRICES.REPORT + " one-time"],
+    ["New subs", fmt(o.new_subs), "EquityWatch, in window"],
+    ["Active subs", fmt(o.active_subs),
+      fmt(o.active_monthly) + " mo · " + fmt(o.active_annual) + " yr" +
+      (o.active_unknown ? " · " + fmt(o.active_unknown) + " ?" : "")],
+    ["Est. MRR", usd0(mrr), "estimated · ×12 = " + usd0(mrr * 12) +
+      (o.active_unknown ? " · unknown-interval counted annual" : "")],
+    ["Match requests", fmt(o.match_requests), "in window"],
+    ["Agents active", fmt(o.agents_active), "program paused"],
+    ["Share clicks", fmt(ev.share_click), "in window"],
+  ];
+  $("ov-cards").innerHTML = cards.map(([k, v, s]) =>
+    `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+  const tz = await rpc("admin_top_zips", { days: DAYS, lim: 25 });
+  if (!tz.length) {
+    $("ov-topzips").innerHTML = '<tr><td colspan="4" style="color:var(--fainter)">No ZIP checks in this window yet.</td></tr>';
+  } else {
+    $("ov-topzips").innerHTML = tz.map((r) =>
+      `<tr><td class="mono"><a href="/zip/${r.zip}/" target="_blank" rel="noopener">${r.zip}</a></td>
+       <td class="mono" id="tz-st-${r.zip}">…</td><td class="num">${fmt(r.checks)}</td>
+       <td id="tz-v-${r.zip}">…</td></tr>`).join("");
+    tz.forEach(async (r) => {
+      const v = await verdictFor(r.zip);
+      const stEl = $("tz-st-" + r.zip), vEl = $("tz-v-" + r.zip);
+      if (stEl) stEl.textContent = v?.st || "—";
+      if (vEl) vEl.innerHTML = (v && VTAG[v.level]) || '<span class="tag">no page</span>';
+    });
+  }
+};
+
+// ————— Funnel —————
+let _chart = null;
+RENDER.funnel = async function () {
+  const f = await rpc("admin_funnel", { days: DAYS });
+  const s = f.stages;
+  const stages = [
+    ["Sessions", s.sessions], ["ZIP checks", s.checks],
+    ["Purchase clicks", s.clicks], ["Purchases", s.purchases],
+    ["Active subs", s.active],
+  ];
+  const max = Math.max(1, ...stages.map(([, v]) => v));
+  $("fn-stages").innerHTML = stages.map(([k, v], i) => {
+    const prev = i ? stages[i - 1][1] : 0;
+    const conv = i && prev ? ((v / prev) * 100).toFixed(1) + "%" : "";
+    return `<div style="display:grid;grid-template-columns:120px 1fr 90px 70px;gap:10px;align-items:center;margin-bottom:8px">
+      <div style="font-size:12.5px;color:var(--muted)">${k}</div>
+      <div style="background:var(--hairline2);border-radius:6px;height:22px;overflow:hidden">
+        <div style="width:${Math.max(1.5, (v / max) * 100)}%;height:100%;background:var(--navy);opacity:${1 - i * 0.13}"></div></div>
+      <div class="num mono" style="font-size:13px">${fmt(v)}</div>
+      <div class="num" style="font-size:11.5px;color:var(--fainter)">${conv}</div>
+    </div>`;
+  }).join("");
+
+  await loadLib("https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js");
+  const days = f.series.map((r) => r.day.slice(5));
+  if (_chart) _chart.destroy();
+  _chart = new Chart($("fn-chart"), {
+    type: "line",
+    data: { labels: days, datasets: [
+      { label: "Sessions", data: f.series.map((r) => r.sessions), borderColor: "#1f3a5f", backgroundColor: "transparent", tension: .25 },
+      { label: "Checks", data: f.series.map((r) => r.checks), borderColor: "#c8891f", backgroundColor: "transparent", tension: .25 },
+      { label: "Clicks", data: f.series.map((r) => r.clicks), borderColor: "#8a7a55", backgroundColor: "transparent", tension: .25 },
+      { label: "Purchases", data: f.series.map((r) => r.purchases), borderColor: "#2e9e5b", backgroundColor: "transparent", tension: .25 },
+    ]},
+    options: { responsive: true, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+  });
+
+  $("fn-utm").innerHTML = (f.utm.length ? f.utm : []).map((u) =>
+    `<tr><td class="mono">${u.utm_source}</td><td class="num">${fmt(u.sessions)}</td>
+     <td class="num">${fmt(u.checks)}</td><td class="num">${fmt(u.clicks)}</td>
+     <td class="num" style="color:var(--fainter)">—</td></tr>`).join("") ||
+    '<tr><td colspan="5" style="color:var(--fainter)">No traffic in this window yet.</td></tr>';
+};
 
 // ————— tiny lazy loader for the chart/map libs (only when their section opens) —————
 const _libs = {};

@@ -284,6 +284,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         body: JSON.stringify({
           status: "active", plan, source: "stripe",
           access_token: token, stripe_session_id: session.id,
+          // Payment confirmation time, distinct from the pending row's
+          // created_at — the funnel windows on this (schema-v13).
+          purchased_at: new Date().toISOString(),
           ...subCustomer,
           ...(zip ? { zip } : {}),
         }),
@@ -307,6 +310,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           address_state: addr?.state ?? null,
           plan, status: "active", source: "stripe",
           access_token: token, stripe_session_id: session.id,
+          purchased_at: new Date().toISOString(),
           ...subCustomer,
         }),
       })))[0];
