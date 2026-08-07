@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your EquityWatch Report — ShouldISellYet</title>
+<title>MyMarketCheckup Report — ShouldISellYet</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -239,12 +239,12 @@ details.how .how-body b{color:#3a4450}
     <div class="gate-inner" id="gate-locked" style="display:none">
       <div class="lock">🔒</div>
       <h1>This is a paid report</h1>
-      <p class="lede">The full EquityWatch report — your equity, your net-proceeds number, and your ZIP's signal gauges — is included with any EquityWatch purchase. Set up monitoring for <span data-price="annual-yr">$29/yr</span> (<span data-price="annual-permo">$2.42/mo, billed annually</span> — <span data-price="monthly-line">or $3.99/mo billed monthly</span>) and get the report plus alerts, or buy the report once for <span data-price="report">$5.99</span> — credited toward annual EquityWatch if you upgrade within 30 days.</p>
+      <p class="lede">The full MyMarketCheckup report — your equity, your net-proceeds number, and your ZIP's signal gauges — is included with any MyMarketCheckup purchase. Set up monitoring for <span data-price="annual-yr">$29/yr</span> (<span data-price="annual-permo">$2.42/mo, billed annually</span> — <span data-price="monthly-line">or $3.99/mo billed monthly</span>) and get the report plus alerts, or buy the report once for <span data-price="report">$5.99</span> — credited toward annual MyMarketCheckup if you upgrade within 30 days.</p>
       <div class="gate-ctas">
         <a class="btn" href="subscribe.html?plan=monitor">Set up alerts + report · <span data-price="annual-yr">$29/yr</span></a>
         <a class="btn-outline" href="subscribe.html?plan=report">Just the report · <span data-price="report">$5.99</span></a>
       </div>
-      <p style="font-size:12.5px;color:var(--fainter);margin-top:16px">Already purchased? Use the <b>“Open my report”</b> link in your confirmation email — it carries your private access. Lost it? <a href="mailto:support@shouldisellyet.com?subject=EquityWatch%20report%20access">Email us</a> and we'll resend it.</p>
+      <p style="font-size:12.5px;color:var(--fainter);margin-top:16px">Already purchased? Use the <b>“Open my report”</b> link in your confirmation email — it carries your private access. Lost it? <a href="mailto:support@shouldisellyet.com?subject=MyMarketCheckup%20report%20access">Email us</a> and we'll resend it.</p>
       <a class="back-link" href="index.html">← Check any ZIP free instead</a>
     </div>
   </div>
@@ -1396,7 +1396,7 @@ async function generate(noScroll){
   $("connect-card").style.display = AGENT_INTRO_ENABLED ? "block" : "none";
   $("nextstep-generic").style.display = AGENT_INTRO_ENABLED ? "none" : "block";
 
-  $("stamp").innerHTML = "EquityWatch™ · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
+  $("stamp").innerHTML = "MyMarketCheckup · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
     " · " + (META ? citeHTML(META.attribution) : "public market data") +
     "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
@@ -1743,7 +1743,7 @@ function renderUpgradeBand(access){
   const days = PRICES.UPGRADE_WINDOW_DAYS - Math.floor((Date.now() - at) / 86400000);
   if (days <= 0 || days > PRICES.UPGRADE_WINDOW_DAYS) return;  // expired offers disappear
   const band = $("upgrade-band");
-  band.innerHTML = "🎟️ Your " + PRICES.usd(PRICES.REPORT) + " counts toward EquityWatch — upgrade for " +
+  band.innerHTML = "🎟️ Your " + PRICES.usd(PRICES.REPORT) + " counts toward MyMarketCheckup — upgrade for " +
     PRICES.usd(PRICES.UPGRADE) + " in the next <b>" + days + " day" + (days === 1 ? "" : "s") + "</b>. " +
     "<a href=\"subscribe.html?plan=monitor&upgrade=report-credit" + ($("in-zip").value ? "&zip=" + $("in-zip").value : "") + "\" style=\"font-weight:600;text-decoration:underline\">Upgrade →</a>";
   band.style.display = "block";
@@ -1783,7 +1783,7 @@ function unlock(zip, justPaid, access){
 // specific inputs needed to recheck that one metric monthly. Two things
 // gate it: a durable token (from the confirmation email — that's what
 // save-watch uses to find the right subscriber row), and being on the
-// EquityWatch monitoring plan (a one-time report has no ongoing check-in
+// MyMarketCheckup monitoring plan (a one-time report has no ongoing check-in
 // for a monthly recompute to attach to). A subscriber can watch all three
 // metrics at once — window.__savedWatches mirrors the server's `watches`
 // array so toggles survive a report rebuild and a page reload alike.
@@ -1808,7 +1808,7 @@ function refreshWatchPanel(metric){
     lockedEl.style.display = "block"; activeEl.style.display = "none";
   } else if (SUB_PLAN !== "monitor") {
     const zip = $("in-zip").value;
-    lockedEl.innerHTML = "Personal alerts are part of <b>EquityWatch monitoring</b> — a one-time report doesn't include ongoing checks. " +
+    lockedEl.innerHTML = "Personal alerts are part of <b>MyMarketCheckup monitoring</b> — a one-time report doesn't include ongoing checks. " +
       "<a href=\"subscribe.html?plan=monitor&upgrade=report-credit" + (zip ? "&zip=" + zip : "") + "\">Upgrade for " + PRICES.usd(PRICES.UPGRADE) + " (first year) →</a>";
     lockedEl.style.display = "block"; activeEl.style.display = "none";
   } else {

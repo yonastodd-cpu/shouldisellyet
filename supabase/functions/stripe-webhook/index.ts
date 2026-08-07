@@ -154,16 +154,36 @@ function daysRemaining(purchasedAt: string | null): number {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// ————— Preheader —————
+// The inbox shows three things: sender, subject, and then whatever text it
+// scrapes first from the body. Without this, that third slot got the visible
+// brand header — so a row read "ShouldISellYet · Your alert for 20874 is
+// live · MyMarketCheckup Your alert is live…", saying the name three times
+// and the news once.
+//
+// This block is hidden in the rendered email but IS the first text a client
+// finds, so it becomes the preview line. The trailing run of zero-width
+// non-joiners is the standard trick to stop clients padding the preview with
+// whatever markup follows.
+const preheader = (text: string) =>
+  `<div style="display:none;font-size:1px;color:#faf8f4;line-height:1px;` +
+  `max-height:0;max-width:0;opacity:0;overflow:hidden">${text}` +
+  "&#8204;&nbsp;".repeat(60) + "</div>";
+
 function welcomeMonitorEmail(zip: string, token: string) {
   const link = reportLink(zip, token);
   return {
-    subject: `🚦 Your EquityWatch alert for ${zip} is live`,
-    html: `
+    // Subject says WHAT and WHERE, without the brand — the sender field
+    // already carries that, and repeating it spends the only characters
+    // that fit on a phone.
+    subject: `${zip} is now being watched`,
+    html: `${preheader(
+      `Your report is ready inside. From here on, we only email ${zip} when the market actually moves.`)}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
-  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch</p>
-  <h1 style="font-size:26px;margin:6px 0 12px">Your alert is live.</h1>
-  <p style="font-size:16px;line-height:1.6">You've set up monitoring for your home in <b>${zip}</b>. The early-warning data — supply, prices, price cuts, time to sell — is checked on every release, and the moment the market for your home shifts, you'll get an email like this one. No news is good news.</p>
-  <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included. Open your private report page below, enter your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup</p>
+  <h1 style="font-size:26px;margin:6px 0 12px">You're watching ${zip}.</h1>
+  <p style="font-size:16px;line-height:1.6">From now on we check the early-warning data for your ZIP on every release — supply, prices, price cuts, time to sell — and email you the moment the picture changes. Most months you'll hear nothing, and that is the good outcome.</p>
+  <p style="font-size:16px;line-height:1.6">Your full property report is ready now. Open it below, add your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access to the report and it works only for you.</p>
   <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">Renews automatically until you cancel. <b>Cancel anytime yourself</b> — open your report above and use "Manage or cancel subscription", or use the link in any Stripe billing email. Canceling stops future charges; your access runs to the end of the period you've paid for. Not financial advice.</p>
@@ -197,18 +217,19 @@ function welcomeReportEmail(zip: string, token: string, city: string,
   const promo = !optedOut && MAILING_ADDRESS.trim() !== "";
   const offer = days > 0
     ? `<p style="font-size:16px;line-height:1.6">Because you bought this report, your <b>${usd(PRICES.REPORT)} counts toward the annual plan</b>: upgrade in the next ${days} day${days === 1 ? "" : "s"} for <b>${usd(PRICES.UPGRADE)}</b> (normally ${usd(PRICES.ANNUAL)}/yr).</p>`
-    : `<p style="font-size:16px;line-height:1.6">EquityWatch is <b>${usd(PRICES.ANNUAL)}/yr</b> — ${usd(PRICES.ANNUAL / 12)}/mo, billed annually — or ${usd(PRICES.MONTHLY)}/mo billed monthly. Cancel anytime.</p>`;
+    : `<p style="font-size:16px;line-height:1.6">MyMarketCheckup is <b>${usd(PRICES.ANNUAL)}/yr</b> — ${usd(PRICES.ANNUAL / 12)}/mo, billed annually — or ${usd(PRICES.MONTHLY)}/mo billed monthly. Cancel anytime.</p>`;
 
   return {
-    subject: `Your market analysis for ${zip} is ready`,
-    html: `
+    subject: `Your ${place} report is ready`,
+    html: `${preheader(
+      `Open it on any device — the four market signals for ${zip}, your value trend, equity and walk-away number.`)}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
-  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch</p>
-  <p style="font-size:16px;line-height:1.6">Your report is ready — here's your link, good on any device:</p>
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup</p>
+  <p style="font-size:16px;line-height:1.6">Here's your link — it works on any device and it's yours to keep:</p>
   <p style="margin:22px 0"><a href="${link}" style="${btn}">View my report →</a></p>
   <p style="font-size:16px;line-height:1.6">It covers ${place}: the four market signals, your home's value trend, and — if you've added your numbers — your equity, walk-away number, and what today's rates mean for you.</p>
   ${promo ? `
-  <p style="font-size:16px;line-height:1.6">One thing a report can't do is watch. Markets turn quietly — inventory creeps up, price cuts spread — and the whole point is hearing it early. <b>EquityWatch</b> monitors ${zip} continuously and emails you the moment the verdict changes, plus a refreshed report monthly.</p>
+  <p style="font-size:16px;line-height:1.6">One thing a report can't do is watch. Markets turn quietly — inventory creeps up, price cuts spread — and the whole point is hearing it early. <b>MyMarketCheckup</b> monitors ${zip} continuously and emails you the moment the verdict changes, plus a refreshed report monthly.</p>
   ${offer}
   <p style="margin:22px 0"><a href="${upgrade}" style="${btn}">Turn on instant notifications →</a></p>` : ""}
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark your report link</b> — it's your private access and it works only for you.</p>

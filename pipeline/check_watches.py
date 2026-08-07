@@ -133,15 +133,30 @@ def fmt_metric(metric, n):
     return fmt(n)
 
 
+# ————— Preheader —————
+# The inbox gives three slots: sender, subject, then whatever text it scrapes
+# first from the body. That third slot was landing on the visible brand
+# header, so a row repeated the product name and said the news once. This
+# block is invisible when rendered but is the first text a client finds, so
+# it becomes the preview line. The trailing zero-width joiners stop clients
+# padding the preview with markup that follows.
+def preheader(text):
+    return ('<div style="display:none;font-size:1px;color:#faf8f4;line-height:1px;'
+            'max-height:0;max-width:0;opacity:0;overflow:hidden">' + text
+            + "&#8204;&nbsp;" * 60 + "</div>")
+
+
 def render_watch_email(metric, direction, threshold, current_value, zip_code, token):
     label = METRIC_LABEL.get(metric, metric)
     verb = "dropped below" if direction == "below" else "rose above"
     whose = "The" if metric in PERCENT_METRICS else "Your"
-    subject = f"{whose} {label} just {verb} {fmt_metric(metric, threshold)} — EquityWatch"
+    # The number they chose to watch, and what it just did. No brand — the
+    # sender already says it.
+    subject = f"{whose} {label} just {verb} {fmt_metric(metric, threshold)}"
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
-    html = f"""
+    html = f"""{preheader(f"You asked to hear when this crossed {fmt_metric(metric, threshold)}. It now reads {fmt_metric(metric, current_value)} in {zip_code}.")}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
-  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">\U0001F514 EquityWatch — your number alert</p>
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">\U0001F514 MyMarketCheckup — your number alert</p>
   <h1 style="font-size:24px;margin:6px 0 4px">{whose} {label} just {verb} {fmt_metric(metric, threshold)}</h1>
   <p style="font-size:14px;color:#667085">You asked to hear about this. Current reading: <b>{fmt_metric(metric, current_value)}</b>.</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your report →</a></p>

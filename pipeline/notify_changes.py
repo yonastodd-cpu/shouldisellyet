@@ -33,6 +33,19 @@ SEVERITY = {"strong": -1, "green": 0, "yellow": 1, "red": 2}
 SITE = "https://shouldisellyet.com"
 
 
+# ————— Preheader —————
+# The inbox gives three slots: sender, subject, then whatever text it scrapes
+# first from the body. That third slot was landing on the visible brand
+# header, so a row repeated the product name and said the news once. This
+# block is invisible when rendered but is the first text a client finds, so
+# it becomes the preview line. The trailing zero-width joiners stop clients
+# padding the preview with markup that follows.
+def preheader(text):
+    return ('<div style="display:none;font-size:1px;color:#faf8f4;line-height:1px;'
+            'max-height:0;max-width:0;opacity:0;overflow:hidden">' + text
+            + "&#8204;&nbsp;" * 60 + "</div>")
+
+
 def load_dir(path):
     """{zip: level} from a directory of {STATE}.json files."""
     out = {}
@@ -56,7 +69,9 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
     word = WORDS[new_level]
     # Personalize to the home if we have the address; fall back to the area.
     home = address.strip() if address and address.strip() else f"your home in {zip_code}"
-    subject = f"{EMOJI[old_level]}→{EMOJI[new_level]} The market for your home just changed to {word} — EquityWatch"
+    # Lead with the ZIP and the new verdict — that is the whole message, and
+    # it survives a phone truncating at ~35 characters.
+    subject = f"{EMOJI[new_level]} {zip_code} is now {word}"
     if new_level == "strong":
         headline = f"The market for {home} is unusually strong for sellers."
     elif old_level == "strong":
@@ -72,14 +87,14 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
         "strong": "Buyers are competing for homes in your area — multiple strength signals are past their thresholds. If selling was already on your mind, conditions favor you right now.",
     }[new_level]
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
-    html = f"""
+    html = f"""{preheader(headline + " " + action)}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
-  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 EquityWatch Alert</p>
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup Alert</p>
   <h1 style="font-size:26px;margin:6px 0 4px">{EMOJI[new_level]} The market for your home is now <span style="color:{'#e03e36' if new_level=='red' else '#e8a317' if new_level=='yellow' else '#1f3a5f' if new_level=='strong' else '#12a150'}">{word}</span></h1>
   <p style="font-size:14px;color:#667085">{home} · changed from {WORDS[old_level]} → {word}</p>
   <p style="font-size:16px;line-height:1.6"><b>{headline}</b> {action}</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your home's report →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions for the area your home is in — this is general market information, not an appraisal of your specific home. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice. You receive these because you set up EquityWatch monitoring for this home.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions for the area your home is in — this is general market information, not an appraisal of your specific home. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice. You receive these because you set up MyMarketCheckup monitoring for this home.</p>
 </div>"""
     return subject, html
 
