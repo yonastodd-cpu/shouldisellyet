@@ -14,6 +14,7 @@ sources, see [ATTRIBUTION.md](ATTRIBUTION.md).
 | **Freddie Mac** — Primary Mortgage Market Survey | `PMMS_history.csv` | Weekly (read on each refresh) | 30-year rate: lock-in math, buyer affordability, rate alerts. |
 | **FRED** (St. Louis Fed) | `fredgraph.csv?id=MORTGAGE30US` | Fallback only | Alternate transport for the *same* PMMS series. Not a separate publisher. |
 | **FHFA** — experimental annual ZIP5 house price index | `hpi_at_bdl_zip5.xlsx` | **Annual**, run by hand | Benchmark line on the value trend + the danger-line backtest. |
+| **Zippopotam.us** — place names (GeoNames-derived, CC BY 4.0) | live API + `pipeline/data/zip_places.csv` | On demand / committed | City names on report headers and generated pages. |
 
 `web/data/` (committed, ~14 MB) is derived output, not raw source.
 

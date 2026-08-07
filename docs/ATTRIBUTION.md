@@ -75,9 +75,28 @@ The sources strip on the homepage lists **only feeds actually wired into
 the product today**. If a source is removed from the pipeline, remove it
 from the strip in the same commit; if one is added, add it.
 
-Currently: Redfin Data Center · Realtor.com residential listings ·
-Federal Housing Finance Agency (FHFA) · Freddie Mac Primary Mortgage Market
-Survey.
+Currently: Redfin Data Center · Realtor.com® Economic Research · Federal
+Housing Finance Agency (FHFA) ZIP-level house price index · Freddie Mac
+Primary Mortgage Market Survey · Place names from Zippopotam.us, derived from
+GeoNames.org (CC BY 4.0).
+
+### What each source actually asks for
+
+| Source | Required wording | Where it comes from |
+| --- | --- | --- |
+| **Redfin** | `Data provided by Redfin, a national real estate brokerage`, linked on first reference | Their Data Center terms |
+| **Realtor.com** | `Realtor.com® Economic Research`, or `Realtor.com®` where space is limited | Verbatim from realtor.com/research/data: *"Please attribute to Realtor.com ® Economic Research (or shortened to Realtor.com ® in cases where space is limited)"* |
+| **GeoNames** | Attribution, under CC BY 4.0 | Place names reach us via Zippopotam.us, which is built on GeoNames — so the licence follows the data |
+| **FHFA** | None required (US Government work, public domain) | Credited anyway, factually: "FHFA ZIP-level house price index" |
+| **Freddie Mac** | None strictly required | Credited as "Freddie Mac PMMS 30-yr weekly average" wherever the rate is shown |
+
+⚠️ **Provenance gap — `pipeline/data/zip_places.csv`.** That file (40,980 ZIP →
+city/state/county rows) is committed with no recorded source. Free ZIP→place
+datasets are almost always GeoNames-derived, which is why the GeoNames credit
+above is the safe reading — but *almost always* is not a licence audit. You
+cannot attribute what you cannot trace. **Operator: establish where that file
+came from and record it here**, or regenerate it from a source with known
+terms.
 
 Note on the mortgage rate: the publisher is **Freddie Mac (PMMS)**. FRED is
 only a fallback *transport* for that same series — crediting FRED as the

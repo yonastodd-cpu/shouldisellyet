@@ -170,7 +170,7 @@ const MARKET = (function () {
         ? '<div class="agree" style="margin-top:6px">✓ Both feeds read this market the same direction.</div>'
         : '<div class="differ" style="margin-top:6px">◆ The two feeds read direction differently right now — often a timing gap between listings and closings; worth watching next month.</div>';
     }
-    el.innerHTML = '<div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM LISTING FEED · ' +
+    el.innerHTML = '<div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM® LISTING FEED · ' +
       (label ? label.toUpperCase() : "") + (newer ? " (ONE MONTH NEWER THAN THE SALES DATA ABOVE)" : "") + '</div>' +
       (bits.length ? bits.join(" · ") + "." : "") + verdictLine;
     el.style.display = "block";

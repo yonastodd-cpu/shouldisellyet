@@ -90,6 +90,18 @@ jobs:
           # block page is worse than no file, because it looks like a record.
           curl -sSL --retry 2 -o "$DIR/redfin-data-center.html" \
             "https://www.redfin.com/news/data-center/" || true
+
+          # Same compliance record for the other two sources whose terms we
+          # rely on. Realtor.com asks for a specific attribution string and
+          # GeoNames data is CC BY — both can change, and "what did their
+          # terms say when we shipped" needs an answer that is not memory.
+          curl -sSL --retry 2 -o "$DIR/realtor-research-terms.html" \
+            -A "Mozilla/5.0 (compatible; shouldisellyet-archive)" \
+            "https://www.realtor.com/research/data/" || \
+            echo "::warning::Realtor.com terms capture failed"
+          curl -sSL --retry 2 -o "$DIR/geonames-license.html" \
+            "https://creativecommons.org/licenses/by/4.0/" || \
+            echo "::warning::CC BY 4.0 licence capture failed"
           if grep -qi "national real estate brokerage\|data center" "$DIR/redfin-data-center.html" 2>/dev/null; then
             echo "terms page captured ($(wc -c < "$DIR/redfin-data-center.html") bytes)"
           else

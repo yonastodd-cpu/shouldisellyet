@@ -683,7 +683,7 @@ def main():
         # text on purpose — render sites add the redfin.com link (see
         # docs/ATTRIBUTION.md before changing a single word of this).
         "attribution": "Data provided by Redfin, a national real estate brokerage"
-                       + (" · Listing data from Realtor.com" if rdc else ""),
+                       + (" · Listing data from Realtor.com® Economic Research" if rdc else ""),
         "national": {"spy_deciles": deciles, "counts": counts0,
                      **({"mortgage": mortgage} if mortgage else {}),
                      **({"backtest": backtest} if backtest else {})},
