@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment received — ShouldISellYet</title>
+<!-- Landing page for Stripe's post-checkout redirect. Set each Payment Link's
+     "After payment → Redirect to a page" to:
+       https://shouldisellyet.com/success.html?session_id={CHECKOUT_SESSION_ID}
+     Stripe substitutes the placeholder. Without that dashboard setting this
+     page is never reached and checkout still dead-ends on Stripe's own
+     confirmation screen. See docs/ATTRIBUTION.md's sibling note in the commit.
+
+     noindex: it is a transactional endpoint, not content, and every URL that
+     reaches it carries a session id that has no business in a search index. -->
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;
+  --hairline:#e7e2d8;--hairline2:#f0ebe0;--navy:#1f3a5f;--navy-dark:#172d4b;--gold:#8a7a55;
+  --green:#2e9e5b;--green-soft:#e9f4ee;--green-line:#bcdcc9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;
+     display:grid;place-content:center;min-height:100vh;padding:24px}
+a{color:var(--navy)}
+.card{max-width:520px;background:#fff;border:1px solid var(--hairline);border-radius:16px;padding:34px 36px}
+.tick{width:46px;height:46px;border-radius:50%;background:var(--green-soft);border:1px solid var(--green-line);
+      display:grid;place-content:center;margin-bottom:18px}
+.tick::after{content:"";width:16px;height:9px;border-left:2.5px solid var(--green);border-bottom:2.5px solid var(--green);
+      transform:rotate(-45deg) translate(1px,-3px)}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}
+h1{font-family:'Newsreader',serif;font-weight:500;font-size:31px;line-height:1.15;margin:8px 0 10px}
+p{font-size:15.5px;line-height:1.65;color:var(--muted);margin:0 0 14px}
+p.tight{margin-bottom:8px}
+b{color:var(--ink)}
+.status{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--muted);
+        border-top:1px solid var(--hairline2);margin-top:20px;padding-top:18px}
+.spin{width:15px;height:15px;border:2px solid var(--hairline);border-top-color:var(--navy);
+      border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+.btn{display:inline-block;background:var(--navy);color:#faf8f4;padding:13px 24px;border-radius:8px;
+     font-weight:600;font-size:15px;text-decoration:none;margin-top:4px}
+.btn:hover{background:var(--navy-dark)}
+.fine{font-size:13px;color:var(--faint);margin-top:18px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="tick" aria-hidden="true"></div>
+  <div class="eyebrow">PAYMENT RECEIVED</div>
+
+  <!-- State A: working. The heading commits to the money being handled, which
+       is the one thing the customer wants confirmed, and never implies doubt
+       about it while the token is being provisioned. -->
+  <div id="working">
+    <h1>Thank you — your payment went through.</h1>
+    <p>We're setting up your report now. This usually takes a few seconds, and
+       you'll be taken to it automatically.</p>
+    <div class="status"><span class="spin"></span><span id="status-text">Preparing your report…</span></div>
+  </div>
+
+  <!-- State B: took too long. NOT an error — the purchase is fine and the
+       email is already on its way. Says exactly what to do next. -->
+  <div id="slow" class="hidden">
+    <h1>Thank you — your payment went through.</h1>
+    <p class="tight">Your report is taking a little longer than usual to build.
+       <b>Nothing is wrong with your purchase.</b></p>
+    <p>The link is on its way to the email address you gave Stripe — it usually
+       arrives within a minute or two. You can safely close this page.</p>
+    <p class="fine">Still nothing after ten minutes? Email
+       <a href="mailto:support@shouldisellyet.com">support@shouldisellyet.com</a>
+       and we'll send it by hand — mention the time you bought and we'll find it.</p>
+  </div>
+
+  <!-- State C: reached without a session id (typed in, bookmarked, a stripped
+       redirect). We cannot identify anyone, so point at the email. -->
+  <div id="direct" class="hidden">
+    <h1>Your report link is in your email.</h1>
+    <p>This page only works right after a purchase. If you've just bought a
+       report, check the inbox for the address you gave Stripe.</p>
+    <p><a class="btn" href="/">Back to ShouldISellYet</a></p>
+    <p class="fine">Lost the link? Email
+       <a href="mailto:support@shouldisellyet.com">support@shouldisellyet.com</a>.</p>
+  </div>
+</div>
+
+<script>
+// Stripe redirects here with ?session_id={CHECKOUT_SESSION_ID}. Trade it for
+// the report access token and forward. The webhook that mints the token is a
+// separate delivery from this redirect and usually loses the race, so polling
+// is the normal path, not the exceptional one.
+const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
+const EXCHANGE_FN = SUPABASE_URL + "/functions/v1/checkout-session";
+
+const SESSION_RE = /^cs_(live|test)_[A-Za-z0-9]{8,200}$/;
+const sessionId = new URLSearchParams(location.search).get("session_id") || "";
+
+const el = (id) => document.getElementById(id);
+const show = (id) => {
+  ["working", "slow", "direct"].forEach(s => el(s).classList.toggle("hidden", s !== id));
+};
+
+if (!SESSION_RE.test(sessionId)) {
+  show("direct");
+} else {
+  // Drop the session id from the address bar immediately. It is a credential;
+  // it should not sit in the visible URL, get copied out of it, or ride along
+  // in a referrer. The value stays in memory for the poll below.
+  history.replaceState({}, "", location.pathname);
+  poll();
+}
+
+// ~40s of attempts, easing off so a slow webhook doesn't get hammered. Chosen
+// to outlast a normal Stripe delivery by a wide margin while still giving up
+// before the customer decides the page is stuck.
+const DELAYS = [800, 1200, 1600, 2000, 2000, 2500, 2500, 3000, 3000, 3500, 3500, 4000, 4000, 4500, 4500];
+
+async function poll() {
+  for (let i = 0; i < DELAYS.length; i++) {
+    let data = null;
+    try {
+      const r = await fetch(EXCHANGE_FN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId })
+      });
+      data = await r.json();
+    } catch (e) {
+      // Offline or a blip — indistinguishable from "not ready" from here, and
+      // the response is the same either way: wait and ask again.
+    }
+
+    if (data && data.ok && data.token) {
+      el("status-text").textContent = "Opening your report…";
+      location.replace("/my-report.html?token=" + encodeURIComponent(data.token));
+      return;
+    }
+    // A malformed id can never become valid by waiting.
+    if (data && data.error === "bad session") { show("direct"); return; }
+
+    if (i === 5) el("status-text").textContent = "Still preparing — hang on…";
+    await new Promise(r => setTimeout(r, DELAYS[i]));
+  }
+  show("slow");
+}
+</script>
+</body>
+</html>
