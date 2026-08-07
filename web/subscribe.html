@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="/track.js" defer></script>
 <script src="address.js"></script>
 <style>
 :root{
@@ -454,6 +455,13 @@ async function go(){
   // `link` may already carry its own query string (e.g. annual_upgrade's
   // ?prefilled_promo_code=...) — join with & in that case, not a second ?,
   // which would corrupt the earlier param and drop these two entirely.
+  // The truest "purchase click" on the site: consent given, Stripe handoff
+  // imminent. plan carries the billing choice for monitor buys.
+  if (window.SISY) {
+    SISY.track(plan === "report" ? "purchase_click_report" : "purchase_click_monitor",
+               { zip: pfZip, plan: plan === "report" ? "report" : billing });
+  }
+
   // Warm the function success.html will poll the moment they come back. An
   // idle edge function cold-starts, and that start would otherwise land in the
   // critical path — right when someone who has just paid is watching a

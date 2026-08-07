@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="/track.js" defer></script>
 <script src="market-render.js"></script>
 <style>
 
@@ -253,7 +254,7 @@ details.how .how-body b{color:#3a4450}
     <b>This is a sample.</b> Every number below belongs to one made-up home in ZIP 20906 so you can see exactly what you get — the market data is real, the homeowner's inputs are not. Your report is built from your own numbers, and only the address is required.
     <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn" href="index.html#check">Check your ZIP free →</a>
-      <a class="btn-outline" href="subscribe.html?plan=monitor">Full report + notifications · <span data-price="annual-yr">$29/yr</span></a>
+      <a class="btn-outline" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full report + notifications · <span data-price="annual-yr">$29/yr</span></a>
     </div>
   </div>
 
@@ -485,8 +486,8 @@ details.how .how-body b{color:#3a4450}
 
   <div class="actions" style="display:flex">
     <a class="btn" href="index.html#check">Check your ZIP free →</a>
-    <a class="btn-outline" href="subscribe.html?plan=monitor" style="text-decoration:none;display:inline-block">Full report + notifications · <span data-price="annual-yr">$29/yr</span></a>
-    <a class="btn-outline" href="subscribe.html?plan=report" style="text-decoration:none;display:inline-block">Just the full report · <span data-price="report-once">$5.99 once</span></a>
+    <a class="btn-outline" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor" style="text-decoration:none;display:inline-block">Full report + notifications · <span data-price="annual-yr">$29/yr</span></a>
+    <a class="btn-outline" data-track="purchase_click_report" href="subscribe.html?plan=report" style="text-decoration:none;display:inline-block">Just the full report · <span data-price="report-once">$5.99 once</span></a>
   </div>
 
   <div id="site-foot" style="margin-top:36px;border-top:1px solid var(--hairline);padding-top:16px;font-size:12px;color:var(--fainter)">

@@ -338,6 +338,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>
+<script src="/track.js" defer></script>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{url}">
 <meta property="og:type" content="article"><meta property="og:title" content="{esc(og_title)}">
@@ -372,10 +373,10 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE} · {PLACES_CITE}</div>
 </div>
 <div class="ctas">
-  <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-text="{esc(share_text)}">Share this checkup</button>
+  <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-track="share_click" data-track-zip="{z}" data-text="{esc(share_text)}">Share this checkup</button>
   <a class="btn btn-primary" href="/?zip={z}&amp;{UTM}">Check this ZIP live</a>
-  <a class="btn btn-outline" href="/subscribe.html?plan=monitor&amp;zip={z}&amp;{UTM}">Set up notifications</a>
-  <a class="btn btn-ghost" href="/subscribe.html?plan=report&amp;zip={z}&amp;{UTM}">Get the full report</a>
+  <a class="btn btn-outline" data-track="purchase_click_monitor" data-track-zip="{z}" href="/subscribe.html?plan=monitor&amp;zip={z}&amp;{UTM}">Set up notifications</a>
+  <a class="btn btn-ghost" data-track="purchase_click_report" data-track-zip="{z}" href="/subscribe.html?plan=report&amp;zip={z}&amp;{UTM}">Get the full report</a>
 </div>
 <h2>How this verdict is computed</h2>
 <p class="method">Four public signals, each with a danger line drawn from past national downturns: months of supply (4.0), the year-over-year price trend (−2%), how long homes take to sell (+40% year over year), and the share of listings cutting price (35%). A ZIP crossing enough of them reads WATCH or ACT; a clean ZIP reads HOLD. <a href="/#signals">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>

@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="/track.js" defer></script>
 <script src="address.js"></script>
 <script src="market-render.js"></script>
 <script src="referral.js"></script>
@@ -1570,6 +1571,9 @@ function openConnect(){
   // while it is switched off is a customer's contact details sent to an agent
   // with no agreement in place, so it is worth two locks.
   if (!AGENT_INTRO_ENABLED) return false;
+
+  // After the guard, so a paused programme counts zero opens.
+  if (window.SISY) SISY.track("match_request_opened", {});
 
   // Always reopens on the form. The disclosure is a post-submission state and
   // must never be what someone sees on the way in.

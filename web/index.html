@@ -32,6 +32,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="/track.js" defer></script>
 <script src="verdict-copy.js"></script>
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
@@ -328,8 +329,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
         <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
 
         <div class="v-ctas">
-          <a class="vbtn vbtn-primary" id="cta-monitor" href="subscribe.html?plan=monitor"><span>Get Full Report + Market Change Notifications</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
-          <a class="vbtn vbtn-secondary" id="cta-report" href="subscribe.html?plan=report"><span>Just the Full Report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
+          <a class="vbtn vbtn-primary" id="cta-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Get Full Report + Market Change Notifications</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
+          <a class="vbtn vbtn-secondary" id="cta-report" data-track="purchase_click_report" href="subscribe.html?plan=report"><span>Just the Full Report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
           <button class="vbtn vbtn-tertiary" id="share-btn" type="button"><span class="share-face"><svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="share-label">Share</span></span></button>
         </div>
 
@@ -433,7 +434,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
       <div class="price-note">Credited toward EquityWatch if you upgrade within 30 days</div>
       <div class="price-feats">Your home's full report: every signal gauge · your estimated equity · your walk-away number if you sold today · printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
-      <a class="price-cta btn-outline" id="cta-price-report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
+      <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
@@ -442,7 +443,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price-note"><span data-price="annual-permo">$2.42/mo, billed annually</span> · <span data-price="save-line">Save $18.88 vs monthly</span></div>
       <div class="price-note" style="margin-top:4px">Cancel anytime · <span data-price="monthly-line">or $3.99/mo billed monthly</span></div>
       <div class="price-feats">Everything in the one-time report, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
-      <a class="price-cta btn" id="cta-price-monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
+      <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
     </div>
   </div>
   <div class="band-note sm">Your information is never sold, and we never pass your details to anyone without you asking us to.</div>
@@ -682,6 +683,8 @@ function setLocationLine(zip, st, city) {
 async function run() {
   const zip = $("zip").value;
   if (!/^\d{5}$/.test(zip)) { $("zip").focus(); return; }
+  // After validation, so the count means "real checks", not keystroke noise.
+  if (window.SISY) SISY.track("zip_check", { zip });
   show($("verdict"), false); $("waitcard").style.display = "none"; show($("crunch"), true);
   $("crunch-zip").textContent = zip;
   const started = Date.now();
@@ -794,6 +797,7 @@ function resetShare() {
 }
 $("share-btn").addEventListener("click", () => {
   if (!lastVerdict) return;
+  if (window.SISY) SISY.track("share_click", { zip: lastVerdict.zip });
   // Share the ZIP PAGE, not the homepage: the homepage is a single URL and
   // cannot carry a per-ZIP preview card, so a homepage link previews as
   // generic brand chrome. /zip/{zip}/ carries the verdict card.
