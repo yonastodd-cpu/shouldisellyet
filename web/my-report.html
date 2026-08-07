@@ -694,8 +694,10 @@ details.how .how-body b{color:#3a4450}
   <div class="actions" id="actions" style="display:none">
     <button class="btn" onclick="window.print()">Print / save as PDF</button>
     <button class="btn-outline" onclick="return adjustNums()">Adjust my numbers</button>
+    <button class="btn-outline" id="manage-sub" onclick="return openPortal()">Manage or cancel subscription</button>
     <a class="btn-outline" href="index.html" style="text-decoration:none;display:inline-block">← Back to the free check</a>
   </div>
+  <div id="portal-msg" style="display:none;font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6"></div>
   </div><!-- /paid-area -->
 
   <div class="modal-veil" id="connect-veil" style="display:none">
@@ -1411,6 +1413,7 @@ const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const VERIFY_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/verify-access" : "";
 const SAVE_WATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-watch" : "";
 const SAVE_ADDR_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/save-address" : "";
+const PORTAL_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/portal-session" : "";
 const MATCH_FN = SUPABASE_URL ? SUPABASE_URL + "/functions/v1/match-request" : "";
 const q = new URLSearchParams(location.search);
 
@@ -1460,6 +1463,44 @@ $("in-zip").addEventListener("blur", fillFromZip);
 ["in-yr","in-origyr"].forEach(id => $(id).addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); }));
 $("in-rate").addEventListener("input", function(){ this.value = this.value.replace(/[^0-9.]/g,""); });
 
+// Self-serve cancellation. Anything bought online has to be cancellable
+// online — "reply to us and we'll do it" is not that. Opens Stripe's own
+// hosted portal via the portal-session function.
+//
+// Degrades honestly at every step: if the portal isn't configured, or the
+// person has a one-time report rather than a subscription, they are told
+// which — and given the email route — instead of being handed a button that
+// silently does nothing.
+async function openPortal(){
+  const btn = $("manage-sub"), msg = $("portal-msg");
+  const say = (html) => { msg.innerHTML = html; msg.style.display = "block"; };
+  if (!TOKEN) {
+    say('Open this page from the link in your confirmation email and the ' +
+        'button will work — it needs your private link to find your subscription. ' +
+        'Or write to <a href="mailto:support@shouldisellyet.com">support@shouldisellyet.com</a>.');
+    return false;
+  }
+  btn.disabled = true; btn.textContent = "Opening…";
+  try {
+    const r = await fetch(PORTAL_FN, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN })
+    });
+    const j = await r.json();
+    if (j && j.ok && j.url) { window.location.href = j.url; return false; }
+    say(j && j.reason === "no_customer"
+      ? "We don't see an active subscription on this account — a one-time report has nothing to cancel. " +
+        'Questions: <a href="mailto:support@shouldisellyet.com">support@shouldisellyet.com</a>.'
+      : 'We couldn\'t open the billing portal just now. Email ' +
+        '<a href="mailto:billing@shouldisellyet.com">billing@shouldisellyet.com</a> ' +
+        'and we\'ll cancel it for you — no charge after that.');
+  } catch (e) {
+    say('We couldn\'t reach the billing portal. Email ' +
+        '<a href="mailto:billing@shouldisellyet.com">billing@shouldisellyet.com</a> and we\'ll take care of it.');
+  }
+  btn.disabled = false; btn.textContent = "Manage or cancel subscription";
+  return false;
+}
 function adjustNums(){
   $("setup").scrollIntoView({behavior:"smooth"});
   $("in-val").focus();

@@ -1,4 +1,4 @@
-name: Rate watch (weekly — emails only on a big move)
+name: Weekly jobs (rate watch + pre-renewal reminders)
 
 on:
   schedule:
@@ -20,3 +20,18 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
         run: python3 pipeline/rate_watch.py
+
+      # Advance notice before an annual subscription renews. Weekly cadence is
+      # enough for a ~30-day window, and the job is idempotent PER PERIOD, so
+      # running it every Friday cannot re-send the same notice.
+      #
+      # continue-on-error: a billing courtesy must never fail the workflow that
+      # also carries the rate alert.
+      - name: Pre-renewal reminders
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+        run: python3 pipeline/renewal_reminders.py

@@ -66,6 +66,9 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
 .securenote{text-align:center;font-size:11.5px;color:var(--fainter);margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px}
 .back{font-size:13px;color:var(--faint);display:inline-block;margin-top:22px}
 .zipnote{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-bottom:2px}
+.renewnote{display:none;margin:18px 0 0;padding:12px 14px;border:1px solid var(--hairline);
+  border-radius:8px;background:#fbfaf6;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.renewnote b{color:var(--ink)}
 @media(max-width:720px){ .grid{grid-template-columns:1fr} h1{font-size:30px} }
 </style>
 </head>
@@ -116,9 +119,17 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
         <div class="pf-hint" id="pf-hint">Enter the ZIP and we'll fill in the city and state. We'll monitor this home's market and alert you the moment it shifts — and you won't be asked for the address again.</div>
       </div>
 
+      <!-- Auto-renewal disclosure, at the point of payment. It sits directly
+           above the pay button because that is the requirement: the renewal
+           terms have to be visible where the purchase decision is made, not
+           only in the Terms page. Rendered from prices.js and the selected
+           billing interval so it can never quote a price the checkout won't
+           charge. Hidden for the one-time report, which does not renew. -->
+      <div class="renewnote" id="renew-note"></div>
+
       <label class="consent">
         <input type="checkbox" id="tos">
-        <span>I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</span>
+        <span id="tos-label">I agree to the <a href="terms.html" target="_blank">Terms</a>. Cancel anytime — you won't be charged again.</span>
       </label>
       <button class="cta" id="cta" disabled onclick="go()">Continue to secure payment →</button>
       <div class="securenote">🔒 Payment is processed securely by Stripe. We never see your card details.</div>
@@ -237,12 +248,34 @@ const PRICE_HTML = {
     : PRICES.usd(PRICES.ANNUAL) + ' <small>/year · ' + PRICE_TEXT["annual-permo"] + ' · cancel anytime</small>',
   monthly: PRICES.usd(PRICES.MONTHLY) + ' <small>/month · billed monthly · cancel anytime</small>'
 };
+// Auto-renewal terms — the exact plan and price the customer is about to be
+// charged on, from prices.js. The report is one-time and gets nothing, because
+// telling someone a one-off purchase renews would be its own kind of wrong.
+function renderRenewalTerms(){
+  const el = document.getElementById("renew-note");
+  const lbl = document.getElementById("tos-label");
+  if (plan !== "monitor") { el.style.display = "none"; return; }
+  const amount = billing === "annual"
+    ? PRICES.usd(PRICES.ANNUAL) + "/year"
+    : PRICES.usd(PRICES.MONTHLY) + "/month";
+  const other = billing === "annual"
+    ? PRICES.usd(PRICES.MONTHLY) + "/month on the monthly plan"
+    : PRICES.usd(PRICES.ANNUAL) + "/year on the annual plan";
+  el.innerHTML =
+    "<b>This subscription renews automatically at " + amount + "</b> (or " + other +
+    ") until you cancel. Cancel anytime online — canceling stops future charges, " +
+    "and your access runs to the end of the period you've already paid for.";
+  el.style.display = "block";
+  lbl.innerHTML = 'I agree to the <a href="terms.html" target="_blank">Terms</a> ' +
+    'and to the automatic renewal terms above.';
+}
 function setBilling(b){
   billing = b;
   document.getElementById("bill-annual").classList.toggle("on", b === "annual");
   document.getElementById("bill-monthly").classList.toggle("on", b === "monthly");
   document.getElementById("price").innerHTML = PRICE_HTML[b];
   document.getElementById("upgrade-note").style.display = (upgrade && b === "annual") ? "block" : "none";
+  renderRenewalTerms();
 }
 document.getElementById("bill-annual").innerHTML =
   "Annual — " + PRICES.usd(upgrade ? PRICES.UPGRADE : PRICES.ANNUAL) + (upgrade ? " first yr" : "/yr") +
@@ -266,6 +299,7 @@ document.getElementById("pf-title").textContent = c.propTitle;
 if (zip) document.getElementById("zipnote").textContent = "FOR ZIP " + zip;
 if (plan === "report") document.getElementById("row4").style.display = "none";
 if (plan === "monitor") { document.getElementById("billing").style.display = "flex"; setBilling(billing); }
+renderRenewalTerms();
 document.getElementById("tos").addEventListener("change", function(){
   document.getElementById("cta").disabled = !this.checked;
 });
