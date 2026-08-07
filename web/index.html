@@ -238,6 +238,10 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .sources{padding:26px 56px 22px;border-top:1px solid var(--hairline)}
 .src-k{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
 .src-list{font-size:var(--fs-meta);color:var(--muted);line-height:1.6}
+/* GeoNames' licence asks for credit with "a link to www.geonames.org is ok".
+   Inherits the strip's muted colour so a required link stays a citation and
+   doesn't read as a call to action. */
+.src-list a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .src-note{font-size:.9375rem;color:var(--faint-ink);line-height:1.55;margin-top:6px;max-width:80ch}
 footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 .foot-row{display:flex;justify-content:space-between;font-size:var(--fs-meta);color:var(--muted);flex-wrap:wrap;gap:12px}
@@ -449,7 +453,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
      into the product today — see docs/ATTRIBUTION.md before editing. -->
 <section class="sources" aria-label="Data sources">
   <div class="src-k">Built on public data</div>
-  <div class="src-list">Redfin Data Center · Realtor.com® Economic Research · Federal Housing Finance Agency (FHFA) ZIP-level house price index · Freddie Mac Primary Mortgage Market Survey · Place names from Zippopotam.us, derived from GeoNames.org (CC BY 4.0)</div>
+  <div class="src-list">Redfin Data Center · Realtor.com® Economic Research · Federal Housing Finance Agency (FHFA) ZIP-level house price index · Freddie Mac Primary Mortgage Market Survey · Place names from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames.org</a> (CC BY 4.0), with live ZIP lookups via Zippopotam.us</div>
   <div class="src-note">We compute our verdicts from public market data. No source sponsors, endorses, or partners with this site.</div>
 </section>
 
