@@ -50,6 +50,14 @@ const TEAM = Deno.env.get("MATCH_TEAM_TO") ?? "ntrealty314@gmail.com";
 // To turn the archive back on, set MATCH_ARCHIVE_BCC to an address that can
 // actually RECEIVE — either create a real alerts@ mailbox in Titan (and clear
 // the Resend suppression first), or point it at an existing inbox.
+//
+// CURRENT (2026-08-07): set to hello@shouldisellyet.com, a real Titan mailbox.
+// Note this is read at module load, not per request, so changing the secret
+// needs a redeploy — a warm worker keeps the value it booted with, which is
+// exactly how a "fixed" setting can appear to do nothing.
+// Expect TWO archive copies per request: the BCC rides on both the agent
+// email and the customer confirmation, on purpose, so the record shows each
+// one actually sent rather than only that the request arrived.
 const ARCHIVE = Deno.env.get("MATCH_ARCHIVE_BCC") ?? "";
 const bcc = ARCHIVE.trim() ? { bcc: [ARCHIVE.trim()] } : {};
 
