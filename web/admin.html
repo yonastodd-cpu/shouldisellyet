@@ -15,7 +15,7 @@
 
      noindex + absent from the sitemap (that URL list is explicit). -->
 <meta name="robots" content="noindex,nofollow">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -45,16 +45,12 @@ button{font-family:inherit}
 #login .btn:disabled{opacity:.5;cursor:default}
 #login .msg{font-size:13px;line-height:1.5;margin-top:12px;color:var(--muted)}
 #login .msg.err{color:var(--red)}
-#login .lights{display:flex;gap:3px;margin-bottom:14px}
-#login .lights span{width:9px;height:9px;border-radius:50%}
 
 /* ——— app shell ——— */
 #app{display:none;min-height:100vh}
 #app.on{display:grid;grid-template-columns:200px 1fr}
 aside{border-right:1px solid var(--hairline);padding:18px 0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fbfaf6}
 .brand{display:flex;align-items:center;gap:8px;padding:0 16px 14px;border-bottom:1px solid var(--hairline2);margin-bottom:10px}
-.brand .lights{display:flex;gap:3px}
-.brand .lights span{width:8px;height:8px;border-radius:50%}
 .brand b{font-family:'Newsreader',serif;font-style:italic;font-weight:600;font-size:15px}
 nav.side a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13.5px;border-left:3px solid transparent}
 nav.side a.on{color:var(--ink);font-weight:600;border-left-color:var(--navy);background:#f4f2ec}
@@ -109,7 +105,7 @@ table.grid tr:hover td{background:#faf9f5}
 <!-- ——— Sign in ——— -->
 <div id="login">
   <div class="card">
-    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block;border-radius:8px;margin-bottom:14px">
     <h1>Operator sign-in</h1>
     <p>Enter the admin email. You'll get a sign-in link — or a 6-digit code if your email template includes one.</p>
     <div id="step-email">
@@ -128,7 +124,7 @@ table.grid tr:hover td{background:#faf9f5}
 <div id="app">
   <aside>
     <div class="brand">
-      <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+      <img src="/logo-mark.svg" alt="" width="26" height="26" style="display:block;border-radius:7px">
       <b>Operator</b>
     </div>
     <nav class="side" id="nav">
