@@ -285,10 +285,41 @@ async function sendLink() {
     options: { emailRedirectTo: location.origin + "/admin.html" },
   });
   $("li-send").disabled = false;
-  if (error) { msg(error.message, true); return false; }
+  if (error) {
+    // Reveal the code box even on a rate-limit failure. A code from an
+    // earlier email is still valid for an hour, and hiding the only field
+    // that can use it behind a successful send is how someone ends up
+    // locked out holding a working credential.
+    if (/rate limit/i.test(String(error.message || ""))) $("step-code").style.display = "block";
+    msg(authError(error), true);
+    return false;
+  }
   $("step-code").style.display = "block";
   msg("Sent. Click the link in the email, or paste the code here if your template shows one.");
   return false;
+}
+
+// Supabase's built-in email sender is throttled to a couple of messages an
+// hour — it is documented as a testing convenience, not a production sender,
+// and hitting it is expected during setup rather than a sign of breakage.
+// The raw string ("email rate limit exceeded") tells an operator nothing
+// about what to do, so translate the two errors that actually strand someone.
+function authError(error) {
+  const m = String(error.message || error);
+  if (/rate limit/i.test(m)) {
+    return "Supabase's built-in email sender is rate-limited to a couple of messages " +
+           "an hour — this is its testing limit, not a fault. Either wait an hour, or " +
+           "remove the limit for good by pointing Supabase Auth at Resend: " +
+           "Authentication → Emails → SMTP Settings (smtp.resend.com, port 465, " +
+           "username 'resend', password = your Resend API key, sender on the " +
+           "shouldisellyet.com domain). If you already have a code from an earlier " +
+           "email, paste it below — codes stay valid for an hour and don't need a new send.";
+  }
+  if (/expired|invalid/i.test(m) && /token|otp|code/i.test(m)) {
+    return "That code has expired or was already used. Request a new one — " +
+           "or if you're rate-limited, wait for the hour to roll over.";
+  }
+  return m;
 }
 
 async function verifyCode() {
@@ -298,7 +329,7 @@ async function verifyCode() {
   $("li-verify").disabled = true;
   const { error } = await sb.auth.verifyOtp({ email, token, type: "email" });
   $("li-verify").disabled = false;
-  if (error) { msg(error.message, true); return false; }
+  if (error) { msg(authError(error), true); return false; }
   return false; // onAuthStateChange takes it from here
 }
 
