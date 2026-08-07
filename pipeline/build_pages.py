@@ -349,6 +349,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <meta name="twitter:description" content="{esc(og_desc)}"><meta name="twitter:image" content="{og_img}">
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script type="application/ld+json">{ld}</script>
 </head><body>
 {NAVBAR}
