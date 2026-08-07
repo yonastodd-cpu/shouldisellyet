@@ -35,3 +35,13 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ALERT_FROM: ${{ secrets.ALERT_FROM }}
         run: python3 pipeline/renewal_reminders.py
+
+      # 90-day retention on raw analytics events (privacy posture: counts,
+      # not history). Weekly is exactly as compliant as nightly — nothing
+      # reads the boundary between runs.
+      - name: Purge analytics events older than 90 days
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/events_maintenance.py
