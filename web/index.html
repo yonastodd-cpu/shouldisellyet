@@ -429,7 +429,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
       <div class="price-note">Credited toward EquityWatch if you upgrade within 30 days</div>
       <div class="price-feats">Your home's full report: every signal gauge · your estimated equity · your walk-away number if you sold today · printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
-      <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
+      <a class="price-cta btn-outline" id="cta-price-report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
@@ -438,7 +438,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price-note"><span data-price="annual-permo">$2.42/mo, billed annually</span> · <span data-price="save-line">Save $18.88 vs monthly</span></div>
       <div class="price-note" style="margin-top:4px">Cancel anytime · <span data-price="monthly-line">or $3.99/mo billed monthly</span></div>
       <div class="price-feats">Everything in the one-time report, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
-      <a class="price-cta btn" href="#" onclick="return buyMonitor(true)">Full Report + Notifications</a>
+      <a class="price-cta btn" id="cta-price-monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
     </div>
   </div>
   <div class="band-note sm">Your information is never sold. If you ever want to talk to an agent, we'll make an introduction only when you ask.</div>
@@ -720,8 +720,11 @@ async function run() {
     // The ZIP and state now lead the block, so the stamp carries only the
     // data vintage and the required Redfin attribution.
     $("v-stamp").innerHTML = META ? "Data through " + META.period + " · " + citeHTML(META.attribution) : "";
-    $("cta-report").href = "subscribe.html?plan=report&zip=" + zip;
-    $("cta-monitor").href = "subscribe.html?plan=monitor&zip=" + zip;   // monthly is subscribe.html's default
+    // Every paid CTA on the page carries the ZIP once we know it — the two in
+    // the verdict card and the two down in the pricing table. Each one ships a
+    // working plain href in the markup; this only adds the ZIP, so a JS failure
+    // costs the prefill, never the link.
+    setPlanLinks(zip);
     resetShare();    lastVerdict = { zip, st: d.st || "", tag: k.tag, level: d.l, city: cachedCity(zip) };
     show($("verdict"), true);
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -729,16 +732,21 @@ async function run() {
 }
 
 // ————— Purchase → plan-details page (describes plan + collects TOS consent), then Stripe —————
-function buyMonitor(fromPricing) {
-  const zip = ($("zip").value || "").replace(/\D/g, "").slice(0, 5);
-  // "Start monitoring" from pricing without a verdict open → check a ZIP first
-  if (fromPricing === true && $("verdict").classList.contains("hidden")) {
-    document.getElementById("check").scrollIntoView({ behavior: "smooth" });
-    $("zip").focus();
-    return false;
-  }
-  window.location.href = "subscribe.html?plan=monitor" + (zip ? "&zip=" + zip : "");
-  return false;
+// Point all four paid CTAs at subscribe.html, appending ?zip= when we have one.
+//
+// The pricing-table monitor button used to run a handler that, with no verdict
+// on screen, scrolled back to the ZIP box instead of navigating — so the most
+// valuable CTA on the page looked broken to anyone who scrolled straight to
+// pricing. It doesn't need to guard: subscribe.html treats ?zip= as optional
+// and collects the address itself, validating coverage there.
+function setPlanLinks(zip) {
+  const q = zip ? "&zip=" + zip : "";
+  [["cta-report", "report"], ["cta-price-report", "report"],
+   ["cta-monitor", "monitor"], ["cta-price-monitor", "monitor"]]
+    .forEach(([id, plan]) => {
+      const a = document.getElementById(id);         // monthly is subscribe.html's default
+      if (a) a.href = "subscribe.html?plan=" + plan + q;
+    });
 }
 
 // Pairs with the commented-out #mform markup above — kept wired, but a no-op
