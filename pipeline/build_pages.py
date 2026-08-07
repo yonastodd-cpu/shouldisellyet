@@ -228,6 +228,15 @@ NAVBAR = """<nav class="top">
 CITE = ('Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, '
         'a national real estate brokerage')
 
+# City names come from the GeoNames US postal export (CC BY 4.0), which asks
+# for credit and accepts a link to www.geonames.org. Any one city name is a
+# bare fact, but across ~18.6k ZIP pages and 51 state hubs we reproduce a
+# substantial part of the compilation — which is the thing the licence covers.
+# So it is credited on the pages that actually print a city name, and NOT on
+# the markets index, which lists states only. See docs/ATTRIBUTION.md.
+PLACES_CITE = ('Place names from <a href="https://www.geonames.org" target="_blank" '
+               'rel="noopener">GeoNames</a> (CC BY 4.0)')
+
 FOOTER = """<footer>
   <a href="/">Home</a> · <a href="/zip/">Browse markets by state</a> · <a href="/press.html">Press</a> ·
   <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
@@ -360,7 +369,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     {rows}
     <ul class="facts">{facts_html}</ul>
   </div>
-  <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE}</div>
+  <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE} · {PLACES_CITE}</div>
 </div>
 <div class="ctas">
   <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-text="{esc(share_text)}">Share this checkup</button>
@@ -523,7 +532,7 @@ def state_hub(st, entries, meta):
 <h1>{esc(name)} housing markets</h1>
 <p class="method">A free HOLD / WATCH / ACT verdict for each of the {len(entries)} {esc(name)} ZIP codes with enough reported sales to score. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
 {''.join(body)}
-{FOOTER.format(cite=CITE + ". ")}
+{FOOTER.format(cite=CITE + ". " + PLACES_CITE + ". ")}
 </div></body></html>"""
 
 
