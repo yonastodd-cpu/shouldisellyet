@@ -10,8 +10,14 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 //
 // Stripe events handled:
-//   checkout.session.completed     → upsert subscriber as active (+ access email)
-//   customer.subscription.deleted  → mark subscriber canceled
+//   checkout.session.completed        → upsert subscriber as active (+ access email)
+//   customer.subscription.created     → store renewal date + billing interval
+//   customer.subscription.updated     → same, so a plan change stays accurate
+//   customer.subscription.deleted     → mark subscriber canceled
+//
+// The two subscription events must be enabled on the Stripe webhook endpoint,
+// or current_period_end is never recorded and the renewal reminder has nothing
+// to read.
 //
 // Requires schema-v6 (address_* columns) and schema-v7 (stripe_session_id,
 // report_email_sent_at). Deploy the SQL BEFORE this function: without
@@ -145,7 +151,7 @@ function welcomeMonitorEmail(zip: string, token: string) {
   <p style="font-size:16px;line-height:1.6">Your full EquityWatch property report is included. Open your private report page below, enter your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access to the report and it works only for you.</p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">Cancel anytime — just reply "cancel" or use the link in any Stripe billing email. Not financial advice.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">Renews automatically until you cancel. <b>Cancel anytime yourself</b> — open your report above and use "Manage or cancel subscription", or use the link in any Stripe billing email. Canceling stops future charges; your access runs to the end of the period you've paid for. Not financial advice.</p>
 </div>`,
   };
 }
@@ -327,6 +333,49 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
   console.log("subscription deleted; no email on event — cancel manually if needed:", sub.id);
 }
 
+
+/** Store the renewal date and billing interval from the subscription payload.
+ *
+ *  Read off customer.subscription.created / .updated rather than fetched from
+ *  the Stripe API on purpose: those events already carry current_period_end,
+ *  so the renewal reminder stays accurate WITHOUT this function needing a
+ *  Stripe secret key. The key it holds is a placeholder used only for
+ *  signature verification.
+ *
+ *  Matched by stripe_customer_id first and email second. The customer id is
+ *  stable; an email can change, and a subscription event carries no email at
+ *  all unless expanded — so the id is the reliable key and the email lookup is
+ *  only a fallback for rows written before the id was recorded.
+ */
+async function handleSubscriptionUpserted(sub: Stripe.Subscription) {
+  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
+  const interval = sub.items?.data?.[0]?.price?.recurring?.interval;   // "year" | "month"
+  const patch: Record<string, unknown> = {
+    stripe_subscription_id: sub.id,
+    ...(periodEnd ? { current_period_end: new Date(periodEnd * 1000).toISOString() } : {}),
+    ...(interval ? { billing_interval: interval === "year" ? "annual" : "monthly" } : {}),
+  };
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+  if (customerId) {
+    patch.stripe_customer_id = customerId;
+    const byId = await rows(await sb(
+      `subscribers?stripe_customer_id=eq.${enc(customerId)}`,
+      { method: "PATCH", body: JSON.stringify(patch) }));
+    if (byId.length) {
+      console.log(`subscription ${sub.id}: period end + interval stored (by customer id)`);
+      return;
+    }
+  }
+  const email = (sub as unknown as { customer_email?: string }).customer_email;
+  if (!email) {
+    console.log(`subscription ${sub.id}: no customer row matched and no email on the event`);
+    return;
+  }
+  await sb(`subscribers?email=eq.${enc(email)}&plan=eq.monitor`,
+           { method: "PATCH", body: JSON.stringify(patch) });
+  console.log(`subscription ${sub.id}: period end + interval stored (by email)`);
+}
+
 // ————— HTTP entry —————
 
 Deno.serve(async (req) => {
@@ -345,6 +394,10 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await handleSubscriptionUpserted(event.data.object as Stripe.Subscription);
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
