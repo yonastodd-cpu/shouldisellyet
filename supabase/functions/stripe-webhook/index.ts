@@ -37,6 +37,17 @@ const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
 const SITE = "https://shouldisellyet.com";
 
+// ————— Postal address (CAN-SPAM) —————
+// Any message carrying promotional content must show a valid physical mailing
+// address. Exactly one of ours does: the report-access email's upsell block.
+//
+// ⚠️ PLACEHOLDER. Set MAILING_ADDRESS in the Edge Function secrets to a real
+// registered-agent address or PO box. Until it is set, the upsell block is
+// SUPPRESSED rather than sent without an address — shipping promotional mail
+// with a fake address is the violation itself, and a missing upsell costs a
+// conversion while a bad address costs a penalty.
+const MAILING_ADDRESS = Deno.env.get("MAILING_ADDRESS") ?? "";
+
 // ————— Prices —————
 // An edge function can't import web/prices.js (different runtime, not served
 // from this origin), so these are a deliberate mirror, not a second source of
@@ -121,6 +132,10 @@ function reportLink(zip: string, token: string, utm = "") {
   return `${SITE}/my-report.html?token=${token}&zip=${zip}${u}`;
 }
 
+function unsubscribeLink(token: string) {
+  return `${SUPABASE_URL}/functions/v1/unsubscribe?token=${token}`;
+}
+
 function upgradeLink(zip: string, utm = "") {
   const z = /^\d{5}$/.test(zip) ? `&zip=${zip}` : "";
   const u = utm ? `&utm_source=${utm}` : "";
@@ -161,7 +176,8 @@ function welcomeMonitorEmail(zip: string, token: string) {
 // No market figures appear in it, so there is no Redfin citation — the
 // attribution rule attaches to displayed data, and adding it here would be
 // noise on a page that shows none. See docs/ATTRIBUTION.md.
-function welcomeReportEmail(zip: string, token: string, city: string, purchasedAt: string | null) {
+function welcomeReportEmail(zip: string, token: string, city: string,
+                           purchasedAt: string | null, optedOut = false) {
   const link = reportLink(zip, token, "report_email");
   const upgrade = upgradeLink(zip, "report_email");
   const days = daysRemaining(purchasedAt);
@@ -174,6 +190,11 @@ function welcomeReportEmail(zip: string, token: string, city: string, purchasedA
   // in a retry queue for a month, or a hand-replayed event — the credit is
   // gone and promising it would be a lie the checkout would then refuse to
   // honour. That case gets the plain annual pitch instead.
+  // The upsell is the ONLY promotional content this system sends. It is
+  // dropped entirely when the reader has opted out, or when no mailing address
+  // is configured — see MAILING_ADDRESS. Everything else in this email is the
+  // report they paid for, and still sends either way.
+  const promo = !optedOut && MAILING_ADDRESS.trim() !== "";
   const offer = days > 0
     ? `<p style="font-size:16px;line-height:1.6">Because you bought this report, your <b>${usd(PRICES.REPORT)} counts toward the annual plan</b>: upgrade in the next ${days} day${days === 1 ? "" : "s"} for <b>${usd(PRICES.UPGRADE)}</b> (normally ${usd(PRICES.ANNUAL)}/yr).</p>`
     : `<p style="font-size:16px;line-height:1.6">EquityWatch is <b>${usd(PRICES.ANNUAL)}/yr</b> — ${usd(PRICES.ANNUAL / 12)}/mo, billed annually — or ${usd(PRICES.MONTHLY)}/mo billed monthly. Cancel anytime.</p>`;
@@ -186,19 +207,22 @@ function welcomeReportEmail(zip: string, token: string, city: string, purchasedA
   <p style="font-size:16px;line-height:1.6">Your report is ready — here's your link, good on any device:</p>
   <p style="margin:22px 0"><a href="${link}" style="${btn}">View my report →</a></p>
   <p style="font-size:16px;line-height:1.6">It covers ${place}: the four market signals, your home's value trend, and — if you've added your numbers — your equity, walk-away number, and what today's rates mean for you.</p>
+  ${promo ? `
   <p style="font-size:16px;line-height:1.6">One thing a report can't do is watch. Markets turn quietly — inventory creeps up, price cuts spread — and the whole point is hearing it early. <b>EquityWatch</b> monitors ${zip} continuously and emails you the moment the verdict changes, plus a refreshed report monthly.</p>
   ${offer}
-  <p style="margin:22px 0"><a href="${upgrade}" style="${btn}">Turn on instant notifications →</a></p>
+  <p style="margin:22px 0"><a href="${upgrade}" style="${btn}">Turn on instant notifications →</a></p>` : ""}
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark your report link</b> — it's your private access and it works only for you.</p>
   <p style="font-size:16px;line-height:1.6">Questions? Just reply.<br>— ShouldISellYet.com</p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">General market information, not financial, legal, or real-estate advice, and not an appraisal of your home. All sales final per our <a href="${SITE}/refunds.html" style="color:#98a2b3">refund policy</a>.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:18px">General market information, not financial, legal, or real-estate advice, and not an appraisal of your home. All sales final per our <a href="${SITE}/refunds.html" style="color:#98a2b3">refund policy</a>.</p>${promo ? `
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5;margin-top:14px">${esc(MAILING_ADDRESS)}<br>
+  Don't want upgrade offers? <a href="${unsubscribeLink(token)}" style="color:#98a2b3">Unsubscribe from promotional email</a>. You'll still get your report link, your ZIP's alerts, and any billing notices.</p>` : ""}
 </div>`,
   };
 }
 
 // ————— Event handling —————
 
-const ROW_COLS = "id,zip,access_token,address_city,created_at,report_email_sent_at";
+const ROW_COLS = "id,zip,access_token,address_city,created_at,report_email_sent_at,marketing_opt_out";
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const email = session.customer_details?.email ?? "";
@@ -306,7 +330,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     ? welcomeMonitorEmail(rowZip || "your ZIP", token)
     : welcomeReportEmail(rowZip || "your ZIP", token,
                          String(row.address_city ?? ""),
-                         (row.created_at as string) ?? null);
+                         (row.created_at as string) ?? null,
+                         row.marketing_opt_out === true);
 
   if (await sendEmail(email, mail.subject, mail.html)) {
     console.log(`activated ${email} (${plan}, ${rowZip})`);
