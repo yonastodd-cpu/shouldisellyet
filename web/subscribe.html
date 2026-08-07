@@ -11,7 +11,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="/track.js" defer></script>
 <script src="address.js"></script>
@@ -73,19 +73,27 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
   border-radius:8px;background:#fbfaf6;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .renewnote b{color:var(--ink)}
 @media(max-width:720px){ .grid{grid-template-columns:1fr} h1{font-size:30px} }
+
+/* Brand lockup — same construction as the homepage, one step down for the
+   narrower inner-page nav. Mark height tracks the two-line stack. */
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.logo-word{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:17px;
+           letter-spacing:-.022em;line-height:1;color:var(--ink)}
+.logo-tag{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:7.75px;
+          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+@media (max-width:400px){ .logo-tag{display:none} }
 </style>
 </head>
 <body>
 <nav>
   <a class="logo" href="index.html" style="text-decoration:none">
-    <img src="/logo-mark-chip.svg" alt="" width="26" height="26" style="display:block">
-    <span class="serif" style="font-style:italic;font-weight:600;font-size:18px;color:var(--ink)">Should I sell yet?</span>
+    <img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span>
   </a>
   <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">CHECKOUT</span>
 </nav>
 
 <div class="wrap">
-  <div class="eyebrow" id="eyebrow">EQUITYWATCH ALERTS</div>
+  <div class="eyebrow" id="eyebrow">MYMARKETCHECKUP ALERTS</div>
   <h1 id="headline">Set up your alert</h1>
   <p class="sub" id="subhead">Here's exactly what you're getting before you pay. Cancel anytime — no phone call, no runaround.</p>
 
@@ -186,7 +194,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const COPY = {
   monitor: {
-    eyebrow: "EQUITYWATCH — FULL REPORT & NOTIFICATIONS",
+    eyebrow: "MYMARKETCHECKUP — FULL REPORT & NOTIFICATIONS",
     headline: "Full report & notifications",
     planname: "MyMarketCheckup — full report & notifications",
     // Monitor renders its price through setBilling() below; this is the
@@ -202,7 +210,7 @@ const COPY = {
     ]
   },
   report: {
-    eyebrow: "EQUITYWATCH REPORT",
+    eyebrow: "MYMARKETCHECKUP REPORT",
     headline: "Get your home's report",
     planname: "MyMarketCheckup property report",
     price: PRICES.usd(PRICES.REPORT) + ' <small>one-time · credited toward annual MyMarketCheckup within 30 days</small>',
