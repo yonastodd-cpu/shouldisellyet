@@ -165,7 +165,6 @@ a{color:var(--navy)}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px 56px}
 nav.top{display:flex;align-items:center;justify-content:space-between;max-width:820px;margin:0 auto;padding:16px 20px;border-bottom:1px solid var(--hairline);flex-wrap:wrap;gap:10px}
 .logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink)}
-.lights{display:flex;gap:3px}.lights span{width:8px;height:8px;border-radius:50%}
 .brand{font-family:Georgia,'Newsreader',serif;font-style:italic;font-weight:600;font-size:17px}
 .crumb{font-size:.8125rem;color:var(--muted);padding:14px 0 0}
 /* Arrival banner for shared links — slim, dismissible, no modal, no gate. */
@@ -217,7 +216,7 @@ footer a{color:var(--faint-ink)}
 """
 
 NAVBAR = """<nav class="top">
-  <a class="logo" href="/"><span class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></span><span class="brand">Should I sell yet?</span></a>
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="26" height="26" style="display:block;border-radius:7px"><span class="brand">Should I sell yet?</span></a>
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 
@@ -349,7 +348,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(og_title)}">
 <meta name="twitter:description" content="{esc(og_desc)}"><meta name="twitter:image" content="{og_img}">
 <link rel="stylesheet" href="/zip/zip.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="icon" href="/favicon.svg">
 <script type="application/ld+json">{ld}</script>
 </head><body>
 {NAVBAR}

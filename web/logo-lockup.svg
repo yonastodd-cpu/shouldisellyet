@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 64">
+<rect x="2" y="2" width="60" height="60" rx="16" fill="#141a14"></rect>
+<path d="M32 14 C24 14 19.5 20 19.5 27.7 L19.5 35.5 L15.5 41.5 L48.5 41.5 L44.5 35.5 L44.5 27.7 C44.5 20 40 14 32 14 Z" fill="#f2f1ec"></path>
+<path d="M27 44.6 a5 5 0 0 0 10 0 Z" fill="#f2f1ec"></path>
+<circle cx="44.5" cy="17.5" r="6.3" fill="#d99a2b"></circle>
+<text x="80" y="41" font-family="Archivo, Helvetica, sans-serif" font-weight="700" font-size="30" letter-spacing="-0.6" fill="#141a14">should i sell yet<tspan fill="#b5591e">?</tspan></text>
+</svg>
