@@ -34,6 +34,14 @@ US.txt is tab-delimited, no header, 12 fields. We keep four:
     2 → zip    3 → city    5 → state (2-letter)    6 → county
 Where a ZIP appears more than once, the FIRST row wins — the output is one
 primary place per ZIP, which is what the consumers expect.
+
+CENTROIDS (--centroids PATH)
+----------------------------
+Optionally also writes {zip: [lat, lng]} from fields 10/11, for the admin
+map. Two decimal places (~1.1 km) on purpose: the map plots ZIP-level
+aggregates, and coarser coordinates keep the file under a megabyte while
+making the data useless for anything street-level — which matches the rule
+that the map never carries more precision than a ZIP centroid.
 """
 
 import argparse
@@ -71,8 +79,12 @@ def download(url: str) -> bytes:
         return r.read()
 
 
-def parse(blob: bytes) -> dict:
-    """→ {zip: (city, state, county)}, military codes dropped."""
+def parse(blob: bytes, centroids: dict | None = None) -> dict:
+    """→ {zip: (city, state, county)}, military codes dropped.
+
+    When a dict is passed as `centroids`, it is filled with {zip: [lat, lng]}
+    (2 dp) for the same kept rows — same filter, same first-row-wins rule, so
+    the two outputs can never disagree about which ZIPs exist."""
     # A truncated download or an error page served with a 200 both arrive here
     # as bytes. Say which, rather than surfacing a zipfile traceback.
     try:
@@ -99,6 +111,11 @@ def parse(blob: bytes) -> dict:
             dupes += 1
             continue
         places[zc] = (city, state, county)
+        if centroids is not None and len(f) >= 11:
+            try:
+                centroids[zc] = [round(float(f[9]), 2), round(float(f[10]), 2)]
+            except ValueError:
+                pass                       # a ZIP with no coordinates just isn't mapped
     print(f"  parsed {len(places):,} ZIPs  "
           f"({dropped:,} military codes dropped, {dupes:,} duplicate rows collapsed)")
     return places
@@ -162,15 +179,27 @@ def main() -> int:
     ap.add_argument("--force", action="store_true",
                     help="write even when ZIPs would be removed")
     ap.add_argument("--input", help="a local US.zip instead of downloading")
+    ap.add_argument("--centroids", metavar="PATH",
+                    help="also write {zip:[lat,lng]} JSON here (admin map)")
     args = ap.parse_args()
 
     print(f"GeoNames US postal codes — {SOURCE_URL}")
     blob = Path(args.input).read_bytes() if args.input else download(SOURCE_URL)
     print(f"  {len(blob):,} bytes")
-    new = parse(blob)
+    cent: dict | None = {} if args.centroids else None
+    new = parse(blob, centroids=cent)
     if not new:
         print("  ! parsed zero rows — refusing to touch the committed file")
         return 2
+
+    # Written before the drift gate below: an identical place file is the
+    # COMMON case for a centroids run, and "nothing to do" must not skip the
+    # file that was explicitly asked for. --check still writes nothing.
+    if cent is not None and not args.check:
+        import json
+        out = Path(args.centroids)
+        out.write_text(json.dumps(cent, separators=(",", ":")), encoding="utf-8")
+        print(f"  wrote {out} — {len(cent):,} centroids")
 
     old = read_existing(OUT)
     added, removed, changed = diff(old, new)
