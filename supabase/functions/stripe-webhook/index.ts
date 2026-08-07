@@ -235,6 +235,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const zip = /^\d{5}$/.test(refZip) ? refZip : (addr?.postal_code ?? "").slice(0, 5);
   const plan = session.mode === "subscription" ? "monitor" : "report";
 
+  // The customer id has to be captured HERE. handleSubscriptionUpserted also
+  // writes it, but it finds its row BY that same column — so on a first
+  // subscription there is nothing to match and it never gets written at all.
+  // That chicken-and-egg left every subscriber with a null stripe_customer_id,
+  // which is the only thing portal-session looks up: the "manage or cancel"
+  // button answered "we don't see an active subscription" for everyone, and
+  // self-serve cancellation silently did not exist. The checkout session
+  // carries the id outright, so taking it here breaks the cycle.
+  //
+  // Subscription mode only. Stripe mints a customer for one-time payments too,
+  // and storing it would send report buyers into a billing portal with nothing
+  // in it, replacing an honest "a one-time report has nothing to cancel" with
+  // a confusing empty page.
+  const customerId = typeof session.customer === "string"
+    ? session.customer
+    : session.customer?.id;
+  const subCustomer = session.mode === "subscription" && customerId
+    ? { stripe_customer_id: customerId }
+    : {};
+
   // ——— 1. Is this delivery a retry of a purchase we already handled? ———
   // Stripe retries until it gets a 2xx and can deliver the same event twice
   // regardless. Keyed on the session id, a retry is recognisable; keyed on
@@ -264,6 +284,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         body: JSON.stringify({
           status: "active", plan, source: "stripe",
           access_token: token, stripe_session_id: session.id,
+          ...subCustomer,
           ...(zip ? { zip } : {}),
         }),
       })))[0];
@@ -286,6 +307,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           address_state: addr?.state ?? null,
           plan, status: "active", source: "stripe",
           access_token: token, stripe_session_id: session.id,
+          ...subCustomer,
         }),
       })))[0];
 
@@ -371,8 +393,17 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
  *  stable; an email can change, and a subscription event carries no email at
  *  all unless expanded — so the id is the reliable key and the email lookup is
  *  only a fallback for rows written before the id was recorded.
+ *
+ *  Returns false when no row could be matched. Stripe usually delivers
+ *  customer.subscription.created BEFORE checkout.session.completed, so on a
+ *  first subscription this genuinely can arrive before the row it belongs to
+ *  exists. Swallowing that loses current_period_end until the NEXT
+ *  subscription event — a full year away on an annual plan — which silently
+ *  disables the renewal reminder for exactly the customers it protects. The
+ *  caller turns false into a non-2xx so Stripe redelivers it, by which time
+ *  the checkout handler has written the row.
  */
-async function handleSubscriptionUpserted(sub: Stripe.Subscription) {
+async function handleSubscriptionUpserted(sub: Stripe.Subscription): Promise<boolean> {
   const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
   const interval = sub.items?.data?.[0]?.price?.recurring?.interval;   // "year" | "month"
   const patch: Record<string, unknown> = {
@@ -388,17 +419,22 @@ async function handleSubscriptionUpserted(sub: Stripe.Subscription) {
       { method: "PATCH", body: JSON.stringify(patch) }));
     if (byId.length) {
       console.log(`subscription ${sub.id}: period end + interval stored (by customer id)`);
-      return;
+      return true;
     }
   }
   const email = (sub as unknown as { customer_email?: string }).customer_email;
   if (!email) {
     console.log(`subscription ${sub.id}: no customer row matched and no email on the event`);
-    return;
+    return false;
   }
-  await sb(`subscribers?email=eq.${enc(email)}&plan=eq.monitor`,
-           { method: "PATCH", body: JSON.stringify(patch) });
+  const byEmail = await rows(await sb(`subscribers?email=eq.${enc(email)}&plan=eq.monitor`,
+                                      { method: "PATCH", body: JSON.stringify(patch) }));
+  if (!byEmail.length) {
+    console.log(`subscription ${sub.id}: email ${email} matched no monitor row`);
+    return false;
+  }
   console.log(`subscription ${sub.id}: period end + interval stored (by email)`);
+  return true;
 }
 
 // ————— HTTP entry —————
@@ -415,6 +451,11 @@ Deno.serve(async (req) => {
     return new Response("bad signature", { status: 400 });
   }
 
+  // Set when a handler could not find the row its event belongs to — see
+  // handleSubscriptionUpserted. The only case we deliberately ask Stripe to
+  // redeliver, because waiting is the actual fix.
+  let retryLater = false;
+
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -422,7 +463,7 @@ Deno.serve(async (req) => {
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":
-        await handleSubscriptionUpserted(event.data.object as Stripe.Subscription);
+        retryLater = !await handleSubscriptionUpserted(event.data.object as Stripe.Subscription);
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
@@ -435,6 +476,21 @@ Deno.serve(async (req) => {
     console.error("handler error:", e);
     // Still 200: we log and fix rather than trigger endless Stripe retries.
   }
+
+  // The one deliberate exception to the 200-always rule. A subscription event
+  // that arrived before its checkout row is not an error we can fix by logging
+  // — the data simply is not there yet, and Stripe's backoff redelivery is the
+  // right and only repair. Bounded by Stripe itself: it retries for ~3 days
+  // and then stops, so a subscription created outside this flow (straight from
+  // the dashboard, say) costs a few logged retries rather than a lost renewal
+  // date on a real customer.
+  if (retryLater) {
+    return new Response(JSON.stringify({ received: false, reason: "row not ready" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   return new Response(JSON.stringify({ received: true }), {
     headers: { "Content-Type": "application/json" },
   });

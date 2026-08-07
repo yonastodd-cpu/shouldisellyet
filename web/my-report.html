@@ -724,7 +724,15 @@ details.how .how-body b{color:#3a4450}
               <option value="watching">Just watching</option>
             </select>
           </div>
-          <div class="f"><label>ANYTHING THEY SHOULD KNOW? (OPTIONAL)</label><input id="cm-note"></div>
+          <!-- The example models the useful kind of answer: a real constraint
+               the timeline dropdown cannot express. Left as a placeholder, not
+               a value, so an untouched field submits empty instead of sending
+               the agent our words as the customer's. maxlength matches the
+               1000-char cap match-request enforces, so the truncation is
+               visible here rather than silent on the server. -->
+          <div class="f"><label>ANYTHING THEY SHOULD KNOW? (OPTIONAL)</label>
+            <input id="cm-note" maxlength="1000"
+                   placeholder="e.g. Relocating in June — should I list before then?"></div>
         </div>
         <p class="sub" id="cm-disclosure" style="margin:4px 0 14px">Requesting an introduction shares your name and contact details with one carefully chosen local agent — that's the whole point, and it's all we share. Free, no obligation, and we never sell your info.</p>
         <div class="err" id="cm-err"></div>
