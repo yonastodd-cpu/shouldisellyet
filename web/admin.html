@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operator — ShouldISellYet</title>
+<!-- Private operator dashboard. This file is served by GitHub Pages, so the
+     HTML itself is public — that is fine and unavoidable on a static host.
+     The boundary is the data layer: every read goes through a
+     security-definer RPC that checks the signed-in email against
+     admin_emails (schema-v12.sql). Without an allowlisted session the anon
+     key gets "permission denied" / "forbidden" on everything this page asks
+     for, which was verified live before shipping. Knowing the URL is worth
+     nothing.
+
+     noindex + absent from the sitemap (that URL list is explicit). -->
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='30' y='6' width='40' height='88' rx='12' fill='%231c2430'/><circle cx='50' cy='26' r='11' fill='%23d64545'/><circle cx='50' cy='50' r='11' fill='%23c8891f'/><circle cx='50' cy='74' r='11' fill='%232e9e5b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/prices.js"></script>
+<style>
+:root{
+  --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
+  --hairline:#e7e2d8;--hairline2:#f0ebe0;--navy:#1f3a5f;--navy-dark:#172d4b;--gold:#8a7a55;
+  --green:#2e9e5b;--amber:#c8891f;--red:#d64545;--green-soft:#e9f4ee;--green-line:#bcdcc9;
+  --amber-soft:#faf1dd;--red-soft:#fbe9e9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;font-size:14.5px}
+a{color:var(--navy)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:'Newsreader',serif}
+button{font-family:inherit}
+
+/* ——— login ——— */
+#login{display:grid;place-content:center;min-height:100vh;padding:24px}
+#login .card{width:min(400px,92vw);background:#fff;border:1px solid var(--hairline);border-radius:14px;padding:30px 32px}
+#login h1{font-family:'Newsreader',serif;font-weight:500;font-size:26px;margin:0 0 6px}
+#login p{color:var(--muted);line-height:1.6;margin:0 0 16px;font-size:14px}
+#login input{width:100%;font-size:16px;padding:12px 14px;border:1.5px solid #d7d0c2;border-radius:8px;margin-bottom:10px;font-family:inherit}
+#login .btn{width:100%;background:var(--navy);color:#faf8f4;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:600;cursor:pointer}
+#login .btn:hover{background:var(--navy-dark)}
+#login .btn:disabled{opacity:.5;cursor:default}
+#login .msg{font-size:13px;line-height:1.5;margin-top:12px;color:var(--muted)}
+#login .msg.err{color:var(--red)}
+#login .lights{display:flex;gap:3px;margin-bottom:14px}
+#login .lights span{width:9px;height:9px;border-radius:50%}
+
+/* ——— app shell ——— */
+#app{display:none;min-height:100vh}
+#app.on{display:grid;grid-template-columns:200px 1fr}
+aside{border-right:1px solid var(--hairline);padding:18px 0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fbfaf6}
+.brand{display:flex;align-items:center;gap:8px;padding:0 16px 14px;border-bottom:1px solid var(--hairline2);margin-bottom:10px}
+.brand .lights{display:flex;gap:3px}
+.brand .lights span{width:8px;height:8px;border-radius:50%}
+.brand b{font-family:'Newsreader',serif;font-style:italic;font-weight:600;font-size:15px}
+nav.side a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13.5px;border-left:3px solid transparent}
+nav.side a.on{color:var(--ink);font-weight:600;border-left-color:var(--navy);background:#f4f2ec}
+nav.side a:hover{color:var(--ink)}
+.side-foot{padding:14px 16px;font-size:11.5px;color:var(--fainter);line-height:1.5}
+.side-foot a{color:var(--faint)}
+main{padding:22px 26px 60px;min-width:0}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+header.top h1{font-family:'Newsreader',serif;font-weight:500;font-size:24px;margin:0}
+.range{display:flex;border:1px solid var(--hairline);border-radius:8px;overflow:hidden}
+.range button{border:none;background:#fff;padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--muted)}
+.range button.on{background:var(--navy);color:#fff}
+
+section{display:none}
+section.on{display:block}
+.placeholder{border:1px dashed var(--hairline);border-radius:12px;padding:34px;text-align:center;color:var(--fainter);font-size:13.5px}
+
+/* shared bits the section tasks use */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--hairline);border-radius:12px;padding:14px 16px}
+.stat .k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--gold);margin-bottom:6px;text-transform:uppercase}
+.stat .v{font-family:'Newsreader',serif;font-size:26px;font-weight:500;line-height:1}
+.stat .s{font-size:11px;color:var(--fainter);margin-top:5px}
+.panel{background:#fff;border:1px solid var(--hairline);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.panel h2{font-family:'Newsreader',serif;font-size:17px;font-weight:600;margin:0 0 12px}
+.panel .note{font-size:11.5px;color:var(--fainter);margin-top:10px;line-height:1.5}
+table.grid{width:100%;border-collapse:collapse;font-size:13px}
+table.grid th{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--faint);text-align:left;padding:7px 8px;border-bottom:1px solid var(--hairline);text-transform:uppercase}
+table.grid td{padding:8px;border-bottom:1px solid var(--hairline2);vertical-align:top}
+table.grid tr:hover td{background:#faf9f5}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:20px;border:1px solid var(--hairline)}
+.tag.green{background:var(--green-soft);border-color:var(--green-line);color:#1e6b3f}
+.tag.amber{background:var(--amber-soft);border-color:#e8d5a8;color:#8a6414}
+.tag.red{background:var(--red-soft);border-color:#ecc3c3;color:#a33}
+.err-note{background:var(--red-soft);border:1px solid #ecc3c3;border-radius:10px;padding:12px 16px;font-size:13px;color:#a33;margin-bottom:14px;display:none}
+
+@media(max-width:760px){
+  #app.on{grid-template-columns:1fr}
+  aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--hairline);padding:10px 0}
+  nav.side{display:flex;overflow-x:auto;white-space:nowrap}
+  nav.side a{border-left:none;border-bottom:3px solid transparent;padding:8px 12px}
+  nav.side a.on{border-bottom-color:var(--navy);background:none}
+  .brand{border-bottom:none;margin-bottom:2px}
+  .side-foot{display:none}
+  main{padding:16px 14px 50px}
+}
+</style>
+</head>
+<body>
+
+<!-- ——— Sign in ——— -->
+<div id="login">
+  <div class="card">
+    <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+    <h1>Operator sign-in</h1>
+    <p>Enter the admin email. You'll get a sign-in link — or a 6-digit code if your email template includes one.</p>
+    <div id="step-email">
+      <input id="li-email" type="email" placeholder="you@shouldisellyet.com" autocomplete="email">
+      <button class="btn" id="li-send" onclick="return sendLink()">Send sign-in link</button>
+    </div>
+    <div id="step-code" style="display:none">
+      <input id="li-code" inputmode="numeric" maxlength="6" placeholder="6-digit code (from the email)">
+      <button class="btn" id="li-verify" onclick="return verifyCode()">Verify code</button>
+    </div>
+    <div class="msg" id="li-msg"></div>
+  </div>
+</div>
+
+<!-- ——— App ——— -->
+<div id="app">
+  <aside>
+    <div class="brand">
+      <div class="lights"><span style="background:var(--green)"></span><span style="background:var(--amber)"></span><span style="background:var(--red)"></span></div>
+      <b>Operator</b>
+    </div>
+    <nav class="side" id="nav">
+      <a href="#overview">Overview</a>
+      <a href="#funnel">Funnel</a>
+      <a href="#customers">Customers</a>
+      <a href="#map">Map</a>
+      <a href="#requests">Requests</a>
+      <a href="#agents">Agents</a>
+      <a href="#health">Data Health</a>
+    </nav>
+    <div class="side-foot">
+      <div id="who" class="mono" style="word-break:break-all"></div>
+      <a href="#" onclick="return signOut()">Sign out</a> · <a href="/">Site</a>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <h1 id="sec-title">Overview</h1>
+      <div class="range" id="range" style="display:none">
+        <button data-days="7">7 days</button>
+        <button data-days="30" class="on">30 days</button>
+      </div>
+    </header>
+    <div class="err-note" id="err"></div>
+
+    <section id="sec-overview"><div class="placeholder">Overview loads here.</div></section>
+    <section id="sec-funnel"><div class="placeholder">Funnel loads here.</div></section>
+    <section id="sec-customers"><div class="placeholder">Customers loads here.</div></section>
+    <section id="sec-map"><div class="placeholder">Map loads here.</div></section>
+    <section id="sec-requests"><div class="placeholder">Requests loads here.</div></section>
+    <section id="sec-agents"><div class="placeholder">Agents loads here.</div></section>
+    <section id="sec-health"><div class="placeholder">Data Health loads here.</div></section>
+  </main>
+</div>
+
+<script>
+"use strict";
+// ————— Supabase client (anon key — same public key every page uses; the
+// admin surface area lives behind the RPC allowlist, not behind this key) —————
+const SB_URL = "https://kfbjooteazwvdsonthba.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
+const sb = window.supabase.createClient(SB_URL, SB_ANON);
+
+const $ = (id) => document.getElementById(id);
+const msg = (t, err) => { const m = $("li-msg"); m.textContent = t; m.className = "msg" + (err ? " err" : ""); };
+
+// ————— auth —————
+async function sendLink() {
+  const email = $("li-email").value.trim();
+  if (!/@/.test(email)) { $("li-email").focus(); return false; }
+  $("li-send").disabled = true;
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + "/admin.html" },
+  });
+  $("li-send").disabled = false;
+  if (error) { msg(error.message, true); return false; }
+  $("step-code").style.display = "block";
+  msg("Sent. Click the link in the email, or paste the code here if your template shows one.");
+  return false;
+}
+
+async function verifyCode() {
+  const email = $("li-email").value.trim();
+  const token = $("li-code").value.trim();
+  if (token.length < 6) { $("li-code").focus(); return false; }
+  $("li-verify").disabled = true;
+  const { error } = await sb.auth.verifyOtp({ email, token, type: "email" });
+  $("li-verify").disabled = false;
+  if (error) { msg(error.message, true); return false; }
+  return false; // onAuthStateChange takes it from here
+}
+
+async function signOut() { await sb.auth.signOut(); location.hash = ""; location.reload(); return false; }
+
+// The gate. A session alone is NOT enough — anyone can complete a magic-link
+// login. admin_ping raises 'forbidden' unless the email is in admin_emails,
+// so a non-allowlisted login sees the door, not the data.
+async function enter(session) {
+  const { error } = await sb.rpc("admin_ping");
+  if (error) {
+    msg("Signed in as " + (session.user?.email || "unknown") +
+        " — but that account isn't on the admin list. Nothing here for it.", true);
+    await sb.auth.signOut();
+    return;
+  }
+  $("who").textContent = session.user?.email || "";
+  $("login").style.display = "none";
+  $("app").classList.add("on");
+  route();
+}
+
+sb.auth.onAuthStateChange((_evt, session) => { if (session) enter(session); });
+sb.auth.getSession().then(({ data }) => { if (data.session) enter(data.session); });
+
+// ————— rpc helper: every section reads through this —————
+async function rpc(name, args) {
+  const { data, error } = await sb.rpc(name, args || {});
+  if (error) throw new Error(name + ": " + error.message);
+  return data;
+}
+function showErr(e) { const el = $("err"); el.textContent = String(e.message || e); el.style.display = "block"; }
+function clearErr() { $("err").style.display = "none"; }
+
+// ————— routing + shared 7/30-day state —————
+let DAYS = 30;
+const RANGE_SECTIONS = new Set(["overview", "funnel"]);   // sections the toggle applies to
+document.querySelectorAll("#range button").forEach((b) =>
+  b.addEventListener("click", () => {
+    DAYS = +b.dataset.days;
+    document.querySelectorAll("#range button").forEach((x) => x.classList.toggle("on", x === b));
+    route();
+  }));
+
+// Filled in by each section's task; falsy entries render their placeholder.
+const RENDER = {
+  overview: null, funnel: null, customers: null, map: null,
+  requests: null, agents: null, health: null,
+};
+const TITLES = {
+  overview: "Overview", funnel: "Funnel", customers: "Customers", map: "Map",
+  requests: "Requests", agents: "Agents", health: "Data Health",
+};
+
+function route() {
+  const name = (location.hash || "#overview").slice(1);
+  const key = RENDER.hasOwnProperty(name) ? name : "overview";
+  document.querySelectorAll("nav.side a").forEach((a) =>
+    a.classList.toggle("on", a.getAttribute("href") === "#" + key));
+  document.querySelectorAll("main section").forEach((s) =>
+    s.classList.toggle("on", s.id === "sec-" + key));
+  $("sec-title").textContent = TITLES[key];
+  $("range").style.display = RANGE_SECTIONS.has(key) ? "flex" : "none";
+  clearErr();
+  const fn = RENDER[key];
+  if (fn) fn().catch(showErr);
+}
+window.addEventListener("hashchange", route);
+
+// ————— tiny lazy loader for the chart/map libs (only when their section opens) —————
+const _libs = {};
+function loadLib(src, cssHref) {
+  if (_libs[src]) return _libs[src];
+  _libs[src] = new Promise((res, rej) => {
+    if (cssHref) {
+      const l = document.createElement("link");
+      l.rel = "stylesheet"; l.href = cssHref; document.head.appendChild(l);
+    }
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error("failed to load " + src));
+    document.head.appendChild(s);
+  });
+  return _libs[src];
+}
+</script>
+</body>
+</html>
