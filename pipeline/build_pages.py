@@ -350,6 +350,8 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#faf8f4">
 <script type="application/ld+json">{ld}</script>
 </head><body>
 {NAVBAR}

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="512" height="512">
+<!-- Source for icon-maskable-512.png (Android adaptive icons).
+
+     Separate from apple-touch-icon.svg because the two platforms crop
+     differently. Android may mask an installed icon to a circle, a squircle,
+     a rounded square or a teardrop depending on the launcher, and guarantees
+     only the inner 80%-diameter CIRCLE. Measured against this artwork's
+     bounding box (half-extents 23 x 21 in a 56 box, so a corner 31.1 from
+     centre), the iOS icon's 0.82 inset lands at 25.5 — outside the 22.4 safe
+     radius, i.e. a launcher using a circular mask would clip the bottom
+     corners of the house. 0.70 puts the corner at 21.8 and fits any mask.
+
+     The extra padding is why this is not just the iOS PNG resized. -->
+<rect width="56" height="56" fill="#141a14"></rect>
+<g transform="translate(28,28) scale(0.70) translate(-28,-28)">
+  <path d="M28 6 L51 25 L46 25 L46 48 L10 48 L10 25 L5 25 Z" fill="none" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
+  <g transform="translate(11.5,15) scale(0.63)"><path d="M26 7 C17.5 7 12.5 13.5 12.5 22 L12.5 31 L8.5 37.5 L43.5 37.5 L39.5 31 L39.5 22 C39.5 13.5 34.5 7 26 7 Z" fill="#f2f1ec" stroke="#141a14" stroke-width="5"></path><path d="M20.5 41.5 a5.5 5.5 0 0 0 11 0 Z" fill="#f2f1ec"></path><circle cx="39.5" cy="10.5" r="6.5" fill="#d99a2b"></circle></g>
+</g>
+</svg>
