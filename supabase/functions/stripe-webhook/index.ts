@@ -408,7 +408,15 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
  *  the checkout handler has written the row.
  */
 async function handleSubscriptionUpserted(sub: Stripe.Subscription): Promise<boolean> {
-  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
+  // Two homes for the period end, depending on the account's Stripe API
+  // version: classic top-level current_period_end, or (2025+ versions) on
+  // each subscription item. Found the hard way: a real subscription stored
+  // billing_interval but a NULL current_period_end — the event carried the
+  // date only on the item. Check both, prefer the classic field.
+  const item0 = sub.items?.data?.[0] as unknown as { current_period_end?: number } | undefined;
+  const periodEnd =
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    item0?.current_period_end;
   const interval = sub.items?.data?.[0]?.price?.recurring?.interval;   // "year" | "month"
   const patch: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
