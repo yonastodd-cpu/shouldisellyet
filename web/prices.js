@@ -14,6 +14,14 @@
 // TODO (payment provider): Stripe Payment Links / price IDs must match these
 // numbers — see LINKS in subscribe.html for exactly which links to create.
 
+// Plan display name — the ONE place the brand string lives for scripted
+// pages. Stamped into [data-plan-name] elements on DOMContentLoaded, exactly
+// like prices into [data-price].
+// TODO: rename pending trademark screen — swap this constant only. New copy
+// must not hardcode the name: say "monitoring" or "alerts on your numbers"
+// generically, and use [data-plan-name] where the brand must appear.
+const PLAN_NAME = "MyMarketCheckup";
+
 const PRICES = {
   ANNUAL: 29,      // MyMarketCheckup, billed annually ($/yr) — the highlighted default
   MONTHLY: 3.99,   // MyMarketCheckup, billed monthly ($/mo)
@@ -51,5 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-price]").forEach((el) => {
     const t = PRICE_TEXT[el.getAttribute("data-price")];
     if (t) el.textContent = t;
+  });
+  document.querySelectorAll("[data-plan-name]").forEach((el) => {
+    el.textContent = PLAN_NAME;
   });
 });

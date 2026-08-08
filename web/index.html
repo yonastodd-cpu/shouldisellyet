@@ -282,6 +282,13 @@ h1 em{font-style:italic;color:var(--navy)}
 #pv-macro p{font-size:var(--fs-meta);line-height:1.55;color:var(--muted);margin:8px 0 0}
 #pv-macro b{color:var(--ink)}
 .pv-rlink{color:var(--navy);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+/* Unlock bar — sticks to the viewport bottom while the visitor is inside the
+   stack, then settles at its natural spot at the foot. Solid background +
+   shadow so rows never show through while stuck. */
+.pv-unlock{position:sticky;bottom:10px;display:flex;gap:10px;margin-top:12px;padding:10px;
+           background:#fffdf9;border:1px solid var(--hairline);border-radius:14px;
+           box-shadow:0 6px 20px rgba(28,36,48,.08)}
+.pv-unlock .vbtn{min-height:50px}
 
 /* monitor signup (inside verdict) */
 .mform{display:none;flex-direction:column;gap:9px;border-top:1px dashed var(--hairline);padding-top:14px;margin-top:6px}
@@ -500,6 +507,15 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
           <div class="pv-kicker">WHAT THIS MEANS FOR YOUR MONEY</div>
           <div class="pv-sub">Your full report, section by section:</div>
           <div id="pv-rows"></div>
+          <!-- Unlock bar — every locked row and toggle scrolls here. Sticky
+               within the preview, so it rides the viewport bottom while the
+               visitor is still inside the stack (sticky never reflows: no
+               CLS). Prices stamp from prices.js; hrefs are working plain
+               links that setPlanLinks() decorates with the ZIP. -->
+          <div class="pv-unlock" id="unlock-bar">
+            <a class="vbtn vbtn-secondary" id="cta-unlock-report" data-track="purchase_click_report" href="subscribe.html?plan=report"><span>Unlock your full report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
+            <a class="vbtn vbtn-primary" id="cta-unlock-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Unlock + alerts on your numbers</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
+          </div>
         </div>
 
         <div class="v-ctas">
@@ -603,20 +619,25 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price-feats">Any ZIP, anytime · full traffic-light verdict · all signal gauges · refreshed on every data release</div>
       <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="#check">Check a ZIP</a>
     </div>
+    <!-- Feature lines are the QUESTIONS the report answers (its actual
+         sections), not feature nouns — the preview stack above carries the
+         same framing, so pricing reads as "unlock those answers". The plan
+         name renders via [data-plan-name] from prices.js (rename pending
+         trademark screen — swap the constant only). -->
     <div class="price-card">
       <div class="card-title">Full report — one time</div>
       <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
-      <div class="price-note">Credited toward MyMarketCheckup if you upgrade within 30 days</div>
-      <div class="price-feats">Your home's full report: every signal gauge · your estimated equity · your walk-away number if you sold today · printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
+      <div class="price-note">Credited toward <span data-plan-name>MyMarketCheckup</span> if you upgrade within 30 days</div>
+      <div class="price-feats">What would you actually walk away with? · What's your equity really worth? · What is your low rate worth? · What if prices fell 5%? · When do homes here sell fastest? · Should you sell it or rent it out? · Printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
       <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
-      <div class="card-title">MyMarketCheckup — full report &amp; notifications</div>
+      <div class="card-title"><span data-plan-name>MyMarketCheckup</span> — full report &amp; alerts on your numbers</div>
       <div class="price"><span data-price="annual">$29</span> <small>/yr</small></div>
       <div class="price-note"><span data-price="annual-permo">$2.42/mo, billed annually</span> · <span data-price="save-line">Save $18.88 vs monthly</span></div>
       <div class="price-note" style="margin-top:4px">Cancel anytime · <span data-price="monthly-line">or $3.99/mo billed monthly</span></div>
-      <div class="price-feats">Everything in the one-time report, refreshed monthly · instant alert the moment your ZIP's verdict changes · your estimated equity · your walk-away number if you sold today</div>
+      <div class="price-feats">Every answer in the one-time report, kept current. You could come back and recheck every month. Or we watch — and email you only the moment your verdict changes, with your numbers refreshed monthly.</div>
       <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
     </div>
   </div>
@@ -1165,8 +1186,8 @@ async function run() {
 // and collects the address itself, validating coverage there.
 function setPlanLinks(zip) {
   const q = zip ? "&zip=" + zip : "";
-  [["cta-report", "report"], ["cta-price-report", "report"],
-   ["cta-monitor", "monitor"], ["cta-price-monitor", "monitor"]]
+  [["cta-report", "report"], ["cta-price-report", "report"], ["cta-unlock-report", "report"],
+   ["cta-monitor", "monitor"], ["cta-price-monitor", "monitor"], ["cta-unlock-monitor", "monitor"]]
     .forEach(([id, plan]) => {
       const a = document.getElementById(id);         // monthly is subscribe.html's default
       if (a) a.href = "subscribe.html?plan=" + plan + q;
