@@ -258,16 +258,34 @@ h1 em{font-style:italic;color:var(--navy)}
    stack past its 1.5-screen budget. Reflow the toggle to one full-width line
    under the value, indented to the body column. */
 @media (max-width:560px){
-  .pv-row{flex-wrap:wrap}
-  /* flex-basis 0 (not auto) so a long value line shrinks instead of wrapping
-     the whole body under the numeral */
-  .pv-body{flex:1 1 0}
-  .pv-alert{flex-direction:row;align-items:center;gap:6px;max-width:100%;flex-basis:100%;
-            justify-content:flex-start;margin-left:58px;min-width:0}
-  /* min-width:0 beats the flex min-width:auto default, which was clipping the
-     microcopy at the card edge instead of letting it wrap */
-  .pv-alert-micro{text-align:left;min-width:0}
-  .pv-alert-micro::before{content:"· "}
+  /* GRID, not wrapped flex. The row wants two lines on a phone — numeral +
+     body, then the alert toggle indented under the body — and flex-wrap
+     cannot express that reliably: an item with flex-basis:100% still shared
+     line 1 here, squeezing .pv-body to 27px so every title wrapped one word
+     per line and rows ran 200-270px tall. Grid states the layout outright.
+     Column 1 (44px) + the 14px column gap IS the 58px indent, so the
+     alignment is derived, not a magic number to keep in sync. */
+  .pv-row{display:grid;grid-template-columns:44px 1fr;
+          grid-template-areas:"num body" ". alert";
+          column-gap:14px;row-gap:6px;align-items:start}
+  .pv-num{grid-area:num}
+  .pv-body{grid-area:body;min-width:0}
+  .pv-alert{grid-area:alert}
+  /* The old rule kept the base flex-shrink:0 and added a 58px margin, so the
+     toggle hung 56px past the card's right edge (measured at 375px) and the
+     microcopy painted outside the card. In the grid there is no margin and no
+     overhang: the empty first column places it. */
+  .pv-alert{flex-direction:row;align-items:center;gap:6px;justify-content:flex-start;min-width:0}
+  /* The per-row microcopy ("if my equity crosses $___") is a desktop
+     enhancement. On a phone it is a full sentence at --fs-micro, which is
+     reserved for mono eyebrows and stamps — and bumping it to reading size
+     cost ~400px, pushing the stack to 1620px against the brief's ≤1.5-screen
+     (1218px) budget. Hidden rather than shrunk: the grey toggle, the lock and
+     "Alert me" still carry the affordance, and ALERT_COPY.locked_sublabel is
+     on the title attribute. The stack's job on mobile is the seven rows. */
+  .pv-alert-micro{display:none}
+  /* The row-08 expander was a 22px tap target. */
+  .pv-xhead{min-height:44px}
 }
 .pv-spark{flex:0 0 auto;width:104px;height:32px;display:block}
 /* Walk-away row — the emphasized one */
@@ -428,11 +446,24 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .zipform{flex-direction:column}
   .zipform .btn{width:100%}
   .grid4{grid-template-columns:1fr}
-  .v-ctas{flex-direction:column}
+  /* The unlock bar stacks with .v-ctas: side by side its two buttons resolved
+     to 131px wide and 106px tall, wrapping "Unlock + alerts on your numbers"
+     over four lines. Full width puts each label on one row beside its price,
+     and the bar gets SHORTER (128px → ~112px) while becoming legible. */
+  .v-ctas,.pv-unlock{flex-direction:column}
+  .pv-unlock .vbtn{flex-direction:row;align-items:center;justify-content:space-between;
+                   gap:10px;min-height:48px;text-align:left}
   .vbtn{width:100%}
   .verdict-head{padding:20px 20px 22px}
   .verdict-body{padding:18px 20px 22px}
   .crunch-row span:nth-child(2){width:auto;flex:1}
+  /* Vertical budget — these were carrying desktop values onto a 375px screen.
+     The page was 7675px (~9.4 screens); this block is most of the reduction. */
+  .hero{gap:28px}
+  section.band{padding-top:36px;padding-bottom:36px}
+  .price-card{padding:22px}
+  .price{font-size:36px}
+  .sig{padding:18px}
   footer{padding:26px 20px 30px}
 }
 /* Footer row tightening. Both blocks must stay after the 560px block above so

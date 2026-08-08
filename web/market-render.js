@@ -189,8 +189,17 @@ const MARKET = (function () {
     for (const j of [i, i-1, i+1, i-2, i+2]) if (j>=0 && j<arr.length && arr[j]!=null) return arr[j];
     return null;
   }
+  // A fixed 640-unit viewBox scaled into a phone-width container shrinks every
+  // label with it: measured at 375px the container is 285px, a scale of 0.445,
+  // so the 10-unit axis text rendered at 4.45 REAL pixels — the paid report's
+  // charts were unreadable on a phone. The fix is a narrower viewBox on narrow
+  // screens (scale ~0.95 instead of 0.445), not bigger font units, because at
+  // 640 wide the labels would then collide with each other. Gutters and tick
+  // density scale with it: 640 units has room for a 58-unit y-gutter and a
+  // tick every 6 months; 300 does not.
+  const NARROW = typeof window !== "undefined" && window.innerWidth <= 640;
   function lineSVG(series, startYM, opts){
-    const o = Object.assign({w:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
+    const o = Object.assign({w:NARROW?300:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
     const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
     if (pts.length < 6) return "";
     const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
@@ -198,7 +207,7 @@ const MARKET = (function () {
     let y0 = Math.min(...ys), y1 = Math.max(...ys);
     if (y1===y0) y1 = y0*1.01+1;
     const pad = (y1-y0)*0.14; y0-=pad; y1+=pad;
-    const L=58, R=64, T=14, B=30;
+    const L = NARROW?38:58, R = NARROW?44:64, T=14, B=30;
     const X = i => L + (i-x0)/(x1-x0)*(o.w-L-R);
     const Y = v => T + (1-(v-y0)/(y1-y0))*(o.h-T-B);
     // gridlines: 4 evenly spaced levels
@@ -208,10 +217,12 @@ const MARKET = (function () {
       grid += '<line x1="'+L+'" y1="'+Y(gv).toFixed(1)+'" x2="'+(o.w-R)+'" y2="'+Y(gv).toFixed(1)+'" stroke="#f0ebe0"/>'+
               '<text x="4" y="'+(Y(gv)+3.5).toFixed(1)+'" font-size="10" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+o.fmt(gv)+'</text>';
     }
-    // x ticks every 6 months
+    // x ticks every 6 months — every 12 on a narrow viewBox, where 6 would put
+    // the month labels closer together than the labels are wide.
+    const tickEvery = NARROW ? 12 : 6;
     let ticks = "";
     for (let i=x0; i<=x1; i++){
-      if ((i-x0)%6===0 && i<=x1-2){
+      if ((i-x0)%tickEvery===0 && i<=x1-2){
         ticks += '<line x1="'+X(i).toFixed(1)+'" y1="'+(o.h-B+2)+'" x2="'+X(i).toFixed(1)+'" y2="'+(o.h-B+6)+'" stroke="#d7d0c2"/>'+
                  '<text x="'+X(i).toFixed(1)+'" y="'+(o.h-8)+'" text-anchor="middle" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="#a49d8d">'+monthLabel(startYM,i)+'</text>';
       }
