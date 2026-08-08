@@ -120,6 +120,27 @@ table.grid tr:hover td{background:#faf9f5}
       <button class="btn" id="li-verify" onclick="return verifyCode()">Verify code</button>
     </div>
     <div class="msg" id="li-msg"></div>
+
+    <!-- Password route. Exists because email sign-in has a dependency the
+         dashboard does not: an SMTP handshake that can fail for reasons this
+         page cannot see or fix. An operator locked out of their own metrics
+         by a mail server is a bad design, so there is a second door.
+         The password is created by the operator in the Supabase dashboard
+         (Authentication → Users) and never passes through this codebase.
+         Same allowlist gate as every other route: a session is not
+         authorisation, membership in admin_emails is. -->
+    <div style="border-top:1px solid var(--hairline2);margin-top:18px;padding-top:14px">
+      <a href="#" id="pw-toggle" onclick="return togglePassword()"
+         style="font-size:13px;color:var(--faint)">Use a password instead →</a>
+      <div id="step-pw" style="display:none;margin-top:10px">
+        <input id="li-pw" type="password" placeholder="Password" autocomplete="current-password">
+        <button class="btn" id="li-pwgo" onclick="return signInPassword()">Sign in</button>
+        <div style="font-size:12px;color:var(--fainter);line-height:1.5;margin-top:8px">
+          Set one in Supabase → Authentication → Users → your address → “Reset password”,
+          or add a user with “Auto Confirm”. Email sign-in keeps working once SMTP is fixed.
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -344,6 +365,37 @@ async function verifyCode() {
   $("li-verify").disabled = false;
   if (error) { msg(authError(error), true); return false; }
   return false; // onAuthStateChange takes it from here
+}
+
+function togglePassword() {
+  const box = $("step-pw");
+  const open = box.style.display !== "block";
+  box.style.display = open ? "block" : "none";
+  $("pw-toggle").textContent = open ? "Use an email link instead →" : "Use a password instead →";
+  $("step-email").style.display = open ? "none" : "block";
+  if (open) $("li-pw").focus();
+  return false;
+}
+
+async function signInPassword() {
+  const email = $("li-email").value.trim();
+  const password = $("li-pw").value;
+  if (!/@/.test(email)) { $("li-email").focus(); msg("Enter the admin email above first.", true); return false; }
+  if (!password) { $("li-pw").focus(); return false; }
+  $("li-pwgo").disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $("li-pwgo").disabled = false;
+  if (error) {
+    // "Invalid login credentials" covers both a wrong password AND a user
+    // with no password set — the two states a locked-out operator most
+    // needs told apart, since the fix is different for each.
+    msg(/invalid login/i.test(error.message)
+        ? "That didn't match. If you've never set a password for this address, " +
+          "there isn't one yet — set it in Supabase → Authentication → Users."
+        : authError(error), true);
+    return false;
+  }
+  return false;   // onAuthStateChange takes it from here
 }
 
 async function signOut() { await sb.auth.signOut(); location.hash = ""; location.reload(); return false; }
