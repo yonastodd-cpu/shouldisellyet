@@ -207,6 +207,47 @@ h1 em{font-style:italic;color:var(--navy)}
 .vbtn-tertiary.copied{border-color:var(--green-ink);color:var(--green-ink)!important}
 .datastamp{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);line-height:1.5;color:var(--faint-ink);letter-spacing:.04em}
 
+/* ————— Masked report preview (inside verdict, between gauges and CTAs) —————
+   Rows mirror the report's own section numbering: .pv-num is my-report.html's
+   .secnum idiom (Newsreader, gold, low opacity, tabular-nums) at row scale.
+   Two value treatments exist and they are NOT interchangeable — see the
+   HONESTY RULE comment at renderPreview():
+     .pv-veil — a REAL computed value, blurred. Never receives invented text.
+     .pv-mask — the "$▓▓▓,▓▓▓" placeholder pattern for values that need the
+                visitor's own inputs; crisp on purpose, labeled "from your
+                numbers", so a veiled promise never masquerades as a veiled
+                number. */
+.preview{border-top:1px solid var(--hairline2);padding-top:16px;margin-top:4px}
+.pv-kicker{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.14em;color:var(--gold);font-weight:600}
+.pv-sub{font-size:var(--fs-meta);color:var(--muted);margin:4px 0 10px}
+#pv-rows{display:flex;flex-direction:column}
+.pv-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+        background:none;border:0;border-top:1px solid var(--hairline2);
+        padding:11px 2px;min-height:56px;cursor:pointer;font-family:inherit;color:inherit}
+.pv-row:first-child{border-top:0}
+.pv-row:hover{background:#f5f1e9}
+.pv-row:focus-visible{outline:2px solid var(--navy);outline-offset:-2px;border-radius:6px}
+.pv-num{font-family:'Newsreader',serif;font-size:1.9rem;line-height:.9;font-weight:500;
+        color:var(--gold);opacity:.26;font-variant-numeric:tabular-nums;flex:0 0 44px}
+.pv-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pv-title{font-size:var(--fs-body-sm);font-weight:600;color:var(--ink);line-height:1.35}
+.pv-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+         font-size:var(--fs-meta);color:var(--muted);min-height:22px}
+/* Real value, blurred. user-select off so a drag-select doesn't defeat the
+   veil by accident; the value is still honest data underneath. */
+.pv-veil{filter:blur(6px);user-select:none;-webkit-user-select:none;color:var(--ink);font-weight:600;white-space:nowrap}
+.pv-mask{font-family:'IBM Plex Mono',monospace;font-size:.9em;color:var(--faint-ink);letter-spacing:.02em;white-space:nowrap}
+.pv-from{font-size:var(--fs-micro);color:var(--faint-ink);border:1px solid var(--hairline);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.pv-lockcol{flex:0 0 auto;font-size:.95rem;opacity:.55;filter:grayscale(1)}
+.pv-spark{flex:0 0 auto;width:104px;height:32px;display:block}
+/* Walk-away row — the emphasized one */
+.pv-row--em{border:1px solid var(--gold);border-radius:10px;background:#fdfaf3;margin:6px 0;padding:13px 12px}
+.pv-row--em + .pv-row{border-top:0}
+.pv-row--em .pv-title{font-size:var(--fs-body)}
+/* Open macro row (08) — content, not a tease: no lock, not a scroll trigger */
+.pv-open{cursor:default}
+.pv-open:hover{background:none}
+
 /* monitor signup (inside verdict) */
 .mform{display:none;flex-direction:column;gap:9px;border-top:1px dashed var(--hairline);padding-top:14px;margin-top:6px}
 .mform input[type=email],.mform input[type=text]{font-size:14px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:7px;background:#fff;font-family:inherit}
@@ -401,8 +442,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
 
     <!-- Results block. Contains, in order: location line, verdict, signal gauges,
-         three actions, Redfin attribution. Nothing else — see the 2026-07-31
-         redesign brief before adding anything here. -->
+         the masked report preview (2026-08-08 conversion brief — it supersedes
+         the 2026-07-31 "nothing else" rule), three actions, Redfin attribution.
+         Read the HONESTY RULE at renderPreview() before touching the preview. -->
     <div class="verdict hidden" id="verdict">
       <div class="verdict-head" id="v-head">
         <div class="v-loc" id="v-loc"></div>
@@ -415,6 +457,15 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="verdict-body">
         <p id="v-sub"></p>
         <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
+
+        <!-- Masked report preview — rendered by renderPreview() in the same
+             synchronous pass as the gauges, BEFORE the block is revealed, so
+             it can never shift the verdict after paint. -->
+        <div class="preview" id="preview" hidden>
+          <div class="pv-kicker">WHAT THIS MEANS FOR YOUR MONEY</div>
+          <div class="pv-sub">Your full report, section by section:</div>
+          <div id="pv-rows"></div>
+        </div>
 
         <div class="v-ctas">
           <a class="vbtn vbtn-primary" id="cta-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Get Full Report + Market Change Notifications</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
@@ -778,6 +829,152 @@ function renderMetrics(rows) {
 }
 
 
+// ————— Masked report preview —————
+// HONESTY RULE (do not weaken): no code path renders a fabricated numeral
+// behind a blur. Exactly two value treatments exist:
+//   veil(v)  — takes a REAL value computed from this ZIP's own data (the h
+//              series that is already in memory). Rendered blurred. Its ONLY
+//              callers pass computed values; if a value cannot be computed for
+//              this ZIP (9% of entries have no h), the row falls back to
+//              mask() — it never invents a number to blur.
+//   mask(p)  — the "$▓▓▓,▓▓▓" placeholder pattern for values that need the
+//              visitor's own inputs (equity, balance, rate). Crisp, monospace,
+//              labeled "from your numbers": a veiled promise, not a veiled lie.
+// Screen readers get the row's state ("unlocked in the full report"), never
+// the veiled digits — the value spans are aria-hidden.
+const PV_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const PV_MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function pvMonthLabel(startYM, i) {   // "2023-07" + offset → "Jul 2024"
+  const [y, m] = startYM.split("-").map(Number);
+  const t = (m - 1) + i;
+  return PV_MONTHS[t % 12] + " " + (y + Math.floor(t / 12));
+}
+
+// Mini sparkline: line + soft area only. Deliberately NO text nodes — axis
+// labels or an end-value tag would leak the numbers the peak veil hides.
+function sparkSVG(p) {
+  const pts = p.map((v, i) => [i, v]).filter(q => q[1] != null);
+  if (pts.length < 6) return "";
+  const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y1 === y0) y1 = y0 + 1;
+  const X = i => ((i - x0) / (x1 - x0) * 100).toFixed(1);
+  const Y = v => (28 - (v - y0) / (y1 - y0) * 24).toFixed(1);
+  let d = "", pen = false;
+  p.forEach((v, i) => {
+    if (v == null) { pen = false; return; }
+    d += (pen ? "L" : "M") + X(i) + "," + Y(v); pen = true;
+  });
+  const first = pts[0], last = pts[pts.length - 1];
+  const area = d.replace(/M/g, "L").replace(/^L/, "M") +
+    "L" + X(last[0]) + ",30L" + X(first[0]) + ",30Z";
+  return '<svg class="pv-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="' + area + '" fill="#1f3a5f" opacity=".07"/>' +
+    '<path d="' + d + '" fill="none" stroke="#1f3a5f" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+// Port of pipeline/build_pages.py fastest_month(): the calendar month with the
+// lowest average days-on-market across the 3-yr history (≥2 samples).
+function pvFastestMonth(h) {
+  if (!h || !h.d || !h.s) return null;
+  const startM = Number(h.s.split("-")[1]);
+  const by = {};
+  h.d.forEach((v, i) => {
+    if (v == null) return;
+    const mo = (startM - 1 + i) % 12;
+    (by[mo] = by[mo] || []).push(v);
+  });
+  let best = null;
+  for (const mo in by) {
+    if (by[mo].length < 2) continue;
+    const avg = by[mo].reduce((a, b) => a + b, 0) / by[mo].length;
+    if (!best || avg < best.avg) best = { mo: Number(mo), avg };
+  }
+  return best ? PV_MONTHS_LONG[best.mo] : null;
+}
+
+function pvPeak(h) {
+  if (!h || !h.p) return null;
+  let pi = -1, pv = -Infinity;
+  h.p.forEach((v, i) => { if (v != null && v > pv) { pv = v; pi = i; } });
+  return pi >= 0 ? { label: pvMonthLabel(h.s, pi), value: pv } : null;
+}
+
+const pvUsd = v => "$" + Math.round(v).toLocaleString("en-US");
+function veil(v) {   // REAL computed values only — see honesty rule above
+  return '<span class="pv-veil" aria-hidden="true">' + v + '</span>';
+}
+function mask(pattern) {
+  return '<span class="pv-mask" aria-hidden="true">' + pattern + '</span>' +
+         '<span class="pv-from" aria-hidden="true">from your numbers</span>';
+}
+
+function renderPreview(d) {
+  const h = d.h;
+  const peak = pvPeak(h), fastest = pvFastestMonth(h);
+  const rows = [];
+  const row = (num, title, line, opts) => rows.push(Object.assign({ num, title, line }, opts || {}));
+
+  // 02 — computable: the sparkline is real and visible; the peak is the real
+  // number, blurred. No h → honest fallback to the placeholder pattern.
+  row("02", "Your home's value trend",
+    h && peak
+      ? sparkSVG(h.p) + veil("Peak " + pvUsd(peak.value)) +
+        '<span aria-hidden="true" style="white-space:nowrap">' + peak.label + "</span>"
+      : mask("$▓▓▓,▓▓▓").replace("from your numbers", "from your ZIP's 3-yr history"),
+    { aria: "Your home's value trend — 3-year chart and peak value, unlocked in the full report" });
+
+  row("03", "Your equity position", mask("$▓▓▓,▓▓▓"),
+    { aria: "Your equity position — computed from your numbers, unlocked in the full report" });
+
+  row("04", "Your walk-away number if you sold today", mask("$▓▓▓,▓▓▓ – $▓▓▓,▓▓▓"),
+    { em: true, aria: "Your walk-away number if you sold today — computed from your numbers, unlocked in the full report" });
+
+  row("05", "What your low rate is worth", mask("$▓▓▓/mo"),
+    { aria: "What your low rate is worth — computed from your numbers, unlocked in the full report" });
+
+  row("06", "If prices fell 5%", mask("$▓▓▓,▓▓▓"),
+    { aria: "If prices fell 5% — computed from your numbers, unlocked in the full report" });
+
+  // 07 — computable: the real fastest-sale month, blurred.
+  row("07", "When homes here sell fastest",
+    fastest ? '<span aria-hidden="true">Homes here sell fastest in</span> ' + veil(fastest)
+            : mask("▓▓▓▓▓").replace("from your numbers", "from your ZIP's 3-yr history"),
+    { aria: "When homes here sell fastest — unlocked in the full report" });
+
+  // 08 — deliberately OPEN, free forever: real national mix, no mask, no lock.
+  // Wording matches market-render.js contextBoxes (HOLD=green, WATCH=yellow,
+  // ACT=red) so the homepage and the report can never disagree.
+  const nc = META && META.national && META.national.counts;
+  row("08", "Your market vs. the nation",
+    nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
+         '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
+         nc.red.toLocaleString() + '</b> ACT.</span>'
+       : '<span>National verdict mix — in the full report.</span>',
+    { open: true });
+
+  $("pv-rows").innerHTML = rows.map(r => r.open
+    ? '<div class="pv-row pv-open"><span class="pv-num" aria-hidden="true">' + r.num +
+      '</span><span class="pv-body"><span class="pv-title">' + r.title +
+      '</span><span class="pv-line">' + r.line + "</span></span></div>"
+    : '<button type="button" class="pv-row' + (r.em ? " pv-row--em" : "") +
+      '" data-goto-unlock aria-label="' + r.aria + '"><span class="pv-num" aria-hidden="true">' +
+      r.num + '</span><span class="pv-body"><span class="pv-title">' + r.title +
+      '</span><span class="pv-line">' + r.line +
+      '</span></span><span class="pv-lockcol" aria-hidden="true">🔒</span></button>'
+  ).join("");
+
+  // Row tap → the unlock bar when it exists, else the CTAs it will stand above.
+  $("pv-rows").querySelectorAll("[data-goto-unlock]").forEach(b =>
+    b.addEventListener("click", () => {
+      const t = document.getElementById("unlock-bar") || document.querySelector(".v-ctas");
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "center" });
+    }));
+  $("preview").hidden = false;
+}
+
 function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null, reqSeq = 0;
 
@@ -831,6 +1028,7 @@ async function run() {
       ? "Smaller markets report few transactions, so we hold the verdict at HOLD until signals are statistically reliable. Here's what we can see:"
       : k.sub.replace("{zip}", zip);
     $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
+    renderPreview(d);   // same synchronous pass — fully rendered before reveal
     // The ZIP and state now lead the block, so the stamp carries only the
     // data vintage and the required Redfin attribution.
     $("v-stamp").innerHTML = META ? "Data through " + META.period + " · " + citeHTML(META.attribution) : "";
