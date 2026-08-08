@@ -506,7 +506,7 @@ footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;fo
 .stategrid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}}
 </style></head><body>
 <nav>
-  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span></a>
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
   <a class="mono" style="font-size:11px;letter-spacing:.14em;color:var(--gold);text-decoration:none" href="/research/">RESEARCH</a>
 </nav>
 <div class="wrap">

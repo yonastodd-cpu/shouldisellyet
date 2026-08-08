@@ -228,7 +228,7 @@ footer a{color:var(--faint-ink)}
 """
 
 NAVBAR = """<nav class="top">
-  <a class="logo" href="/"><img src="/logo-mark-chip.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I Sell Yet</span><span class="logo-tag">HOME EQUITY EARLY WARNING</span></span></a>
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 
