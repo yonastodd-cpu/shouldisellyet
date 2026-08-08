@@ -476,7 +476,17 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
         body = '<div style="font-size:14px;color:#5c6673">Not available — Supabase counts unreadable (see gaps below).</div>'
     parts.append(_sec(4, "Subscriber-adjacent flips", "These people just got an alert — meet them where they already are.", body))
 
-    # 5 — warm ZIPs
+    # 5 — warm ZIPs. The "So what" line used to read "pitch /partners agents
+    # here" and each line item called its ZIP "good agent-recruitment territory".
+    # The ZIP-sponsorship program was taken down 2026-08-05 (/partners is now a
+    # stub that redirects to the homepage) and its draft agreement was deleted
+    # 2026-08-08, so this email was sending the operator to a redirect to recruit
+    # for a program that is not operating. The DATA is untouched and still the
+    # best signal in the digest — improving markets that already have real users.
+    # Do NOT put an agent-recruitment call to action back here: a monthly email
+    # the operator follows without re-reading the decision is exactly how a
+    # retired program restarts by habit. This comment and docs/GROWTH-OPS.md
+    # row 5 are a matched pair — change one, change the other.
     if counts:
         warm = []
         for z in flips["to_hold"] + flips["to_strong"]:
@@ -485,13 +495,13 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
             if s or mr:
                 warm.append(f'<li><b>{H(label(z, places))}</b> → {WORD.get(entries[z]["l"], "")} · '
                             f'{s} subscriber{"s" if s != 1 else ""}, {mr} match request'
-                            f'{"s" if mr != 1 else ""} — good agent-recruitment territory.</li>')
+                            f'{"s" if mr != 1 else ""}.</li>')
         body = (f'<ul style="margin:0;padding-left:20px;font-size:14px">{"".join(sorted(warm))}</ul>'
                 if warm else
                 '<div style="font-size:14px;color:#5c6673">No improving ZIP has subscribers or match requests yet.</div>')
     else:
         body = '<div style="font-size:14px;color:#5c6673">Not available — Supabase counts unreadable (see gaps below).</div>'
-    parts.append(_sec(5, "Warm ZIPs (referral triggers)", "Improving markets with real users — pitch /partners agents here.", body))
+    parts.append(_sec(5, "Warm ZIPs (referral triggers)", "Improving markets where you already have users — post locally or follow up directly.", body))
 
     # 6 — rate line
     if rate_now is None:

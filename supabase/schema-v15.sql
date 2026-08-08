@@ -31,7 +31,17 @@ create table if not exists public.agents (
   stripe_customer_id text,
   stripe_subscription_id text,
   stripe_status text,                        -- mirrored by webhook when live
-  agreement_version text,                    -- e.g. "1.0" (partners/agreement.html)
+  -- The v1.0 document this string named was web/partners/agreement.html. It was
+  -- drafted 2026-08-06, noindexed, never sitemapped, never submitted to
+  -- IndexNow, linked from nowhere, NEVER OFFERED and NEVER ACCEPTED — zero agent
+  -- rows, zero non-null agreement_version values and zero zip_claims on the day
+  -- it was retired — and deleted 2026-08-08. Git is the archive; find every
+  -- revision with `git log --all -- web/partners/agreement.html` (five commits;
+  -- the four after the draft are favicon/manifest/font only, terms unchanged).
+  -- Do NOT repoint this at a URL. There is no published agreement, and a URL in
+  -- a schema comment is how a retired offer quietly starts looking live again.
+  -- A restart publishes a NEW version; it does not revive "1.0".
+  agreement_version text,                    -- see note above
   agreement_accepted_at timestamptz,
   created_at timestamptz not null default now()
 );

@@ -37,12 +37,22 @@ sentence stating what the digest never contains.)
 | 2 | Local angle bank — 5 paste-ready facts | **Social post**, verbatim |
 | 3 | Press hook of the month + CSV | **Press pitch** to a local reporter |
 | 4 | Subscriber-adjacent flips | **Group post** where those people already are |
-| 5 | Warm ZIPs (improving + real users) | **`/partners` agent recruitment** |
+| 5 | Warm ZIPs (improving + real users) | **Local post or direct follow-up** where you already have users |
 | 6 | Rate vs. last month | **Burst play** when it clears ±0.25 pts |
 | 7 | 30-day scorecard | If flat, sections 1–6 are the levers |
 
 Each section header carries its own "So what" line in the email, so the action
 travels with the data.
+
+Section 5's action used to be **`/partners` agent recruitment**. The ZIP
+sponsorship program was taken down 2026-08-05 and its draft agreement deleted
+2026-08-08; `/partners` has redirected to the homepage since the takedown and
+nothing there is for sale. The row was **changed, not deleted**, because the
+underlying signal — an improving market that already has real users — is still
+the best read on where the audience is. Do not restore the recruitment action:
+restarting the program is a product decision made on purpose, not something a
+playbook row should cause by default. This row and the `_sec(5, …)` subtitle in
+`pipeline/growth_digest.py` are a matched pair.
 
 ## Angle bank selection rules
 

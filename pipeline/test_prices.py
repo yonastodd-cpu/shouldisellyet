@@ -102,9 +102,14 @@ def _customer_visible(html):
 def test_no_stale_amounts_left_in_consumer_copy():
     """Old prices, in the surfaces a customer reads.
 
-    partners.html is excluded by name: it sells ZIP sponsorship to agents at
-    $39/mo, a price that has nothing to do with the consumer ladder and must
-    NOT move with it. This is the exact trap a global find-and-replace falls
+    partners.html is excluded by name, and the exclusion STAYS even though it is
+    currently a no-op. Until the 2026-08-05 takedown that page sold ZIP
+    sponsorship to agents at $39/mo (the price was in its meta description and
+    its .price div); it is now a takedown stub containing no "$" at all. The
+    exclusion is kept pre-positioned because restoring the program means
+    restoring that file from git history, which would put an agent price back
+    into this glob — a price that has nothing to do with the consumer ladder and
+    must NOT move with it. This is the exact trap a global find-and-replace falls
     into, so the exclusion is deliberate rather than incidental.
     """
     stale = {"$9.99", "$39/yr", "$39/year", "$5.99/mo", "$5.99/month"}
