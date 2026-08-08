@@ -230,6 +230,117 @@ def state_map(per_state, month, out, w=1200, h=675):
     img.save(out, "PNG", optimize=True)
 
 
+# ————— OG stat card + social set (T4) —————
+
+def og_card(rep, out, w=1200, h=630):
+    """The release URL's share image: the headline stat, nothing else. A
+    chart thumbnail dies at feed size; one enormous number does not."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (w, h), (20, 26, 20))
+    d = ImageDraw.Draw(img)
+    CREAM = (242, 241, 236)
+    GOLD = (217, 154, 43)
+    rec = rep["records"]
+    d.text((70, 64), "WARNING-SIGN INDEX", font=font(BOLD, 34), fill=GOLD)
+    big = f"{rec['wsi']:.1f}%"
+    d.text((62, 130), big, font=font(BOLD, 230), fill=CREAM)
+    sub = "of scored U.S. ZIP housing markets"
+    d.text((70, 400), sub, font=font(REG, 34), fill=CREAM)
+    d.text((70, 444), "show warning signs", font=font(REG, 34), fill=CREAM)
+    delta = rec.get("delta")
+    if delta is not None:
+        # The triangle is DRAWN, not typed: IBM Plex Mono has no ▲/▼ glyphs
+        # and the fallback tofu box shipped in the first render of this card.
+        arrowc = (212, 130, 120) if delta > 0 else (140, 190, 150)
+        ax, ay, s2 = 70, 514, 22
+        if delta > 0:
+            d.polygon([(ax, ay + s2), (ax + s2, ay + s2), (ax + s2 // 2, ay)], fill=arrowc)
+        else:
+            d.polygon([(ax, ay), (ax + s2, ay), (ax + s2 // 2, ay + s2)], fill=arrowc)
+        d.text((ax + s2 + 14, 508), f"{abs(delta):.1f} pts vs prior month",
+               font=font(BOLD, 28), fill=arrowc)
+    line = f"{rep['pretty_month']} · ShouldISellYet Research"
+    d.text((70, h - 60), line, font=font(REG, 24), fill=(154, 160, 150))
+    img.save(out, "PNG", optimize=True)
+
+
+def _social_frame(title_lines, month, w=1080, h=1350):
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (w, h), BG)
+    d = ImageDraw.Draw(img)
+    y = 64
+    for i, t in enumerate(title_lines):
+        d.text((64, y), t, font=font(BOLD, 46 if i == 0 else 30),
+               fill=INK if i == 0 else MUTED)
+        y += 62 if i == 0 else 44
+    f = font(REG, 22)
+    line = f"ShouldISellYet Research · {pretty(month)} · {SITE}/research/"
+    d.text((64, h - 70), line, font=f, fill=FAINT)
+    return img, d
+
+
+def social_set(rep, series, outdir):
+    """Four 1080×1350 images matching the social pillars, dropped beside the
+    release so the week's posting is a pick-and-post, not a design task."""
+    from PIL import Image
+    month = rep["month"]
+    rec = rep["records"]
+    sdir = outdir / "social"
+    sdir.mkdir(exist_ok=True)
+
+    # 1 — the WSI number + trend (crop the landscape chart into the frame)
+    img, d = _social_frame(
+        [f"Warning signs: {rec['wsi']:.1f}% of U.S. ZIP markets",
+         "The Warning-Sign Index, monthly since 2020 (context to 2012)"], month)
+    chart = Image.open(outdir / "wsi-chart.png")
+    cw = 1080 - 128
+    ch = round(chart.height * cw / chart.width)
+    img.paste(chart.resize((cw, ch)), (64, 240))
+    img.save(sdir / "1-wsi.png", "PNG", optimize=True)
+
+    # 2 — the state map
+    img, d = _social_frame(
+        ["Warning signs, state by state",
+         "Share of each state's scored ZIP markets at WATCH or ACT"], month)
+    m = Image.open(outdir / "state-map.png")
+    mw = 1080 - 96
+    mh = round(m.height * mw / m.width)
+    img.paste(m.resize((mw, mh)), (48, 300))
+    img.save(sdir / "2-map.png", "PNG", optimize=True)
+
+    # 3 — the deteriorating-metros table
+    img, d = _social_frame(
+        ["Metros deteriorating fastest",
+         "Change in warning share vs last month, pts"], month)
+    y = 260
+    for i, r in enumerate(rep["metros_deteriorating"][:8], 1):
+        name = r["name"].split(",")[0][:26]
+        st = r["name"].split(",")[-1].strip()[:6]
+        d.text((64, y), f"{i}.", font=font(BOLD, 34), fill=FAINT)
+        d.text((128, y), f"{name}, {st}", font=font(BOLD, 34), fill=INK)
+        val = f"+{r['delta']:.1f}"
+        d.text((1080 - 64 - d.textlength(val, font=font(BOLD, 34)), y), val,
+               font=font(BOLD, 34), fill=RED)
+        d.text((128, y + 44), f"warning share {r['share']:.1f}%",
+               font=font(REG, 24), fill=MUTED)
+        y += 100
+    img.save(sdir / "3-metros.png", "PNG", optimize=True)
+
+    # 4 — the local spotlight: longest current warning streak
+    img, d = _social_frame(["Local spotlight", ""], month)
+    ts = rep["top_streaks"][:1]
+    if ts:
+        s = ts[0]
+        place = f"{s['city']}, {s['state']}" if s["city"] else s["state"]
+        d.text((64, 240), s["zip"], font=font(BOLD, 150), fill=NAVY)
+        d.text((64, 420), place[:30], font=font(BOLD, 44), fill=INK)
+        d.text((64, 500), f"{s['months']} consecutive months", font=font(BOLD, 60), fill=RED)
+        d.text((64, 580), "showing market warning signs", font=font(REG, 34), fill=MUTED)
+        d.text((64, 660), "The longest current streak of any", font=font(REG, 30), fill=MUTED)
+        d.text((64, 700), "scored U.S. ZIP market.", font=font(REG, 30), fill=MUTED)
+    img.save(sdir / "4-spotlight.png", "PNG", optimize=True)
+
+
 # ————— html scaffolding —————
 
 def page(title, desc, canonical, body, og_image=""):
@@ -501,7 +612,7 @@ def release_page(rep, series, outdir, rel_url):
         f"{rep['national']['scored']:,} U.S. ZIP markets scored in {pretty(month)}: "
         f"{rec['wsi']:.1f}% show warning signs. Monthly index, metro league tables, "
         "and downloadable data.",
-        f"{SITE}{rel_url}", body, og_image=f"{SITE}{rel_url}wsi-chart.png"))
+        f"{SITE}{rel_url}", body, og_image=f"{SITE}{rel_url}og.png"))
 
 
 def hub_page(h, series, releases, outdir):
@@ -569,6 +680,8 @@ def main():
         state_map({st: e for st, e in rep["states"].items()}, month,
                   outdir / "state-map.png")
         write_csvs(rep, upto, outdir)
+        og_card(rep, outdir / "og.png")
+        social_set(rep, upto, outdir)
         release_page(rep, upto, outdir, f"/research/{month}/")
 
     hub_page(h, series, releases, stage)
