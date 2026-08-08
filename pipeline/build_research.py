@@ -595,12 +595,18 @@ def state_paragraph(st, e, month):
 
 def write_csvs(rep, series, outdir):
     month = rep["month"]
+    seam = rep.get("seam", "")
 
     with (outdir / "wsi-history.csv").open("w", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(["month", "wsi_pct"])
+        # The series column is not optional metadata: without it, anyone
+        # charting this file draws the source seam as a market move — the
+        # exact misread the chart's two strokes exist to prevent. The page
+        # can explain; a CSV must carry its own caveats.
+        w.writerow(["month", "wsi_pct", "series"])
         for m, v in series:
-            w.writerow([m, f"{v:.2f}"])
+            w.writerow([m, f"{v:.2f}",
+                        "continuous" if (seam and m >= seam) else "reconstruction"])
 
     with (outdir / f"state-aggregates-{month}.csv").open("w", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
