@@ -147,6 +147,17 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python pipeline/check_watches.py --data web/data
+      # ShouldISellYet Research: append this month to the Warning-Sign Index
+      # history, advance streaks, detect records, and write the per-month
+      # research JSON. MUST run before the digest — the digest's "Research
+      # release" section reads this month's research JSON. continue-on-error
+      # for the same reason the digest is: the index is derived output, and
+      # losing one month of it must never lose a deploy.
+      - name: Research index (Warning-Sign Index)
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        run: python3 pipeline/research.py --data web/data
+
       # Digest failure must never fail the refresh: the site data is already
       # good at this point and a broken marketing email is not worth losing a
       # deploy over. continue-on-error plus an explicit fallback notice.
@@ -197,9 +208,9 @@ jobs:
         run: |
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add pipeline/snapshots || true
+          git add pipeline/snapshots pipeline/research || true
           git diff --cached --quiet && { echo "no snapshot change"; exit 0; }
-          git commit -m "Verdict snapshot $(date +%Y-%m)"
+          git commit -m "Verdict snapshot + research index $(date +%Y-%m)"
           for i in 1 2 3; do
             git push && exit 0
             git pull --rebase --autostash origin main || true
@@ -252,6 +263,7 @@ jobs:
           # per-ZIP previews — so install it rather than let that happen.
           pip install --quiet Pillow
           python3 pipeline/build_pages.py
+          python3 pipeline/build_research.py
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'
