@@ -1,22 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
-<!-- Tab icon: logo-mark-dark.svg on its own dark chip.
+<!-- Tab icon: the house mark, transparent, flipping with the reader's theme.
+     Dark house by day, light house by night — the two delivered colourways
+     (logo-mark.svg and logo-mark-dark.svg) driven from one file.
 
-     The delivered flat favicon (kept as favicon-flat.svg) is a #141a14 house
-     on transparent, which measures 1.10:1 against a dark-mode tab strip —
-     invisible in the theme most people browse in. A chip is opaque, so it
-     reads the same on a white tab bar, a dark one, a pinned tab and a
-     bookmarks bar.
+     WHY NO CHIP ANY MORE. This used to be the dark mark on an opaque #141a14
+     chip, because the delivered flat favicon is a dark house on transparent
+     and measures 1.10:1 against a dark tab strip — invisible. A chip solved
+     that by never changing. Serving the right colourway per theme solves it
+     properly instead: the art is transparent and always contrasts with the
+     strip behind it, in either mode. favicon-flat.svg keeps the original
+     single-colour delivery.
 
-     The DARK mark is used here (cream house, dark bell) because the chip
-     behind it is dark. That is the delivered light/dark system working as
-     intended, not an inconsistency with the nav — the nav sits on cream and
-     uses the light mark, this sits on near-black and uses the dark one.
-     Art inset to 0.84 so the roofline clears the corner radius. -->
-<rect width="56" height="56" rx="14" fill="#141a14"></rect>
-<g transform="translate(28,28) scale(0.84) translate(-28,-28)">
-  <path d="M28 4.5 L52.5 24 L47.5 24 L47.5 47 C47.5 48.4 46.4 49.5 45 49.5 L11 49.5 C9.6 49.5 8.5 48.4 8.5 47 L8.5 24 L3.5 24 Z" fill="#f2f1ec" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
-  <path d="M40.5 9 L45.5 9 L45.5 18.4 L40.5 14.4 Z" fill="#f2f1ec" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
-  <g transform="translate(10.3,15.5) scale(0.68)"><path d="M26 6.5 C27.8 6.5 29.2 7.9 29.2 9.7 L29.2 10.6 C34.8 12.2 38.5 17.2 38.5 23.6 L38.5 31.2 L42.3 36.2 C43.1 37.3 42.3 38.8 41 38.8 L11 38.8 C9.7 38.8 8.9 37.3 9.7 36.2 L13.5 31.2 L13.5 23.6 C13.5 17.2 17.2 12.2 22.8 10.6 L22.8 9.7 C22.8 7.9 24.2 6.5 26 6.5 Z" fill="#141a14"></path><path d="M21.5 41.6 A4.5 4.5 0 0 0 30.5 41.6 Z" fill="#141a14"></path></g>
-  <circle cx="34.8" cy="23" r="4.4" fill="#d99a2b" stroke="#f2f1ec" stroke-width="2"></circle>
-</g>
+     HOW IT WORKS. Presentation attributes carry the LIGHT colourway, so any
+     renderer that ignores the style block still gets a correct, visible icon.
+     The CSS below overrides them — CSS beats presentation attributes — and
+     restates light explicitly so the two modes sit side by side and neither
+     is implicit. The gold bell-ring is constant: it reads on both grounds.
+
+     KNOWN LIMIT: Safari does not honour prefers-color-scheme in SVG favicons,
+     so it pins the light colourway (dark house) in both modes. That is the
+     safe way to fail — a dark house on Safari's light tab strip is legible.
+     The PNG icons (apple-touch-icon, icon-192/512) cannot be theme-aware at
+     all; they keep their own baked backgrounds. -->
+<style>
+  .house { fill:#141a14; stroke:#141a14 }
+  .bell  { fill:#f2f1ec }
+  .ring  { stroke:#141a14 }
+  @media (prefers-color-scheme: dark) {
+    .house { fill:#f2f1ec; stroke:#f2f1ec }
+    .bell  { fill:#141a14 }
+    .ring  { stroke:#f2f1ec }
+  }
+</style>
+<path class="house" d="M28 4.5 L52.5 24 L47.5 24 L47.5 47 C47.5 48.4 46.4 49.5 45 49.5 L11 49.5 C9.6 49.5 8.5 48.4 8.5 47 L8.5 24 L3.5 24 Z" fill="#141a14" stroke="#141a14" stroke-width="2.5" stroke-linejoin="round"></path>
+<path class="house" d="M40.5 9 L45.5 9 L45.5 18.4 L40.5 14.4 Z" fill="#141a14" stroke="#141a14" stroke-width="2.5" stroke-linejoin="round"></path>
+<g transform="translate(10.3,15.5) scale(0.68)"><path class="bell" d="M26 6.5 C27.8 6.5 29.2 7.9 29.2 9.7 L29.2 10.6 C34.8 12.2 38.5 17.2 38.5 23.6 L38.5 31.2 L42.3 36.2 C43.1 37.3 42.3 38.8 41 38.8 L11 38.8 C9.7 38.8 8.9 37.3 9.7 36.2 L13.5 31.2 L13.5 23.6 C13.5 17.2 17.2 12.2 22.8 10.6 L22.8 9.7 C22.8 7.9 24.2 6.5 26 6.5 Z" fill="#f2f1ec"></path><path class="bell" d="M21.5 41.6 A4.5 4.5 0 0 0 30.5 41.6 Z" fill="#f2f1ec"></path></g>
+<circle class="ring" cx="34.8" cy="23" r="4.4" fill="#d99a2b" stroke="#141a14" stroke-width="2"></circle>
 </svg>

@@ -522,9 +522,15 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
           </div>
         </div>
 
+        <!-- ONE purchase surface per verdict: the unlock bar above. The two
+             priced buttons that used to sit here offered the SAME two plans at
+             the SAME prices as the bar, so the card showed four price buttons
+             for two products. The bar wins because it is the scroll target
+             every locked preview row points at, it sticks to the viewport, and
+             its labels finish the sentence the preview starts. Only Share
+             stays here — it sells nothing. Do not re-add a priced button to
+             this row; change the bar instead. -->
         <div class="v-ctas">
-          <a class="vbtn vbtn-primary" id="cta-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Get Full Report + Market Change Notifications</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
-          <a class="vbtn vbtn-secondary" id="cta-report" data-track="purchase_click_report" href="subscribe.html?plan=report"><span>Just the Full Report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
           <button class="vbtn vbtn-tertiary" id="share-btn" type="button"><span class="share-face"><svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="share-label">Share</span></span></button>
         </div>
 
@@ -1218,8 +1224,11 @@ async function run() {
 // and collects the address itself, validating coverage there.
 function setPlanLinks(zip) {
   const q = zip ? "&zip=" + zip : "";
-  [["cta-report", "report"], ["cta-price-report", "report"], ["cta-unlock-report", "report"],
-   ["cta-monitor", "monitor"], ["cta-price-monitor", "monitor"], ["cta-unlock-monitor", "monitor"]]
+  // cta-report / cta-monitor are gone from the verdict card (one purchase
+  // surface — see the comment above .v-ctas). The pricing table's pair and the
+  // unlock bar's pair remain.
+  [["cta-price-report", "report"], ["cta-unlock-report", "report"],
+   ["cta-price-monitor", "monitor"], ["cta-unlock-monitor", "monitor"]]
     .forEach(([id, plan]) => {
       const a = document.getElementById(id);         // monthly is subscribe.html's default
       if (a) a.href = "subscribe.html?plan=" + plan + q;
