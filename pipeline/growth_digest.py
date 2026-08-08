@@ -389,7 +389,8 @@ def _chip(level, text):
 
 
 def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
-                  rate_now, rate_prior, rate_asof, places, baseline=False, demo=False):
+                  rate_now, rate_prior, rate_asof, places, baseline=False, demo=False,
+                  research_html=""):
     pm = pretty_month(period)
     n_flips = sum(len(v) for v in flips.values())
     dmv_flips = [(b, z) for b, zs in flips.items() for z in zs if is_dmv(z)]
@@ -418,6 +419,9 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
                      'padding:12px 14px;margin:14px 0;font-size:14px"><b>Baseline run.</b> '
                      'No prior month snapshot existed, so there are no flips to report. '
                      'Next refresh will diff against this one.</div>')
+
+    if research_html:
+        parts.append(research_html)
 
     # 1 — headline counts
     rows = "".join(
@@ -546,6 +550,160 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
 
 # ————— delivery —————
 
+
+# ————— Research release (ShouldISellYet Research) —————
+
+RESEARCH_DIR = Path(__file__).parent / "research"
+
+
+def load_research(period):
+    p = RESEARCH_DIR / f"research-{period}.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def research_headline(rep):
+    """One sentence, the same discipline as the release page: superlatives
+    never reach across the source seam."""
+    rec = rep["records"]
+    wsi, delta = rec.get("wsi"), rec.get("delta")
+    s = f"Warning signs are flashing in {wsi:.1f}% of scored U.S. ZIP markets"
+    if delta is not None:
+        s += (f", up from {rec['prev_wsi']:.1f}% last month" if delta > 0 else
+              f", down from {rec['prev_wsi']:.1f}% last month" if delta < 0 else
+              ", unchanged from last month")
+        hs, ls = rec.get("highest_since"), rec.get("lowest_since")
+        if delta > 0:
+            s += (" — the highest share in the index's continuous history"
+                  if hs == "record" else f" — the highest share since {pretty_month(hs)}")
+        elif delta < 0:
+            s += (" — the lowest share in the index's continuous history"
+                  if ls == "record" else f" — the lowest share since {pretty_month(ls)}")
+    return s + "."
+
+
+def strongest_record(rep):
+    """The one fact a pitch leads with, strongest first."""
+    rec = rep["records"]
+    delta = rec.get("delta")
+    if delta is not None and delta > 0 and rec.get("highest_since") == "record":
+        return "a record high for the index's continuous history"
+    if delta is not None and delta < 0 and rec.get("lowest_since") == "record":
+        return "a record low for the index's continuous history"
+    if delta is not None and delta > 0 and rec.get("highest_since") not in (None, "record"):
+        return f"the highest share since {pretty_month(rec['highest_since'])}"
+    if delta is not None and delta < 0 and rec.get("lowest_since") not in (None, "record"):
+        return f"the lowest share since {pretty_month(rec['lowest_since'])}"
+    if rec.get("run_length", 0) >= 3:
+        return (f"the {rec['run_length']}th consecutive monthly "
+                f"{'rise' if rec['run_direction'] == 'up' else 'decline'}")
+    return None
+
+
+def research_bullets(rep):
+    out = []
+    sm = rep.get("state_moves") or []
+    if sm:
+        worst = max(sm, key=lambda r: r["delta"])
+        best = min(sm, key=lambda r: r["delta"])
+        if worst["delta"] > 0:
+            out.append(f"Biggest deterioration: {worst['key']} — warning share "
+                       f"{worst['share']:.1f}% (+{worst['delta']:.1f} pts).")
+        if best["delta"] < 0:
+            out.append(f"Biggest improvement: {best['key']} — warning share "
+                       f"{best['share']:.1f}% ({best['delta']:.1f} pts).")
+    ts = rep.get("top_streaks") or []
+    if ts:
+        s = ts[0]
+        place = f"{s['city']}, {s['state']}" if s.get("city") else s.get("state", "")
+        out.append(f"Longest current warning streak: {s['zip']} ({place}), "
+                   f"{s['months']} months at WATCH or ACT.")
+    n = len(rep.get("flips_to_warning") or [])
+    if n:
+        out.append(f"{n:,} ZIPs crossed the danger line this month (CSV in the release).")
+    return out[:3]
+
+
+def pitch_draft(rep):
+    """Subject + ~120-word body, written to be REVIEWED and sent by a human.
+    Nothing here auto-sends, ever."""
+    rec = rep["records"]
+    month = rep["pretty_month"]
+    rel = f"{SITE}/research/{rep['month']}/"
+    record = strongest_record(rep)
+    hook = record or f"at {rec['wsi']:.1f}% of scored ZIP markets"
+    subject = (f"Warning signs in {rec['wsi']:.1f}% of U.S. ZIP housing markets"
+               + (f" — {record}" if record else "") + f" ({month} data)")
+    body = f"""Hi {{name}},
+
+New monthly number you can use: ShouldISellYet Research tracks a Warning-Sign
+Index — the share of ~25,000 scored U.S. ZIP housing markets showing warning
+signs (elevated supply, falling prices, slowing sales) against fixed,
+published danger lines. For {month}: {rec['wsi']:.1f}%, {hook}.
+
+The release has state and metro league tables, the ZIPs that crossed the
+danger line this month, and free downloadable CSVs (state, metro, ZIP level)
+— free to use with citation. Local numbers for your coverage area are
+pre-computed on the page.
+
+{rel}
+
+Happy to pull a custom cut for your market. Methodology and the FHFA
+backtest are linked from the release.
+
+— ShouldISellYet Research
+{SITE}/research/"""
+    return subject, body
+
+
+def research_section(rep, out_dir):
+    """The digest's 'Research release' block: the operator's launch kit —
+    headline, bullets, every asset link, and the pitch draft inline."""
+    if not rep:
+        return ""
+    month = rep["month"]
+    rel = f"{SITE}/research/{month}/"
+    subject, body = pitch_draft(rep)
+    bullets = "".join(f"<li style='margin:5px 0'>{H(b)}</li>" for b in research_bullets(rep))
+    assets = " · ".join(
+        f'<a href="{rel}{f}">{t}</a>' for f, t in [
+            ("", "release page"), ("wsi-chart.png", "WSI chart"),
+            ("state-map.png", "state map"), ("wsi-history.csv", "history CSV"),
+            (f"zip-flips-{month}.csv", "flip list")])
+    return (
+        '<h2 style="font-size:17px;margin:26px 0 6px">📊 Research release — '
+        f'{H(rep["pretty_month"])}</h2>'
+        f'<div style="font-size:15px;line-height:1.6"><b>{H(research_headline(rep))}</b></div>'
+        f'<ul style="font-size:14px;line-height:1.55;padding-left:20px">{bullets}</ul>'
+        f'<div style="font-size:13px;color:#5c6673">Assets: {assets}</div>'
+        '<div style="background:#f4f2ec;border:1px solid #e7e2d8;border-radius:8px;'
+        'padding:12px 14px;margin:12px 0;font-size:13px;line-height:1.55">'
+        f'<div style="color:#8a7a55;font-weight:700;letter-spacing:.08em;font-size:11px">'
+        'PITCH DRAFT — REVIEW, PERSONALISE, SEND YOURSELF</div>'
+        f'<div style="margin-top:6px"><b>Subject:</b> {H(subject)}</div>'
+        f'<pre style="white-space:pre-wrap;font-family:inherit;margin:8px 0 0">{H(body)}</pre>'
+        '</div>')
+
+
+def write_press_drafts(rep, out_dir):
+    """PRESS_LIST env (comma-separated emails) → one draft file per outlet in
+    the archive folder. Generated, never sent — sending is a human decision,
+    and the file layout makes that the only possible flow."""
+    raw = os.environ.get("PRESS_LIST", "").strip()
+    if not raw or not rep:
+        return 0
+    subject, body = pitch_draft(rep)
+    drafts = out_dir / "press-drafts"
+    drafts.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for addr in [a.strip() for a in raw.split(",") if a.strip()]:
+        name = addr.split("@")[0].replace(".", " ").title()
+        (drafts / f"{addr.replace('@', '_at_')}.txt").write_text(
+            f"To: {addr}\nSubject: {subject}\n\n" + body.replace("{name}", name),
+            encoding="utf-8")
+        n += 1
+    return n
+
+
 def send_email(subject, html, recipients):
     key = os.environ.get("RESEND_API_KEY", "")
     sender = os.environ.get("ALERT_FROM", "ShouldISellYet <support@shouldisellyet.com>")
@@ -605,12 +763,17 @@ def main():
 
     if args.demo and rate_prior is None and rate_now is not None:
         rate_prior = round(rate_now - 0.31, 2)      # show the burst banner
+    research = load_research(period)
     html = render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
                          rate_now, rate_prior, rate_asof, places,
-                         baseline=baseline, demo=args.demo)
+                         baseline=baseline, demo=args.demo,
+                         research_html=research_section(research, out_dir))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"digest-{period}.html").write_text(html, encoding="utf-8")
+    n_drafts = write_press_drafts(research, out_dir)
+    if n_drafts:
+        print(f"press drafts: {n_drafts} file(s) in {out_dir / 'press-drafts'} — review and send by hand")
 
     # Snapshots written LAST: if anything above throws, this month's snapshot
     # isn't recorded and the next run still has a clean prior to diff against.
