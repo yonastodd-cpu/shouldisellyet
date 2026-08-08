@@ -136,6 +136,11 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
 h1{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h1);line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1 em{font-style:italic;color:var(--navy)}
 .sub{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);margin:0;max-width:52ch}
+/* Hero coda under .sub — existing meta scale, no new sizes. The bold half is
+   --ink so the "ten answers" promise carries; negative top margin tucks it
+   against .sub inside the hero's 22px flex gap. */
+.sub-tally{font-size:var(--fs-meta);line-height:1.55;color:var(--muted);margin:-10px 0 0;max-width:52ch}
+.sub-tally b{color:var(--ink)}
 /* Friend-context line for a shared arrival. Sits ABOVE the input so the
    on-screen keyboard can't push it out of view on mobile. */
 #from-ctx{display:flex;align-items:flex-start;gap:10px;max-width:540px;margin:0 0 4px;
@@ -377,6 +382,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
     <h1>The housing market turns quietly. <em>Hear it early.</em></h1>
     <p class="sub">Prices are the last thing to fall. We crunch the newest inventory, price-cut and days-on-market data for your ZIP into one plain-English verdict — months before it shows up in headlines.</p>
+    <!-- The one-line pitch for the full report, set at the existing meta scale
+         so it reads as a coda to .sub, not a second subhead competing with it. -->
+    <p class="sub-tally">One verdict for your market. <b>Ten answers about your money.</b></p>
     <div id="from-ctx" hidden></div>
     <div class="zipform">
       <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
