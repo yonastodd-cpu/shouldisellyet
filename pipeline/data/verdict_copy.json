@@ -1,7 +1,43 @@
 {
-  "_comment": "CANONICAL verdict copy. Single source of truth for the word, its plain-English translation, and the status emoji. Read by the OG card renderer, the ZIP-page generator, the share text on every surface, and the homepage (via the generated web/verdict-copy.js). Change wording HERE and nowhere else — a translation that drifts between the card and the share text is exactly the confusion this map exists to prevent.",
-  "green":  {"word": "HOLD",   "translation": "No warning signs right now",        "short": "no warning signs",        "emoji": "🟢", "ink": "#1e7a42", "band": "#e9f4ee", "edge": "#bcdcc9"},
-  "yellow": {"word": "WATCH",  "translation": "Early warning signs — worth watching", "short": "early warning signs", "emoji": "🟡", "ink": "#96650c", "band": "#faf1dd", "edge": "#e8d5a8"},
-  "red":    {"word": "ACT",    "translation": "Warning signs building — pay attention", "short": "warning signs building", "emoji": "🔴", "ink": "#c02f2f", "band": "#fbe9e9", "edge": "#ecc3c3"},
-  "strong": {"word": "STRONG", "translation": "Seller's market — conditions favor you", "short": "a seller's market", "emoji": "🔵", "ink": "#1f3a5f", "band": "#e8eef7", "edge": "#c3d2e8"}
+ "_comment": "CANONICAL verdict copy. Single source of truth for the word, its plain-English translation, and the status emoji. Read by the OG card renderer, the ZIP-page generator, the share text on every surface, and the homepage (via the generated web/verdict-copy.js). Change wording HERE and nowhere else — a translation that drifts between the card and the share text is exactly the confusion this map exists to prevent. The qa field is the two-sentence answer for the ZIP pages' visible Q&A block and its FAQPage JSON-LD ({city} is templated at build).",
+ "green": {
+  "word": "HOLD",
+  "translation": "No warning signs right now",
+  "short": "no warning signs",
+  "emoji": "🟢",
+  "ink": "#1e7a42",
+  "band": "#e9f4ee",
+  "edge": "#bcdcc9",
+  "qa": "Nothing in the current public data says the market in {city} is turning — the verdict is HOLD, with no warning signal past its danger line. Selling now is a life decision, not a market-timing one."
+ },
+ "yellow": {
+  "word": "WATCH",
+  "translation": "Early warning signs — worth watching",
+  "short": "early warning signs",
+  "emoji": "🟡",
+  "ink": "#96650c",
+  "band": "#faf1dd",
+  "edge": "#e8d5a8",
+  "qa": "The data shows early warning signs in {city} — the verdict is WATCH, with at least one signal past its danger line. Not a crisis, but turns start this way months before prices move; if selling is on your mind, watch closely."
+ },
+ "red": {
+  "word": "ACT",
+  "translation": "Warning signs building — pay attention",
+  "short": "warning signs building",
+  "emoji": "🔴",
+  "ink": "#c02f2f",
+  "band": "#fbe9e9",
+  "edge": "#ecc3c3",
+  "qa": "Multiple signals in {city} are past the thresholds that preceded past downturns — the verdict is ACT, and sellers here are losing pricing power. If selling was already on your mind, make a plan now rather than next spring."
+ },
+ "strong": {
+  "word": "STRONG",
+  "translation": "Seller's market — conditions favor you",
+  "short": "a seller's market",
+  "emoji": "🔵",
+  "ink": "#1f3a5f",
+  "band": "#e8eef7",
+  "edge": "#c3d2e8",
+  "qa": "Buyers are competing for homes in {city} — the verdict is ACT in the seller's favor: a strong market. If selling was already on your mind, current conditions favor you."
+ }
 }

@@ -592,10 +592,18 @@ RENDER.funnel = async function () {
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
   });
 
-  $("fn-utm").innerHTML = (f.utm.length ? f.utm : []).map((u) =>
+  // AI answer engines (chatgpt.com, perplexity.ai, …) as one derived row —
+  // server-side bucket from the stored referrer domain (schema-v16), so it
+  // shows retroactively and needs nothing from the client. Rendered first
+  // when present: it is the row this table exists to watch right now.
+  const aiRow = f.ai && (f.ai.sessions || f.ai.checks || f.ai.clicks)
+    ? `<tr><td class="mono" style="color:var(--gold)">(ai engines)</td><td class="num">${fmt(f.ai.sessions)}</td>
+       <td class="num">${fmt(f.ai.checks)}</td><td class="num">${fmt(f.ai.clicks)}</td>
+       <td class="num" style="color:var(--fainter)">—</td></tr>` : "";
+  $("fn-utm").innerHTML = (aiRow + (f.utm.length ? f.utm : []).map((u) =>
     `<tr><td class="mono">${u.utm_source}</td><td class="num">${fmt(u.sessions)}</td>
      <td class="num">${fmt(u.checks)}</td><td class="num">${fmt(u.clicks)}</td>
-     <td class="num" style="color:var(--fainter)">—</td></tr>`).join("") ||
+     <td class="num" style="color:var(--fainter)">—</td></tr>`).join("")) ||
     '<tr><td colspan="5" style="color:var(--fainter)">No traffic in this window yet.</td></tr>';
 };
 

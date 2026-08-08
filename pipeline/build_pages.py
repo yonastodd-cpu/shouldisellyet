@@ -212,6 +212,9 @@ h1{font-family:Georgia,'Newsreader',serif;font-weight:500;font-size:clamp(1.6rem
 .btn-ghost{background:none;border-color:var(--faint);color:var(--muted)}
 h2{font-family:Georgia,'Newsreader',serif;font-weight:500;font-size:1.3rem;margin:30px 0 8px}
 .method{font-size:.9375rem;color:var(--muted)}
+/* The extractable answer sentence under the H1 — body ink, not muted: it is
+   the page's one-line summary for humans AND the sentence engines lift. */
+.answer{font-size:1.0625rem;line-height:1.6;color:var(--ink);margin:2px 0 18px;max-width:72ch}
 .nearby{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;padding:0;list-style:none}
 .nearby a{display:inline-block;border:1px solid var(--hairline);border-radius:7px;padding:7px 11px;font-size:.9375rem;text-decoration:none;background:#fff}
 .hubgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 18px;padding:0;list-style:none;margin:10px 0 0}
@@ -329,15 +332,36 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     url = f"{SITE}/zip/{z}/"
 
     nb = "".join(f'<li><a href="/zip/{n}/">{esc(nc)} · {n}</a></li>' for n, nc in neighbours)
+
+    # The extractable answer: one self-contained sentence an answer engine can
+    # lift whole — entity, date, verdict, and the two stats every standing
+    # page is guaranteed to have (eligibility requires mos+dom non-null).
+    # Every number in it is the page's own live data; nothing is hardcoded.
+    answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
+              f"{vc['short']} — the verdict is {vc['word']}, with homes selling in about "
+              f"{round(m['dom'])} days and {m['mos']:.1f} months of supply.")
+    # The Q&A pair: question a person actually asks, two-sentence answer from
+    # the canonical copy map (verdict_copy.json qa — never hand-written here,
+    # so the FAQ can't drift from the card and the share text).
+    faq_q = f"Is it a good time to sell a home in {city}?"
+    faq_a = vc["qa"].format(city=city)
+
     ld = json.dumps({
         "@context": "https://schema.org",
         "@graph": [
+            {"@type": "Organization", "@id": SITE + "/#org", "name": "ShouldISellYet",
+             "url": SITE + "/", "legalName": "Yayday LLC",
+             "logo": {"@type": "ImageObject", "url": SITE + "/apple-touch-icon.png"}},
             {"@type": "WebPage", "@id": url, "url": url, "name": title, "description": desc,
              "inLanguage": "en-US", "datePublished": updated, "dateModified": updated,
+             "publisher": {"@id": SITE + "/#org"},
              "isPartOf": {"@type": "WebSite", "name": "ShouldISellYet", "url": SITE + "/"},
              "about": {"@type": "Place", "name": f"{city}, {st} {z}",
                        "address": {"@type": "PostalAddress", "postalCode": z,
                                    "addressLocality": city, "addressRegion": st, "addressCountry": "US"}}},
+            {"@type": "FAQPage", "@id": url + "#faq", "mainEntity": [
+                {"@type": "Question", "name": faq_q,
+                 "acceptedAnswer": {"@type": "Answer", "text": faq_a}}]},
             {"@type": "BreadcrumbList", "itemListElement": [
                 {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE + "/"},
                 {"@type": "ListItem", "position": 2, "name": "Markets by state", "item": f"{SITE}/zip/"},
@@ -373,6 +397,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   <button type="button" id="share-banner-x" aria-label="Dismiss">&times;</button></div>
 <div class="crumb"><a href="/">Home</a> › <a href="/zip/">Markets</a> › <a href="/zip/{st}/">{esc(state_name)}</a> › {z}</div>
 <h1>Should I sell my house in {esc(city)}, {esc(st)}? ({z})</h1>
+<p class="answer">{esc(answer)}</p>
 <div class="vcard" style="border-color:{k['line']}">
   <div class="vhead" style="background:{k['soft']}">
     <span class="vdot" style="background:{k['hex']};box-shadow:0 0 0 4px {k['soft']},0 0 0 5px {k['hex']}"></span>
@@ -392,6 +417,8 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
   <a class="btn btn-outline" data-track="purchase_click_monitor" data-track-zip="{z}" href="/subscribe.html?plan=monitor&amp;zip={z}&amp;{UTM}">Set up notifications</a>
   <a class="btn btn-ghost" data-track="purchase_click_report" data-track-zip="{z}" href="/subscribe.html?plan=report&amp;zip={z}&amp;{UTM}">Get the full report</a>
 </div>
+<h2>{esc(faq_q)}</h2>
+<p class="method">{esc(faq_a)}</p>
 <h2>How this verdict is computed</h2>
 <p class="method">Four public signals, each with a danger line drawn from past national downturns: months of supply (4.0), the year-over-year price trend (−2%), how long homes take to sell (+40% year over year), and the share of listings cutting price (35%). A ZIP crossing enough of them reads WATCH or ACT; a clean ZIP reads HOLD. <a href="/#signals">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>
 <h2>Nearby markets</h2>
@@ -607,12 +634,82 @@ def write_sitemaps(web, urls, lastmod, chunk=10000):
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + idx + "</sitemapindex>\n",
         encoding="utf-8")
+    # AI answer engines are the growth channel now — homeowners ask "should I
+    # sell my house in {city}" straight to ChatGPT/Perplexity/AI Overviews, and
+    # the goal is to be the source those engines cite. Nothing ever BLOCKED
+    # these bots here (the old file was one universal group), but an explicit
+    # named welcome is the strongest signal robots.txt can send, and it
+    # survives any future tightening of the * group. The disallows repeat in
+    # every group because a robots group that names a bot REPLACES * for it.
+    # /s/ share stubs (meta-noindexed redirect shims) and admin.html (operator
+    # plumbing, noindex) were never worth anyone's crawl budget — now stated.
+    ai_bots = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "Claude-SearchBot",
+               "PerplexityBot", "Google-Extended", "CCBot"]
+    deny = ("# The paid report is per-customer and gated; no value in crawling it.\n"
+            "Disallow: /my-report.html\n"
+            "Disallow: /s/\n"
+            "Disallow: /admin.html\n")
     (web / "robots.txt").write_text(
-        "User-agent: *\nAllow: /\n"
-        "# The paid report is per-customer and gated; no value in crawling it.\n"
-        "Disallow: /my-report.html\n\n"
+        "User-agent: *\nAllow: /\n" + deny + "\n"
+        "# AI answer engines — explicitly welcome.\n"
+        + "".join(f"User-agent: {b}\n" for b in ai_bots)
+        + "Allow: /\n" + deny + "\n"
         f"Sitemap: {SITE}/sitemap.xml\n", encoding="utf-8")
     return n
+
+
+def write_llms_txt(web, meta, scored, pages):
+    """llms.txt — the site, described for answer engines, with live numbers.
+
+    Generated (like robots.txt) so the coverage figures and data month can
+    never go stale in a hand-edited file. Kept well under the convention's
+    ~80-line comfort zone."""
+    period = meta.get("period", "")
+    pretty = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
+    (web / "llms.txt").write_text(f"""# ShouldISellYet
+
+> ShouldISellYet.com computes a free plain-English housing-market verdict —
+> HOLD, WATCH, or ACT — for {scored:,} U.S. ZIP codes from public market data,
+> refreshed on every data release (currently through {pretty}). Operated by
+> Yayday LLC. Not a brokerage; verdicts are general information, not financial
+> or real-estate advice.
+
+## How the verdict works
+
+Four public signals, each tested against a fixed, published danger line drawn
+from past national downturns: months of supply (4.0), year-over-year price
+trend (−2%), time to sell (+40% y/y), and the share of listings cutting price
+(35%). A ZIP past enough danger lines reads WATCH or ACT; a clean ZIP reads
+HOLD. The same signals are tested in the strengthening direction, so a clean
+market with unusual buyer competition reads as a strong seller's market.
+
+## Key pages
+
+- [Methodology](https://shouldisellyet.com/research/methodology.html): index
+  definition, danger lines, backtest, and changelog for the research series.
+- [ShouldISellYet Research](https://shouldisellyet.com/research/): the monthly
+  Warning-Sign Index — the share of scored ZIP markets showing warning signs —
+  with state league tables and downloadable CSVs (free with citation).
+- [Markets by state](https://shouldisellyet.com/zip/): standing verdict pages
+  for {pages:,} ZIP markets, each with its signal gauges and danger lines.
+- [Sample report](https://shouldisellyet.com/report.html): what the paid
+  MyMarketCheckup report looks like for a real ZIP.
+- [Press](https://shouldisellyet.com/press.html): coverage facts and contact.
+
+## Citing this site
+
+Cite as: "Source: ShouldISellYet Research, shouldisellyet.com" — link either
+the research hub or the specific ZIP page. Research CSVs are free to reuse
+with that citation.
+
+## Data attribution
+
+Market data: Data provided by Redfin, a national real estate brokerage ·
+Listing data from Realtor.com® Economic Research · FHFA ZIP-level house price
+index (benchmark) · Freddie Mac PMMS 30-yr weekly average (mortgage rate).
+Place names from GeoNames.org (CC BY 4.0). No source sponsors, endorses, or
+partners with this site.
+""", encoding="utf-8")
 
 
 def main():
@@ -750,6 +847,11 @@ def main():
     urls += [f"{SITE}/zip/{st}/" for st in sorted(by_state)]
     urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
     chunks = write_sitemaps(web, urls, lastmod)
+    # scored = every verdict-carrying ZIP in the data (the homepage's basis);
+    # pages = the subset with standing pages. Both live so llms.txt can't drift.
+    scored = sum(counts for counts in
+                 (len(json.loads(f.read_text())) for f in sorted((data / "zips").glob("*.json"))))
+    write_llms_txt(web, meta, scored, len(eligible))
 
     print(f"pages: {len(eligible):,} ZIP + {len(by_state)} state hubs + 1 index")
     print(f"skipped: {dict(skipped)}")

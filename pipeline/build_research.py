@@ -454,10 +454,12 @@ which belong to their publishers. Media/data questions:
 
 # ————— html scaffolding —————
 
-def page(title, desc, canonical, body, og_image=""):
+def page(title, desc, canonical, body, og_image="", jsonld=""):
     og = (f'<meta property="og:image" content="{og_image}">'
           '<meta name="twitter:card" content="summary_large_image">'
           f'<meta name="twitter:image" content="{og_image}">') if og_image else ""
+    if jsonld:
+        og += f'<script type="application/ld+json">{jsonld}</script>'
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <script src="/track.js" defer></script>
@@ -652,10 +654,20 @@ def word(level):
     return {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "STRONG"}.get(level, level)
 
 
-def release_page(rep, series, outdir, rel_url):
+def release_page(rep, series, outdir, rel_url, gen_date=""):
     month = rep["month"]
     rec = rep["records"]
     bullets = "".join(f"<li>{b}</li>" for b in three_bullets(rep))
+
+    # Quotable-stat rule: the WSI historical series was the one headline stat
+    # with no HTML-text form — it lived only in the chart PNG and the CSV,
+    # and an engine cannot cite a PNG. One dated sentence fixes that.
+    year_ago_m = f"{int(month[:4]) - 1}-{month[5:7]}"
+    year_ago = next((v for m0, v in series if m0 == year_ago_m), None)
+    series_text = (f"In text: the index stood at {rec['wsi']:.1f}% in {pretty(month)}, "
+                   f"versus {rec['prev_wsi']:.1f}% the month before"
+                   + (f" and {year_ago:.1f}% in {pretty(year_ago_m)}" if year_ago is not None else "")
+                   + f". The full monthly series back to {series[0][0]} is in the CSV below.")
 
     def metro_rows(rows):
         return "".join(
@@ -694,6 +706,7 @@ def release_page(rep, series, outdir, rel_url):
 <p class="lede">{headline_sentence(rec)}</p>
 <ul class="bullets">{bullets}</ul>
 <img class="chart" src="wsi-chart.png" alt="Warning-Sign Index time series through {esc(pretty(month))}" width="1200" height="675">
+<p class="note">{esc(series_text)}</p>
 <img class="chart" src="state-map.png" alt="Warning share by state, {esc(pretty(month))}" width="1200" height="675">
 
 <div class="cols">
@@ -724,12 +737,51 @@ def release_page(rep, series, outdir, rel_url):
 <h2>Methodology, briefly</h2>
 <p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose verdict is WATCH or ACT. Verdicts come from fixed, published danger lines (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%, price cuts&nbsp;&gt;35%), backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
 """
+    # Article + Dataset markup for answer engines. Dates follow the ZIP-page
+    # precedent: the data build's generated stamp (meta.json), day-precision;
+    # no truer per-release publish date exists in the research JSONs, which
+    # carry month granularity only.
+    canon = f"{SITE}{rel_url}"
+    pub = gen_date or f"{month}-01"
+    org = {"@type": "Organization", "@id": SITE + "/#org", "name": "ShouldISellYet",
+           "url": SITE + "/", "legalName": "Yayday LLC",
+           "logo": {"@type": "ImageObject", "url": SITE + "/apple-touch-icon.png"}}
+    dataset = lambda name, desc_t, fname, cover: {
+        "@type": "Dataset", "@id": canon + "#" + fname, "name": name,
+        "description": desc_t, "license": canon + "LICENSE.txt",
+        "isAccessibleForFree": True, "creator": {"@id": SITE + "/#org"},
+        "temporalCoverage": cover,
+        "distribution": [{"@type": "DataDownload", "encodingFormat": "text/csv",
+                          "contentUrl": canon + fname}]}
+    ld = json.dumps({"@context": "https://schema.org", "@graph": [
+        org,
+        {"@type": "Article", "@id": canon + "#article", "mainEntityOfPage": canon,
+         "headline": f"Warning-Sign Index: {rec['wsi']:.1f}% — {pretty(month)}",
+         "description": headline_sentence(rec),
+         "datePublished": pub, "dateModified": pub,
+         "author": {"@id": SITE + "/#org"}, "publisher": {"@id": SITE + "/#org"},
+         "image": canon + "og.png"},
+        dataset("ShouldISellYet Warning-Sign Index — monthly history",
+                "Monthly share of scored U.S. ZIP markets whose verdict is WATCH or ACT, "
+                "with a series column separating the continuous run from the reconstructed tail.",
+                "wsi-history.csv", f"{series[0][0]}/{month}"),
+        dataset(f"State warning-sign aggregates — {pretty(month)}",
+                "Scored ZIPs, warning share, and month-over-month change per U.S. state.",
+                f"state-aggregates-{month}.csv", month),
+        dataset(f"Metro warning-sign movers — {pretty(month)}",
+                "Metro areas (≥15 scored ZIPs) deteriorating and improving fastest.",
+                f"metro-aggregates-{month}.csv", month),
+        dataset(f"ZIP verdict flips — {pretty(month)}",
+                "Every ZIP market that moved from HOLD or STRONG into WATCH or ACT this month.",
+                f"zip-flips-{month}.csv", month),
+    ]}, separators=(",", ":"))
+
     (outdir / "index.html").write_text(page(
         f"Warning-Sign Index {rec['wsi']:.1f}% — {pretty(month)} · ShouldISellYet Research",
         f"{rep['national']['scored']:,} U.S. ZIP markets scored in {pretty(month)}: "
         f"{rec['wsi']:.1f}% show warning signs. Monthly index, metro league tables, "
         "and downloadable data.",
-        f"{SITE}{rel_url}", body, og_image=f"{SITE}{rel_url}og.png"))
+        canon, body, og_image=f"{SITE}{rel_url}og.png", jsonld=ld))
 
 
 def hub_page(h, series, releases, outdir):
@@ -785,6 +837,12 @@ def main():
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
 
+    # Day-precision date for Article markup — the data build's generated
+    # stamp, same source the ZIP pages already use for datePublished.
+    meta_p = Path(args.web) / "data" / "meta.json"
+    gen_date = (json.loads(meta_p.read_text()).get("generated", "")
+                if meta_p.exists() else "")
+
     seam = h.get("seam")
     wsi_chart(series, {"delta": None}, changelog, stage / "wsi-chart.png", seam=seam)
     for p in reports:
@@ -799,7 +857,7 @@ def main():
         write_csvs(rep, upto, outdir)
         og_card(rep, outdir / "og.png")
         social_set(rep, upto, outdir)
-        release_page(rep, upto, outdir, f"/research/{month}/")
+        release_page(rep, upto, outdir, f"/research/{month}/", gen_date=gen_date)
 
     hub_page(h, series, releases, stage)
     methodology_page(h, changelog, stage)
