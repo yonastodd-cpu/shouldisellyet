@@ -154,9 +154,17 @@ The strip carries this line verbatim:
 meta tags, structured data, README badges, or commit-visible comments,
 when referring to a data source.
 
-(Unrelated and fine: NTRealty is a genuinely affiliated brokerage of this
-site, and that relationship is disclosed in `terms.html`. That's a real
-disclosure about our own business, not a data-source claim.)
+(A note that used to sit here called NTRealty "a genuinely affiliated
+brokerage of this site." That was wrong and is corrected as of 2026-08-08:
+there is NO corporate affiliation. Naomi Todd is an independent licensed
+Maryland agent who answers the support address. NTRealty, LLC is *her own
+company*, not a brokerage and not ours — her licence is held with Samson
+Properties. Do not describe it as affiliated, and do not describe it as a
+brokerage. Introductions are switched off pending a signed agreement
+(`supabase/schema-v15.sql`), so do not write copy that assumes a standing
+referral arrangement with anyone. `terms.html` §4 states the accurate version.
+The rule this file exists to enforce — never claim a relationship you do not
+have — applies to our own business as much as to a data source.)
 
 ## Operator task — not automated, and it cannot be
 
