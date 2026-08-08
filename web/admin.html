@@ -136,8 +136,11 @@ table.grid tr:hover td{background:#faf9f5}
         <input id="li-pw" type="password" placeholder="Password" autocomplete="current-password">
         <button class="btn" id="li-pwgo" onclick="return signInPassword()">Sign in</button>
         <div style="font-size:12px;color:var(--fainter);line-height:1.5;margin-top:8px">
-          Set one in Supabase → Authentication → Users → your address → “Reset password”,
-          or add a user with “Auto Confirm”. Email sign-in keeps working once SMTP is fixed.
+          Use the password set when the user was created. No password, or forgotten?
+          Supabase → Authentication → Users → <b>Add user</b> → “Create new user” with
+          <b>Auto Confirm</b> — that sets a password directly and sends no email.
+          (The dashboard’s “Reset password” <em>does</em> send one, so it fails while
+          SMTP is down.) Email sign-in resumes working once SMTP is fixed.
         </div>
       </div>
     </div>
