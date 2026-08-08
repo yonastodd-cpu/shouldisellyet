@@ -35,6 +35,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
+<script src="alert-copy.js"></script>
 <script src="/track.js" defer></script>
 <script src="verdict-copy.js"></script>
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
@@ -239,6 +240,31 @@ h1 em{font-style:italic;color:var(--navy)}
 .pv-mask{font-family:'IBM Plex Mono',monospace;font-size:.9em;color:var(--faint-ink);letter-spacing:.02em;white-space:nowrap}
 .pv-from{font-size:var(--fs-micro);color:var(--faint-ink);border:1px solid var(--hairline);border-radius:99px;padding:1px 8px;white-space:nowrap}
 .pv-lockcol{flex:0 0 auto;font-size:.95rem;opacity:.55;filter:grayscale(1)}
+/* Locked alert toggle column — a rendered switch, deliberately inert: no
+   input element exists, so there is no state to change and nothing to POST.
+   The grayed pill + lock reads "exists, not yet yours"; the microcopy under
+   it names exactly what the alert would watch. */
+.pv-alert{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:132px}
+.pv-togline{display:flex;align-items:center;gap:5px;font-size:.8rem;opacity:.85;filter:grayscale(1)}
+.pv-tog{width:28px;height:17px;border-radius:9px;background:#d7d0c2;position:relative;flex:0 0 auto}
+.pv-tog::after{content:"";position:absolute;top:2.5px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.pv-alert-label{font-size:var(--fs-micro);font-weight:600;color:var(--muted);white-space:nowrap}
+.pv-alert-micro{font-size:var(--fs-micro);line-height:1.35;color:var(--faint-ink);text-align:right}
+/* Narrow screens: the tall right-hand column wraps 3-deep and bloats the
+   stack past its 1.5-screen budget. Reflow the toggle to one full-width line
+   under the value, indented to the body column. */
+@media (max-width:560px){
+  .pv-row{flex-wrap:wrap}
+  /* flex-basis 0 (not auto) so a long value line shrinks instead of wrapping
+     the whole body under the numeral */
+  .pv-body{flex:1 1 0}
+  .pv-alert{flex-direction:row;align-items:center;gap:6px;max-width:100%;flex-basis:100%;
+            justify-content:flex-start;margin-left:58px;min-width:0}
+  /* min-width:0 beats the flex min-width:auto default, which was clipping the
+     microcopy at the card edge instead of letting it wrap */
+  .pv-alert-micro{text-align:left;min-width:0}
+  .pv-alert-micro::before{content:"· "}
+}
 .pv-spark{flex:0 0 auto;width:104px;height:32px;display:block}
 /* Walk-away row — the emphasized one */
 .pv-row--em{border:1px solid var(--gold);border-radius:10px;background:#fdfaf3;margin:6px 0;padding:13px 12px}
@@ -955,15 +981,30 @@ function renderPreview(d) {
        : '<span>National verdict mix — in the full report.</span>',
     { open: true });
 
+  // Locked alert toggle for each maskable row. GENUINELY INERT: it is markup
+  // inside the row button — no checkbox, no state, no handler, no network
+  // call. The only interaction is the row's own scroll-to-unlock. All wording
+  // comes from the alert-copy.js map so the report and emails can reuse it
+  // verbatim later.
+  const AC = window.ALERT_COPY || { rows: {}, locked_sublabel: "Alert me — included with monitoring" };
+  const alertCol = num => {
+    const micro = AC.rows[num];
+    if (!micro) return "";
+    return '<span class="pv-alert" aria-hidden="true" title="' + AC.locked_sublabel + '">' +
+      '<span class="pv-togline"><span class="pv-tog"></span>🔒<span class="pv-alert-label">Alert me</span></span>' +
+      '<span class="pv-alert-micro">' + micro + "</span></span>";
+  };
+
   $("pv-rows").innerHTML = rows.map(r => r.open
     ? '<div class="pv-row pv-open"><span class="pv-num" aria-hidden="true">' + r.num +
       '</span><span class="pv-body"><span class="pv-title">' + r.title +
       '</span><span class="pv-line">' + r.line + "</span></span></div>"
     : '<button type="button" class="pv-row' + (r.em ? " pv-row--em" : "") +
-      '" data-goto-unlock aria-label="' + r.aria + '"><span class="pv-num" aria-hidden="true">' +
+      '" data-goto-unlock aria-label="' + r.aria + ' Alert available with monitoring.' +
+      '"><span class="pv-num" aria-hidden="true">' +
       r.num + '</span><span class="pv-body"><span class="pv-title">' + r.title +
       '</span><span class="pv-line">' + r.line +
-      '</span></span><span class="pv-lockcol" aria-hidden="true">🔒</span></button>'
+      "</span></span>" + alertCol(r.num) + "</button>"
   ).join("");
 
   // Row tap → the unlock bar when it exists, else the CTAs it will stand above.
