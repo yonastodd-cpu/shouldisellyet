@@ -280,8 +280,39 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .src-list a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .src-note{font-size:.9375rem;color:var(--faint-ink);line-height:1.55;margin-top:6px;max-width:80ch}
 footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
-.foot-row{display:flex;justify-content:space-between;font-size:var(--fs-meta);color:var(--muted);flex-wrap:wrap;gap:12px}
-.foot-row a{color:var(--muted)}
+/* .foot-nav is a real <nav>, so the masthead rule at line 91 and the
+   `nav{padding:16px 24px}` inside the 980px block both land on it. The first
+   line resets all four properties they set — those resets are load-bearing,
+   not decoration. A class (0,1,0) beats bare `nav` (0,0,1) at every width.
+   column-gap and font-size match .navlinks so the row keeps the masthead's
+   rhythm. */
+.foot-nav{padding:0;border-bottom:0;justify-content:flex-start;align-items:baseline;
+          display:flex;flex-wrap:wrap;column-gap:26px;row-gap:0;
+          font-size:var(--fs-meta)}
+/* These previously inherited the muted colour of the sentence beside them and
+   the global a{text-decoration:none}, which left nothing to mark them as
+   links. --navy is 10.83:1 on --bg, and the underline stands by default
+   rather than on hover, so the affordance survives for people who never point
+   at anything. As flex items these are blockified, so the vertical padding
+   lands — that is what takes each target to 40px without shifting the
+   underline. Keep the padding if .foot-nav ever stops being a flex row. */
+.foot-nav a{padding:8px 0;color:var(--navy);font-weight:600;
+            text-decoration:underline;text-decoration-thickness:1px;
+            text-underline-offset:3px;text-decoration-color:currentColor;
+            transition:color .12s ease}
+.foot-nav a:hover{color:var(--navy-dark);text-decoration-thickness:2px}
+.foot-nav a:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:2px}
+/* Admin is operator plumbing: last in the row and quieter in both colour and
+   weight, but it keeps the underline so it still reads as a link. --faint-ink
+   rather than the --fainter it used before, which is decorative-only (see
+   :root). The selector must stay `.foot-nav a.foot-admin` (0,2,1) — a bare
+   `.foot-admin` (0,1,0) loses to `.foot-nav a` and renders identically. */
+.foot-nav a.foot-admin{color:var(--faint-ink);font-weight:400}
+.foot-nav a.foot-admin:hover{color:var(--ink);text-decoration-thickness:1px}
+/* --hairline2 is the lighter of the two rules, keeping this subordinate to the
+   border-top that already separates footer{} from the section above it. */
+.foot-legal{margin-top:18px;padding-top:20px;border-top:1px solid var(--hairline2)}
+.foot-copy{font-size:var(--fs-meta);color:var(--muted)}
 .disclaimer{font-size:.9375rem;line-height:1.55;color:var(--faint-ink);max-width:90ch;margin-top:12px}
 .hidden{display:none!important}
 @media (max-width:980px){
@@ -311,6 +342,17 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .verdict-body{padding:18px 20px 22px}
   .crunch-row span:nth-child(2){width:auto;flex:1}
   footer{padding:26px 20px 30px}
+}
+/* Footer row tightening. Both blocks must stay after the 560px block above so
+   they win on source order — .foot-nav is a single class in each, so nothing
+   here outranks anything by specificity alone. */
+@media (max-width:980px){
+  .foot-nav{column-gap:22px}
+}
+@media (max-width:560px){
+  .foot-nav{column-gap:20px;row-gap:2px}
+  .foot-nav a{padding:9px 0}
+  .foot-legal{margin-top:14px;padding-top:16px}
 }
 </style>
 </head>
@@ -497,22 +539,34 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </section>
 
 <footer>
-  <div class="foot-row">
-    <span>© 2026 ShouldISellYet.com · operated by Yayday LLC · NTRealty, LLC is an affiliated company</span>
+  <!-- Footer navigation leads the block. These are destinations, so they are
+       left-aligned and styled as links rather than sitting in a muted
+       right-hand clump that read as the tail of the legal sentence beside it. -->
+  <nav class="foot-nav" aria-label="Footer">
+    <a href="zip/">Browse markets by state</a>
+    <a href="research/">Research</a>
+    <a href="press.html">Press</a>
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="refunds.html">Refunds &amp; cancellation</a>
     <!-- The Admin link is a convenience, not a secret. admin.html is static
          HTML on a public host, so its URL was never the boundary — every read
          it does goes through an allowlist-checked RPC, and the anon key gets
          "permission denied" on all of them. rel="nofollow" keeps it out of
          crawl budget (the page is noindex and absent from the sitemap
-         anyway); it sits last and muted so it reads as operator plumbing
-         rather than something a visitor should click. -->
-    <span style="display:flex;gap:14px;flex-wrap:wrap"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds &amp; cancellation</a><a href="zip/">Browse markets by state</a><a href="research/">Research</a><a href="press.html">Press</a><a href="admin.html" rel="nofollow" style="color:var(--fainter)">Admin</a></span>
-  </div>
+         anyway); it sits last and, via .foot-admin, one step quieter in
+         colour and weight than the visitor links, so it reads as operator
+         plumbing rather than something a visitor should click. -->
+    <a class="foot-admin" href="admin.html" rel="nofollow">Admin</a>
+  </nav>
+  <div class="foot-legal">
+  <div class="foot-copy">© 2026 ShouldISellYet.com · operated by Yayday LLC</div>
   <div class="disclaimer">Your information is never sold, and we never pass your details to anyone without you asking us to.</div>
   <!-- No source citation here on purpose. The page carries exactly ONE, in
        the results stamp beside the data it credits (see citeHTML). A second
        copy down here would be the duplicate the attribution rule forbids. -->
   <div class="disclaimer" id="attribution">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
+  </div>
 </footer>
 </div>
 
