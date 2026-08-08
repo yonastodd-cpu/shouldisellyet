@@ -804,6 +804,18 @@ def main():
     hub_page(h, series, releases, stage)
     methodology_page(h, changelog, stage)
 
+    # Machine-readable current WSI at a STABLE url (/research/wsi.json) so the
+    # homepage's "Your market vs. the nation" row can carry the live number
+    # without hardcoding it or knowing the release month. Contents are the
+    # latest release's records verbatim (wsi, delta, prev_wsi, month, streaks)
+    # plus the release path for the "full monthly research" link. The homepage
+    # FEATURE-DETECTS this file — absent or stale, the row degrades to the
+    # verdict mix + percentile and no research link, never an error.
+    latest = json.loads(reports[-1].read_text())
+    (stage / "wsi.json").write_text(json.dumps(
+        dict(latest["records"], release=f"/research/{latest['month']}/"),
+        separators=(",", ":")))
+
     if final.exists():
         shutil.rmtree(final)
     stage.rename(final)

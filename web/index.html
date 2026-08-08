@@ -270,9 +270,18 @@ h1 em{font-style:italic;color:var(--navy)}
 .pv-row--em{border:1px solid var(--gold);border-radius:10px;background:#fdfaf3;margin:6px 0;padding:13px 12px}
 .pv-row--em + .pv-row{border-top:0}
 .pv-row--em .pv-title{font-size:var(--fs-body)}
-/* Open macro row (08) — content, not a tease: no lock, not a scroll trigger */
+/* Open macro row (08) — content, not a tease: no lock, not a scroll trigger.
+   The title is its own expand button; the expanded box carries percentile,
+   WSI and the research link. */
 .pv-open{cursor:default}
 .pv-open:hover{background:none}
+.pv-xhead{display:flex;align-items:center;gap:7px;background:none;border:0;padding:0;
+          font-family:inherit;color:inherit;cursor:pointer;text-align:left}
+.pv-xhead:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:4px}
+.pv-chev{font-size:.8rem;color:var(--gold);transition:transform .15s ease}
+#pv-macro p{font-size:var(--fs-meta);line-height:1.55;color:var(--muted);margin:8px 0 0}
+#pv-macro b{color:var(--ink)}
+.pv-rlink{color:var(--navy);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 
 /* monitor signup (inside verdict) */
 .mform{display:none;flex-direction:column;gap:9px;border-top:1px dashed var(--hairline);padding-top:14px;margin-top:6px}
@@ -691,6 +700,18 @@ const DEMO = {
 let INDEX = null, META = null, live = false;   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
 const stateCache = {};
 
+// Warning-Sign Index for the preview's macro row — FEATURE-DETECTED, never
+// hardcoded. /research/wsi.json is emitted by pipeline/build_research.py at a
+// stable URL; if it is absent (research build not run) the row renders the
+// verdict mix + percentile only and hides the research link. The fetch starts
+// at page load and the macro row reads whatever has resolved by expand time —
+// expansion is a user action after reveal, so this can never shift layout.
+let PV_WSI = null, PV_RESEARCH = false;
+fetch("research/wsi.json").then(r => r.ok ? r.json() : null).then(j => {
+  if (j && typeof j.wsi === "number") { PV_WSI = j; PV_RESEARCH = true; }
+  else return fetch("research/", { method: "HEAD" }).then(r => { PV_RESEARCH = r.ok; });
+}).catch(() => {});
+
 fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
   if (j && Object.keys(j).length > 0) { INDEX = j; live = true; }
   return fetch("data/meta.json").then(r => r.ok ? r.json() : null);
@@ -970,16 +991,18 @@ function renderPreview(d) {
             : mask("▓▓▓▓▓").replace("from your numbers", "from your ZIP's 3-yr history"),
     { aria: "When homes here sell fastest — unlocked in the full report" });
 
-  // 08 — deliberately OPEN, free forever: real national mix, no mask, no lock.
-  // Wording matches market-render.js contextBoxes (HOLD=green, WATCH=yellow,
-  // ACT=red) so the homepage and the report can never disagree.
+  // 08 — deliberately OPEN and free-tier forever: real national mix, no mask,
+  // no lock, no upsell gate. Wording matches market-render.js contextBoxes
+  // (HOLD=green, WATCH=yellow, ACT=red) so the homepage and the report can
+  // never disagree. Expandable: percentile + WSI + research link live behind
+  // the toggle, built at expand time so async data can never shift layout.
   const nc = META && META.national && META.national.counts;
   row("08", "Your market vs. the nation",
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
        : '<span>National verdict mix — in the full report.</span>',
-    { open: true });
+    { open: true, spy: d.m && d.m.spy });
 
   // Locked alert toggle for each maskable row. GENUINELY INERT: it is markup
   // inside the row button — no checkbox, no state, no handler, no network
@@ -997,8 +1020,11 @@ function renderPreview(d) {
 
   $("pv-rows").innerHTML = rows.map(r => r.open
     ? '<div class="pv-row pv-open"><span class="pv-num" aria-hidden="true">' + r.num +
-      '</span><span class="pv-body"><span class="pv-title">' + r.title +
-      '</span><span class="pv-line">' + r.line + "</span></span></div>"
+      '</span><span class="pv-body">' +
+      '<button type="button" class="pv-xhead" id="pv-x" aria-expanded="false" aria-controls="pv-macro">' +
+      '<span class="pv-title">' + r.title + '</span><span class="pv-chev" aria-hidden="true">▾</span></button>' +
+      '<span class="pv-line">' + r.line + '</span>' +
+      '<div id="pv-macro" hidden></div></span></div>'
     : '<button type="button" class="pv-row' + (r.em ? " pv-row--em" : "") +
       '" data-goto-unlock aria-label="' + r.aria + ' Alert available with monitoring.' +
       '"><span class="pv-num" aria-hidden="true">' +
@@ -1013,7 +1039,52 @@ function renderPreview(d) {
       const t = document.getElementById("unlock-bar") || document.querySelector(".v-ctas");
       if (t) t.scrollIntoView({ behavior: "smooth", block: "center" });
     }));
+
+  // Macro row expansion — content is built here, at expand time, from
+  // whatever has resolved: percentile always (META is loaded before any
+  // verdict can render), WSI + research link only if feature-detection found
+  // them. Everything in it is real, dated, and free — no mask, no gate.
+  const spy = d.m && d.m.spy;
+  const xBtn = document.getElementById("pv-x");
+  if (xBtn) xBtn.addEventListener("click", () => {
+    const box = document.getElementById("pv-macro");
+    const opening = box.hidden;
+    if (opening && !box.innerHTML) {
+      const parts = [];
+      const pct = pvPercentile(spy);
+      if (pct != null) {
+        const pack = pct >= 85 ? "near the top of the pack" : pct >= 60 ? "ahead of most markets"
+                   : pct > 40 ? "squarely mid-pack" : pct > 15 ? "behind most markets" : "near the bottom of the pack";
+        parts.push("<p>Prices here are rising faster than about <b>" + pct +
+                   "%</b> of U.S. ZIP codes — " + pack + ".</p>");
+      }
+      if (PV_WSI) {
+        const mo = ym => PV_MONTHS_LONG[Number(ym.split("-")[1]) - 1] + " " + ym.split("-")[0];
+        const dir = PV_WSI.delta > 0 ? "up" : "down";
+        parts.push('<p class="pv-wsi">Warning-Sign Index: <b>' + PV_WSI.wsi.toFixed(1) +
+                   "%</b> of scored ZIP markets showed warning signs in " + mo(PV_WSI.month) +
+                   (PV_WSI.delta ? " — " + dir + " " + Math.abs(PV_WSI.delta).toFixed(1) +
+                   " points from the month before." : ".") + "</p>");
+      }
+      if (PV_RESEARCH) parts.push('<p><a class="pv-rlink" href="research/">See the full monthly research →</a></p>');
+      box.innerHTML = parts.join("") || "<p>More national context is published monthly.</p>";
+    }
+    box.hidden = !opening;
+    xBtn.setAttribute("aria-expanded", String(opening));
+    xBtn.querySelector(".pv-chev").style.transform = opening ? "rotate(180deg)" : "";
+  });
   $("preview").hidden = false;
+}
+
+// Percentile of this ZIP's price trend vs. the nation, from the same decile
+// interpolation market-render.js contextBoxes uses (spy_deciles in meta.json).
+function pvPercentile(spy) {
+  const nat = META && META.national;
+  if (!nat || !nat.spy_deciles || nat.spy_deciles.length !== 11 || spy == null) return null;
+  const dec = nat.spy_deciles;
+  let k = 0; while (k < 10 && spy > dec[k + 1]) k++;
+  const frac = k * 10 + (dec[k + 1] > dec[k] ? (spy - dec[k]) / (dec[k + 1] - dec[k]) * 10 : 5);
+  return Math.max(1, Math.min(99, Math.round(frac)));
 }
 
 function show(el, on) { el.classList.toggle("hidden", !on); }
