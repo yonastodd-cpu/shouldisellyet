@@ -318,6 +318,20 @@ function authError(error) {
     return "That code has expired or was already used. Request a new one — " +
            "or if you're rate-limited, wait for the hour to roll over.";
   }
+  if (/error sending.*email/i.test(m)) {
+    // GoTrue's own message for "the SMTP send itself failed" — a 500 from
+    // its side, not a client problem, and it never says why: a bad
+    // credential and an unverified sender domain produce this identical
+    // string. Distinct from the rate-limit case above, which is Supabase's
+    // OWN throttle rejecting the request before it tries to send at all;
+    // this is a real send attempt that reached SMTP Settings and bounced.
+    return "The mail server rejected this send — Custom SMTP is configured but the " +
+           "handshake is failing. In Authentication → Emails → SMTP Settings, check: " +
+           "username is exactly “resend” (not your email) · password is your Resend " +
+           "API key with no stray quotes or spaces · port 465, or 587 if 465 fails · the " +
+           "sender email's domain shows Verified in Resend → Domains · you scrolled down " +
+           "and hit Save. Fix one, save, and try again.";
+  }
   return m;
 }
 
