@@ -162,6 +162,8 @@ def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
     # methodology-version annotations (T5 changelog): a tick + label at the
     # month a definition changed, so no reader mistakes a redefinition for news
     for entry in changelog:
+        if entry.get("annotate") is False:
+            continue
         m = entry.get("month")
         idx = next((i for i, (mm, _) in enumerate(series) if mm == m), None)
         if idx is not None:
@@ -340,6 +342,115 @@ def social_set(rep, series, outdir):
         d.text((64, 700), "scored U.S. ZIP market.", font=font(REG, 30), fill=MUTED)
     img.save(sdir / "4-spotlight.png", "PNG", optimize=True)
 
+
+
+# ————— methodology page (T5) —————
+
+def methodology_page(h, changelog, outdir):
+    seam = h.get("seam", "")
+    entries = "".join(
+        f'<tr><td class="mono">v{esc(e["version"])}</td>'
+        f'<td class="mono">{esc(pretty(e["month"]))}</td>'
+        f'<td>{esc(e["note"])}</td></tr>'
+        for e in sorted(changelog, key=lambda e: e["month"], reverse=True))
+    backtest = ""
+    meta_p = ROOT / "web" / "data" / "meta.json"
+    if meta_p.exists():
+        bt = json.loads(meta_p.read_text()).get("national", {}).get("backtest")
+        if bt:
+            sig_names = {"mos": "Months of supply > 4", "price": "Prices falling y/y",
+                         "dom": "Time-to-sell up > 40% y/y", "inv": "Inventory up > 50% y/y"}
+            rows = "".join(
+                f'<tr><td>{esc(nm)}</td>'
+                f'<td class="n">{bt["sig"][k]["x"]:.1f}%</td>'
+                f'<td class="n">{bt["sig"][k]["c"]:.1f}%</td></tr>'
+                for k, nm in sig_names.items() if k in bt.get("sig", {}))
+            backtest = f"""
+<h2>The danger lines are backtested</h2>
+<p>Each signal's threshold was tested against the FHFA's official ZIP-level
+house-price outcomes ({bt.get("n", 0):,} zip-year pairs, {bt.get("y0")}–{bt.get("y1")},
+outcomes through {bt.get("fhfa")}): of markets past a line at year-end, the share whose
+FHFA index declined the following year, versus markets clear of it.</p>
+<table><thead><tr><th>Signal crossed</th><th>Declined next year</th><th>Clear of the line</th></tr></thead>
+<tbody>{rows}</tbody></table>
+<p class="note">Warning ≠ crash: a WATCH/ACT market is one where decline risk is
+elevated versus baseline, not one guaranteed to fall. The full backtest method is
+described on the <a href="/">homepage's signal explanations</a>.</p>"""
+
+    body = f"""
+<div class="eyebrow">SHOULDISELLYET RESEARCH</div>
+<h1>Warning-Sign Index — methodology</h1>
+<p class="lede">Everything needed to check, reuse, or challenge the number.
+The definition is versioned; changes are listed at the bottom and annotated
+on the chart at the month they take effect. History is restated on cutover,
+never silently redefined.</p>
+
+<h2>Definition</h2>
+<p><b>WSI = ZIP markets at WATCH or ACT ÷ all scored ZIP markets</b>, as a
+percentage, computed monthly. A ZIP is <b>scored</b> when at least two of the
+four index signals are known for the month. Insufficient-data ZIPs are
+excluded from both numerator and denominator. STRONG (seller's-market)
+verdicts count in the denominator only.</p>
+
+<h2>The four signals</h2>
+<p>Identical thresholds to the site's published danger lines, evaluated by
+the same verdict engine — restated on a constant four-signal basis so every
+month of the series measures the same thing:</p>
+<table><thead><tr><th>Signal</th><th>Danger line</th></tr></thead><tbody>
+<tr><td>Months of supply</td><td class="mono">&gt; 4 (severe &gt; 6)</td></tr>
+<tr><td>Median sale price, y/y</td><td class="mono">&lt; −2% (fast &lt; −5%)</td></tr>
+<tr><td>Time to sell, y/y</td><td class="mono">&gt; +40%</td></tr>
+<tr><td>Inventory, y/y</td><td class="mono">&gt; +50%</td></tr>
+</tbody></table>
+<p class="note">The site's per-ZIP verdicts additionally use the share of
+listings with price cuts (&gt; 35%) where Redfin publishes it. That signal has
+no history before 2026 and is deliberately excluded from the index; measured
+impact of the exclusion at adoption was 0.2 points (62.2% vs 62.4%).</p>
+
+<h2>Sources and the seam</h2>
+<p>The <b>continuous series</b> begins {esc(pretty(seam))}: Redfin Data Center
+hub data, the same file the site refreshes from, ~25,000 scored ZIPs per
+month. The <b>2012–2019 tail</b> is reconstructed from Redfin's legacy market
+tracker (~18,000 ZIPs, a prior universe), drawn in a lighter stroke, and
+<b>excluded from every record, delta, and superlative</b>. The two sources
+overlap for 72 months; per-ZIP level agreement across 1.36M shared zip-months
+is 72.7% — similar, not the same, which is exactly why claims never reach
+across the seam. The current month is always computed from the site's own
+published per-ZIP data, so the index and the ZIP pages a reader can check
+agree by construction.</p>
+
+<h2>Records and streaks</h2>
+<p>"Highest since {{month}}" names the last month the index was <b>at or
+above</b> the current value — ties block the bigger claim, so no superlative
+can contradict the archive. "Record" always means "within the continuous
+series", never "ever". ZIP warning streaks count consecutive months at WATCH
+or ACT; a month without a score breaks the streak.</p>
+
+<h2>Metro definitions</h2>
+<p>ZIPs map to Metropolitan Statistical Areas via the Census 2020
+ZCTA↔county relationship file (largest land-overlap county per ZCTA) chained
+to the OMB 2023 CBSA delineation — the same definitions the press already
+uses. ZCTAs approximate ZIP codes; the divergence is the standard documented
+compromise, because USPS publishes no ZIP geography. Metro league tables
+require ≥ 15 scored ZIPs.</p>
+{backtest}
+
+<h2>Use and citation</h2>
+<p>Index values, league tables, and release CSVs are free to use, chart, and
+republish with citation: <b>"Source: ShouldISellYet Research."</b> The CSVs
+carry ShouldISellYet's derived indicators only — never upstream raw metrics,
+which belong to their publishers. Media/data questions:
+<a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
+
+<h2>Changelog</h2>
+<table><thead><tr><th>Version</th><th>Effective</th><th>Change</th></tr></thead>
+<tbody>{entries}</tbody></table>
+"""
+    (outdir / "methodology.html").write_text(page(
+        "Warning-Sign Index methodology — ShouldISellYet Research",
+        "Definition, danger lines, sources, the seam, records rules, metro "
+        "mapping, FHFA backtest, and the versioned changelog.",
+        f"{SITE}/research/methodology.html", body))
 
 # ————— html scaffolding —————
 
@@ -685,6 +796,7 @@ def main():
         release_page(rep, upto, outdir, f"/research/{month}/")
 
     hub_page(h, series, releases, stage)
+    methodology_page(h, changelog, stage)
 
     if final.exists():
         shutil.rmtree(final)

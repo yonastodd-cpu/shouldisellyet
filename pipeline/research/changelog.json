@@ -1,0 +1,8 @@
+[
+  {
+    "version": "1.0",
+    "month": "2026-06",
+    "annotate": false,
+    "note": "Index launched. Four-signal constant methodology (months of supply, price trend y/y, time-to-sell y/y, inventory y/y — the site's published danger lines, price-cuts share deliberately excluded for lack of pre-2026 history). Continuous series begins June 2020 (Redfin Data Center hub, ~25k scored ZIPs/month); 2012–2019 context tail reconstructed from the legacy market tracker (~18k ZIPs, prior universe), charted separately and excluded from records. Measured cross-source level agreement over the 72 overlapping months: 72.74% of 1.36M shared zip-months."
+  }
+]
