@@ -318,7 +318,16 @@ async function sendLink() {
     return false;
   }
   $("step-code").style.display = "block";
-  msg("Sent. Click the link in the email, or paste the code here if your template shows one.");
+  // Name the redirect this page actually asked for. Supabase silently falls
+  // back to the project's Site URL when the requested redirect is not on the
+  // allow list — which is how a correctly-sent link opens localhost:3000 and
+  // reads as a broken email rather than a missing setting. Printing the exact
+  // origin means it gets pasted, not retyped.
+  msg("Sent. Click the link, or paste the 6-digit code below if your email template " +
+      "includes {{ .Token }}. Link opening localhost instead of this site? The redirect " +
+      "isn't allow-listed — set Site URL to " + location.origin + " and add " +
+      location.origin + "/** to Redirect URLs, both in Supabase → Authentication → " +
+      "URL Configuration.");
   return false;
 }
 
