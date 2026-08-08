@@ -507,16 +507,14 @@ def cmd_monthly(args):
     sp = RESEARCH_DIR / "streaks.json"
     prev_s = json.loads(sp.read_text()) if sp.exists() else {"month": "", "warn": {}}
     if prev_s.get("month") == month:
-        # Same-month rerun (manual dispatch): the streaks file already
-        # advanced for this month, so advancing again would double-count.
-        # Rebuild from the previous month's persisted level map instead.
-        # That base only proves membership, not depth, so a rerun floors
-        # prior streaks at one month — counts stay sane, long streaks read
-        # short until the next real refresh. Production cadence never runs
-        # the same month twice, so this is a dispatch-only degradation.
-        base_levels = load_levels(prev_month(month)) or {}
-        base = {z: 1 for z, lv in base_levels.items() if lv in WARN}
-        streaks = advance_streaks(base, levels)
+        # Same-month rerun (manual dispatch): the streaks file ALREADY
+        # advanced for this month — reuse it untouched. Advancing again
+        # would double-count, and any attempt to "rebuild" from a bare
+        # level map floors every long-running streak at one month: the
+        # first version of this branch did exactly that, and a dispatch
+        # would have silently rewritten an 89-month streak as 2 in the
+        # committed artifacts. Idempotence here means KEEP, not recompute.
+        streaks = prev_s.get("warn", {})
     else:
         streaks = advance_streaks(prev_s.get("warn", {}), levels)
 
