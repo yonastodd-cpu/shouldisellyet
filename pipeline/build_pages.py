@@ -739,6 +739,14 @@ def main():
 
     lastmod = meta.get("generated", date.today().isoformat())
     urls = [f"{SITE}/", f"{SITE}/report.html", f"{SITE}/press.html", f"{SITE}/zip/"]
+    # Research releases: indexable by design — the citation flywheel needs
+    # crawlers to find them. URLs derive from the committed research JSONs,
+    # same discipline as the rest of this explicit list.
+    research_months = sorted(p.stem.replace("research-", "") for p in
+                             (Path(__file__).parent / "research").glob("research-*.json"))
+    if research_months:
+        urls += [f"{SITE}/research/", f"{SITE}/research/methodology.html"]
+        urls += [f"{SITE}/research/{m}/" for m in research_months]
     urls += [f"{SITE}/zip/{st}/" for st in sorted(by_state)]
     urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
     chunks = write_sitemaps(web, urls, lastmod)
