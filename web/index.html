@@ -162,8 +162,12 @@ h1 em{font-style:italic;color:var(--navy)}
 .crunch-dot{width:7px;height:7px;border-radius:50%;background:var(--navy);animation:blink 1.1s infinite;flex:none}
 .crunch-row span:nth-child(2){font-size:var(--fs-body-sm);color:#3a4450;width:290px;flex:none}
 .crunch-bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#efe9dc 25%,#dcd4c2 50%,#efe9dc 75%);background-size:360px 100%;animation:shimmer 1.2s linear infinite}
-.verdict{border-radius:10px;background:#fff;overflow:hidden;animation:fadeUp .35s ease;border:1px solid var(--hairline)}
-.verdict-head{display:flex;flex-direction:column;gap:12px;padding:24px 26px 26px}
+/* NO overflow:hidden here — it would make .verdict the containing block for
+   position:sticky, and the unlock bar inside would never pin to the viewport
+   (found live: the bar sat 327px below the fold, inert). The rounded-corner
+   clip it provided is done by rounding the head itself instead. */
+.verdict{border-radius:10px;background:#fff;animation:fadeUp .35s ease;border:1px solid var(--hairline)}
+.verdict-head{display:flex;flex-direction:column;gap:12px;padding:24px 26px 26px;border-radius:9px 9px 0 0}
 .v-loc{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-meta);letter-spacing:.05em;color:var(--muted)}
 .v-tagline{display:flex;align-items:center;gap:16px}
 .verdict-dot{width:18px;height:18px;border-radius:50%;flex:none}
@@ -737,7 +741,13 @@ fetch("research/wsi.json").then(r => r.ok ? r.json() : null).then(j => {
   else return fetch("research/", { method: "HEAD" }).then(r => { PV_RESEARCH = r.ok; });
 }).catch(() => {});
 
-fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
+// The whole chain is held as DATA_READY so lookup() can AWAIT it instead of
+// racing it. Before this, a /?zip= landing (every generated ZIP page's
+// primary CTA) called run() at parse time, lost the race, fell back to the
+// 2-entry DEMO map, and told visitors from scored ZIPs "we're not scoring
+// {zip} yet". Awaiting also makes the macro row's premise real: META is
+// genuinely loaded before any verdict can render.
+const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
   if (j && Object.keys(j).length > 0) { INDEX = j; live = true; }
   return fetch("data/meta.json").then(r => r.ok ? r.json() : null);
 }).then(m => {
@@ -756,6 +766,11 @@ fetch("data/index.json").then(r => r.ok ? r.json() : null).then(j => {
 }).catch(() => {});
 
 async function lookup(zip) {
+  // Never race the data fetch — a parse-time run() (the /?zip= prefill path)
+  // must see the same data a hand-typed check sees. The crunch animation's
+  // 1.6s floor absorbs the wait invisibly; on fetch failure this resolves
+  // immediately and the DEMO fallback below still applies.
+  await DATA_READY.catch(() => {});
   if (live && INDEX) {
     const st = INDEX[zip.slice(0, 3)];
     if (!st) return null;
@@ -934,14 +949,23 @@ function sparkSVG(p) {
   if (y1 === y0) y1 = y0 + 1;
   const X = i => ((i - x0) / (x1 - x0) * 100).toFixed(1);
   const Y = v => (28 - (v - y0) / (y1 - y0) * 24).toFixed(1);
-  let d = "", pen = false;
+  // Line and area are both built PER pen-down segment: the pen lifts at null
+  // months, and the area closes each segment to the baseline independently —
+  // a fill bridging a gap would be invented shape in the one element the
+  // honesty rule calls real and visible (~41% of live series have gaps).
+  let d = "", area = "", pen = false, segStart = null, segEnd = null;
+  const closeSeg = () => {
+    if (segStart != null) area += "L" + X(segEnd) + ",30L" + X(segStart) + ",30Z";
+    segStart = segEnd = null;
+  };
   p.forEach((v, i) => {
-    if (v == null) { pen = false; return; }
-    d += (pen ? "L" : "M") + X(i) + "," + Y(v); pen = true;
+    if (v == null) { pen = false; closeSeg(); return; }
+    d += (pen ? "L" : "M") + X(i) + "," + Y(v);
+    area += (pen ? "L" : "M") + X(i) + "," + Y(v);
+    if (!pen) segStart = i;
+    segEnd = i; pen = true;
   });
-  const first = pts[0], last = pts[pts.length - 1];
-  const area = d.replace(/M/g, "L").replace(/^L/, "M") +
-    "L" + X(last[0]) + ",30L" + X(first[0]) + ",30Z";
+  closeSeg();
   return '<svg class="pv-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">' +
     '<path d="' + area + '" fill="#1f3a5f" opacity=".07"/>' +
     '<path d="' + d + '" fill="none" stroke="#1f3a5f" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>';
@@ -1026,20 +1050,22 @@ function renderPreview(d) {
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
-       : '<span>National verdict mix — in the full report.</span>',
-    { open: true, spy: d.m && d.m.spy });
+       : '<span>National verdict mix loads with the live data.</span>',
+    { open: true });
 
   // Locked alert toggle for each maskable row. GENUINELY INERT: it is markup
   // inside the row button — no checkbox, no state, no handler, no network
   // call. The only interaction is the row's own scroll-to-unlock. All wording
   // comes from the alert-copy.js map so the report and emails can reuse it
   // verbatim later.
-  const AC = window.ALERT_COPY || { rows: {}, locked_sublabel: "Alert me — included with monitoring" };
+  const AC = window.ALERT_COPY ||
+    { rows: {}, toggle_label: "Alert me", aria_suffix: "Alert available with monitoring.",
+      locked_sublabel: "Alert me — included with monitoring" };
   const alertCol = num => {
     const micro = AC.rows[num];
     if (!micro) return "";
     return '<span class="pv-alert" aria-hidden="true" title="' + AC.locked_sublabel + '">' +
-      '<span class="pv-togline"><span class="pv-tog"></span>🔒<span class="pv-alert-label">Alert me</span></span>' +
+      '<span class="pv-togline"><span class="pv-tog"></span>🔒<span class="pv-alert-label">' + AC.toggle_label + '</span></span>' +
       '<span class="pv-alert-micro">' + micro + "</span></span>";
   };
 
@@ -1051,7 +1077,7 @@ function renderPreview(d) {
       '<span class="pv-line">' + r.line + '</span>' +
       '<div id="pv-macro" hidden></div></span></div>'
     : '<button type="button" class="pv-row' + (r.em ? " pv-row--em" : "") +
-      '" data-goto-unlock aria-label="' + r.aria + ' Alert available with monitoring.' +
+      '" data-goto-unlock aria-label="' + r.aria + " " + AC.aria_suffix +
       '"><span class="pv-num" aria-hidden="true">' +
       r.num + '</span><span class="pv-body"><span class="pv-title">' + r.title +
       '</span><span class="pv-line">' + r.line +
@@ -1074,7 +1100,9 @@ function renderPreview(d) {
   if (xBtn) xBtn.addEventListener("click", () => {
     const box = document.getElementById("pv-macro");
     const opening = box.hidden;
-    if (opening && !box.innerHTML) {
+    // Rebuilt on EVERY open (no innerHTML cache): if the visitor expands
+    // before the wsi.json fetch resolves, the next open picks it up.
+    if (opening) {
       const parts = [];
       const pct = pvPercentile(spy);
       if (pct != null) {

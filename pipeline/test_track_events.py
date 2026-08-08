@@ -29,8 +29,12 @@ def _fn_enum() -> set:
 
 def _used_literals() -> set:
     used = set()
-    # data-track attributes across pages and the generated-page template.
-    sources = list((ROOT / "web").glob("*.html")) + [ROOT / "pipeline" / "build_pages.py"]
+    # data-track attributes across pages and BOTH generated-page templates —
+    # research pages ship track.js too, so an event literal added there must
+    # be inside the function's enum like any other.
+    sources = (list((ROOT / "web").glob("*.html"))
+               + [ROOT / "pipeline" / "build_pages.py",
+                  ROOT / "pipeline" / "build_research.py"])
     for p in sources:
         text = p.read_text(encoding="utf-8", errors="replace")
         used |= set(re.findall(r'data-track="([a-z_]+)"', text))

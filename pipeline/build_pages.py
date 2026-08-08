@@ -693,7 +693,7 @@ market with unusual buyer competition reads as a strong seller's market.
 - [Markets by state](https://shouldisellyet.com/zip/): standing verdict pages
   for {pages:,} ZIP markets, each with its signal gauges and danger lines.
 - [Sample report](https://shouldisellyet.com/report.html): what the paid
-  MyMarketCheckup report looks like for a real ZIP.
+  full report looks like for a real ZIP.
 - [Press](https://shouldisellyet.com/press.html): coverage facts and contact.
 
 ## Citing this site
@@ -848,10 +848,14 @@ def main():
     urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
     chunks = write_sitemaps(web, urls, lastmod)
     # scored = every verdict-carrying ZIP in the data (the homepage's basis);
-    # pages = the subset with standing pages. Both live so llms.txt can't drift.
-    scored = sum(counts for counts in
-                 (len(json.loads(f.read_text())) for f in sorted((data / "zips").glob("*.json"))))
-    write_llms_txt(web, meta, scored, len(eligible))
+    # pages = the subset with standing pages. Both live so llms.txt can't
+    # drift — which is also why a LIMITED build must not write it: --limit /
+    # --only shrink len(eligible), and a smoke build that reached the host
+    # would publish "standing pages for 2 ZIP markets" as fact.
+    if not (args.limit or only):
+        scored = sum(len(json.loads(f.read_text()))
+                     for f in sorted((data / "zips").glob("*.json")))
+        write_llms_txt(web, meta, scored, len(eligible))
 
     print(f"pages: {len(eligible):,} ZIP + {len(by_state)} state hubs + 1 index")
     print(f"skipped: {dict(skipped)}")

@@ -10,7 +10,13 @@
 // written in the visitor's first person ("my number", "my equity") because it
 // completes the sentence "Alert me …".
 window.ALERT_COPY = {
-  // Shown on hover/tap of a locked toggle, and appended to row aria-labels.
+  // The toggle's visible label, and the sentence screen readers get appended
+  // to a locked row's aria-label. Every string the toggles render lives in
+  // this map — index.html holds no alert wording of its own.
+  toggle_label: "Alert me",
+  aria_suffix: "Alert available with monitoring.",
+
+  // Shown on hover/tap of a locked toggle.
   locked_sublabel: "Alert me — included with monitoring",
 
   // The free-tier affordance's language, when/where one exists. (As of

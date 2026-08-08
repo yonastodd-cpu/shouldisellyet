@@ -664,8 +664,10 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
     # and an engine cannot cite a PNG. One dated sentence fixes that.
     year_ago_m = f"{int(month[:4]) - 1}-{month[5:7]}"
     year_ago = next((v for m0, v in series if m0 == year_ago_m), None)
-    series_text = (f"In text: the index stood at {rec['wsi']:.1f}% in {pretty(month)}, "
-                   f"versus {rec['prev_wsi']:.1f}% the month before"
+    # prev_wsi is optional (absent on a single-month series — research.py only
+    # emits it with >=2 months), so guard it like headline_sentence guards delta.
+    series_text = (f"In text: the index stood at {rec['wsi']:.1f}% in {pretty(month)}"
+                   + (f", versus {rec['prev_wsi']:.1f}% the month before" if rec.get("prev_wsi") is not None else "")
                    + (f" and {year_ago:.1f}% in {pretty(year_ago_m)}" if year_ago is not None else "")
                    + f". The full monthly series back to {series[0][0]} is in the CSV below.")
 

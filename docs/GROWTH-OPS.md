@@ -146,10 +146,19 @@ succeeds; the next digest just renders as a **baseline** and says so.
 - A first run with no prior snapshot sends a **baseline** digest that states
   there are no flips *because there's nothing to compare to*.
 
-## Known gap
+## Analytics
 
-**No analytics are installed on the site** — no Plausible, GA, Umami, or
-anything else. So the scorecard's "Visits by `utm_source`" renders
-`not tracked yet`, and the UTM tags on the ZIP pages and share links are
-currently being collected by nobody. Installing any privacy-friendly analytics
-with a queryable API would light up that row; the digest already has the slot.
+(An earlier revision called analytics a known gap. No longer true as of the
+2026-08-07 admin build: first-party, cookieless counts flow through
+web/track.js → the track edge function → the events table, and the admin
+dashboard's funnel breaks them out by channel — including, since 2026-08-08,
+an "(ai engines)" row for visits referred by ChatGPT, Perplexity, Copilot,
+and Gemini, derived server-side from the stored referrer domain.)
+
+## One-time operator TODOs
+
+- **Bing Webmaster Tools** — verify the domain (web/BingSiteAuth.xml is
+  already served) and submit https://shouldisellyet.com/sitemap.xml. ChatGPT
+  search leans on Bing's index, so this is an AI-visibility task, not just a
+  Bing one. IndexNow already fans out to Bing on every data refresh; this is
+  the console-side half that can't be automated from the repo.

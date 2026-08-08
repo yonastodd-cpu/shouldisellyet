@@ -310,3 +310,27 @@ def test_load_fhfa_compact_and_backtest(tmp_path):
     assert meta_bt["y0"] == 2012 and meta_bt["fhfa"] == 2023
     assert meta_bt["sig"]["mos"] == {"x": 41.0, "c": 12.0, "n": 900}
     assert "cuts" not in meta_bt["sig"]  # one-sided data never ships
+
+
+def test_verdict_copy_map_is_complete():
+    """Every verdict level carries the full key set, including the qa answer.
+
+    The ZIP-page generator formats vc["qa"] unconditionally (build_pages.py),
+    so a level missing a key fails only at deploy time without this. The qa
+    text must also agree with the level's own verdict word — the answer
+    sentence and the FAQ answer land on the same page, and an engine lifting
+    both must not read two different verdicts.
+    """
+    import json
+    from pathlib import Path
+    from verdict_copy import COPY, STATES
+
+    required = {"word", "translation", "short", "emoji", "qa"}
+    for level in STATES:
+        assert level in COPY, f"verdict_copy.json missing level {level}"
+        missing = required - set(COPY[level])
+        assert not missing, f"{level} missing keys: {missing}"
+        assert "{city}" in COPY[level]["qa"], f"{level}.qa lost its city placeholder"
+        assert COPY[level]["word"] in COPY[level]["qa"], (
+            f"{level}.qa never states its own verdict word "
+            f"{COPY[level]['word']!r} — answer sentence and FAQ would disagree")
