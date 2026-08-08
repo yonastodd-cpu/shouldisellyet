@@ -22,3 +22,7 @@ web/og/
 
 web/verdict-copy.js
 web/s/
+
+# Generated at deploy time by pipeline/build_research.py from committed
+# pipeline/research JSONs — pages, charts, CSVs.
+web/research/
