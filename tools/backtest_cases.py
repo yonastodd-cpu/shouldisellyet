@@ -390,6 +390,133 @@ def nominate_false_alarms(cfg, compact, months, cbsa_zips, cbsa_names, exclude):
     return cands[:want]
 
 
+
+# ————— The visual proof —————
+# Site chart style, same palette and IBM Plex Mono as build_research.py's WSI
+# chart, 1200x675 like every other social/press asset. Two stacked panels:
+# the dial that crossed (with its danger line and the crossing marked), and
+# the median price that followed. The chart's whole job is to let a reader
+# check the claim, so both panels share one x-axis and the crossing month is
+# drawn straight through them.
+BG = (250, 248, 244); INK = (28, 36, 48); MUTED = (92, 102, 115)
+FAINT = (138, 133, 120); HAIRLINE = (231, 226, 216); NAVY = (31, 58, 95)
+GREEN = (46, 158, 91); AMBER = (200, 137, 31); RED = (214, 69, 69)
+FONTS = ROOT / "pipeline" / "fonts"
+BOLD, REG = "IBMPlexMono-Bold.ttf", "IBMPlexMono-Regular.ttf"
+_fc = {}
+
+DIAL_LABEL = {"mos": "MONTHS OF SUPPLY", "spy": "PRICES VS. LAST YEAR",
+              "dom_stretch": "TIME TO SELL, VS. LAST YEAR", "pd": "LISTINGS WITH PRICE CUTS"}
+DIAL_FMT = {"mos": lambda v: f"{v:.1f}", "spy": lambda v: f"{v*100:+.0f}%",
+            "dom_stretch": lambda v: f"{v*100:+.0f}%", "pd": lambda v: f"{v*100:.0f}%"}
+
+
+def _font(name, size):
+    from PIL import ImageFont
+    if (name, size) not in _fc:
+        _fc[(name, size)] = ImageFont.truetype(str(FONTS / name), size)
+    return _fc[(name, size)]
+
+
+def case_chart(case, out, w=1200, h=675):
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (w, h), BG)
+    d = ImageDraw.Draw(img)
+    series = case["series"]
+    months = [s["month"] for s in series]
+    miss = case["kind"] == "miss"
+
+    # Show the evidence this case ACTUALLY has. Usually that is the dial that
+    # crossed first. But a market can reach a sustained WATCH majority without
+    # any single dial's median holding past its line for three months — its
+    # ZIPs trip different signals at different times (Quincy did exactly
+    # this). Drawing a dial chart there would imply a crossing that never
+    # happened, so the panel falls back to the share of ZIPs flagged against
+    # the 50% majority line, which is what the verdict actually keyed on.
+    if case["crossings"]:
+        dial = min(case["crossings"].items(), key=lambda kv: kv[1]["month"])[0]
+        line = case["crossings"][dial]["line"]
+        cross_month = case["crossings"][dial]["month"]
+        dvals = [s["dials"].get(dial) for s in series]
+        dlabel = DIAL_LABEL.get(dial, dial.upper())
+        dfmt = DIAL_FMT.get(dial, lambda v: f"{v:.2f}")
+    else:
+        dial, line = "share_flagged", 50.0
+        cross_month = case.get("first_watch_majority") or case["first_signal"]
+        dvals = [s["share_flagged"] for s in series]
+        dlabel = "SHARE OF ITS ZIP CODES FLAGGED WATCH OR ACT"
+        dfmt = lambda v: f"{v:.0f}%"
+
+    d.text((60, 40), case["name"].upper(), font=_font(BOLD, 30), fill=INK)
+    d.text((60, 80), case["story"], font=_font(REG, 18), fill=MUTED)
+
+    x0, x1 = 90, w - 60
+    X = lambda i: x0 + (x1 - x0) * (i / max(1, len(months) - 1))
+    ci = months.index(cross_month) if cross_month in months else 0
+
+    def panel(top, bot, values, fmt, label, colour, extra_line=None):
+        vals = [v for v in values if v is not None]
+        if not vals:
+            return
+        lo, hi = min(vals), max(vals)
+        if extra_line is not None:
+            lo, hi = min(lo, extra_line), max(hi, extra_line)
+        pad = (hi - lo) * 0.18 or abs(hi) * 0.2 or 1
+        lo, hi = lo - pad, hi + pad
+        Y = lambda v: bot - (bot - top) * ((v - lo) / (hi - lo))
+        d.text((60, top - 26), label, font=_font(BOLD, 15), fill=FAINT)
+        for gv in (lo + (hi - lo) * f for f in (0.0, 0.5, 1.0)):
+            d.line([(x0, Y(gv)), (x1, Y(gv))], fill=HAIRLINE, width=1)
+            d.text((8, Y(gv) - 8), fmt(gv), font=_font(REG, 13), fill=FAINT)
+        if extra_line is not None:                      # the danger line
+            yy = Y(extra_line)
+            for sx in range(x0, x1, 14):
+                d.line([(sx, yy), (sx + 7, yy)], fill=RED, width=2)
+            cap = ("MAJORITY FLAGGED 50%" if dial == "share_flagged"
+                   else f"DANGER LINE {fmt(extra_line)}")
+            d.text((x1 - 12 - d.textlength(cap, font=_font(BOLD, 13)), yy - 20), cap,
+                   font=_font(BOLD, 13), fill=RED)
+        pts = [(X(i), Y(v)) for i, v in enumerate(values) if v is not None]
+        if len(pts) > 1:
+            d.line(pts, fill=colour, width=3, joint="curve")
+        return Y
+
+    # Panel 1 — the dial (or the flagged share) and its line.
+    panel(170, 340, dvals, dfmt, dlabel, NAVY, extra_line=line)
+    # Panel 2 — what the price did next.
+    pvals = [s.get("price") for s in series]
+    Yp = panel(430, 600, pvals, lambda v: f"${v/1000:.0f}K",
+               "MEDIAN SALE PRICE", GREEN if miss else RED)
+
+    # The crossing, drawn through both panels — the claim, checkable.
+    cx = X(ci)
+    for sy in range(150, 610, 12):
+        d.line([(cx, sy), (cx, sy + 6)], fill=AMBER, width=2)
+    d.text((cx + 8, 150), f"SIGNAL {cross_month}", font=_font(BOLD, 15), fill=AMBER)
+
+    # x labels: one per year.
+    seen = set()
+    for i, m in enumerate(months):
+        if m[:4] not in seen:
+            seen.add(m[:4])
+            d.text((X(i), 615), m[:4], font=_font(REG, 14), fill=FAINT)
+
+    # The claim in words, and the line that makes it checkable.
+    if miss:
+        claim = (f"Crossed the line {cross_month} — and recovered. "
+                 f"Worst dip {case['worst_drawdown']*100:+.1f}%, now {case['recovered_to']*100:+.1f}%.")
+    else:
+        claim = (f"Signal {cross_month} · first price decline {case['first_negative_yoy']} "
+                 f"({case['lead_months']} months later) · peak to trough {case['peak_to_trough']*100:+.1f}%")
+    d.text((60, 638), claim, font=_font(BOLD, 16), fill=INK)
+    d.text((w - 60 - d.textlength("Computed from the same data and thresholds we use today.",
+                                  font=_font(REG, 13)), 656),
+           "Computed from the same data and thresholds we use today.",
+           font=_font(REG, 13), fill=FAINT)
+    img.save(out)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(ROOT / "tools" / "cases.yml"))
@@ -443,6 +570,7 @@ def main():
             print(f"DROPPED {case['id']}: {why}")
             continue
         built["kind"] = "hit"
+        case_chart(built, out_dir / f"{case['id']}.png")
         (out_dir / f"{case['id']}.json").write_text(
             json.dumps(built, separators=(",", ":"), sort_keys=True))
         report["published"].append({
@@ -484,6 +612,7 @@ def main():
             built["kind"] = "miss"
             built["worst_drawdown"] = mcase["worst_drawdown"]
             built["recovered_to"] = mcase["recovered_to"]
+            case_chart(built, out_dir / f"{case['id']}.png")
             (out_dir / f"{case['id']}.json").write_text(
                 json.dumps(built, separators=(",", ":"), sort_keys=True))
             report["published"].append({"id": case["id"], "name": case["name"],
@@ -497,8 +626,9 @@ def main():
     # publishing from its last successful run — the exact failure the
     # governing rule exists to prevent. The run's own output is the whole
     # truth; anything else in the directory is a leftover.
-    keep = {f"{p['id']}.json" for p in report["published"]} | {"index.json"}
-    for f in out_dir.glob("*.json"):
+    keep = ({f"{p['id']}.json" for p in report["published"]} |
+            {f"{p['id']}.png" for p in report["published"]} | {"index.json"})
+    for f in list(out_dir.glob("*.json")) + list(out_dir.glob("*.png")):
         if f.name not in keep:
             f.unlink()
             report.setdefault("pruned", []).append(f.name)

@@ -1,8 +1,5 @@
 {
  "dropped": [],
- "pruned": [
-  "miss-44100.json"
- ],
  "published": [
   {
    "first_signal": "2021-11",
@@ -10,13 +7,6 @@
    "lead_months": 12,
    "name": "Boise City, ID",
    "peak_to_trough": -0.1786
-  },
-  {
-   "first_signal": "2022-07",
-   "id": "austin-2021",
-   "lead_months": 6,
-   "name": "Austin-Round Rock-San Marcos, TX",
-   "peak_to_trough": -0.2558
   },
   {
    "first_signal": "2022-08",
