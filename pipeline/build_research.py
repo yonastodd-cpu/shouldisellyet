@@ -462,6 +462,8 @@ def page(title, desc, canonical, body, og_image="", jsonld=""):
         og += f'<script type="application/ld+json">{jsonld}</script>'
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="/track.js" defer></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>

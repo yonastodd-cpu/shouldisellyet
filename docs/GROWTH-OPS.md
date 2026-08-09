@@ -157,6 +157,11 @@ and Gemini, derived server-side from the stored referrer domain.)
 
 ## One-time operator TODOs
 
+- **Stripe Radar** — confirm Radar's default rules are ENABLED in the Stripe
+  dashboard (Settings → Radar): card-testing protection matters most on the
+  $5.99 payment link, which is exactly the price point card testers use.
+  Review the rules again after the first 100 sales, when there is enough
+  volume to judge false-positive rates.
 - **Cloudflare Turnstile keys** — the invisible bot check on the waitlist,
   checkout signup, Get Connected, and alert-save forms ships INERT until the
   keys exist. Cloudflare dashboard → Turnstile → Add site (free tier,

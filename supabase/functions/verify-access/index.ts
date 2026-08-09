@@ -28,8 +28,15 @@ import { rateAllowed } from "../_shared/ratelimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+// CORS restricted to the site origin (2026-08-08): the wildcard predated the
+// hardening pass. STATIC on purpose — a per-request reflected origin would
+// need request-scoped headers, and mutating a module-level object is racy
+// across concurrent requests in one isolate (a prod visitor could catch a
+// dev origin on the checkout path). Cost of static: browser calls from the
+// localhost dev preview can't READ these responses any more — verify these
+// flows with curl (no CORS there) or on the deployed site.
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://shouldisellyet.com",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
 };
