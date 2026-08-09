@@ -125,12 +125,15 @@ footer a{color:var(--faint-ink)}
   </div>
   <p style="font-size:.875rem;color:var(--faint-ink)">Verdict mix across all 24,619 scored ZIP codes · data through May 2026. Left to right: HOLD, strong seller's market, WATCH, ACT.</p>
   <!-- These numbers RENDER from /data/backtest.json (written by
-       pipeline/backtest_thresholds.py). They were hand-typed prose until
-       2026-08-09 and had drifted: the page claimed 155,612 ZIP-years and a
-       10.2/18.3/27.8 ladder while the computed truth was 182,644 and
-       11.3/18.9/28.1 — the published HOLD rate flattering us by a point.
-       Do not retype them here. The no-JS fallback below is generated from
-       the same file and must be regenerated with it. -->
+       pipeline/backtest_thresholds.py). Do not retype them here: they were
+       hand-typed prose until 2026-08-09 and had silently drifted from the
+       computed truth. pipeline/test_no_handwritten_claims.py fails the build
+       if any figure on this page disagrees with that file; `git log -S"ZIP-years"
+       -- web/press.html` has the full account. The no-JS fallback below is
+       generated from the same file and must be regenerated with it.
+       Superseded figures are deliberately NOT quoted here — this page is
+       written to be crawled and cited, and a wrong number in the source is
+       still a wrong number an answer engine can lift. -->
   <p id="backtest-ladder">We also test the thresholds rather than assert them. Replaying every year-end signal snapshot the source data supports — <b>182,644 ZIP-years, 2012–2026</b> — against the federal government's own annual house-price index for the following year, the ladder holds: markets reading HOLD saw prices fall the next year 11.3% of the time, WATCH 18.9%, ACT 28.1%.</p>
   <script>
   fetch("/data/backtest.json").then(r => r.ok ? r.json() : null).then(b => {
