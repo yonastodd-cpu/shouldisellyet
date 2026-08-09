@@ -1232,6 +1232,9 @@ async function run() {
       $("waitcard").querySelector("form").style.display = "flex";
       $("waitcard").style.display = "block";
       waitcardShownAt = Date.now();
+      // The card was display:none until now, so its Turnstile slot could not
+      // render a completable challenge. Re-scan now that it is visible.
+      if (window.SISY_TS) SISY_TS.render();
       return;
     }
     const insufficient = (d.r || []).some(x => x[0] === "insufficient_data");

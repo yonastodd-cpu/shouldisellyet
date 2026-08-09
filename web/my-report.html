@@ -1609,6 +1609,9 @@ function openConnect(){
   // The bot-timing anchor: a person reads the modal before filling five
   // fields; a bot that submits within 2s of open did not.
   window.__cmShownAt = Date.now();
+  // The modal was hidden behind its veil until now — same reason the waitlist
+  // card re-scans: a challenge in a hidden element isn't reliably completable.
+  if (window.SISY_TS) SISY_TS.render();
   $("cm-name").focus();
   return false;
 }

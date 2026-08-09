@@ -162,15 +162,17 @@ and Gemini, derived server-side from the stored referrer domain.)
   $5.99 payment link, which is exactly the price point card testers use.
   Review the rules again after the first 100 sales, when there is enough
   volume to judge false-positive rates.
-- **Cloudflare Turnstile keys** — the invisible bot check on the waitlist,
-  checkout signup, Get Connected, and alert-save forms ships INERT until the
-  keys exist. Cloudflare dashboard → Turnstile → Add site (free tier,
-  invisible/managed) for shouldisellyet.com, then: paste the SITE key into
-  `web/turnstile.js` (the `SITE_KEY` constant), run
-  `npx supabase secrets set TURNSTILE_SECRET=<secret key>`, and redeploy
-  `signup`, `match-request`, `save-watch`. Until then the honeypot and rate
-  limits carry the load, and `turnstile_bypass` in the admin funnel's events
-  shows how often the missing layer is being felt.
+- **Cloudflare Turnstile — SECRET key still outstanding.** The site key is
+  wired (`web/turnstile.js`), so the widget loads; the server half is still
+  off until the secret is set, which means tokens are collected but never
+  verified. Finish with:
+  `npx supabase secrets set TURNSTILE_SECRET=<secret key>` then redeploy
+  `signup`, `match-request`, `save-watch` (secrets need a restart to take).
+  Optional but useful: add `localhost` to the widget's Hostnames in the
+  Cloudflare dashboard — without it the widget returns error 110200 on the
+  dev preview and the layer can only be tested in production. Until the
+  secret lands the honeypot and rate limits carry the load, and
+  `turnstile_bypass` in the admin funnel shows how often the gap is felt.
 - **Bing Webmaster Tools** — verify the domain (web/BingSiteAuth.xml is
   already served) and submit https://shouldisellyet.com/sitemap.xml. ChatGPT
   search leans on Bing's index, so this is an AI-visibility task, not just a

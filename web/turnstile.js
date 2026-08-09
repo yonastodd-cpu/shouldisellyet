@@ -20,7 +20,7 @@
 // here, then: npx supabase secrets set TURNSTILE_SECRET=<secret key>
 // and redeploy signup, match-request, save-watch.
 window.SISY_TS = (function () {
-  const SITE_KEY = "";   // ← operator fills; empty = layer off
+  const SITE_KEY = "0x4AAAAAAEKsxXi2-TL-rdoX";   // public by design; empty = layer off
 
   let scriptFailed = false, apiReady = false;
   const widgets = new Map();   // slot element → widget id
@@ -35,9 +35,17 @@ window.SISY_TS = (function () {
     document.head.appendChild(s);
   }
 
-  window.__sisyTsReady = function () {
-    apiReady = true;
+  // Render every slot that doesn't have a widget yet. Safe to call repeatedly.
+  //
+  // Called once when the API is ready AND again when a form becomes visible:
+  // the waitlist card lives in a display:none container until an unscored ZIP
+  // is checked, and a challenge rendered into a hidden element is not reliably
+  // completable. Re-scanning on reveal is cheaper than reasoning about which
+  // container was visible when the API happened to land.
+  function render() {
+    if (!SITE_KEY || !apiReady) return;
     document.querySelectorAll(".ts-slot").forEach((slot) => {
+      if (widgets.has(slot)) return;
       try {
         const id = turnstile.render(slot, {
           sitekey: SITE_KEY,
@@ -48,7 +56,9 @@ window.SISY_TS = (function () {
         widgets.set(slot, id);
       } catch (e) { /* degrade */ }
     });
-  };
+  }
+
+  window.__sisyTsReady = function () { apiReady = true; render(); };
 
   // Current token for the form owning `slot`, or "" (not configured, script
   // failed, or challenge errored — the server's bypass counter covers those).
@@ -68,5 +78,5 @@ window.SISY_TS = (function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load);
   else load();
 
-  return { token, enabled: () => !!SITE_KEY };
+  return { token, render, enabled: () => !!SITE_KEY };
 })();
