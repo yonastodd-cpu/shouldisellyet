@@ -590,6 +590,12 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <p>Smaller markets report too few sales for a reliable verdict. Leave your email and we'll tell you the moment your ZIP goes live.</p>
       <form onsubmit="return joinWaitlist(event)">
         <input type="email" id="wl-email" placeholder="you@email.com" required>
+        <!-- Honeypot: no human sees or fills this. Off-screen (not
+             display:none — some bots skip those), out of the tab order,
+             hidden from AT. A value here means a bot; the server drops the
+             submission silently. -->
+        <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
+          <input type="text" id="wl-website" name="website" tabindex="-1" autocomplete="off"></label>
         <button class="btn" type="submit">Notify me</button>
       </form>
       <div class="ok" id="wl-ok">✓ You're on the list.</div>
@@ -745,16 +751,19 @@ const MONITOR_CHECKOUT_URL = "https://buy.stripe.com/8x2bJ2blffbP6vw7752go00";  
 const SUPABASE_URL = "https://kfbjooteazwvdsonthba.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYmpvb3RlYXp3dmRzb250aGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjczNDcsImV4cCI6MjEwMDE0MzM0N30.BL1wNQnjaE840Cpsx6pRFOOclLzjiITuEBUTwMg_ZJw";
 
+// Subscriber writes go through the `signup` edge function, which runs the
+// honeypot/timing bot checks server-side (anon INSERT on the table is revoked
+// — schema-v17). The function's response is success-shaped even for dropped
+// bots, so this caller can't tell the difference and neither can a bot.
 async function saveSignup(rec) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  if (!SUPABASE_URL) return false;
   try {
-    const r = await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
+    const r = await fetch(SUPABASE_URL + "/functions/v1/signup", {
       method: "POST",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-                 "Content-Type": "application/json", "Prefer": "return=minimal" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rec)
     });
-    return r.ok;
+    return r.ok && (await r.json()).ok === true;
   } catch (e) { return false; }
 }
 
@@ -1179,6 +1188,10 @@ function pvPercentile(spy) {
 
 function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null, reqSeq = 0;
+// When the waitlist card became visible — the "form rendered" moment for the
+// server's <2s bot-timing check. A human reads the card before typing an
+// email; a bot that fires the moment the card exists does not.
+let waitcardShownAt = 0;
 
 // "20874 — Germantown, MD", degrading to "20874 — MD" then "20874".
 function setLocationLine(zip, st, city) {
@@ -1213,6 +1226,7 @@ async function run() {
       $("wl-ok").style.display = "none";
       $("waitcard").querySelector("form").style.display = "flex";
       $("waitcard").style.display = "block";
+      waitcardShownAt = Date.now();
       return;
     }
     const insufficient = (d.r || []).some(x => x[0] === "insufficient_data");
@@ -1285,7 +1299,9 @@ async function subMonitor(e) {
 async function joinWaitlist(e) {
   e.preventDefault();
   const email = $("wl-email").value, zip = $("zip").value;
-  const ok = await saveSignup({ email, zip, plan: "waitlist", source: "waitlist" });
+  const ok = await saveSignup({ email, zip, plan: "waitlist", source: "waitlist",
+    website: $("wl-website").value,          // honeypot — humans send ""
+    rendered_at: waitcardShownAt });         // stamped when the card appeared
   if (ok) {
     e.target.style.display = "none";
     $("wl-ok").style.display = "block";

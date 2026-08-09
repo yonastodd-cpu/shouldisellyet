@@ -131,6 +131,10 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
         </div>
         <div class="pf-zipnote" id="pf-zipnote"></div>
         <input id="pf-email" type="email" autocomplete="email" placeholder="you@email.com">
+        <!-- Honeypot — off-screen, out of tab order, hidden from AT. A value
+             here means a bot; the signup function drops the row silently. -->
+        <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
+          <input type="text" id="pf-website" name="website" tabindex="-1" autocomplete="off"></label>
         <div class="pf-hint" id="pf-hint">Enter the ZIP and we'll fill in the city and state. We'll monitor this home's market and alert you the moment it shifts — and you won't be asked for the address again.</div>
       </div>
 
@@ -390,16 +394,25 @@ F("zip").addEventListener("input", function(){
 F("zip").addEventListener("blur", resolveZip);
 if (F("zip").value.length === 5) resolveZip();
 
+// Pending-row capture goes through the `signup` edge function — same row
+// shape as before (the Stripe webhook still matches on email + pending), but
+// the write now passes the server-side honeypot/timing bot checks; raw anon
+// INSERT on subscribers is revoked (schema-v17). pageLoadedAt is this page's
+// rendered_at: a human picks a plan and types an address; a bot that POSTs
+// within 2 seconds of load did neither.
+const pageLoadedAt = Date.now();
 async function savePending(rec){
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  if (!SUPABASE_URL) return false;
   try {
-    const r = await fetch(SUPABASE_URL + "/rest/v1/subscribers", {
+    const r = await fetch(SUPABASE_URL + "/functions/v1/signup", {
       method: "POST",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-                 "Content-Type": "application/json", "Prefer": "return=minimal" },
-      body: JSON.stringify(rec)
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({
+        website: (document.getElementById("pf-website") || {}).value || "",
+        rendered_at: pageLoadedAt
+      }, rec))
     });
-    return r.ok;
+    return r.ok && (await r.json()).ok === true;
   } catch(e){ return false; }
 }
 

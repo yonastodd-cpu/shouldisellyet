@@ -725,6 +725,10 @@ details.how .how-body b{color:#3a4450}
         <div class="frow">
           <div class="f"><label>YOUR NAME</label><input id="cm-name" autocomplete="name"></div>
           <div class="f"><label>EMAIL</label><input id="cm-email" type="email" autocomplete="email"></div>
+          <!-- Honeypot — off-screen, out of tab order, hidden from AT. A value
+               here means a bot; match-request drops the submission silently. -->
+          <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
+            <input type="text" id="cm-website" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
         <div class="frow">
           <div class="f"><label>PHONE (OPTIONAL)</label><input id="cm-phone" inputmode="tel" autocomplete="tel"></div>
@@ -1594,6 +1598,9 @@ function openConnect(){
   if (!$("cm-addr").value) $("cm-addr").value = ADDRESS.oneLine(a) || a.zip;
   if ($("in-timeline").value && !$("cm-timeline").value) $("cm-timeline").value = $("in-timeline").value;
   $("connect-veil").style.display = "flex";
+  // The bot-timing anchor: a person reads the modal before filling five
+  // fields; a bot that submits within 2s of open did not.
+  window.__cmShownAt = Date.now();
   $("cm-name").focus();
   return false;
 }
@@ -1626,6 +1633,8 @@ async function submitConnect(){
         disclosure_text: REFERRAL.plainText(),
         verdict: (window.__lastVerdict && window.__lastVerdict.tag) || "",
         source: "report",
+        website: $("cm-website").value,        // honeypot — humans send ""
+        rendered_at: window.__cmShownAt || 0,  // modal-open time
       }),
     });
     const j = await r.json();

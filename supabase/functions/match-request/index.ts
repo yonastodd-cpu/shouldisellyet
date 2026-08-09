@@ -102,6 +102,33 @@ Deno.serve(async (req) => {
   const verdict = str("verdict", 20);
   const source = str("source", 40) || "report";
 
+  // ————— bot checks, before validation (silent success-shaped drop) —————
+  // This function emails a visitor-supplied address (the sent-confirmation),
+  // which makes it the one endpoint where a bot can make a stranger's inbox
+  // ring. Honeypot ("website", hidden field no human sees) or a submit under
+  // 2s of the modal opening → count it, store nothing, send nothing, and
+  // return the success shape so the bot learns nothing. A MISSING
+  // rendered_at passes — cached pages predate the field.
+  {
+    const decoy = str("website", 200);
+    const renderedAt = Number(b.rendered_at ?? NaN);
+    if (decoy || (Number.isFinite(renderedAt) && renderedAt > 0 && Date.now() - renderedAt < 2000)) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/events`, {
+          method: "POST",
+          headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`,
+                     "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({ event: "bot_rejected",
+            ts: new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString(),
+            path: "/match-request" }),
+        });
+      } catch { /* counter is best-effort */ }
+      // Mirror the real success shape ({ok, id}) so the drop is
+      // indistinguishable; the id is a throwaway UUID.
+      return json({ ok: true, id: crypto.randomUUID() });
+    }
+  }
+
   if (!name) return json({ ok: false, error: "name required" });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: "valid email required" });
   if (!/^\d{5}$/.test(zip)) return json({ ok: false, error: "5-digit zip required" });
