@@ -840,11 +840,10 @@ const stateCache = {};
 // at page load and the macro row reads whatever has resolved by expand time —
 // expansion is a user action after reveal, so this can never shift layout.
 let PV_WSI = null, PV_RESEARCH = false;
-// Track-record case for the macro row — FEATURE-FLAGGED OFF by default.
-// Flip SHOW_CASE_ROW to true (or add ?case=1) to rotate one recomputed case
-// into row 08's expansion. Off until the operator has read the cards live:
-// they are computed, but a marketing surface should ship on a decision.
-const SHOW_CASE_ROW = false;
+// Track-record case for the macro row — rotates one recomputed case into
+// row 08's expansion. Shipped ON by operator decision (2026-08-09) after
+// reviewing the computed cards; ?case=1 forces it for preview regardless.
+const SHOW_CASE_ROW = true;   // flipped on 2026-08-09 by operator decision
 let PV_CASE = null;
 if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
   fetch("data/cases/index.json").then(r => r.ok ? r.json() : null).then(j => {
