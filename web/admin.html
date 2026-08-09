@@ -163,6 +163,7 @@ table.grid tr:hover td{background:#faf9f5}
       <a href="#map">Map</a>
       <a href="#requests">Requests</a>
       <a href="#agents">Agents</a>
+      <a href="#markets">Markets to Market</a>
       <a href="#health">Data Health</a>
     </nav>
     <div class="side-foot">
@@ -277,6 +278,60 @@ table.grid tr:hover td{background:#faf9f5}
         </div>
       </div>
     </section>
+    <section id="sec-markets">
+      <div class="panel">
+        <h2>Target markets — where the warning signs are gathering</h2>
+        <div class="note" style="margin-bottom:10px">Metros still mostly HOLD whose signals are moving
+          toward the danger lines fastest. Ranked by month-over-month score change. <b>SURGE</b> =
+          first top-10 entry in 6 months. Sessions join checked-ZIP activity (last 30d) to each
+          metro's scored ZIPs.</div>
+        <table class="grid"><thead><tr><th>Metro</th><th class="num">Score</th><th class="num">Δ mo</th>
+          <th class="num">Det/total</th><th class="num">Mo to line</th><th class="num">Checks 30d</th>
+          <th>Why</th><th></th></tr></thead>
+        <tbody id="mk-rows"><tr><td colspan="8" style="color:var(--fainter)">Loading…</td></tr></tbody></table>
+        <div class="note" id="mk-meta"></div>
+      </div>
+      <div class="panel">
+        <h2>News corroboration log — the receipts</h2>
+        <div class="note" style="margin-bottom:10px">Published articles corroborating events we flagged
+          earlier. Feeds marketing claims, so no receipt without a source: URL and article date are
+          required. Lead time = article date − our first-flag date.</div>
+        <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">
+          <div class="stat"><div class="k">MEDIAN PRESS LAG BEHIND OUR FLAG</div>
+            <div class="v" id="pc-median">—</div><div class="s" id="pc-count">no cases logged yet</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:10px">
+          <input id="pc-url" placeholder="Article URL (required)">
+          <input id="pc-outlet" placeholder="Outlet">
+          <input id="pc-headline" placeholder="Headline">
+          <input id="pc-published" type="date" title="Article publish date (required)">
+          <select id="pc-geo"><option value="">Metro (from gathering list)…</option></select>
+          <input id="pc-zip" placeholder="…or ZIP" maxlength="5">
+          <select id="pc-what">
+            <option value="first_watch">corroborates: first WATCH</option>
+            <option value="first_act">corroborates: first ACT</option>
+            <option value="gathering_entry">corroborates: gathering-list entry</option>
+          </select>
+          <input id="pc-flag" type="date" title="Date WE first flagged it">
+          <input id="pc-note" placeholder="Note (optional)">
+        </div>
+        <button class="tag" style="cursor:pointer" onclick="return pcAdd()">Add receipt</button>
+        <button class="tag" style="cursor:pointer;margin-left:6px" onclick="return pcExport()">Export CSV</button>
+        <div id="pc-msg" class="note" style="display:none"></div>
+        <table class="grid" style="margin-top:12px"><thead><tr><th>Published</th><th>Outlet / headline</th>
+          <th>Geo</th><th>Corroborates</th><th class="num">Lead (days)</th><th></th></tr></thead>
+        <tbody id="pc-rows"></tbody></table>
+      </div>
+      <div class="panel">
+        <h2>Pipeline</h2>
+        <table class="grid"><tbody id="pl-rows"></tbody></table>
+        <div class="note">Digest emails aren't archived to the site (they go to the operator inbox;
+          archive/ is a 90-day workflow artifact). A manual "regenerate digest" hook doesn't exist —
+          the digest writes verdict snapshots as a side effect, so a safe re-run needs a
+          dedicated dry-run entry point first (TODO, noted 2026-08-09).</div>
+      </div>
+    </section>
+
     <section id="sec-health">
       <div class="cards" id="dh-cards"></div>
       <div class="panel">
@@ -464,11 +519,11 @@ document.querySelectorAll("#range button").forEach((b) =>
 // Filled in by each section's task; falsy entries render their placeholder.
 const RENDER = {
   overview: null, funnel: null, customers: null, map: null,
-  requests: null, agents: null, health: null,
+  requests: null, agents: null, markets: null, health: null,
 };
 const TITLES = {
   overview: "Overview", funnel: "Funnel", customers: "Customers", map: "Map",
-  requests: "Requests", agents: "Agents", health: "Data Health",
+  requests: "Requests", agents: "Agents", markets: "Markets to Market", health: "Data Health",
 };
 
 function route() {
@@ -830,6 +885,180 @@ async function agVerify(id, v) {
 }
 
 // ————— Data Health —————
+// ————— Markets to Market —————
+// Panel 1 reads the PUBLIC velocity aggregates (web/data — same layer the
+// research page publishes) and joins 30d checked-ZIP activity per metro via
+// admin_zip_checks. Panel 2 is the press-corroboration CRUD (schema-v21).
+// Panel 3 is the pipeline glance. Per-ZIP velocity (the paid layer) is
+// deliberately absent from this whole tab.
+const VEL_SIG_LABEL = { spy: "price trend", dom: "time to sell",
+                        mos: "supply", pd: "price cuts" };
+let MK = { vel: null, checks: {}, press: [] };
+
+function mkWhy(g) {
+  const bits = Object.entries(g.sig || {}).map(([k, s]) =>
+    `${VEL_SIG_LABEL[k] || k} near the line in ${s.near} of ${g.zips} scored ZIPs` +
+    (s.median_mtl != null ? ` (~${s.median_mtl} mo)` : ""));
+  return bits.length ? bits.join("; ") + "." : "signals drifting; no dial within 6 months yet.";
+}
+
+function mkPitch(g) {
+  const period = MK.vel ? MK.vel.period : "";
+  return `Subject: ${g.name} — the housing warning signs are gathering (new data)
+
+Hi —
+
+We publish a monthly Warning-Sign Index for U.S. housing markets
+(shouldisellyet.com/research/). This month ${g.name} stands out — not because
+it has flipped, but because it is still rated HOLD in ${Math.round(g.hold_share)}% of its scored
+ZIP codes while moving toward the danger lines faster than almost anywhere:
+
+- ${mkWhy(g)}
+- Median nearest signal: ${g.median_mtl != null ? "~" + g.median_mtl + " months from its danger line" : "approaching"} at the current 3-month pace.
+
+Happy to share the underlying table (free with citation), a quote, or the
+methodology. Data through ${period}.
+
+— ShouldISellYet Research
+Source: ShouldISellYet Research, shouldisellyet.com`;
+}
+
+function mkPost(g) {
+  return `The housing warning signs are gathering in ${g.name}.
+
+${Math.round(g.hold_share)}% of its scored ZIP codes still rate HOLD — but ${mkWhy(g)}
+At the current pace the median nearest signal crosses its danger line in ~${g.median_mtl ?? "—"} months.
+
+Watch your own ZIP free: shouldisellyet.com
+(Source: ShouldISellYet Research, data through ${MK.vel ? MK.vel.period : ""})`;
+}
+
+async function mkCopy(i, kind, btn) {
+  const g = (MK.vel.gathering || [])[i];
+  try {
+    await navigator.clipboard.writeText(kind === "pitch" ? mkPitch(g) : mkPost(g));
+    const t = btn.textContent; btn.textContent = "Copied ✓";
+    setTimeout(() => { btn.textContent = t; }, 1400);
+  } catch (e) { showErr(e); }
+  return false;
+}
+
+RENDER.markets = async function () {
+  // Aggregates + activity in parallel; press list rides along.
+  const [velR, checks, press] = await Promise.all([
+    fetch("/data/velocity-aggregates.json").then(r => r.ok ? r.json() : null).catch(() => null),
+    rpc("admin_zip_checks", { days: 30 }).catch(() => ({})),
+    rpc("admin_press_list").catch(() => []),
+  ]);
+  MK = { vel: velR, checks: checks || {}, press: press || [] };
+
+  // — Panel 1: target markets —
+  if (!velR) {
+    $("mk-rows").innerHTML = '<tr><td colspan="8" style="color:var(--fainter)">velocity-aggregates.json not published yet — runs with the next data refresh.</td></tr>';
+  } else {
+    const rows = (velR.gathering || []).map((g, i) => {
+      const checks30 = (g.member_zips || []).reduce((n, z) => n + (MK.checks[z] || 0), 0);
+      return `<tr>
+        <td>${esc(g.name)} ${g.surge ? '<span class="tag amber">SURGE</span>' : ""}</td>
+        <td class="num">${g.median_score.toFixed(2)}</td>
+        <td class="num">${g.score_delta != null ? (g.score_delta >= 0 ? "+" : "") + g.score_delta.toFixed(2) : "—"}</td>
+        <td class="num">${g.deteriorating + g.drifting}/${g.zips}</td>
+        <td class="num">${g.median_mtl ?? "—"}</td>
+        <td class="num">${checks30}</td>
+        <td style="font-size:12px;max-width:260px">${esc(mkWhy(g))}</td>
+        <td style="white-space:nowrap">
+          <button class="tag" style="cursor:pointer" onclick="return mkCopy(${i},'pitch',this)">Copy pitch</button>
+          <button class="tag" style="cursor:pointer" onclick="return mkCopy(${i},'post',this)">Copy post</button></td>
+      </tr>`;
+    }).join("");
+    $("mk-rows").innerHTML = rows || '<tr><td colspan="8" style="color:var(--fainter)">No gathering markets this month.</td></tr>';
+    const pend = Object.values(velR.pending_signals || {});
+    $("mk-meta").textContent = "Data through " + velR.period +
+      (pend.length ? " · velocity currently computed from price-trend + time-to-sell history; " +
+       pend.join(" and ") + " join as snapshot history accumulates." : "");
+    // Geo picker for the corroboration form.
+    $("pc-geo").innerHTML = '<option value="">Metro (from gathering list)…</option>' +
+      (velR.gathering || []).map(g => `<option value="${esc(g.cbsa)}">${esc(g.name)}</option>`).join("");
+  }
+
+  renderPress();
+
+  // — Panel 3: pipeline —
+  const [meta, wsi] = await Promise.all([
+    fetch("/data/meta.json").then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch("/research/wsi.json").then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  const rows = [];
+  const li = (k, v) => rows.push(`<tr><td style="width:220px;color:var(--faint)">${k}</td><td>${v}</td></tr>`);
+  li("Last data refresh", meta ? `${esc(meta.generated)} (data month ${esc(meta.period)})` : "meta.json unreachable");
+  li("Next scheduled refresh", "Mon & Thu 13:00 UTC (runs only when a source published)");
+  li("Research release", wsi ? `<a href="${esc(wsi.release)}" target="_blank">WSI ${wsi.wsi}% — ${esc(wsi.month)}</a> · <a href="/research/" target="_blank">hub</a>` : "wsi.json not published yet");
+  li("Velocity aggregates", velR ? `fresh (${esc(velR.period)})` : "not published yet");
+  li("Last digest", "emailed to the operator inbox on each refresh — not archived to the site");
+  $("pl-rows").innerHTML = rows.join("");
+};
+
+// — Panel 2: corroboration CRUD —
+function renderPress() {
+  const rows = MK.press;
+  const leads = rows.map(r => r.lead_days).filter(n => typeof n === "number");
+  if (leads.length) {
+    const s = leads.slice().sort((a, b) => a - b);
+    const med = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+    $("pc-median").textContent = med + " days";
+    $("pc-count").textContent = "across " + leads.length + " logged case" + (leads.length === 1 ? "" : "s");
+  } else {
+    $("pc-median").textContent = "—";
+    $("pc-count").textContent = "no cases logged yet";
+  }
+  $("pc-rows").innerHTML = rows.map(r => `<tr>
+    <td class="mono">${esc(r.published_on)}</td>
+    <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.outlet || "link")}</a>
+        <br><span style="font-size:11.5px;color:var(--fainter)">${esc(r.headline || "")}</span></td>
+    <td class="mono">${esc(r.metro_cbsa || r.zip || "—")}</td>
+    <td class="mono" style="font-size:11px">${esc(r.corroborates)}<br>flag ${esc(r.flag_date)}</td>
+    <td class="num" style="font-weight:600">${r.lead_days}</td>
+    <td><button class="tag red" style="cursor:pointer" onclick="return pcDel('${r.id}')">✕</button></td>
+  </tr>`).join("") || '<tr><td colspan="6" style="color:var(--fainter)">No receipts yet. Log the first article that writes up a market after we flagged it.</td></tr>';
+}
+
+async function pcAdd() {
+  const msg = $("pc-msg");
+  const show = (s, bad) => { msg.textContent = s; msg.style.display = "block"; msg.style.color = bad ? "var(--red)" : "inherit"; };
+  const url = $("pc-url").value.trim(), pub = $("pc-published").value, flag = $("pc-flag").value;
+  if (!url || !pub) return show("No receipt without a source — URL and article date are required.", true), false;
+  if (!flag) return show("Enter the date we first flagged this (check the metro's history or the snapshot diffs).", true), false;
+  try {
+    await rpc("admin_press_add", {
+      p_url: url, p_outlet: $("pc-outlet").value, p_headline: $("pc-headline").value,
+      p_published: pub, p_cbsa: $("pc-geo").value, p_zip: $("pc-zip").value.trim(),
+      p_corroborates: $("pc-what").value, p_flag: flag, p_note: $("pc-note").value,
+    });
+    ["pc-url", "pc-outlet", "pc-headline", "pc-note", "pc-zip"].forEach(id => { $(id).value = ""; });
+    MK.press = await rpc("admin_press_list");
+    renderPress(); show("Receipt logged.");
+  } catch (e) { show(String(e.message || e), true); }
+  return false;
+}
+
+async function pcDel(id) {
+  try { await rpc("admin_press_delete", { rid: id }); MK.press = MK.press.filter(r => r.id !== id); renderPress(); }
+  catch (e) { showErr(e); }
+  return false;
+}
+
+function pcExport() {
+  const head = ["published_on", "outlet", "headline", "url", "metro_cbsa", "zip", "corroborates", "flag_date", "lead_days", "note"];
+  const csvq = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const csv = [head.join(",")].concat(MK.press.map(r => head.map(k => csvq(r[k])).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "press-corroboration.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return false;
+}
+
 RENDER.health = async function () {
   const [meta, evh, mdShard] = await Promise.all([
     fetch("/data/meta.json").then((r) => r.json()),

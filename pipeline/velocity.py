@@ -231,6 +231,17 @@ def aggregate(rows, key_of, names=None, min_zips=5):
                 for r in rs
                 if any(not v.get("pending") and v.get("mtl") is not None
                        for v in r["sig"].values())]
+        # Per-signal texture for the admin "why" lines: how many of the
+        # metro's ZIPs have this signal near its line, and the median mtl.
+        sig_summary = {}
+        for sk in SIGNALS:
+            near_mtls = [v["mtl"] for r in rs
+                         for v in [r["sig"].get(sk) or {}]
+                         if not v.get("pending") and v.get("mtl") is not None
+                         and v["mtl"] <= MTL_NEAR]
+            if near_mtls:
+                sig_summary[sk] = {"near": len(near_mtls),
+                                   "median_mtl": round(median(near_mtls), 1)}
         out[k] = {
             "zips": len(rs),
             "deteriorating": len(det),
@@ -239,6 +250,7 @@ def aggregate(rows, key_of, names=None, min_zips=5):
             "median_mtl": round(median(mtls), 1) if mtls else None,
             "median_score": round(median(r["score"] for r in rs), 2),
             "hold_share": round(100 * sum(1 for r in rs if r["level"] in ("green", "strong")) / len(rs), 1),
+            "sig": sig_summary,
         }
         if names:
             out[k]["name"] = names.get(k, k)
@@ -356,10 +368,41 @@ def main():
 
     result = build(period, entries, snaps, prev)
 
+    # Surge flag: a metro entering the gathering top-10 for the first time in
+    # 6 months. Judged against this run's own history files, which the
+    # backfill seeded 13 months deep.
+    recent = set()
+    for k in range(1, 7):
+        f = out_dir / f"velocity-{prev_period(period, k)}.json"
+        if f.exists():
+            j = json.loads(f.read_text())
+            recent |= {g.get("cbsa") for g in (j.get("gathering") or [])[:10]}
+    for i, g in enumerate(result["gathering"]):
+        g["surge"] = i < 10 and g["cbsa"] not in recent
+
     # Committed artifact: aggregates + gathering list ONLY (see header).
     public = {k: v for k, v in result.items() if k != "zips"}
     (out_dir / f"velocity-{period}.json").write_text(
         json.dumps(public, separators=(",", ":"), sort_keys=True))
+
+    # Web-served aggregates for the admin dashboard (web/data commits on every
+    # refresh). Same public layer as the research page, plus each gathering
+    # metro's member-ZIP list so admin can join activity (zip_check events) to
+    # metros client-side. Aggregates only — the per-ZIP paid layer never
+    # touches web/.
+    zc, _ = load_cbsa()
+    members = defaultdict(list)
+    for z, r in result["zips"].items():
+        c = zc.get(z)
+        if c:
+            members[c].append(z)
+    web_gathering = [dict(g, member_zips=sorted(members.get(g["cbsa"], [])))
+                     for g in result["gathering"]]
+    (ROOT / "web" / "data" / "velocity-aggregates.json").write_text(json.dumps(
+        {"period": period, "pending_signals": result["pending_signals"],
+         "signals": result["signals"], "gathering": web_gathering,
+         "states": result["states"]},
+        separators=(",", ":"), sort_keys=True))
     # Rolling prev-month aggregate cache for MoM deltas.
     prev_p.write_text(json.dumps({"metros": result["metros"]}, separators=(",", ":")))
 
