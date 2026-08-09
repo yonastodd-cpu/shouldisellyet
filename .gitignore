@@ -27,3 +27,8 @@ web/s/
 # Generated at deploy time by pipeline/build_research.py from committed
 # pipeline/research JSONs — pages, charts, CSVs.
 web/research/
+
+# Per-ZIP velocity payloads — the PAID layer. Served only through
+# verify-access (Supabase); committing them would publish the paid feature in
+# a public repo. The aggregate velocity-{month}.json files ARE committed.
+pipeline/velocity/zip-velocity-latest.json
