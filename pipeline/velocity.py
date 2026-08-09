@@ -286,7 +286,12 @@ def build(period, entries, snaps_by_month, prev_aggregates=None):
             "level": e["l"], "st": e["st"],
             "low_volume": (e.get("m", {}).get("sold") or 0) < LOW_VOLUME_SOLD,
         }
-    metros = aggregate(zips, lambda z, r: zc.get(z), cbsa_names, min_zips=5)
+    # 8, raised from 5 on 2026-08-09. A metro qualifies on scored-ZIP count,
+    # and at 5 a single ZIP moves the median — the first live gathering list
+    # was topped by 5-8 ZIP micro-metros nobody pitching a reporter would
+    # recognise. 8 is a deliberate middle: still reaches genuine small metros,
+    # but no one ZIP can carry a market onto the list.
+    metros = aggregate(zips, lambda z, r: zc.get(z), cbsa_names, min_zips=8)
     states = aggregate(zips, lambda z, r: r["st"], min_zips=10)
     glist = gathering_list(metros, (prev_aggregates or {}).get("metros"))
 

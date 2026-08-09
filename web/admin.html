@@ -903,12 +903,24 @@ async function agVerify(id, v) {
 // deliberately absent from this whole tab.
 const VEL_SIG_LABEL = { spy: "price trend", dom: "time to sell",
                         mos: "supply", pd: "price cuts" };
+// Months-to-line phrasing — mirrors mtl_cell/mtl_prose in build_research.py.
+// A median of 0.0 means the median ZIP's nearest signal has already CROSSED;
+// printing "0.0 months" reads like a broken template, and these strings get
+// pasted into press emails. Keep the two languages' wording in sync.
+// Returns PLAIN text — every call site escapes (mkWhy is esc()'d, the
+// median column escapes inline). Returning pre-escaped HTML here caused a
+// literal "&lt;1" in the why-line, double-escaped by esc().
+const mtlCell = (v) => v == null ? "—" : v <= 0 ? "at the line" : v < 1 ? "<1" : String(v);
+const mtlProse = (v) => v == null ? "an unmeasured distance from its danger line"
+  : v <= 0 ? "already at its danger line"
+  : v < 1 ? "less than a month from its danger line"
+  : `about ${v} month${v === 1 ? "" : "s"} from its danger line`;
 let MK = { vel: null, checks: {}, press: [] };
 
 function mkWhy(g) {
   const bits = Object.entries(g.sig || {}).map(([k, s]) =>
     `${VEL_SIG_LABEL[k] || k} near the line in ${s.near} of ${g.zips} scored ZIPs` +
-    (s.median_mtl != null ? ` (~${s.median_mtl} mo)` : ""));
+    (s.median_mtl != null ? ` (${mtlCell(s.median_mtl)}${s.median_mtl > 0 ? " mo" : ""})` : ""));
   return bits.length ? bits.join("; ") + "." : "signals drifting; no dial within 6 months yet.";
 }
 
@@ -924,7 +936,7 @@ it has flipped, but because it is still rated HOLD in ${Math.round(g.hold_share)
 ZIP codes while moving toward the danger lines faster than almost anywhere:
 
 - ${mkWhy(g)}
-- Median nearest signal: ${g.median_mtl != null ? "~" + g.median_mtl + " months from its danger line" : "approaching"} at the current 3-month pace.
+- Median nearest signal: ${mtlProse(g.median_mtl)} at the current 3-month pace.
 
 Happy to share the underlying table (free with citation), a quote, or the
 methodology. Data through ${period}.
@@ -937,7 +949,7 @@ function mkPost(g) {
   return `The housing warning signs are gathering in ${g.name}.
 
 ${Math.round(g.hold_share)}% of its scored ZIP codes still rate HOLD — but ${mkWhy(g)}
-At the current pace the median nearest signal crosses its danger line in ~${g.median_mtl ?? "—"} months.
+At the current pace the median nearest signal is ${mtlProse(g.median_mtl)}.
 
 Watch your own ZIP free: shouldisellyet.com
 (Source: ShouldISellYet Research, data through ${MK.vel ? MK.vel.period : ""})`;
@@ -973,7 +985,7 @@ RENDER.markets = async function () {
         <td class="num">${g.median_score.toFixed(2)}</td>
         <td class="num">${g.score_delta != null ? (g.score_delta >= 0 ? "+" : "") + g.score_delta.toFixed(2) : "—"}</td>
         <td class="num">${g.deteriorating + g.drifting}/${g.zips}</td>
-        <td class="num">${g.median_mtl ?? "—"}</td>
+        <td class="num">${esc(mtlCell(g.median_mtl))}</td>
         <td class="num">${checks30}</td>
         <td style="font-size:12px;max-width:260px">${esc(mkWhy(g))}</td>
         <td style="white-space:nowrap">

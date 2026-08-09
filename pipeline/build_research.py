@@ -346,6 +346,31 @@ def social_set(rep, series, outdir):
 
 # ————— methodology page (T5) —————
 
+# ————— Months-to-line phrasing —————
+# A median of 0.0 is arithmetically right — the median ZIP's nearest signal has
+# already CROSSED — but "0.0 months from its danger line" reads like a broken
+# template in press copy, which is where these strings end up. One helper each
+# for table cells and prose so the two can never drift apart.
+def mtl_cell(v):
+    if v is None:
+        return "—"
+    if v <= 0:
+        return "at the line"
+    if v < 1:
+        return "<1"          # PLAIN text — the call site escapes
+    return f"{v:g}"
+
+
+def mtl_prose(v):
+    if v is None:
+        return "an unmeasured distance from its danger line"
+    if v <= 0:
+        return "already at its danger line"
+    if v < 1:
+        return "less than a month from its danger line"
+    return f"about {v:g} month{'' if v == 1 else 's'} from its danger line"
+
+
 def methodology_page(h, changelog, outdir):
     seam = h.get("seam", "")
     entries = "".join(
@@ -750,7 +775,7 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
                 f'<td class="n">{r["hold_share"]:.0f}%</td>'
                 f'<td class="n">{r["median_score"]:.2f}</td>'
                 f'<td class="n">{("+" if (r.get("score_delta") or 0) >= 0 else "") + format(r.get("score_delta"), ".2f") if r.get("score_delta") is not None else "—"}</td>'
-                f'<td class="n">{r["median_mtl"] if r["median_mtl"] is not None else "—"}</td></tr>'
+                f'<td class="n">{mtl_cell(r["median_mtl"])}</td></tr>'
                 for r in g)
             gathering_html = f"""
 <h2>Where the warning signs are gathering</h2>
@@ -763,8 +788,8 @@ metro's scored ZIPs; months-to-line is how long until the nearest signal crosses
 <tbody>{g_rows}</tbody></table>
 <p class="note">In text, quotable with citation: in {esc(pretty(month))}, the warning signs were
 gathering fastest in {esc(g[0].get("name", ""))} — {g[0]["hold_share"]:.0f}% of its scored ZIP codes
-still rate HOLD, with the median nearest signal {g[0]["median_mtl"] if g[0]["median_mtl"] is not None else "—"} months
-from its danger line at the current pace.</p>"""
+still rate HOLD, with the median nearest signal {mtl_prose(g[0]["median_mtl"])}
+at the current pace.</p>"""
 
     state_cards = "".join(
         f'<div class="statecard"><b>{esc(STATE_NAMES.get(st, st))}</b><br>'
