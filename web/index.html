@@ -1050,6 +1050,40 @@ function pvPeak(h) {
 }
 
 const pvUsd = v => "$" + Math.round(v).toLocaleString("en-US");
+
+// Months-to-line for the masked velocity row — the same 3-mo-smoothed,
+// 3-mo-rate arithmetic as pipeline/velocity.py, on the two h-derived signals
+// (price trend, time to sell). Returns a REAL phrase to veil, or null when
+// the history can't support one (then the row falls back to mask()).
+function pvVelocityPhrase(h) {
+  if (!h || !h.p || !h.d) return null;
+  const oriented = (src, flip) => {
+    const out = [];
+    for (let i = 12; i < src.length; i++) {
+      out.push((src[i] != null && src[i - 12] != null)
+        ? (flip ? -(src[i] / src[i - 12] - 1) : (src[i] / src[i - 12] - 1)) : null);
+    }
+    return out;
+  };
+  const mtl = (series, line) => {
+    const sm = [];
+    for (let i = 0; i < series.length; i++) {
+      const w = series.slice(Math.max(0, i - 2), i + 1);
+      sm.push((w.length < 3 || w.some(v => v == null)) ? null : (w[0] + w[1] + w[2]) / 3);
+    }
+    if (sm.length < 4 || sm[sm.length - 1] == null || sm[sm.length - 4] == null) return undefined;
+    const cur = sm[sm.length - 1], rate = (cur - sm[sm.length - 4]) / 3;
+    if (cur >= line) return 0;
+    if (rate <= 0) return null;               // moving away
+    return (line - cur) / rate;
+  };
+  const vals = [mtl(oriented(h.p, true), 0.02), mtl(oriented(h.d, false), 0.40)];
+  if (vals.every(v => v === undefined)) return null;
+  const nums = vals.filter(v => typeof v === "number");
+  if (!nums.length) return "moving away from the lines";
+  const m = Math.min(...nums);
+  return m <= 0 ? "past a line already" : m > 24 ? ">24 months out" : "~" + Math.round(m) + " months to the line";
+}
 function veil(v) {   // REAL computed values only — see honesty rule above
   return '<span class="pv-veil" aria-hidden="true">' + v + '</span>';
 }
@@ -1103,6 +1137,15 @@ function renderPreview(d) {
          nc.red.toLocaleString() + '</b> ACT.</span>'
        : '<span>National verdict mix loads with the live data.</span>',
     { open: true });
+
+  // 09 — velocity tease. veil() gets the REAL months-to-line phrase computed
+  // from this ZIP's own history (same arithmetic as the pipeline); when the
+  // history can't support one, the honest placeholder — never an invention.
+  const velPhrase = pvVelocityPhrase(h);
+  row("09", "How fast your market is moving",
+    velPhrase ? veil(velPhrase)
+              : mask("▓▓ months").replace("from your numbers", "from your ZIP's history"),
+    { aria: "How fast your market is moving — months to the danger line, unlocked in the full report" });
 
   // Locked alert toggle for each maskable row. GENUINELY INERT: it is markup
   // inside the row button — no checkbox, no state, no handler, no network

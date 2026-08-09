@@ -171,6 +171,15 @@ jobs:
         continue-on-error: true
         run: python3 pipeline/velocity.py
 
+      # Per-ZIP payloads → Supabase (the paid serving layer; schema-v20).
+      - name: Velocity upsert
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/upsert_velocity.py
+
       # Digest failure must never fail the refresh: the site data is already
       # good at this point and a broken marketing email is not worth losing a
       # deploy over. continue-on-error plus an explicit fallback notice.

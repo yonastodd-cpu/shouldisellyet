@@ -165,6 +165,38 @@ def render_watch_email(metric, direction, threshold, current_value, zip_code, to
     return subject, html
 
 
+# ——— The velocity alert (metric "velocity") ———
+# Stateful, not threshold-based: fires when the market's gathering STATE
+# escalates past the baseline recorded at save time, then re-baselines so one
+# worsening produces one email. De-escalation quietly lowers the baseline —
+# nobody wants "good news" spam, and re-arming means a future worsening from
+# the better level fires again. States come from zip_velocity (schema-v20),
+# fetched in one query for every watched ZIP by main().
+VEL_RANK = {"improving": 0, "stable": 1, "drifting": 2, "deteriorating fast": 3}
+VEL_PHRASE = {
+    "drifting": "has started drifting toward its warning lines",
+    "deteriorating fast": "is now moving toward its warning lines fast",
+}
+
+
+def render_velocity_email(old_state, new_state, zip_code, token):
+    phrase = VEL_PHRASE.get(new_state, f"changed from {old_state} to {new_state}")
+    subject = f"{zip_code}: your market {phrase}"
+    html = f"""{preheader(f"Direction change in {zip_code}: {old_state} \u2192 {new_state}. Your full report has the month-by-month pace.")}
+<div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;color:#1c2430;line-height:1.65">
+<p>You asked to hear if the market in <b>{zip_code}</b> started moving toward a warning line.</p>
+<p>It has: our approach-velocity read just moved from <b>{old_state}</b> to <b>{new_state}</b>.
+A state change is about direction and pace \u2014 not a verdict flip \u2014 but this is
+how turns usually start, months before prices move.</p>
+<p style="margin:22px 0"><a href="https://shouldisellyet.com/my-report.html?token={token}"
+   style="background:#1f3a5f;color:#faf8f4;text-decoration:none;padding:13px 22px;border-radius:8px;font-weight:600;display:inline-block">
+   See which dials are moving \u2192</a></p>
+<p style="font-size:13px;color:#8a8578">ShouldISellYet \u00b7 you set this alert on your report page \u2014
+manage or turn it off there. <a href="https://kfbjooteazwvdsonthba.supabase.co/functions/v1/unsubscribe?token={token}">Unsubscribe</a></p>
+</div>"""
+    return subject, html
+
+
 def process_subscriber(sub, data_dir, market_rate):
     """Evaluate every watch entry for one subscriber against fresh ZIP data.
 
@@ -181,7 +213,24 @@ def process_subscriber(sub, data_dir, market_rate):
     current_median = latest_price(entry) if entry else None
 
     updated, emails = [], []
+    vel_state = sub.get("_vel_state")   # attached by main() from zip_velocity
     for w in watches:
+        if w.get("metric") == "velocity":
+            base = w.get("baseline", "unknown")
+            cur = vel_state
+            if cur is None or cur == "unknown" or cur not in VEL_RANK:
+                updated.append(w)          # no fresh read — leave untouched
+            elif base not in VEL_RANK:
+                updated.append({**w, "baseline": cur})   # first real read becomes baseline
+            elif VEL_RANK[cur] > VEL_RANK[base]:
+                emails.append(render_velocity_email(base, cur, sub.get("zip", ""),
+                                                    sub.get("access_token", "")))
+                updated.append({**w, "baseline": cur})
+            elif VEL_RANK[cur] < VEL_RANK[base]:
+                updated.append({**w, "baseline": cur})   # quiet re-arm downward
+            else:
+                updated.append(w)
+            continue
         value = compute_metric(w["metric"], inputs, current_median, market_rate)
         crossed = is_crossed(value, w["direction"], w["threshold"])
         if crossed is None:
@@ -285,6 +334,26 @@ def main():
     watchers = fetch_watchers(sb_url, sb_key)
     total_watches = sum(len(w.get("watches") or []) for w in watchers)
     print(f"{len(watchers)} subscriber(s) with {total_watches} active watch(es) total.")
+
+    # One query hydrates every velocity watch: current gathering state per
+    # watched ZIP from zip_velocity (schema-v20). Missing rows leave
+    # _vel_state None and the watch is left untouched this run.
+    vel_zips = sorted({s.get("zip") for s in watchers
+                       if any((w or {}).get("metric") == "velocity"
+                              for w in (s.get("watches") or []))
+                       and s.get("zip")})
+    vel_states = {}
+    if vel_zips:
+        try:
+            rows = _req(f"{sb_url}/rest/v1/zip_velocity?select=zip,payload"
+                        f"&zip=in.({','.join(vel_zips)})",
+                        headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"})
+            vel_states = {r["zip"]: (r.get("payload") or {}).get("state")
+                          for r in (rows or [])}
+        except Exception as e:
+            print(f"zip_velocity read failed — velocity watches skipped: {e}", file=sys.stderr)
+    for s in watchers:
+        s["_vel_state"] = vel_states.get(s.get("zip"))
     market_rate = load_market_rate(args.data)
     sent = 0
 

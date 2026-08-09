@@ -690,6 +690,42 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
         f'<td>{word(r["level"])}</td></tr>'
         for r in rep["top_streaks"][:15])
 
+    # ————— The gathering list (metro-level approach velocity) —————
+    # METRO AGGREGATES ONLY — deliberately the public/press layer of the
+    # velocity build. Per-ZIP velocity is the paid product and never appears
+    # here (velocity.py's header owns that boundary). Renders only when the
+    # month's velocity file exists; a release without one simply omits the
+    # section. OPERATOR NOTE: this section ships with the next release build —
+    # confirm the framing reads right before the first publish.
+    gathering_html = ""
+    vel_p = Path(__file__).parent / "velocity" / f"velocity-{month}.json"
+    if vel_p.exists():
+        vel = json.loads(vel_p.read_text())
+        g = (vel.get("gathering") or [])[:10]
+        active = [k for k, s in (vel.get("signals") or {}).items()
+                  if k not in (vel.get("pending_signals") or {})]
+        if g:
+            g_rows = "".join(
+                f'<tr><td>{esc(r.get("name", r.get("cbsa", "")))}</td>'
+                f'<td class="n">{r["hold_share"]:.0f}%</td>'
+                f'<td class="n">{r["median_score"]:.2f}</td>'
+                f'<td class="n">{("+" if (r.get("score_delta") or 0) >= 0 else "") + format(r.get("score_delta"), ".2f") if r.get("score_delta") is not None else "—"}</td>'
+                f'<td class="n">{r["median_mtl"] if r["median_mtl"] is not None else "—"}</td></tr>'
+                for r in g)
+            gathering_html = f"""
+<h2>Where the warning signs are gathering</h2>
+<p class="lede" style="font-size:1rem">Metros still rated HOLD in most of their ZIP codes — but whose
+signals are moving toward the danger lines fastest. Score is the median approach-velocity across the
+metro's scored ZIPs; months-to-line is how long until the nearest signal crosses at the current
+3-month pace. Computed from {", ".join(esc(vel["signals"][k]["label"]) for k in active)} history
+(the remaining signals join as their history accumulates).</p>
+<table><thead><tr><th>Metro</th><th>Still HOLD</th><th>Score</th><th>Δ month</th><th>Months to line</th></tr></thead>
+<tbody>{g_rows}</tbody></table>
+<p class="note">In text, quotable with citation: in {esc(pretty(month))}, the warning signs were
+gathering fastest in {esc(g[0].get("name", ""))} — {g[0]["hold_share"]:.0f}% of its scored ZIP codes
+still rate HOLD, with the median nearest signal {g[0]["median_mtl"] if g[0]["median_mtl"] is not None else "—"} months
+from its danger line at the current pace.</p>"""
+
     state_cards = "".join(
         f'<div class="statecard"><b>{esc(STATE_NAMES.get(st, st))}</b><br>'
         f'{esc(state_paragraph(st, e, month))}</div>'
@@ -729,6 +765,7 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
 
 <h2>Longest current warning streaks</h2>
 <table><thead><tr><th>ZIP</th><th>Place</th><th>Months</th><th>Now</th></tr></thead><tbody>{streak_rows}</tbody></table>
+{gathering_html}
 
 <h2>Your state, in one paragraph</h2>
 <p class="note">Written for reuse — every paragraph is quotable as-is with citation.</p>

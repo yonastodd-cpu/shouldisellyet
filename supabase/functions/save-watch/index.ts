@@ -51,8 +51,11 @@ function json(body: unknown, status = 200) {
 
 // "rate" (market 30-year rate) needs no personal inputs — the threshold is a
 // percent, and check_watches.py evaluates it against the pipeline's FRED rate.
-const METRICS = new Set(["walkaway", "equity", "lockin", "rate", "rategap", "gain"]);
-const DIRECTIONS = new Set(["below", "above"]);
+// "velocity" is the approach-velocity alert: no threshold — it fires when the
+// market's gathering STATE escalates past the baseline recorded at save time
+// (check_watches compares against zip_velocity each refresh).
+const METRICS = new Set(["walkaway", "equity", "lockin", "rate", "rategap", "gain", "velocity"]);
+const DIRECTIONS = new Set(["below", "above", "escalates"]);
 const TOKEN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
@@ -93,7 +96,7 @@ Deno.serve(async (req) => {
     // Verify the token belongs to a real, active/report subscriber, and load
     // its current watches array so we only touch this one metric's entry.
     const lookup = await fetch(
-      `${SUPABASE_URL}/rest/v1/subscribers?select=id,watches&access_token=eq.${token}&status=in.(active,report)&limit=1`,
+      `${SUPABASE_URL}/rest/v1/subscribers?select=id,zip,watches&access_token=eq.${token}&status=in.(active,report)&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
     );
     const rows = lookup.ok ? await lookup.json() : [];
@@ -102,9 +105,24 @@ Deno.serve(async (req) => {
     const sub = rows[0];
     const current = Array.isArray(sub.watches) ? sub.watches : [];
     const others = current.filter((w: Record<string, unknown>) => w.metric !== metric);
-    const watches = clearing
-      ? others
-      : [...others, { metric, direction: body.direction, threshold: Number(body.threshold), crossed: false }];
+    let entry: Record<string, unknown> =
+      { metric, direction: body.direction, threshold: Number(body.threshold), crossed: false };
+    if (!clearing && metric === "velocity") {
+      // Record the CURRENT gathering state as the baseline the alert
+      // escalates from. Missing velocity row → baseline "unknown": the first
+      // refresh that produces a real state becomes the baseline instead of
+      // firing a bogus day-one alert.
+      let baseline = "unknown";
+      try {
+        const vr = await fetch(
+          `${SUPABASE_URL}/rest/v1/zip_velocity?select=payload&zip=eq.${sub.zip}&limit=1`,
+          { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+        const vrows = vr.ok ? await vr.json() : [];
+        if (vrows.length) baseline = vrows[0].payload?.state ?? "unknown";
+      } catch (_e) { /* baseline stays unknown */ }
+      entry = { metric, direction: "escalates", threshold: 0, crossed: false, baseline };
+    }
+    const watches = clearing ? others : [...others, entry];
 
     const patch: Record<string, unknown> = { watches };
     if (!clearing) patch.calc_inputs = body.calcInputs ?? null; // refresh shared inputs on every save

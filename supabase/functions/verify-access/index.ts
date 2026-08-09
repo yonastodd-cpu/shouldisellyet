@@ -74,6 +74,25 @@ Deno.serve(async (req) => {
     const rows = r.ok ? await r.json() : [];
     if (Array.isArray(rows) && rows.length) {
       const s = rows[0];
+
+      // Approach velocity for THIS zip — the paid layer (schema-v20). Served
+      // only here, only after the token validated: this response is the sole
+      // read path, so an unauthenticated fetch of report data cannot contain
+      // velocity fields. Absent rows (table not yet seeded, or an unscored
+      // ZIP) yield null and the report renders its "computed on the next data
+      // refresh" note — a missing number is shown as missing, never invented.
+      let velocity = null;
+      try {
+        const vr = await fetch(
+          `${SUPABASE_URL}/rest/v1/zip_velocity?select=period,payload&zip=eq.${s.zip}&limit=1`,
+          { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
+        );
+        const vrows = vr.ok ? await vr.json() : [];
+        if (Array.isArray(vrows) && vrows.length) {
+          velocity = { period: vrows[0].period, ...vrows[0].payload };
+        }
+      } catch (_e) { /* velocity is additive; the report must not fail on it */ }
+
       // purchased_at powers the report page's 30-day upgrade-credit countdown
       return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status,
                     address_street: s.address_street ?? "",
@@ -82,7 +101,8 @@ Deno.serve(async (req) => {
                     address_state: s.address_state ?? "",
                     address: s.address ?? "",   // deprecated, pre-v6 rows only
                     purchased_at: s.created_at ?? null,
-                    watches: s.watches ?? [] });
+                    watches: s.watches ?? [],
+                    velocity });
     }
     return json({ ok: false });
   } catch (_e) {

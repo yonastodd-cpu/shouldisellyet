@@ -31,6 +31,7 @@ window.ALERT_COPY = {
     "04": "if this drops below my number",
     "05": "if the market rate comes within ½ pt of mine",
     "06": "if my safety margin thins",
-    "07": "60 days before my best listing window"
+    "07": "60 days before my best listing window",
+    "09": "if my market starts moving toward a warning line"
   }
 };

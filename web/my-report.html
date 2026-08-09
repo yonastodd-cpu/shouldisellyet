@@ -387,6 +387,29 @@ details.how .how-body b{color:#3a4450}
       <div id="trend-locked" style="display:none;margin-top:12px"></div>
     </div>
 
+    <!-- Approach velocity — PAID-ONLY DATA PATH. The numbers here come
+         exclusively from the verify-access response (zip_velocity, schema
+         v20), which requires a valid purchase token: there is no public file
+         to fetch and nothing to un-hide client-side. The traces are drawn
+         from the ZIP's public h series — the same data the free gauges use —
+         but every NUMBER (months-to-line, state, score) is server-gated. -->
+    <div class="sec" id="velocity" data-nav="velocity" style="display:none">
+      <div class="k">HOW FAST IS YOUR MARKET MOVING?</div>
+      <div class="title">Approach velocity — the distance to each danger line</div>
+      <p class="subt">A verdict says where your market IS. This says where it's HEADED: for each dial,
+        the direction of travel and — at the current 3-month pace — how many months until it
+        crosses the published danger line. Markets usually drift for months before they flip.</p>
+      <div id="vel-rows"></div>
+      <p id="vel-state" style="margin-top:14px;font-size:15px;line-height:1.6"></p>
+      <p id="vel-lowvol" style="display:none;margin-top:8px;font-size:12.5px;color:var(--amber-ink, #96650c)">
+        Heads up: this ZIP reports fewer than 12 sales a month, so these velocities are computed
+        from thin data — treat the direction as more reliable than the month count.</p>
+      <div id="vel-watch" style="margin-top:16px;border-top:1px dashed var(--hairline);padding-top:12px"></div>
+      <p style="margin-top:10px;font-size:12px;color:var(--fainter)">Pace is measured over the last
+        3 months on 3-month-smoothed data, so one odd month can't swing it. Signals without enough
+        history yet say so — a missing number is shown as missing, never estimated.</p>
+    </div>
+
     <div class="sec" id="equity" data-nav="equity">
       <div class="k">YOUR EQUITY POSITION</div>
       <div class="title">What you actually own</div>
@@ -969,8 +992,135 @@ const { clampPct, tcol, strongSignals, applyStrong, buildMetricRows, backtestNot
         stateWord, renderMetrics, renderCrossCheck, MONTHS, monthLabel, lastIdx,
         atOrNear, lineSVG, pctf } = MARKET;
 
+// ————— Approach velocity (paid-only — see the section comment) —————
+const VEL_LABEL = { spy: "Price trend", dom: "Time to sell",
+                    mos: "Months of supply", pd: "Price cuts" };
+const VEL_STATE_RANK = { improving: 0, stable: 1, drifting: 2, "deteriorating fast": 3 };
+
+// Oriented 6-point traces from the public h series (rising = approaching the
+// line) — the drawing is public data; the NUMBERS beside it are server-gated.
+function velTrace(kind, h){
+  if (!h) return "";
+  const src = kind === "spy" ? h.p : h.d;
+  if (!src || src.length < 18) return "";
+  const pts = [];
+  for (let i = src.length - 6; i < src.length; i++){
+    if (src[i] == null || src[i-12] == null){ pts.push(null); continue; }
+    const r = src[i] / src[i-12] - 1;
+    pts.push(kind === "spy" ? -r : r);
+  }
+  const real = pts.filter(v => v != null);
+  if (real.length < 4) return "";
+  const lo = Math.min(...real), hi = Math.max(...real) || 0.0001;
+  const span = (hi - lo) || Math.abs(hi) || 0.0001;
+  let d = "", pen = false;
+  pts.forEach((v, i) => {
+    if (v == null){ pen = false; return; }
+    const x = (i / 5) * 100, y = 26 - ((v - lo) / span) * 22;
+    d += (pen ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1); pen = true;
+  });
+  return '<svg viewBox="0 0 100 30" style="width:88px;height:26px;flex:none" aria-hidden="true">' +
+    '<path d="' + d + '" fill="none" stroke="#1f3a5f" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function velPhrase(kind, row){
+  const label = VEL_LABEL[kind];
+  if (row.pending) return { arrow: "…", cls: "var(--fainter)",
+    text: label + " — needs more months of history; first reading expected once " +
+          "enough refreshes accumulate." };
+  if (row.dir === "crossed") return { arrow: "✕", cls: "var(--red-ink, #c02f2f)",
+    text: label + " is already past its danger line." };
+  if (row.dir === "away") return { arrow: "←", cls: "var(--green-ink, #1e7a42)",
+    text: label + " is moving away from its danger line." };
+  const mtl = row.mtl;
+  const when = mtl <= 1 ? "within a month" : mtl > 24 ? "in over two years at this pace"
+             : "in ~" + Math.round(mtl) + " months at the current pace";
+  return { arrow: "→", cls: "var(--amber-ink, #96650c)",
+    text: label + " crosses the danger line " + when + "." };
+}
+
+function renderVelocity(v){
+  if (!v){
+    // No row yet (table unseeded or unscored ZIP): say so — never estimate.
+    $("vel-rows").innerHTML = '<p style="font-size:14px;color:var(--muted)">Velocity for this ZIP is computed on the next data refresh — check back shortly.</p>';
+    $("velocity").style.display = "block";
+    return;
+  }
+  const h = (window.__zipEntry || {}).h;
+  $("vel-rows").innerHTML = Object.keys(VEL_LABEL).map(k => {
+    const row = v.sig[k] || { pending: true };
+    const p = velPhrase(k, row);
+    return '<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--hairline2)">' +
+      '<span style="font-size:17px;width:22px;text-align:center;color:' + p.cls + '" aria-hidden="true">' + p.arrow + '</span>' +
+      '<span style="flex:1;font-size:14.5px;line-height:1.5">' + p.text + '</span>' +
+      (row.pending ? "" : velTrace(k, h)) + '</div>';
+  }).join("");
+
+  const stateLine = {
+    "deteriorating fast": "The signals here are <b>gathering</b> — this market is moving toward its warning lines faster than most.",
+    "drifting": "This market is <b>drifting</b> toward its warning lines — not fast, but the direction is set.",
+    "stable": "This market is holding <b>steady</b> — nothing is moving toward a line at a meaningful pace.",
+    "improving": "This market is <b>improving</b> — its signals are moving away from the warning lines.",
+    "unknown": "Not enough history in this ZIP to read a direction yet.",
+  }[v.state] || "";
+  // period is pipeline-stamped YYYY-MM; strip to that charset rather than
+  // relying on an escaper that isn't in scope here.
+  $("vel-state").innerHTML = stateLine +
+    ' <span style="color:var(--fainter);font-size:12px">(data through ' +
+    String(v.period || "").replace(/[^0-9-]/g, "") + ")</span>";
+  $("vel-lowvol").style.display = v.low_volume ? "block" : "none";
+  renderVelWatch(v);
+  $("velocity").style.display = "block";
+  renumberSections();
+}
+
+// The velocity alert — fires when the gathering state ESCALATES (e.g. stable →
+// drifting). One toggle, no threshold: the baseline is recorded server-side at
+// save time and each refresh compares against it.
+function renderVelWatch(v){
+  const saved = (window.__savedWatches || []).some(w => w.metric === "velocity");
+  $("vel-watch").innerHTML =
+    '<label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13.5px;line-height:1.5">' +
+    '<input type="checkbox" id="vel-watch-toggle" ' + (saved ? "checked" : "") +
+    ' onchange="toggleVelWatch(this.checked)" style="margin-top:2px;accent-color:var(--navy)">' +
+    '<span><b>' + (window.ALERT_COPY ? ALERT_COPY.toggle_label : "Alert me") + '</b> · ' +
+    (window.ALERT_COPY && ALERT_COPY.rows["09"] ? ALERT_COPY.rows["09"] :
+     "if my market starts moving toward a warning line") +
+    '<br><span style="color:var(--fainter);font-size:12px">Uses the same alert address as your other watches; the privacy terms are identical.</span></span></label>' +
+    '<div id="vel-watch-msg" style="display:none;font-size:13px;margin-top:6px"></div>';
+}
+
+async function toggleVelWatch(on){
+  const msg = $("vel-watch-msg");
+  const show = (t, bad) => { msg.textContent = t; msg.style.display = "block";
+                            msg.style.color = bad ? "var(--red)" : "var(--green-ink, #1e7a42)"; };
+  if (!TOKEN || !SAVE_WATCH_FN) { show("Alerts need an active report link.", true); return; }
+  try {
+    const r = await fetch(SAVE_WATCH_FN, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(on
+        ? { token: TOKEN, metric: "velocity", direction: "escalates", threshold: 0,
+            calcInputs: window.__calcInputs || {},
+            cf_token: window.SISY_TS ? SISY_TS.token($("ts-watch")) : "" }
+        : { token: TOKEN, metric: "velocity", clear: true,
+            cf_token: window.SISY_TS ? SISY_TS.token($("ts-watch")) : "" }),
+    });
+    const j = await r.json();
+    if (j && j.ok){
+      window.__savedWatches = (window.__savedWatches || []).filter(w => w.metric !== "velocity")
+        .concat(on ? [{ metric: "velocity" }] : []);
+      show(on ? "✓ We'll email you if this market's direction worsens." : "Alert off.");
+    } else {
+      $("vel-watch-toggle").checked = !on;
+      show(r.status === 429 ? "Too many attempts — try again later."
+                            : "Couldn't save — try again in a minute.", true);
+    }
+  } catch(e){ $("vel-watch-toggle").checked = !on; show("Couldn't save — try again in a minute.", true); }
+}
+
 function renderDeepDive(d, zip, val, bal){
   const h = d.h, m = d.m || {};
+  window.__zipEntry = d;   // velocity traces read h from here
   const hasVal = val != null, hasBal = bal != null;
 
   // 02 · value trend — with a value, the ZIP series indexed to it (overlay);
@@ -1435,6 +1585,9 @@ async function generate(noScroll){
   setWatchAvail("lockin",   hasLockin, rate == null ? "ADD RATE" : "ADD BALANCE");
   syncWatchToggles();
 
+  // Re-render velocity now that __zipEntry.h exists, so the traces draw.
+  if (window.__velocity !== undefined && $("velocity")) renderVelocity(window.__velocity);
+
   renumberSections();
 
   $("report").style.display = "block";
@@ -1797,6 +1950,11 @@ function unlock(zip, justPaid, access){
   if (access && (access.address_street || access.address_city || access.zip)) {
     writeAddrForm(ADDRESS.adopt(access), true);
   }
+  // Approach velocity rides the same verified response — the ONLY source for
+  // these numbers. Stash + render now; renderDeepDive re-renders once the
+  // public h series is loaded so the little traces can draw.
+  window.__velocity = (access && access.velocity) || null;
+  renderVelocity(window.__velocity);
   REPORT_ZIP = String(zip || "").replace(/\D/g, "").slice(0, 5);
   if (REPORT_ZIP && !$("in-zip").value) {
     $("in-zip").value = REPORT_ZIP;
