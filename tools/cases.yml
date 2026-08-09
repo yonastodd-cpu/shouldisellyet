@@ -1,0 +1,63 @@
+# Track-record candidate cases.
+#
+# GOVERNING RULE (tools/backtest_cases.py enforces it): no case publishes
+# unless it REPRODUCES — every date, value and lead time on a published card
+# must come from running today's dial definitions and danger lines over
+# historical source data. A candidate that doesn't reproduce is DROPPED and
+# reported. Thresholds are never softened to rescue a story.
+#
+# VERIFIABLE WINDOW: 2019-04 → 2026-06. Both Redfin hub files (housing market
+# and price drops) carry monthly history to 2019-04, so all FOUR dials —
+# months of supply, price trend, days on market, price-cut share — recompute
+# at full fidelity. Nothing before 2019-04 is recomputable at dial level from
+# any source this project has.
+#
+# geo: a CBSA code (metro, aggregated from its ZIPs via
+#      pipeline/data/zip_cbsa.csv) or an explicit zips: list.
+# window: months scanned for the first crossing.
+# outcome: months over which the price path after the crossing is measured.
+
+cases:
+  # ————— Seed hits —————
+  - id: boise-2021
+    name: "Boise City, ID"
+    cbsa: "14260"
+    window: ["2021-01", "2024-12"]
+    outcome: ["2021-01", "2024-12"]
+    story: "The pandemic boomtown that ran hottest — and turned first."
+
+  - id: austin-2021
+    name: "Austin-Round Rock-San Marcos, TX"
+    cbsa: "12420"
+    window: ["2021-01", "2024-12"]
+    outcome: ["2021-01", "2024-12"]
+    story: "The most-hyped migration market of the boom."
+
+  - id: cape-coral-2022
+    name: "Cape Coral-Fort Myers, FL"
+    cbsa: "15980"
+    window: ["2022-01", "2026-06"]
+    outcome: ["2022-01", "2026-06"]
+    story: "Gulf Coast inventory built for two years before prices gave way."
+
+  # ————— The 2005–2009 case is ABSENT ON PURPOSE —————
+  # Not "pending", not qualitative. No source available to this project reaches
+  # 2005 at metro level with any of the four dials: Redfin begins 2012
+  # (legacy) / 2019 (current hub), and FHFA — which does reach the 2000s — is
+  # an annual ZIP-level repeat-sales VALUE index carrying no dial at all.
+  # Per the brief's default, it is dropped rather than described from
+  # published research, because a card sourced that way could not carry the
+  # "computed from the same data and thresholds we use today" line.
+
+# False alarms are NOT hand-picked: the tool nominates them by querying for
+# markets that crossed into WATCH in the given year and then failed to decline
+# meaningfully. Hand-picking the miss would defeat its purpose.
+false_alarm_query:
+  crossed_in_year: 2022
+  # A "miss" = crossed WATCH/ACT, then the deepest subsequent 12-month price
+  # change stayed shallower than this, and the market recovered to within
+  # recover_within of its pre-crossing level.
+  max_decline: -0.02
+  recover_within: -0.01
+  outcome_months: 24
+  nominate: 2

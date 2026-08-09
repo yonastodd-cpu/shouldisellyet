@@ -32,3 +32,7 @@ web/research/
 # verify-access (Supabase); committing them would publish the paid feature in
 # a public repo. The aggregate velocity-{month}.json files ARE committed.
 pipeline/velocity/zip-velocity-latest.json
+
+# Raw Redfin sources cached by tools/backtest_cases.py (~1GB). The COMPUTED
+# case JSONs in web/data/cases/ are committed; their inputs are not.
+.cache/

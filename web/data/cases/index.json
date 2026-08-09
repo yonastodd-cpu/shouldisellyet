@@ -1,0 +1,40 @@
+{
+ "dropped": [],
+ "pruned": [
+  "miss-44100.json"
+ ],
+ "published": [
+  {
+   "first_signal": "2021-11",
+   "id": "boise-2021",
+   "lead_months": 12,
+   "name": "Boise City, ID",
+   "peak_to_trough": -0.1786
+  },
+  {
+   "first_signal": "2022-07",
+   "id": "austin-2021",
+   "lead_months": 6,
+   "name": "Austin-Round Rock-San Marcos, TX",
+   "peak_to_trough": -0.2558
+  },
+  {
+   "first_signal": "2022-08",
+   "id": "cape-coral-2022",
+   "lead_months": 10,
+   "name": "Cape Coral-Fort Myers, FL",
+   "peak_to_trough": -0.1775
+  },
+  {
+   "first_signal": "2022-01",
+   "id": "miss-39500",
+   "kind": "miss",
+   "name": "Quincy, IL-MO",
+   "worst_drawdown": -0.0189
+  }
+ ],
+ "window": [
+  "2019-06",
+  "2026-06"
+ ]
+}
