@@ -787,6 +787,22 @@ const stateCache = {};
 // at page load and the macro row reads whatever has resolved by expand time —
 // expansion is a user action after reveal, so this can never shift layout.
 let PV_WSI = null, PV_RESEARCH = false;
+// Track-record case for the macro row — FEATURE-FLAGGED OFF by default.
+// Flip SHOW_CASE_ROW to true (or add ?case=1) to rotate one recomputed case
+// into row 08's expansion. Off until the operator has read the cards live:
+// they are computed, but a marketing surface should ship on a decision.
+const SHOW_CASE_ROW = false;
+let PV_CASE = null;
+if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
+  fetch("data/cases/index.json").then(r => r.ok ? r.json() : null).then(j => {
+    const hits = (j && j.published || []).filter(p => p.kind !== "miss");
+    if (!hits.length) return;
+    // Rotate by day so repeat visitors don't always meet the same market.
+    const pick = hits[Math.floor(Date.now() / 86400000) % hits.length];
+    return fetch("data/cases/" + pick.id + ".json").then(r => r.ok ? r.json() : null)
+      .then(c => { PV_CASE = c; });
+  }).catch(() => {});
+}
 fetch("research/wsi.json").then(r => r.ok ? r.json() : null).then(j => {
   if (j && typeof j.wsi === "number") { PV_WSI = j; PV_RESEARCH = true; }
   else return fetch("research/", { method: "HEAD" }).then(r => { PV_RESEARCH = r.ok; });
@@ -1212,6 +1228,17 @@ function renderPreview(d) {
                    "%</b> of scored ZIP markets showed warning signs in " + mo(PV_WSI.month) +
                    (PV_WSI.delta ? " — " + dir + " " + Math.abs(PV_WSI.delta).toFixed(1) +
                    " points from the month before." : ".") + "</p>");
+      }
+      // One recomputed case, when the flag is on. Free-tier content like the
+      // rest of row 08 — it is evidence about the method, not paid analysis.
+      if (PV_CASE && PV_CASE.lead_months != null) {
+        const ce = s => String(s).replace(/[&<>"]/g, c =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+        parts.push('<p class="pv-case"><b>' + ce(PV_CASE.name) + '</b> — our dials crossed in ' +
+          ce(PV_CASE.first_signal) + '; prices first fell ' + PV_CASE.lead_months +
+          ' months later, then ' + (PV_CASE.peak_to_trough * 100).toFixed(1) +
+          '% peak to trough. <a class="pv-rlink" href="research/methodology.html#track">' +
+          'See how this was computed →</a></p>');
       }
       if (PV_RESEARCH) parts.push('<p><a class="pv-rlink" href="research/">See the full monthly research →</a></p>');
       box.innerHTML = parts.join("") || "<p>More national context is published monthly.</p>";

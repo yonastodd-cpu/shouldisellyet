@@ -281,6 +281,19 @@ def _social_frame(title_lines, month, w=1080, h=1350):
     return img, d
 
 
+def copy_case_charts(outdir):
+    """Case charts ride along with the release's social assets, so the posting
+    series has them in the same folder as everything else it publishes."""
+    import shutil
+    n = 0
+    for c in load_cases():
+        src = CASES_DIR / f"{c['id']}.png"
+        if src.exists():
+            shutil.copy2(src, outdir / f"case-{c['id']}.png")
+            n += 1
+    return n
+
+
 def social_set(rep, series, outdir):
     """Four 1080×1350 images matching the social pillars, dropped beside the
     release so the week's posting is a pick-and-post, not a design task."""
@@ -371,6 +384,122 @@ def mtl_prose(v):
     return f"about {v:g} month{'' if v == 1 else 's'} from its danger line"
 
 
+
+# ————— The explainer and the track record —————
+# THE SMOKE DETECTOR is the site's one-paragraph answer to "does this
+# actually work?" — markets slow before they fall, three visible behaviours,
+# four gauges with lines drawn from past downturns, velocity as drift
+# detection, and the honest framing: not a prediction, a smoke detector.
+#
+# THE TRACK RECORD renders ONLY from web/data/cases/*.json, which
+# tools/backtest_cases.py recomputes from source under today's thresholds.
+# Nothing here is hand-written, and there is no fallback copy: if the case
+# files are absent the section does not render at all. That is deliberate —
+# a hand-typed lead time is exactly what this brief exists to eliminate.
+#
+# A MISS ALWAYS RENDERS WITH THE HITS. If no miss case is present the whole
+# section is withheld rather than showing hits alone, because hits-only is
+# the dishonest version of this page.
+CASES_DIR = ROOT / "web" / "data" / "cases"
+
+EXPLAINER = """
+<h2>How this works: the smoke detector</h2>
+<p><b>Markets slow before they fall.</b> Prices are the last thing to move,
+because sellers hold their asking price long after buyers have stopped
+paying it. What changes first is behaviour, and behaviour is visible.</p>
+<p>Three things happen, in this order, while the headline price still looks
+fine: <b>homes take longer to sell</b>, <b>unsold homes pile up</b>, and
+<b>sellers start cutting asking prices</b>. Each is measurable monthly from
+public data, per ZIP code.</p>
+<p>So we watch four gauges — months of supply, the year-over-year price
+trend, time to sell, and the share of listings cutting price — each with a
+<b>danger line drawn from what happened in past downturns</b>, published on
+this page and never moved to fit a story. A market past enough of them
+reads WATCH or ACT.</p>
+<p>We also watch the <b>speed of approach</b>: a market can sit well inside
+every line and still be closing on one fast. That drift is usually visible
+months before the crossing itself.</p>
+<p><b>This is not a prediction. It is a smoke detector.</b> It tells you
+that the conditions which have preceded past declines are present in your
+market now. Smoke detectors go off for burnt toast, and some markets cross
+a line and recover — which is why one of the cases below is a market that
+did exactly that.</p>
+"""
+
+
+def _chip(label, value):
+    return (f'<div class="chip"><div class="chip-k">{esc(label)}</div>'
+            f'<div class="chip-v">{esc(value)}</div></div>')
+
+
+def case_card(case, rel_prefix=""):
+    """One case card: market + years, the story, the chart, three stat chips,
+    and the computed-from line. The miss uses the same component with a
+    neutral tone — a different card would let a reader skim past it."""
+    miss = case.get("kind") == "miss"
+    yrs = f'{case["window"][0][:4]}–{case["outcome"][1][:4]}'
+    if miss:
+        chips = (_chip("Flagged", case["first_signal"]) +
+                 _chip("Deepest dip after", f'{case["worst_drawdown"]*100:+.1f}%') +
+                 _chip("Since then", f'{case["recovered_to"]*100:+.1f}%'))
+        note = ("<p class=\"case-note\"><b>This is why WATCH exists.</b> Some markets "
+                "cross a line and recover. We show you this one on purpose — a "
+                "track record with no misses in it is a sales page, not a record.</p>")
+    else:
+        chips = (_chip("First flag", case["first_signal"]) +
+                 _chip("Lead time", f'{case["lead_months"]} months')  +
+                 _chip("What followed", f'{case["peak_to_trough"]*100:+.1f}% peak to trough'))
+        note = ""
+    return f"""
+<div class="case {'case-miss' if miss else ''}">
+  <div class="case-head"><b>{esc(case["name"])}</b> <span>{yrs}</span></div>
+  <p class="case-story">{esc(case.get("story", ""))}</p>
+  <img class="chart" src="{rel_prefix}/data/cases/{esc(case["id"])}.png"
+       alt="{esc(case["name"])}: the dial crossing its danger line, and the median price that followed"
+       width="1200" height="675" loading="lazy">
+  <div class="chips">{chips}</div>
+  {note}
+  <p class="case-src">Computed from the same data and thresholds we use today.</p>
+</div>"""
+
+
+def load_cases():
+    """Published cases, hits first, miss last. Returns [] when none exist."""
+    idx = CASES_DIR / "index.json"
+    if not idx.exists():
+        return []
+    out = []
+    for pub in json.loads(idx.read_text()).get("published", []):
+        f = CASES_DIR / f"{pub['id']}.json"
+        if f.exists() and (CASES_DIR / f"{pub['id']}.png").exists():
+            out.append(json.loads(f.read_text()))
+    out.sort(key=lambda c: c.get("kind") == "miss")
+    return out
+
+
+def track_record(rel_prefix=""):
+    cases = load_cases()
+    hits = [c for c in cases if c.get("kind") != "miss"]
+    misses = [c for c in cases if c.get("kind") == "miss"]
+    # Hits never render alone — see the section comment.
+    if not hits or not misses:
+        return ""
+    window = json.loads((CASES_DIR / "index.json").read_text()).get("window", ["", ""])
+    return f"""
+<h2>Times the signals spoke first</h2>
+<p>Every number on these cards is recomputed — the dials and danger lines
+below, run over the historical source data for that market, month by month.
+None of it is quoted from memory or from press coverage. Where a case would
+not reproduce under the published thresholds, it is not here; we do not
+soften a line to rescue a story.</p>
+<p class="note">Recomputable window: {esc(window[0])} → {esc(window[1])}. Earlier
+downturns, including 2005–2009, are absent because no source available to
+this project carries these dials at metro level before then — and a card we
+could not recompute could not carry the line every card below carries.</p>
+{"".join(case_card(c, rel_prefix) for c in cases)}
+"""
+
+
 def methodology_page(h, changelog, outdir):
     seam = h.get("seam", "")
     entries = "".join(
@@ -441,6 +570,7 @@ earlier versus realized price changes since (thresholds: a real decline is
 </tbody></table>
 <p class="note">One caveat applies to every number above: {caveat}.</p>"""
 
+    track = track_record(rel_prefix="")
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH</div>
 <h1>Warning-Sign Index — methodology</h1>
@@ -498,6 +628,8 @@ uses. ZCTAs approximate ZIP codes; the divergence is the standard documented
 compromise, because USPS publishes no ZIP geography. Metro league tables
 require ≥ 15 scored ZIPs.</p>
 {backtest}
+{EXPLAINER}
+{track}
 {measured}
 
 <h2>Use and citation</h2>
@@ -560,6 +692,20 @@ h2{{font-family:'Newsreader',serif;font-weight:600;font-size:1.35rem;margin:36px
 .lede{{font-size:1.15rem;color:var(--muted);max-width:64ch}}
 .big{{font-family:'Newsreader',serif;font-size:clamp(2.2rem,5vw,3.2rem);font-weight:500;color:var(--navy)}}
 img.chart{{width:100%;height:auto;border:1px solid var(--hairline);border-radius:12px;margin:10px 0}}
+.case{{border:1px solid var(--hairline);border-radius:14px;padding:18px 20px;margin:18px 0;background:#fff}}
+.case-head{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:1.05rem}}
+.case-head span{{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--faint)}}
+.case-story{{color:var(--muted);margin:4px 0 10px;font-size:.98rem}}
+.chips{{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}}
+.chip{{border:1px solid var(--hairline);border-radius:10px;padding:8px 12px;flex:1 1 150px}}
+.chip-k{{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.09em;color:var(--gold);text-transform:uppercase}}
+.chip-v{{font-family:'Newsreader',serif;font-size:1.15rem;margin-top:3px}}
+.case-note{{font-size:.92rem;color:var(--muted);margin:12px 0 0;line-height:1.55}}
+.case-src{{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.05em;color:var(--fainter);margin:10px 0 0}}
+/* The miss is neutral, never alarming — it is evidence, not a warning. */
+.case-miss{{background:#fbfaf6;border-color:var(--hairline2)}}
+.case-miss .chip-v{{color:var(--muted)}}
+@media(max-width:640px){{ .chip{{flex:1 1 100%}} .case{{padding:14px}} }}
 table{{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0}}
 th{{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.08em;color:var(--faint);text-align:left;padding:7px 8px;border-bottom:1px solid var(--hairline);text-transform:uppercase}}
 td{{padding:7px 8px;border-bottom:1px solid var(--hairline2)}}
@@ -805,6 +951,20 @@ at the current pace.</p>"""
             ("LICENSE.txt", "License"),
         ])
 
+    # Optional appendix: ONE case card from the track record, rotating by
+    # release month so successive releases don't repeat the same one. Hits
+    # only here — the miss lives on the methodology page where the full set
+    # renders together and can't be read as cherry-picking.
+    appendix = ""
+    _hits = [c for c in load_cases() if c.get("kind") != "miss"]
+    if _hits:
+        pick = _hits[(int(month[:4]) * 12 + int(month[5:7])) % len(_hits)]
+        appendix = ("\n<h2>From the track record</h2>\n"
+                    "<p class=\"note\">One recomputed case from "
+                    "<a href=\"/research/methodology.html\">the full track record</a>, "
+                    "which also carries a market that crossed a line and recovered.</p>\n"
+                    + case_card(pick, rel_prefix=".."))
+
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH · {esc(pretty(month)).upper()} RELEASE · INDEX v{esc(rep['index_version'])}</div>
 <h1>Warning-Sign Index: {rec['wsi']:.1f}%</h1>
@@ -840,6 +1000,7 @@ at the current pace.</p>"""
 <p>{csv_links}</p>
 <p class="note">Free with citation ("Source: ShouldISellYet Research"). Files carry ShouldISellYet's derived indicators only — verdicts, shares, changes — never upstream raw metrics.</p>
 
+{appendix}
 <h2>Methodology, briefly</h2>
 <p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose verdict is WATCH or ACT. Verdicts come from fixed, published danger lines (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%, price cuts&nbsp;&gt;35%), backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
 """
@@ -963,6 +1124,7 @@ def main():
         write_csvs(rep, upto, outdir)
         og_card(rep, outdir / "og.png")
         social_set(rep, upto, outdir)
+        copy_case_charts(outdir)
         release_page(rep, upto, outdir, f"/research/{month}/", gen_date=gen_date)
 
     hub_page(h, series, releases, stage)
