@@ -366,7 +366,7 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .sig .n{font-family:'Newsreader',serif;font-size:var(--fs-h3);font-weight:600;line-height:1.25}
 .sig p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .sig .line{margin-top:auto;padding-top:12px;border-top:1px dashed #eee8db;font-size:var(--fs-meta);color:var(--amber-ink);font-weight:600}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:44px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
 .step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
 .step .t{font-size:var(--fs-h3);font-weight:650;margin:12px 0}
 .step p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
@@ -433,7 +433,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   nav{padding:16px 24px}.navlinks a:not(.btn){display:none}
   section.band{padding:56px 24px}
   .grid4{grid-template-columns:1fr 1fr}
-  .steps{grid-template-columns:1fr;gap:32px}
+  /* Four steps: 2×2 on tablets, single column on phones (below). Type sizes
+     are untouched — the grid adapts, not the text. */
+  .steps{grid-template-columns:1fr 1fr;gap:32px 28px}
   .pricing{grid-template-columns:1fr}
   .metric{grid-template-columns:1fr 92px;grid-template-areas:"name val" "track track";gap:6px 12px}
   .metric .name{grid-area:name}
@@ -449,6 +451,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .zipform{flex-direction:column}
   .zipform .btn{width:100%}
   .grid4{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr;gap:30px}
   /* The unlock bar stacks with .v-ctas: side by side its two buttons resolved
      to 131px wide and 106px tall, wrapping "Unlock + alerts on your numbers"
      over four lines. Full width puts each label on one row beside its price,
@@ -658,6 +661,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="step"><div class="num">1</div><div class="t">Tell us your home</div><p>Enter your address once. We track the market where your home is — inventory, price cuts, days on market, sales — pulled automatically from public data whenever new figures publish.</p></div>
     <div class="step"><div class="num">2</div><div class="t">The thresholds get tested</div><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
     <div class="step"><div class="num">3</div><div class="t">You get one answer</div><p>Hold, watch, or act — with the exact numbers behind it, in plain English. No spreadsheets, no jargon.</p></div>
+    <!-- The closing sentence is mandatory copy: it preempts the surveillance
+         read of an alert product head-on. Do not trim it. -->
+    <div class="step"><div class="num">4</div><div class="t">Updates come to you</div><p>No need to keep checking back. Whenever new market data publishes, your ZIP's numbers re-run automatically — and you get an email only when something meaningful changes. We monitor the market, not you.</p></div>
   </div>
 </section>
 
