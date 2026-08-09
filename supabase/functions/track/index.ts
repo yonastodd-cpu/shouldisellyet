@@ -27,6 +27,8 @@
 //                                    curl can fake it, which is fine: the
 //                                    table holds nothing worth faking into.
 
+import { rateAllowed } from "../_shared/ratelimit.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -88,6 +90,13 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return json({ ok: false, error: "method" }, 405, cors);
   if (!allowed) return json({ ok: false }, 403, cors);
+
+  // Layer 2: 120/hour per hashed IP (schema-v18) — roughly two events a
+  // minute, far above any human browsing pattern, low enough that a replay
+  // loop cannot burn the events quota.
+  if (!await rateAllowed(req, "track", 120, 3600)) {
+    return json({ ok: false }, 429, cors);
+  }
 
   const raw = await req.text();
   if (raw.length > 2048) return json({ ok: false, error: "too large" }, 400, cors);

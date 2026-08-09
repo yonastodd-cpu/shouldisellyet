@@ -23,6 +23,8 @@
 //   200 { ok: true, watches: [...] }
 //   200 { ok: false, error }
 
+import { rateAllowed } from "../_shared/ratelimit.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -58,6 +60,12 @@ Deno.serve(async (req) => {
 
   const token = String(body.token ?? "");
   if (!TOKEN_RE.test(token)) return json({ ok: false, error: "bad token" });
+
+  // Layer 2: 5/hour per hashed IP (schema-v18). Token-gated already, so this
+  // only caps token-guessing noise and runaway clients.
+  if (!await rateAllowed(req, "watch", 5, 3600)) {
+    return json({ ok: false, error: "rate_limited" }, 429);
+  }
 
   const metric = String(body.metric ?? "");
   if (!METRICS.has(metric)) return json({ ok: false, error: "bad metric" });

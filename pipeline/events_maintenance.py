@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete raw analytics events older than 90 days.
+"""Delete raw analytics events older than 90 days, and spent rate-limit rows.
 
 The privacy posture is "anonymous usage counts", and part of keeping counts
 anonymous is not hoarding the raw rows: the dashboard reads daily rollups, so
@@ -46,6 +46,25 @@ def main() -> int:
         rng = r.headers.get("Content-Range", "")
         n = rng.split("/")[-1] if "/" in rng else "?"
         print(f"events maintenance: deleted {n} rows older than {RETAIN_DAYS} days")
+
+    # Rate-limit rows (schema-v18) are spent the moment their window lapses —
+    # the longest window is 24h, so anything older than 48h is inert. The keys
+    # are salted daily-rotating hashes that join to nothing, but dead rows are
+    # still dead rows. Weekly is fine: the limiter resets lapsed windows
+    # in-place, so stale rows can't extend or revive a limit between runs.
+    cutoff_rl = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=48)).isoformat()
+    req = urllib.request.Request(
+        f"{url}/rest/v1/rate_limits?window_start=lt.{cutoff_rl}",
+        method="DELETE",
+        headers={"apikey": key, "Authorization": f"Bearer {key}", "Prefer": "count=exact"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            rng = r.headers.get("Content-Range", "")
+            n = rng.split("/")[-1] if "/" in rng else "?"
+            print(f"events maintenance: purged {n} spent rate-limit rows (>48h)")
+    except Exception as e:  # table may predate schema-v18 on a fork — not fatal
+        print(f"events maintenance: rate-limit purge skipped ({e})")
     return 0
 
 

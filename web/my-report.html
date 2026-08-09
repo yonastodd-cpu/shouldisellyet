@@ -1648,7 +1648,9 @@ async function submitConnect(){
       $("cm-form").style.display = "none";
       $("cm-done").style.display = "block";
     }
-    else fail("Couldn't send your request — please try again, or email support@shouldisellyet.com.");
+    else fail(r.status === 429
+      ? "Too many attempts — try again later."
+      : "Couldn't send your request — please try again, or email support@shouldisellyet.com.");
   } catch (e) {
     fail("Couldn't send your request — please try again, or email support@shouldisellyet.com.");
   }
@@ -1893,7 +1895,9 @@ async function saveWatch(metric){
       window.__savedWatches = (window.__savedWatches || []).filter(w => w.metric !== metric)
         .concat([{ metric, direction, threshold }]);
     } else {
-      errEl.textContent = "Couldn't save your alert — please try again, or write to support@shouldisellyet.com.";
+      errEl.textContent = r.status === 429
+        ? "Too many attempts — try again later."
+        : "Couldn't save your alert — please try again, or write to support@shouldisellyet.com.";
       errEl.style.display = "block";
     }
   } catch (e) {

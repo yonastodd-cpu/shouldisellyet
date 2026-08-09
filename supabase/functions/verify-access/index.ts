@@ -23,6 +23,8 @@
 // (edge functions can't import web/prices.js) — keep the two in sync when
 // pricing changes; pipeline/test_prices.py checks that they agree.
 
+import { rateAllowed } from "../_shared/ratelimit.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -46,6 +48,12 @@ Deno.serve(async (req) => {
   // basic shape check — uuid-ish, avoids pointless queries
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
     return json({ ok: false });
+  }
+
+  // Layer 2: 10/hour per hashed IP (schema-v18). Tokens are 128-bit UUIDs so
+  // enumeration is hopeless anyway; this caps the noise and the quota burn.
+  if (!await rateAllowed(req, "verify", 10, 3600)) {
+    return json({ ok: false, error: "rate_limited" }, 429);
   }
 
   try {

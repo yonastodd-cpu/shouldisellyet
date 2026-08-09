@@ -36,8 +36,16 @@
 //   200 { ok: true }    — stored (or silently dropped as a bot)
 //   200 { ok: false }   — validation failed; the form shows its usual error
 
+import { rateAllowed } from "../_shared/ratelimit.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+// Layer 2: rate limits (schema-v18; keys are salted daily-rotating hashes —
+// raw IPs never stored). Waitlist joins are rarer than checkout captures, so
+// they get the tighter cap. Adjust here, not inline.
+const WAITLIST_PER_DAY = 3;
+const PENDING_PER_HOUR = 5;
 
 // Same Origin allowlist discipline as track: browsers can't spoof Origin, so
 // this cheaply filters junk before any parsing happens.
@@ -112,6 +120,11 @@ Deno.serve(async (req) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: "valid email required" }, 200, cors);
   if (!/^\d{5}$/.test(zip)) return json({ ok: false, error: "5-digit zip required" }, 200, cors);
   if (!["waitlist", "monitor", "report"].includes(plan)) return json({ ok: false, error: "bad plan" }, 200, cors);
+
+  const [max, win] = plan === "waitlist" ? [WAITLIST_PER_DAY, 86400] : [PENDING_PER_HOUR, 3600];
+  if (!await rateAllowed(req, `signup-${plan === "waitlist" ? "wl" : "pending"}`, max, win, email)) {
+    return json({ ok: false, error: "rate_limited" }, 429, cors);
+  }
 
   const row: Record<string, unknown> = {
     email, zip, plan,

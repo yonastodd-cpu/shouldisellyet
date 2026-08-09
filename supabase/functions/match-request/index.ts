@@ -29,6 +29,8 @@
 // may be involved — and it is stored verbatim alongside the consent text so
 // "what was I told" is answerable from the row.
 
+import { rateAllowed } from "../_shared/ratelimit.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -133,6 +135,13 @@ Deno.serve(async (req) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: "valid email required" });
   if (!/^\d{5}$/.test(zip)) return json({ ok: false, error: "5-digit zip required" });
   if (!consent_text) return json({ ok: false, error: "consent required" });
+
+  // Layer 2: 3/day per hashed IP AND per normalized email (schema-v18). This
+  // endpoint emails the visitor-supplied address, so the email key is the one
+  // that stops "sign up a stranger 50 times" even across rotating IPs.
+  if (!await rateAllowed(req, "match", 3, 86400, email)) {
+    return json({ ok: false, error: "rate_limited" }, 429);
+  }
 
   try {
     const ins = await fetch(`${SUPABASE_URL}/rest/v1/match_requests`, {
