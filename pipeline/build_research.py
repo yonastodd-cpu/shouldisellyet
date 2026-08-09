@@ -377,6 +377,45 @@ FHFA index declined the following year, versus markets clear of it.</p>
 elevated versus baseline, not one guaranteed to fall. The full backtest method is
 described on the <a href="/">homepage's signal explanations</a>.</p>"""
 
+    # ————— Measured accuracy (forward validation) —————
+    # Backtest says "calibrated on the past"; this section is the FORWARD
+    # ledger — verdicts we actually published, scored against what happened
+    # next. Renders measured numbers or the collecting state, never partials.
+    # The regime-change caveat is VERBATIM per the build brief — do not
+    # reword it.
+    measured = ""
+    val_p = ROOT / "web" / "data" / "validation.json"
+    if val_p.exists():
+        val = json.loads(val_p.read_text())
+        caveat = ("danger lines are calibrated on past downturns; future "
+                  "downturns may differ")
+        if val.get("collecting"):
+            measured = f"""
+<h2>Measured, not promised</h2>
+<p>From {esc(val.get("first_snapshot", ""))} onward we snapshot every month's
+verdicts as published, so they can be scored against what prices actually do
+next — recall on real declines, precision of the flags, and lead time. The
+first 12-month scoring lands in <b>{esc(val.get("first_validation", ""))}</b>;
+until then this section says "collecting" rather than showing partial
+numbers. Updated monthly once live. One caveat applies now and always:
+{caveat}.</p>"""
+        elif val.get("v12"):
+            v = val["v12"]
+            fmtp = lambda x: f"{round(x * 100)}%" if x is not None else "—"
+            lead = val.get("lead_days_median")
+            measured = f"""
+<h2>Measured, not promised</h2>
+<p>Updated monthly, scored against outcomes — verdicts published 12 months
+earlier versus realized price changes since (thresholds: a real decline is
+≤−5%; a flag counts as right at ≤−2%). Data through {esc(val.get("period", ""))}.</p>
+<table><thead><tr><th>Metric</th><th>Definition</th><th>Measured</th></tr></thead><tbody>
+<tr><td>Recall</td><td>of ZIPs that declined ≥5%, the share we flagged WATCH/ACT ≥12 months earlier</td><td class="n">{fmtp(v.get("recall"))}</td></tr>
+<tr><td>Precision</td><td>of flagged ZIPs, the share that declined ≥2%</td><td class="n">{fmtp(v.get("precision"))}</td></tr>
+<tr><td>Median lead</td><td>first flag → first negative year-over-year print</td><td class="n">{str(lead) + " days" if lead is not None else "not yet reportable"}</td></tr>
+<tr><td>False quiet</td><td>ZIPs that declined ≥5% while rated HOLD</td><td class="n">{v.get("false_quiet")}</td></tr>
+</tbody></table>
+<p class="note">One caveat applies to every number above: {caveat}.</p>"""
+
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH</div>
 <h1>Warning-Sign Index — methodology</h1>
@@ -434,6 +473,7 @@ uses. ZCTAs approximate ZIP codes; the divergence is the standard documented
 compromise, because USPS publishes no ZIP geography. Metro league tables
 require ≥ 15 scored ZIPs.</p>
 {backtest}
+{measured}
 
 <h2>Use and citation</h2>
 <p>Index values, league tables, and release CSVs are free to use, chart, and

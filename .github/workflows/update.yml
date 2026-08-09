@@ -172,6 +172,13 @@ jobs:
         run: python3 pipeline/velocity.py
 
       # Per-ZIP payloads → Supabase (the paid serving layer; schema-v20).
+      # Forward validation — measured accuracy (or the honest collecting state
+      # until 12 months of snapshots exist; first possible run 2027-05).
+      - name: Forward validation
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        run: python3 pipeline/validation.py
+
       - name: Velocity upsert
         if: steps.check.outputs.changed == 'true'
         continue-on-error: true
@@ -230,7 +237,7 @@ jobs:
         run: |
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add pipeline/snapshots pipeline/research pipeline/velocity || true
+          git add pipeline/snapshots pipeline/research pipeline/velocity pipeline/validation || true
           git diff --cached --quiet && { echo "no snapshot change"; exit 0; }
           git commit -m "Verdict snapshot + research index $(date +%Y-%m) [skip ci]"
           for i in 1 2 3; do

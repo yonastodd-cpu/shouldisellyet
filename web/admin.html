@@ -1070,6 +1070,35 @@ function pcExport() {
 }
 
 RENDER.health = async function () {
+  // Accuracy card — forward validation (validation.py). Either measured
+  // numbers or the collecting state; the block never shows partials.
+  try {
+    const val = await fetch("/data/validation.json").then(r => r.ok ? r.json() : null);
+    let el = document.getElementById("hl-accuracy");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "hl-accuracy"; el.className = "panel";
+      const sec = document.getElementById("sec-health");
+      sec.insertBefore(el, sec.firstElementChild);
+    }
+    if (!val) el.innerHTML = "<h2>Accuracy — measured, not promised</h2><div class='note'>validation.json not published yet.</div>";
+    else if (val.collecting) el.innerHTML =
+      `<h2>Accuracy — measured, not promised</h2>
+       <div class="note">Collecting: verdict snapshots began ${val.first_snapshot} (${val.snapshot_months} so far).
+       First 12-month validation lands <b>${val.first_validation}</b>. No partial numbers before then, on purpose.</div>`;
+    else {
+      const v = val.v12 || {};
+      el.innerHTML = `<h2>Accuracy — measured, not promised</h2>
+        <div class="cards" style="margin-bottom:6px">
+          <div class="stat"><div class="k">RECALL (declines ≥5% we flagged ≥1yr early)</div><div class="v">${v.recall != null ? Math.round(v.recall*100) + "%" : "—"}</div><div class="s">${v.declined} decliners</div></div>
+          <div class="stat"><div class="k">PRECISION (flags followed by ≥2% decline)</div><div class="v">${v.precision != null ? Math.round(v.precision*100) + "%" : "—"}</div><div class="s">${v.flagged} flagged</div></div>
+          <div class="stat"><div class="k">MEDIAN LEAD</div><div class="v">${val.lead_days_median != null ? val.lead_days_median + "d" : "—"}</div><div class="s">first flag → first negative print</div></div>
+          <div class="stat"><div class="k">FALSE QUIET</div><div class="v">${v.false_quiet}</div><div class="s">declined ≥5% while HOLD</div></div>
+        </div>
+        <div class="note">Data through ${val.period}. Danger lines are calibrated on past downturns; future downturns may differ.</div>`;
+    }
+  } catch (e) { /* accuracy card is additive — health must render without it */ }
+
   const [meta, evh, mdShard] = await Promise.all([
     fetch("/data/meta.json").then((r) => r.json()),
     rpc("admin_events_health"),
