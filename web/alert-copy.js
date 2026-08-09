@@ -35,3 +35,15 @@ window.ALERT_COPY = {
     "09": "if my market starts moving toward a warning line"
   }
 };
+
+// Homepage "Alerts in action" strip — the same triggers, phrased standalone.
+// The rows[] strings assume their report-row context sits beside them
+// ("if this drops below my number" needs the walk-away row above it), so two
+// entries here are standalone rewordings of rows 01/04 and one reuses
+// rows["05"] verbatim. Built AFTER the map literal so it can reference it —
+// this file stays the single source for every alert string on the site.
+window.ALERT_COPY.strip = [
+  window.ALERT_COPY.toggle_label + " · the moment my ZIP's verdict changes",
+  window.ALERT_COPY.toggle_label + " · if my walk-away number drops below my line",
+  window.ALERT_COPY.toggle_label + " · " + window.ALERT_COPY.rows["05"],
+];
