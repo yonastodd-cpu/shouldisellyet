@@ -5,7 +5,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; frame-src https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Set up MyMarketCheckup monitoring for your home: a full property report plus an email the moment your ZIP's housing market shifts. $29/yr or $3.99/mo, cancel anytime.">
+<!-- Prices below lead MONTHLY to match PRICE_DISPLAY_MODE=monthly_led in
+     prices.js. JS cannot reach crawlers: if the flag flips to annual_led,
+     reorder this sentence by hand — it is the one surface the flag misses. -->
+<meta name="description" content="Set up MyMarketCheckup monitoring for your home: a full property report plus an email the moment your ZIP's housing market shifts. $3.99/mo or $29/yr, cancel anytime.">
 <title>Set up MyMarketCheckup — ShouldISellYet</title>
 <link rel="canonical" href="https://shouldisellyet.com/subscribe.html">
 <link rel="icon" href="/favicon.svg">
@@ -245,7 +248,12 @@ const c = COPY[plan];
 // the price you clicked is a bait-and-switch, so these two must move together.
 // ?billing=monthly opts out; the report-credit upgrade below forces annual,
 // since the credit only buys down the first year.
-let billing = q.get("billing") === "monthly" ? "monthly" : "annual";
+// Default billing follows the site-wide lead (PRICE_DISPLAY_MODE in
+// prices.js) so the first visible price here always matches the surface the
+// visitor clicked. An explicit ?billing= param still wins.
+let billing = q.get("billing") === "monthly" ? "monthly"
+            : q.get("billing") === "annual" ? "annual"
+            : (window.PRICE_DISPLAY_MODE === "monthly_led" ? "monthly" : "annual");
 
 // ————— Report-credit upgrade (report buyer → annual within 30 days) —————
 // Purchase timestamps are recorded client-side at checkout handoff (see go()).

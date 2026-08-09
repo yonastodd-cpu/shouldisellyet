@@ -574,7 +574,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
                links that setPlanLinks() decorates with the ZIP. -->
           <div class="pv-unlock" id="unlock-bar">
             <a class="vbtn vbtn-secondary" id="cta-unlock-report" data-track="purchase_click_report" href="subscribe.html?plan=report"><span>Unlock your full report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
-            <a class="vbtn vbtn-primary" id="cta-unlock-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Unlock + alerts on your numbers</span><span class="vbtn-price" data-price="annual-yr">$29/yr</span></a>
+            <a class="vbtn vbtn-primary" id="cta-unlock-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor"><span>Unlock + alerts on your numbers</span><span class="vbtn-price" data-price="mode-cta">$3.99/mo</span></a>
           </div>
         </div>
 
@@ -709,7 +709,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
     <div class="ax-col">
       <div id="alert-examples"></div>
-      <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full report + alerts — <span data-price="annual">$29</span>/yr</a>
+      <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full report + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
     </div>
   </div>
 </section>
@@ -735,20 +735,28 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="price-card">
       <div class="card-title">Full report — one time</div>
       <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
-      <div class="price-note">Credited toward <span data-plan-name>MyMarketCheckup</span> if you upgrade within 30 days</div>
+      <div class="price-note">Just want one deep look, no subscription — <span data-price="report">$5.99</span> once.</div>
+      <!-- The upgrade credit applies to the ANNUAL plan regardless of which
+           price leads the featured card, so it names it explicitly. -->
+      <div class="price-note" style="margin-top:4px">Credited toward the annual plan (<span data-price="annual">$29</span>/yr) if you upgrade within 30 days</div>
       <div class="price-feats">What would you actually walk away with? · What's your equity really worth? · What is your low rate worth? · What if prices fell 5%? · When do homes here sell fastest? · Should you sell it or rent it out? · Printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
       <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
       <div class="card-title"><span data-plan-name>MyMarketCheckup</span> — full report &amp; alerts on your numbers</div>
-      <div class="price"><span data-price="annual">$29</span> <small>/yr</small></div>
-      <div class="price-note"><span data-price="annual-permo">$2.42/mo, billed annually</span> · <span data-price="save-line">Save $18.88 vs monthly</span></div>
-      <div class="price-note" style="margin-top:4px">Cancel anytime · <span data-price="monthly-line">or $3.99/mo billed monthly</span></div>
+      <!-- One price large, one alternative small, nothing else — the $2.42/mo
+           arithmetic and the $18.88 save line are gone on purpose. Which
+           price leads comes from PRICE_DISPLAY_MODE (prices.js); fallback
+           literals are the monthly_led defaults. -->
+      <div class="price"><span data-price="mode-lead">$3.99</span> <small data-price="mode-lead-unit">/mo</small></div>
+      <div class="price-note" data-price="mode-alt">or $29/yr — save 39%</div>
+      <div class="price-note" style="margin-top:4px">Cancel anytime</div>
       <div class="price-feats">Every answer in the one-time report — kept current automatically, with alerts on the lines you set.</div>
       <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
     </div>
   </div>
+  <div class="band-note sm" style="margin-bottom:6px">Try the free check first — upgrade only if your ZIP's story is worth following.</div>
   <div class="band-note sm">Your information is never sold, and we never pass your details to anyone without you asking us to.</div>
 </section>
 

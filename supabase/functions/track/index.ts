@@ -115,6 +115,8 @@ Deno.serve(async (req) => {
   const planRaw = String(b.plan ?? "");
   const plan = ["annual", "monthly", "report"].includes(planRaw) ? planRaw : null;
   const utm = String(b.source ?? "").trim().slice(0, 60) || null;
+  const priceMode = ["monthly_led", "annual_led"].includes(String(b.price_mode ?? ""))
+    ? String(b.price_mode) : null;
 
   // Pathname only. Cut at ? and # so tokens and query params can't arrive
   // even if a caller sends a full URL.
@@ -127,6 +129,7 @@ Deno.serve(async (req) => {
     ts: new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString(),
     is_new_session: b.ns === true,
     utm_source: utm,
+    price_mode: priceMode,
     referrer: refDomain(b.ref),
     zip,
     plan,

@@ -75,6 +75,11 @@
       path: location.pathname,
       zip: extra.zip || undefined,
       plan: extra.plan || undefined,
+      // Which price led the page when a purchase CTA was clicked — set
+      // centrally so every purchase_click carries it, from any page.
+      // (prices.js publishes window.PRICE_DISPLAY_MODE; pages without
+      // prices.js send no mode, and the column stays null.)
+      price_mode: (event.indexOf("purchase_click") === 0 && window.PRICE_DISPLAY_MODE) || undefined,
     };
     try {
       fetch(FN, {

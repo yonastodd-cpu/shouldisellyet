@@ -29,7 +29,20 @@ const PRICES = {
   UPGRADE: 23,     // annual price for a report buyer upgrading within 30 days
   UPGRADE_WINDOW_DAYS: 30,
 };
+// Which price LEADS every pricing surface. "monthly_led" | "annual_led".
+// Flip here and every surface follows: the homepage featured card, the
+// unlock bar, the alerts-strip CTA, and the subscribe page's default billing
+// selection. purchase_click events carry the live mode (price_mode, added by
+// track.js) so the admin funnel can compare modes if this is ever flipped.
+// ONE surface JS cannot reach: subscribe.html's static meta description
+// cites both prices in lead order — flipping this flag needs that one
+// hand-edit, noted there.
+const PRICE_DISPLAY_MODE = "monthly_led";
+window.PRICE_DISPLAY_MODE = PRICE_DISPLAY_MODE;
+
 PRICES.ANNUAL_PER_MO = PRICES.ANNUAL / 12;                        // 2.4166… → "$2.42"
+// 1 − 29/(3.99×12) = 39.4% → "39%". Computed, so a price change can't strand it.
+PRICES.SAVE_PCT = Math.round((1 - PRICES.ANNUAL / (PRICES.MONTHLY * 12)) * 100);
 // Exact to the cent: $3.99 x 12 − $29 = $18.88. Rounded, not floored — floor()
 // was here to avoid overstating a fractional saving, but at these numbers the
 // fraction IS most of the appeal and dropping it understates by $0.88.
@@ -54,6 +67,18 @@ const PRICE_TEXT = {
   "report-once": usd(PRICES.REPORT) + " once",
   "upgrade": usd(PRICES.UPGRADE),
 };
+
+// Mode-aware tokens — the ONLY way a surface should render the lead price.
+{
+  const monthlyLed = PRICE_DISPLAY_MODE === "monthly_led";
+  PRICE_TEXT["mode-lead"] = monthlyLed ? usd(PRICES.MONTHLY) : usd(PRICES.ANNUAL);
+  PRICE_TEXT["mode-lead-unit"] = monthlyLed ? "/mo" : "/yr";
+  // Exactly one quiet alternative under the big number — nothing else.
+  PRICE_TEXT["mode-alt"] = monthlyLed
+    ? "or " + usd(PRICES.ANNUAL) + "/yr — save " + PRICES.SAVE_PCT + "%"
+    : "or " + usd(PRICES.MONTHLY) + "/mo billed monthly";
+  PRICE_TEXT["mode-cta"] = PRICE_TEXT["mode-lead"] + PRICE_TEXT["mode-lead-unit"];
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-price]").forEach((el) => {
