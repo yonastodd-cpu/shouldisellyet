@@ -114,6 +114,11 @@ def fetch_subscribers(supabase_url, service_key, zips):
         batch = ",".join(zips[i:i + 100])
         url = (f"{supabase_url}/rest/v1/subscribers"
                f"?select=email,zip,address,access_token"
+               # status=active is set only by the payment webhook, which also
+               # stamps confirmed_at (schema-v19) — so this filter IS the
+               # double-opt-in gate. Never widen it to pending/waitlist rows:
+               # recurring mail to an unconfirmed address is the harassment
+               # vector and the Resend-reputation risk T4 exists to prevent.
                f"&plan=eq.monitor&status=eq.active&zip=in.({batch})")
         subs += _req(url, headers={"apikey": service_key,
                                    "Authorization": f"Bearer {service_key}"})

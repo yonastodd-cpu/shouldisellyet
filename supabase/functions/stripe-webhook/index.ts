@@ -304,6 +304,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         method: "PATCH",
         body: JSON.stringify({
           status: "active", plan, source: "stripe",
+          confirmed_at: new Date().toISOString(),   // payment verifies the address (schema-v19)
           access_token: token, stripe_session_id: session.id,
           // Payment confirmation time, distinct from the pending row's
           // created_at — the funnel windows on this (schema-v13).
@@ -330,6 +331,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           address_city: addr?.city ?? null,
           address_state: addr?.state ?? null,
           plan, status: "active", source: "stripe",
+          confirmed_at: new Date().toISOString(),   // payment verifies the address (schema-v19)
           access_token: token, stripe_session_id: session.id,
           purchased_at: new Date().toISOString(),
           ...subCustomer,

@@ -220,6 +220,9 @@ def fetch_watchers(supabase_url, service_key):
     exact-text-match quirks on jsonb equality."""
     url = (f"{supabase_url}/rest/v1/subscribers"
            f"?select=id,email,zip,access_token,calc_inputs,watches"
+           # active/report exist only via the payment webhook, which stamps
+           # confirmed_at (schema-v19) — payment-verified addresses, the
+           # double-opt-in invariant. Never widen this filter.
            f"&status=in.(active,report)")
     rows = _req(url, headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"}) or []
     return [r for r in rows if r.get("watches")]

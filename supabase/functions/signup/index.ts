@@ -41,6 +41,11 @@ import { turnstileOk } from "../_shared/turnstile.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
+// Same secret-with-fallback discipline as the rate-limit salt: CONFIRM_SECRET
+// if set, else derived from the service key. Must match functions/confirm.
+const CONFIRM_SECRET = Deno.env.get("CONFIRM_SECRET") || SERVICE_KEY.slice(-32);
 
 // Layer 2: rate limits (schema-v18; keys are salted daily-rotating hashes —
 // raw IPs never stored). Waitlist joins are rarer than checkout captures, so
@@ -150,11 +155,60 @@ Deno.serve(async (req) => {
         apikey: SERVICE_KEY,
         Authorization: `Bearer ${SERVICE_KEY}`,
         "Content-Type": "application/json",
-        Prefer: "return=minimal",
+        Prefer: "return=representation",
       },
       body: JSON.stringify(row),
     });
-    return json({ ok: r.ok }, 200, cors);
+    if (!r.ok) return json({ ok: false, error: "storage" }, 200, cors);
+
+    // DOUBLE OPT-IN (waitlist only — the recurring stream). The address gets
+    // exactly ONE email: this confirm request with a signed link. Unconfirmed
+    // rows are never emailed again and purge after 7 days
+    // (events_maintenance.py). Monitor/report pending rows get NO confirm
+    // email — payment is their verification, and the webhook stamps
+    // confirmed_at when it activates them.
+    //
+    // WHY (do not "simplify" this away): it is the primary defense against
+    // signing up a third party's address for harassment — the worst a bot
+    // can inflict on a stranger through this form is one polite confirm
+    // email, capped at 3/day by the rate limit above — and it protects the
+    // Resend sender reputation the paid transactional flow also depends on.
+    // Send failure never fails the signup: the row exists unconfirmed, and
+    // the purge tidies it if the confirm never lands.
+    if (plan === "waitlist" && RESEND_KEY) {
+      try {
+        const [inserted] = await r.clone().json();
+        const id = inserted?.id ?? "";
+        if (id) {
+          const key = await crypto.subtle.importKey(
+            "raw", new TextEncoder().encode(CONFIRM_SECRET),
+            { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+          const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(id));
+          const sig = Array.from(new Uint8Array(sigBuf)).map((x) => x.toString(16).padStart(2, "0")).join("");
+          const link = `${SUPABASE_URL}/functions/v1/confirm?id=${id}&sig=${sig}`;
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: FROM, to: [email],
+              subject: `Confirm your alert for ${zip}`,
+              html: `<div style="display:none;max-height:0;overflow:hidden">One click and you're set — we'll email you the moment ${zip} goes live.&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;</div>
+<div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;color:#1c2430;line-height:1.65">
+<p>You (or someone using your address) asked to be told when our housing-market
+verdict for <b>${zip}</b> goes live.</p>
+<p style="margin:22px 0"><a href="${link}"
+   style="background:#1f3a5f;color:#faf8f4;text-decoration:none;padding:13px 22px;border-radius:8px;font-weight:600;display:inline-block">
+   Confirm my alert for ${zip}</a></p>
+<p>If this wasn't you, do nothing — you won't hear from us again, and the
+signup deletes itself in 7 days.</p>
+<p style="font-size:13px;color:#8a8578">ShouldISellYet.com · operated by Yayday LLC</p>
+</div>`,
+            }),
+          });
+        }
+      } catch { /* signup stands; the purge handles a lost confirm */ }
+    }
+    return json({ ok: true }, 200, cors);
   } catch {
     return json({ ok: false, error: "storage" }, 200, cors);
   }

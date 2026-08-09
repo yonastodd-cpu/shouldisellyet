@@ -65,6 +65,28 @@ def main() -> int:
             print(f"events maintenance: purged {n} spent rate-limit rows (>48h)")
     except Exception as e:  # table may predate schema-v18 on a fork — not fatal
         print(f"events maintenance: rate-limit purge skipped ({e})")
+
+    # Unconfirmed waitlist signups purge at 7 days (double opt-in, schema-v19):
+    # the address got its one confirm email and never clicked, so we stop
+    # holding it — an unconfirmed row is a stranger's address we have no
+    # consent to keep. ONLY rows created after the confirm flow went live
+    # (2026-08-08): pre-migration waitlist signups predate confirmation and
+    # are deliberately kept-but-never-emailed until the future waitlist
+    # sender opens with a confirm pass for them — see schema-v19's footer.
+    cutoff_wl = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)).isoformat()
+    req = urllib.request.Request(
+        f"{url}/rest/v1/subscribers?plan=eq.waitlist&confirmed_at=is.null"
+        f"&created_at=lt.{cutoff_wl}&created_at=gt.2026-08-08",
+        method="DELETE",
+        headers={"apikey": key, "Authorization": f"Bearer {key}", "Prefer": "count=exact"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            rng = r.headers.get("Content-Range", "")
+            n = rng.split("/")[-1] if "/" in rng else "?"
+            print(f"events maintenance: purged {n} unconfirmed waitlist rows (>7d)")
+    except Exception as e:  # column may predate schema-v19 on a fork — not fatal
+        print(f"events maintenance: waitlist purge skipped ({e})")
     return 0
 
 
