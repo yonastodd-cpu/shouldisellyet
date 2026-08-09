@@ -157,11 +157,21 @@ and Gemini, derived server-side from the stored referrer domain.)
 
 ## One-time operator TODOs
 
-- **Stripe Radar** — confirm Radar's default rules are ENABLED in the Stripe
-  dashboard (Settings → Radar): card-testing protection matters most on the
-  $5.99 payment link, which is exactly the price point card testers use.
-  Review the rules again after the first 100 sales, when there is enough
-  volume to judge false-positive rates.
+- **Stripe Radar — decided 2026-08-08: stay on the free tier.** Baseline
+  Radar (ML risk scoring + the default block on highest-risk payments) is
+  included with standard Stripe pricing and applies to Payment Links with
+  nothing to enable, so the $5.99 link — the price point card testers use to
+  validate stolen cards — is already covered. **Radar for Fraud Teams** is
+  the paid add-on (~$0.07/txn) and buys custom rules, allow/block lists and
+  a review queue; at pre-revenue volume there is no rule worth writing and
+  no false-positive data to tune against, so it is deliberately NOT bought.
+  Note the site's own rate limiting does NOT reach this: the payment link
+  navigates straight to buy.stripe.com and never touches an edge function,
+  so card-testing defense here is entirely Stripe's side.
+  **Revisit only if** the Stripe dashboard shows a burst of failed/declined
+  payments (Payments → filter Failed) far exceeding successful ones, or
+  Stripe emails a card-testing warning. That is the trigger to buy Fraud
+  Teams, not a sales count.
 - **Cloudflare Turnstile — SECRET key still outstanding.** The site key is
   wired (`web/turnstile.js`), so the widget loads; the server half is still
   off until the secret is set, which means tokens are collected but never
