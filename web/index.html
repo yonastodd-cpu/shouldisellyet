@@ -36,6 +36,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="alert-copy.js"></script>
+<script src="turnstile.js" defer></script>
 <script src="/track.js" defer></script>
 <script src="verdict-copy.js"></script>
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
@@ -596,6 +597,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
              submission silently. -->
         <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
           <input type="text" id="wl-website" name="website" tabindex="-1" autocomplete="off"></label>
+        <div class="ts-slot"></div>
         <button class="btn" type="submit">Notify me</button>
       </form>
       <div class="ok" id="wl-ok">✓ You're on the list.</div>
@@ -1302,7 +1304,8 @@ async function joinWaitlist(e) {
   const email = $("wl-email").value, zip = $("zip").value;
   const ok = await saveSignup({ email, zip, plan: "waitlist", source: "waitlist",
     website: $("wl-website").value,          // honeypot — humans send ""
-    rendered_at: waitcardShownAt });         // stamped when the card appeared
+    rendered_at: waitcardShownAt,            // stamped when the card appeared
+    cf_token: window.SISY_TS ? SISY_TS.token(document.querySelector("#waitcard .ts-slot")) : "" });
   if (ok === true) {
     e.target.style.display = "none";
     $("wl-ok").style.display = "block";

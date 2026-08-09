@@ -30,6 +30,7 @@
 // "what was I told" is answerable from the row.
 
 import { rateAllowed } from "../_shared/ratelimit.ts";
+import { turnstileOk } from "../_shared/turnstile.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -141,6 +142,11 @@ Deno.serve(async (req) => {
   // that stops "sign up a stranger 50 times" even across rotating IPs.
   if (!await rateAllowed(req, "match", 3, 86400, email)) {
     return json({ ok: false, error: "rate_limited" }, 429);
+  }
+
+  // Layer 3: Turnstile (see _shared/turnstile.ts for the degrade semantics).
+  if (!await turnstileOk(req, str("cf_token", 3000), "/match-request")) {
+    return json({ ok: false, error: "verification" });
   }
 
   try {

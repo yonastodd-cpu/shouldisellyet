@@ -37,6 +37,7 @@
 //   200 { ok: false }   — validation failed; the form shows its usual error
 
 import { rateAllowed } from "../_shared/ratelimit.ts";
+import { turnstileOk } from "../_shared/turnstile.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -124,6 +125,12 @@ Deno.serve(async (req) => {
   const [max, win] = plan === "waitlist" ? [WAITLIST_PER_DAY, 86400] : [PENDING_PER_HOUR, 3600];
   if (!await rateAllowed(req, `signup-${plan === "waitlist" ? "wl" : "pending"}`, max, win, email)) {
     return json({ ok: false, error: "rate_limited" }, 429, cors);
+  }
+
+  // Layer 3: Turnstile (off until TURNSTILE_SECRET is set; empty token while
+  // on → allowed but counted — see _shared/turnstile.ts).
+  if (!await turnstileOk(req, str("cf_token", 3000), "/signup")) {
+    return json({ ok: false, error: "verification" }, 200, cors);
   }
 
   const row: Record<string, unknown> = {

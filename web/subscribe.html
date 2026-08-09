@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="/track.js" defer></script>
+<script src="/turnstile.js" defer></script>
 <script src="address.js"></script>
 <style>
 :root{
@@ -135,6 +136,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
              here means a bot; the signup function drops the row silently. -->
         <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
           <input type="text" id="pf-website" name="website" tabindex="-1" autocomplete="off"></label>
+        <div class="ts-slot"></div>
         <div class="pf-hint" id="pf-hint">Enter the ZIP and we'll fill in the city and state. We'll monitor this home's market and alert you the moment it shifts — and you won't be asked for the address again.</div>
       </div>
 
@@ -409,7 +411,8 @@ async function savePending(rec){
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.assign({
         website: (document.getElementById("pf-website") || {}).value || "",
-        rendered_at: pageLoadedAt
+        rendered_at: pageLoadedAt,
+        cf_token: window.SISY_TS ? SISY_TS.token(document.querySelector(".ts-slot")) : ""
       }, rec))
     });
     return r.ok && (await r.json()).ok === true;

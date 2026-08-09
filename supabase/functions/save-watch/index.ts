@@ -24,6 +24,7 @@
 //   200 { ok: false, error }
 
 import { rateAllowed } from "../_shared/ratelimit.ts";
+import { turnstileOk } from "../_shared/turnstile.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -65,6 +66,11 @@ Deno.serve(async (req) => {
   // only caps token-guessing noise and runaway clients.
   if (!await rateAllowed(req, "watch", 5, 3600)) {
     return json({ ok: false, error: "rate_limited" }, 429);
+  }
+
+  // Layer 3: Turnstile (see _shared/turnstile.ts for the degrade semantics).
+  if (!await turnstileOk(req, String(body.cf_token ?? "").slice(0, 3000), "/save-watch")) {
+    return json({ ok: false, error: "verification" });
   }
 
   const metric = String(body.metric ?? "");

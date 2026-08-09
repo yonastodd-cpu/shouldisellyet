@@ -157,6 +157,15 @@ and Gemini, derived server-side from the stored referrer domain.)
 
 ## One-time operator TODOs
 
+- **Cloudflare Turnstile keys** — the invisible bot check on the waitlist,
+  checkout signup, Get Connected, and alert-save forms ships INERT until the
+  keys exist. Cloudflare dashboard → Turnstile → Add site (free tier,
+  invisible/managed) for shouldisellyet.com, then: paste the SITE key into
+  `web/turnstile.js` (the `SITE_KEY` constant), run
+  `npx supabase secrets set TURNSTILE_SECRET=<secret key>`, and redeploy
+  `signup`, `match-request`, `save-watch`. Until then the honeypot and rate
+  limits carry the load, and `turnstile_bypass` in the admin funnel's events
+  shows how often the missing layer is being felt.
 - **Bing Webmaster Tools** — verify the domain (web/BingSiteAuth.xml is
   already served) and submit https://shouldisellyet.com/sitemap.xml. ChatGPT
   search leans on Bing's index, so this is an AI-visibility task, not just a

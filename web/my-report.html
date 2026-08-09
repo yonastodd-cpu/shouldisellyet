@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="/track.js" defer></script>
+<script src="/turnstile.js" defer></script>
 <script src="address.js"></script>
 <script src="market-render.js"></script>
 <script src="referral.js"></script>
@@ -259,6 +260,10 @@ details.how .how-body b{color:#3a4450}
 
   <!-- Everything below is revealed only after access is confirmed -->
   <div id="paid-area" style="display:none">
+    <!-- One Turnstile slot serves every watch toggle on the page — tokens are
+         minted per submit and reset after each read (see turnstile.js), so
+         three toggles don't need three widgets. -->
+    <div class="ts-slot" id="ts-watch"></div>
   <div class="paidband" id="paidband">✓ You're all set — thank you. Build your report below, and bookmark this page: your private link brings you right back.</div>
   <div id="upgrade-band" style="display:none;background:#fbf8f1;border:1px solid #e6dcc3;border-radius:8px;padding:12px 16px;font-size:14px;margin:14px 0 0;line-height:1.55"></div>
 
@@ -729,6 +734,7 @@ details.how .how-body b{color:#3a4450}
                here means a bot; match-request drops the submission silently. -->
           <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
             <input type="text" id="cm-website" name="website" tabindex="-1" autocomplete="off"></label>
+          <div class="ts-slot" id="ts-connect"></div>
         </div>
         <div class="frow">
           <div class="f"><label>PHONE (OPTIONAL)</label><input id="cm-phone" inputmode="tel" autocomplete="tel"></div>
@@ -1635,6 +1641,7 @@ async function submitConnect(){
         source: "report",
         website: $("cm-website").value,        // honeypot — humans send ""
         rendered_at: window.__cmShownAt || 0,  // modal-open time
+        cf_token: window.SISY_TS ? SISY_TS.token($("ts-connect")) : "",
       }),
     });
     const j = await r.json();
@@ -1884,6 +1891,7 @@ async function saveWatch(metric){
       body: JSON.stringify({
         token: TOKEN, calcInputs: window.__calcInputs,
         metric, direction, threshold,
+        cf_token: window.SISY_TS ? SISY_TS.token($("ts-watch")) : "",
       }),
     });
     const j = await r.json();
