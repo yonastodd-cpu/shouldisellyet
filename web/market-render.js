@@ -45,9 +45,16 @@ const MARKET = (function () {
   // strong=true marks the strong-market thresholds on the same gauges.
   // Each row carries its own methodology (`how`) for the disclosure under the
   // dial: plain definition, the exact math in words, and why the danger line
-  // sits where it does. Threshold rationale is deliberately general — we have
-  // no proprietary backtest, so claims stay at "the level that preceded price
-  // declines in past national downturns," which is the honest version.
+  // sits where it does.
+  //
+  // The rationale used to end there because there was no backtest to cite.
+  // There are now TWO, and both render rather than assert: backtestNote()
+  // below appends the FHFA outcome rates from meta.national.backtest, and
+  // /research/methodology.html carries recomputed case studies (Boise, Cape
+  // Coral, and a market that crossed a line and recovered) built by
+  // tools/backtest_cases.py from source under these exact thresholds. If you
+  // add a performance claim here, back it from one of those — never type a
+  // lead time or a hit rate into this file.
   function buildMetricRows(d, strong){
     const m = d.m || {}, rows = [];
     if (m.mos != null){ const t = strong ? (m.mos<2.5?"s":"g") : (m.mos>6?"r":m.mos>4?"a":"g");

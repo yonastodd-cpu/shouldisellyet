@@ -188,3 +188,31 @@ and Gemini, derived server-side from the stored referrer domain.)
   search leans on Bing's index, so this is an AI-visibility task, not just a
   Bing one. IndexNow already fans out to Bing on every data refresh; this is
   the console-side half that can't be automated from the repo.
+
+## Reply bank — "does this actually work?"
+
+For the operator answering that question in a comment, a DM, or a reply to a
+press email. Comment-length, no numbers typed from memory: every figure below
+renders on the site, so link rather than recite if the thread allows it.
+
+> Markets slow before they fall. Prices are the last thing to move, because
+> sellers hold their asking price long after buyers stop paying it. What moves
+> first is behaviour: homes take longer to sell, unsold homes pile up, and
+> sellers start cutting asking prices. We watch four public signals for those,
+> each with a danger line drawn from past downturns, and we publish the lines
+> so anyone can check them.
+>
+> It's a smoke detector, not a prediction. It says the conditions that came
+> before past declines are present in your market now.
+>
+> And we show our misses. Our track record page has recomputed case studies —
+> every date re-derived from the source data under today's thresholds — and one
+> of them is a market that crossed a danger line and then recovered. A record
+> with no misses in it is a sales page.
+> shouldisellyet.com/research/methodology.html
+
+**Rules for using it:** don't quote a lead time or a hit rate from memory —
+open the page and read the current number, because the cases regenerate when
+the data does. If someone asks about 2008, the honest answer is that our
+dials cannot be recomputed that far back (no source we have carries them at
+metro level before 2019), so we don't claim it.

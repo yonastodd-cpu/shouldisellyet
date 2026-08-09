@@ -173,5 +173,24 @@ def main():
     print(f"wrote {args.out}")
 
 
+def write_web_extract(results, web=ROOT / "web" / "data"):
+    """Small committed extract the public pages render from.
+
+    press.html used to carry these numbers as hand-typed prose and they drifted:
+    it published 155,612 ZIP-years and a 10.2/18.3/27.8 ladder while the
+    computed truth was 182,644 and 11.3/18.9/28.1 — the published HOLD rate
+    flattering us by a point. Numbers about our own performance render from a
+    file or they do not appear.
+    """
+    web.mkdir(parents=True, exist_ok=True)
+    (web / "backtest.json").write_text(json.dumps({
+        "n_pairs": results["n_pairs"],
+        "years": results["redfin_years"],
+        "fhfa_thru": results.get("fhfa_thru"),
+        "ladder": {k: {"n": v["n"], "decline_pct": v["decline_pct"]}
+                   for k, v in results["levels"].items()},
+    }, separators=(",", ":"), sort_keys=True))
+
+
 if __name__ == "__main__":
     main()

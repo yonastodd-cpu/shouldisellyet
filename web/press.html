@@ -82,6 +82,7 @@ footer a{color:var(--faint-ink)}
 
   <h2>How the verdict is computed</h2>
   <p>Four public signals, each with a danger line drawn from how markets behaved before past national downturns. The thresholds are published, not proprietary — the point is that anyone can check our work.</p>
+  <p>You can check it on specific markets: the <a href="/research/methodology.html">methodology page</a> carries recomputed case studies — every date and lead time re-derived from the source data under today's published thresholds, including one market that crossed a danger line and then recovered. We publish the miss alongside the hits on purpose.</p>
 
   <div class="dials" role="img" aria-label="The four signals and their danger lines: months of supply at 4.0 months, price trend at minus 2 percent year over year, time to sell at plus 40 percent year over year, and price cuts at 35 percent of listings.">
     <div class="dial">
@@ -123,7 +124,28 @@ footer a{color:var(--faint-ink)}
     <span style="width:11%;background:#d64545">ACT 11%</span>
   </div>
   <p style="font-size:.875rem;color:var(--faint-ink)">Verdict mix across all 24,619 scored ZIP codes · data through May 2026. Left to right: HOLD, strong seller's market, WATCH, ACT.</p>
-  <p>We also test the thresholds rather than assert them. Replaying every year-end signal snapshot the source data supports — <b>155,612 ZIP-years, 2012–2026</b> — against the federal government's own annual house-price index for the following year, the ladder holds: markets reading HOLD saw prices fall the next year 10.2% of the time, WATCH 18.3%, ACT 27.8%.</p>
+  <!-- These numbers RENDER from /data/backtest.json (written by
+       pipeline/backtest_thresholds.py). They were hand-typed prose until
+       2026-08-09 and had drifted: the page claimed 155,612 ZIP-years and a
+       10.2/18.3/27.8 ladder while the computed truth was 182,644 and
+       11.3/18.9/28.1 — the published HOLD rate flattering us by a point.
+       Do not retype them here. The no-JS fallback below is generated from
+       the same file and must be regenerated with it. -->
+  <p id="backtest-ladder">We also test the thresholds rather than assert them. Replaying every year-end signal snapshot the source data supports — <b>182,644 ZIP-years, 2012–2026</b> — against the federal government's own annual house-price index for the following year, the ladder holds: markets reading HOLD saw prices fall the next year 11.3% of the time, WATCH 18.9%, ACT 28.1%.</p>
+  <script>
+  fetch("/data/backtest.json").then(r => r.ok ? r.json() : null).then(b => {
+    if (!b || !b.ladder) return;                  // keep the served fallback
+    const l = b.ladder, pc = k => l[k] ? l[k].decline_pct.toFixed(1) : "—";
+    document.getElementById("backtest-ladder").innerHTML =
+      "We also test the thresholds rather than assert them. Replaying every " +
+      "year-end signal snapshot the source data supports — <b>" +
+      b.n_pairs.toLocaleString() + " ZIP-years, " + b.years[0] + "–" + b.years[1] +
+      "</b> — against the federal government's own annual house-price index for " +
+      "the following year, the ladder holds: markets reading HOLD saw prices " +
+      "fall the next year " + pc("green") + "% of the time, WATCH " +
+      pc("yellow") + "%, ACT " + pc("red") + "%.";
+  }).catch(() => {});
+  </script>
 
   <h2>Where the data comes from</h2>
   <p>Verdicts are computed from public housing-market data. Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, a national real estate brokerage. An independent cross-check uses Realtor.com's residential listings database; mortgage rates come from Freddie Mac's Primary Mortgage Market Survey; the threshold backtest and an official price benchmark use the Federal Housing Finance Agency's ZIP-level index; place names come from GeoNames. No source sponsors, endorses, or partners with this site, and no source has any influence over a verdict.</p>
