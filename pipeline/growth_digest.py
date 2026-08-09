@@ -66,16 +66,62 @@ def load_current(data_dir):
     return out
 
 
+# Snapshot value layout. v2 rows are [level, mos, spy, dom, pd, sold]; v1 rows
+# are the bare level string. Read every snapshot through snap_level() /
+# snap_metrics() so both formats keep working — v1 files are 2026-05 and
+# 2026-06 and must not be rewritten (a snapshot is a record of what we said
+# that month, not a file to migrate).
+SNAP_SIGNALS = ("mos", "spy", "dom", "pd")
+# Rounding, per signal, chosen so a rewrite is lossless against how each value
+# is displayed: mos 1dp ("2.6 mo"), spy 4dp (a 0.01% move is noise), dom whole
+# days, pd 4dp. Keeps the file ~3x the v1 size rather than ~8x.
+SNAP_ROUND = {"mos": 1, "spy": 4, "dom": 0, "pd": 4}
+
+
+def snap_level(v):
+    """Verdict level from a snapshot value, v1 or v2."""
+    return v if isinstance(v, str) else (v[0] if v else None)
+
+
+def snap_metrics(v):
+    """{signal: value} from a snapshot value. Empty for v1 rows, which carry
+    no metrics — the caller decides whether that ZIP-month can be used."""
+    if isinstance(v, str) or not v:
+        return {}
+    return {k: v[i + 1] for i, k in enumerate(SNAP_SIGNALS) if i + 1 < len(v)}
+
+
 def write_snapshot(entries, period):
-    """Compact zip -> verdict-level map, committed to the repo.
+    """Compact zip -> [level, mos, spy, dom, pd, sold] map, committed to repo.
+
+    WHY THE METRICS ARE HERE (added 2026-08-09 — do not trim back to levels).
+    The v1 format stored the level alone, which made a whole class of analysis
+    permanently impossible rather than merely unbuilt: approach velocity needs
+    a rate of change per SIGNAL, and forward validation needs the metrics that
+    produced a past verdict. Price and days-on-market can be recovered after
+    the fact from each ZIP's 36-month `h` series, but MONTHS OF SUPPLY and
+    PRICE-CUT SHARE appear in no history anywhere — if a refresh doesn't
+    record them, that month is gone for good. Two months (2026-05, 2026-06)
+    were already lost that way. `sold` rides along because it is the
+    sales-count floor the velocity layer needs to flag low-volume ZIPs.
 
     NOT written to archive/{YYYY-MM}: those are 90-day workflow artifacts and
     are gitignored, so a verdict history kept there would silently vanish and
-    the diff would break every quarter. 387KB/month in-repo is durable.
+    the diff would break every quarter. ~1.2MB/month in-repo is durable.
     """
     SNAP_DIR.mkdir(parents=True, exist_ok=True)
     p = SNAP_DIR / f"verdicts-{period}.json"
-    p.write_text(json.dumps({z: e["l"] for z, e in entries.items()},
+
+    def row(e):
+        m = e.get("m") or {}
+        out = [e["l"]]
+        for k in SNAP_SIGNALS:
+            v = m.get(k)
+            out.append(None if v is None else round(v, SNAP_ROUND[k]))
+        out.append(m.get("sold"))
+        return out
+
+    p.write_text(json.dumps({z: row(e) for z, e in entries.items()},
                             separators=(",", ":"), sort_keys=True))
     return p
 
@@ -91,7 +137,9 @@ def diff_verdicts(prev, entries):
     RANK = {"red": 0, "yellow": 1, "green": 2, "strong": 3}
     flips = {"to_watch": [], "to_act": [], "to_hold": [], "to_strong": []}
     for z, e in entries.items():
-        was = prev.get(z)
+        # snap_level so a v1 (bare string) and a v2 (list) snapshot compare
+        # identically — the 2026-05/06 files are v1 and stay that way.
+        was = snap_level(prev.get(z))
         now = e["l"]
         if was is None or was == now:
             continue
