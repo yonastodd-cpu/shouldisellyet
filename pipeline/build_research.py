@@ -671,7 +671,7 @@ def page(title, desc, canonical, body, og_image="", jsonld=""):
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{{--bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
 --hairline:#e7e2d8;--hairline2:#f0ebe0;--navy:#1f3a5f;--gold:#8a7a55;
@@ -681,10 +681,12 @@ body{{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-appl
 a{{color:var(--navy)}}
 .mono{{font-family:'IBM Plex Mono',monospace}}
 nav{{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline);max-width:900px;margin:0 auto}}
-.logo{{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}}
+.logo{{display:flex;align-items:center;gap:calc(var(--lockup)*.2333);text-decoration:none;color:var(--ink)}}
 .logo-text{{display:flex;flex-direction:column;gap:2px}}
-.logo-word{{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:18.5px;letter-spacing:-.01em;line-height:1}}
-.logo-tag{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:7.5px;letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}}
+.logo{{--lockup:40px}}
+.logo img{{width:var(--lockup);height:var(--lockup)}}
+.logo-word{{font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:calc(var(--lockup)*.5333);letter-spacing:-.0094em;line-height:1;color:#1E2B36}}
+.logo-tag{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:calc(var(--lockup)*.1583);letter-spacing:.28em;line-height:1;color:#7E7A70;white-space:nowrap}}
 .wrap{{max-width:900px;margin:0 auto;padding:34px 20px 80px}}
 .eyebrow{{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}}
 h1{{font-family:'Newsreader',serif;font-weight:500;font-size:clamp(1.7rem,3.4vw,2.4rem);line-height:1.15;margin:10px 0 8px}}
@@ -721,7 +723,7 @@ footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;fo
 .stategrid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}}
 </style></head><body>
 <nav>
-  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="40" height="40" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet?</span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
   <a class="mono" style="font-size:11px;letter-spacing:.14em;color:var(--gold);text-decoration:none" href="/research/">RESEARCH</a>
 </nav>
 <div class="wrap">

@@ -165,20 +165,25 @@ a{color:var(--navy)}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px 56px}
 nav.top{display:flex;align-items:center;justify-content:space-between;max-width:820px;margin:0 auto;padding:16px 20px;border-bottom:1px solid var(--hairline);flex-wrap:wrap;gap:10px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-/* Brand lockup — deliberately WITHOUT the webfonts the rest of the site
-   uses. These 22.9k pages ship zero webfonts on purpose: they are the SEO
-   surface, and a font request in the head is paid on every one of them for
-   a 17px wordmark. Georgia stands in for Newsreader, exactly as the h1 rule
-   below already does, so the whole page falls back consistently instead of
-   this one line reaching for a face nothing else here loads. The descriptor
-   takes the same ui-monospace fallback as .mono. Near, not identical: if
-   brand exactness beats the request, add the fonts to the head here and
-   drop the fallbacks. */
+/* Brand lockup — the delivered artboard's ratios (see web/index.html), but
+   deliberately WITHOUT the Source Serif 4 the rest of the site now loads.
+   These 22.9k pages ship zero webfonts on purpose: they are the SEO surface,
+   and a font request in the head is paid on every one of them for a one-line
+   wordmark. Georgia stands in, exactly as the h1 rule below already does, so
+   the page falls back consistently instead of this one line reaching for a
+   face nothing else here loads — and Georgia is the delivered file's own
+   first fallback, so this matches what that file renders on its own. Sizing,
+   tracking and ink are the artboard's regardless, so only the face differs.
+   If brand exactness beats the request, add the font to the head here and
+   drop the fallback. */
+.logo{--lockup:40px;gap:calc(var(--lockup)*.2333)}
+.logo img{width:var(--lockup);height:var(--lockup)}
 .logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-.logo-word{font-family:Georgia,'Newsreader',serif;font-weight:600;font-size:18.5px;
-           letter-spacing:-.01em;line-height:1}
-.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:7.5px;
-          letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
+.logo-word{font-family:Georgia,'Source Serif 4',serif;font-weight:600;
+           font-size:calc(var(--lockup)*.5333);letter-spacing:-.0094em;line-height:1}
+.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;
+          font-size:calc(var(--lockup)*.1583);letter-spacing:.28em;
+          line-height:1;color:#7E7A70;white-space:nowrap}
 @media (max-width:400px){ .logo-tag{display:none} }
 .crumb{font-size:.8125rem;color:var(--muted);padding:14px 0 0}
 /* Arrival banner for shared links — slim, dismissible, no modal, no gate. */
@@ -233,7 +238,7 @@ footer a{color:var(--faint-ink)}
 """
 
 NAVBAR = """<nav class="top">
-  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="40" height="40" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet?</span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
   <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
 </nav>"""
 

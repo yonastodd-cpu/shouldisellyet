@@ -35,7 +35,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="alert-copy.js"></script>
 <script src="proof-config.js"></script>
@@ -101,22 +101,33 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
    and readable to search engines.
    Balance: the mark is sized to the height of the two-line stack (20px name +
    9px tagline + leading ≈ 34px), so neither element towers over the other. */
-.logo{display:flex;align-items:center;gap:11px}
-.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-/* Type follows the delivered lockup: serif name over a mono descriptor.
-   Set in the site's own families — Newsreader for the name (the face the
-   headlines already use) and IBM Plex Mono for the descriptor — rather than
-   the lockup file's Source Serif 4, which would mean a third font request
-   for one line of text. The serif carries less weight per pixel than the
-   Archivo it replaces, so the name is set a shade larger to hold the same
-   presence beside the mark.
+/* ——— Brand lockup: the delivered artboard, rebuilt as live text ———
+   web/logo-lockup.svg is the reference. It is NOT used as an <img> because an
+   <img> renders in its own document with none of this page's webfonts, so the
+   file's Source Serif 4 would silently fall back to Georgia. As live text it
+   gets the real face, stays crisp at any zoom, and remains selectable and
+   readable to search engines.
+   EVERY VALUE BELOW IS THE ARTBOARD'S, expressed as a ratio of the mark, so a
+   breakpoint resizes the lockup by setting --lockup alone and no proportion
+   can drift. From the 430x76 file: mark 60, wordmark 32 (.5333), descriptor
+   9.5 (.1583), mark-to-text gap 14 (.2333). Its tracking is already
+   scale-free once converted — -0.3px on 32px is -.0094em, 2.66px on 9.5px is
+   .28em — as are its two inks, #1E2B36 and #7E7A70. Checked against the file
+   at artboard size: both lines matched its own text to 0.1px.
+   The name is one ink throughout. The orange "?" that used to end it is not
+   in the delivered lockup.
    nowrap on both: a wordmark that breaks mid-name ("Should I Sell / Yet")
    stops reading as a logo and starts reading as a layout bug. It scales
    down instead. */
-.logo-word{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:1.375rem;
-           letter-spacing:-.01em;line-height:1;color:var(--ink);white-space:nowrap}
-.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:.5625rem;
-          letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
+.logo{--lockup:44px;display:flex;align-items:center;gap:calc(var(--lockup)*.2333)}
+.logo img{width:var(--lockup);height:var(--lockup)}
+.logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.logo-word{font-family:'Source Serif 4',Georgia,serif;font-weight:600;
+           font-size:calc(var(--lockup)*.5333);letter-spacing:-.0094em;
+           line-height:1;color:#1E2B36;white-space:nowrap}
+.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;
+          font-size:calc(var(--lockup)*.1583);letter-spacing:.28em;
+          line-height:1;color:#7E7A70;white-space:nowrap}
 /* The nav is one row: lockup + CTA. As it narrows, the descriptor goes
    first (the name still identifies the site), then the whole lockup steps
    down, and only then does the CTA go.
@@ -129,20 +140,14 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
    back ~45px, which clears the collision down to ~420 — below where the CTA
    itself goes. Right trade anyway: the descriptor is brand, the button is the
    conversion, and the name alone still identifies the site. */
-@media (max-width:560px){
-  .logo{gap:9px}
-  .logo img{width:30px;height:30px}
-  .logo-word{font-size:1.1875rem}
-  .logo-tag{font-size:.5rem;letter-spacing:.18em}
-}
+@media (max-width:560px){ .logo{--lockup:40px} }
 @media (max-width:500px){
   .logo-tag{display:none}
   /* The lockup steps down here too, for the same reason it used to at 430:
      pressure from the CTA, which is on screen throughout this band. Dropping
      the descriptor alone left 5px between the wordmark and the button at
      431px — clear of it, but reading as a near-collision. */
-  .logo img{width:28px;height:28px}
-  .logo-word{font-size:1.125rem}
+  .logo{--lockup:34px}
 }
 @media (max-width:430px){
   /* The nav CTA goes too. "Check my ZIP — free" cannot share a 375px row
@@ -552,9 +557,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 <div class="wrap">
 <nav>
   <div class="logo">
-    <img src="/logo-mark.svg" alt="" width="34" height="34" style="display:block">
+    <img src="/logo-mark.svg" alt="" width="44" height="44" style="display:block">
     <span class="logo-text">
-      <span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span>
+      <span class="logo-word">Should I sell yet?</span>
       <span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span>
     </span>
   </div>

@@ -20,7 +20,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;
@@ -61,20 +61,25 @@ b{color:var(--ink)}
 .fine{font-size:13px;color:var(--faint);margin-top:18px}
 .hidden{display:none}
 
-/* Brand lockup — same construction as the homepage, one step down for the
-   narrower inner-page nav. Mark height tracks the two-line stack. */
+/* Brand lockup — the delivered artboard's ratios, driven by --lockup so the
+   proportions hold at any size. Full rationale in web/index.html. One step
+   down from the homepage for the narrower inner-page nav. */
+.logo{--lockup:40px;gap:calc(var(--lockup)*.2333)}
+.logo img{width:var(--lockup);height:var(--lockup)}
 .logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-.logo-word{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:18.5px;
-           letter-spacing:-.01em;line-height:1;color:var(--ink)}
-.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:7.5px;
-          letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
+.logo-word{font-family:'Source Serif 4',Georgia,serif;font-weight:600;
+           font-size:calc(var(--lockup)*.5333);letter-spacing:-.0094em;
+           line-height:1;color:#1E2B36}
+.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;
+          font-size:calc(var(--lockup)*.1583);letter-spacing:.28em;
+          line-height:1;color:#7E7A70;white-space:nowrap}
 @media (max-width:400px){ .logo-tag{display:none} }
 </style>
 </head>
 <body>
 <nav>
   <a class="logo" href="/">
-    <img src="/logo-mark.svg" alt="" width="30" height="30" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet<span style="color:#b5591e">?</span></span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span>
+    <img src="/logo-mark.svg" alt="" width="40" height="40" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet?</span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span>
   </a>
   <span class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--gold)">CHECKOUT</span>
 </nav>
