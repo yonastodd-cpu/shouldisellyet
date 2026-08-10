@@ -538,7 +538,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   </div>
   <div class="navlinks">
     <a href="#how">How it works</a><a href="#signals">The signals</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
-    <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP - free</a>
+    <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a>
   </div>
 </nav>
 
@@ -743,7 +743,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
     <div class="ax-col">
       <div id="alert-examples"></div>
-      <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full report + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
+      <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
     </div>
   </div>
 </section>
@@ -754,6 +754,9 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
        computed: scored from meta.json, flips/checks from data/proof.json
        (written by the digest each refresh). Nothing here is ever typed. -->
   <div class="proofline" id="proofline" hidden></div>
+  <!-- Honest urgency: the date is OUR next scheduled data check (Mon/Thu),
+       computed — never a fabricated claim about when Redfin publishes. -->
+  <div class="proofline" id="freshline" hidden></div>
   <h2>Check your ZIP code free.</h2>
   <p class="lede" style="margin:10px 0 10px">You could come back and recheck every month. Or let the updates come to you — one email the moment your verdict changes, your report refreshed with every data release.</p>
   <!-- Borrowed-weight line (one placement only, data grammar — never "powered
@@ -779,7 +782,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
            price leads the featured card, so it names it explicitly. -->
       <div class="price-note" style="margin-top:4px">Credited toward the annual plan (<span data-price="annual">$29</span>/yr) if you upgrade within 30 days</div>
       <div class="price-feats">What would you actually walk away with? · What's your equity really worth? · What is your low rate worth? · What if prices fell 5%? · When do homes here sell fastest? · Should you sell it or rent it out? · Printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
-      <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Get the Full Report</a>
+      <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Unlock the full report</a>
     </div>
     <div class="price-card featured">
       <div class="price-badge">MOST POPULAR</div>
@@ -792,7 +795,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="price-note" data-price="mode-alt">or $29/yr — save 39%</div>
       <div class="price-note" style="margin-top:4px">Cancel anytime</div>
       <div class="price-feats">Every answer in the one-time report — kept current automatically, with alerts on the lines you set.</div>
-      <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Full Report + Notifications</a>
+      <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts</a>
     </div>
   </div>
   <div class="band-note sm" style="margin-bottom:6px">Try the free check first — upgrade only if your ZIP's story is worth following.</div>
@@ -924,6 +927,7 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
     // Same counted total as the ticker — one source, so the hero and the feed
     // can never quote different sizes of the same product.
     renderProofLine();
+    renderFreshLine();
     const n = scoredZips();
     if (n >= 1000) {
       document.getElementById("map-label").textContent =
@@ -1375,6 +1379,25 @@ function pvPercentile(spy) {
 // Proof counters — threshold-gated (web/proof-config.js). Each candidate
 // either passes its bar and renders, or contributes NOTHING — no filler.
 // The whole line stays hidden unless at least one passes.
+function renderFreshLine() {
+  const el = $("freshline");
+  if (!el) return;
+  // Next Monday(1) or Thursday(4) — the pipeline's real cron days. We state
+  // what WE do (check) rather than inventing a publisher's schedule.
+  const now = new Date();
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const mons = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(now); d.setDate(now.getDate() + i);
+    if (d.getDay() === 1 || d.getDay() === 4) {
+      el.textContent = "Next data check: " + days[d.getDay()] + ", " +
+        mons[d.getMonth()] + " " + d.getDate() + " — verdicts refresh the moment new figures land.";
+      el.hidden = false;
+      return;
+    }
+  }
+}
+
 async function renderProofLine() {
   const el = $("proofline"), TH = window.PROOF_THRESHOLDS;
   if (!el || !TH) return;
