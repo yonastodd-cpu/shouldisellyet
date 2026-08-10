@@ -52,7 +52,12 @@ RECEIPT_LOOKBACK_DAYS = 35   # a receipt older than one cycle is stale news
 PRESS_OUTLET_BATCHES = []    # e.g. [{"slug": "national", "name": "National desks"}]
 
 # ——— Scheduling ———
-HORIZON_WEEKS = 2       # this marketing week (Sunday-start, ET) + the next
+# Four Sunday-start ET weeks: the current one plus three. Raised from 2 on
+# 2026-08-10 when the queue was first filled — two weeks is enough to keep a
+# rolling schedule topped up once the queue is running, but the first fill
+# wants a month on the board so the operator can see the shape of the rotation
+# (and so an empty week shows up as an evergreen slot rather than as nothing).
+HORIZON_WEEKS = 4
 MIN_LEAD_HOURS = 2      # never plan a slot closer than this to the run
 
 # Caps — MIRRORS of marketing_slot_conflict R2/R3 in supabase/schema-v23.sql.

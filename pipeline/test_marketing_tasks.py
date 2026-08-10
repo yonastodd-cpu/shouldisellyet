@@ -468,3 +468,25 @@ def test_windows_fallback_matches_seed():
             for w in MC.FALLBACK_WINDOWS}
     assert seed == ours
     assert not any(w["channel"] == "nextdoor_naomi" for w in MC.FALLBACK_WINDOWS)
+
+
+def test_dedupe_index_is_inferable_by_on_conflict():
+    """The generator upserts through PostgREST with ?on_conflict=dedupe_key,
+    which emits a bare `ON CONFLICT (dedupe_key)`. Postgres cannot infer a
+    PARTIAL index from a bare column list, so a `where` clause on this index
+    makes every insert raise 42P10 — invisibly, because the writer is
+    monkeypatched out of every other test in this file.
+
+    Shipped exactly that way in v23 and was only caught filling the queue
+    against production. schema-v24.sql drops the predicate; this keeps it off.
+    """
+    sqldir = Path(__file__).resolve().parents[1] / "supabase"
+    sql = "\n".join((sqldir / f).read_text()
+                    for f in ("schema-v23.sql", "schema-v24.sql"))
+    # The LAST definition of the index wins — that is the one that is live.
+    defs = re.findall(r"create unique index[^;]*marketing_tasks_dedupe_idx[^;]*;",
+                      sql, re.I | re.S)
+    assert defs, "marketing_tasks_dedupe_idx is not defined anywhere"
+    assert "where" not in defs[-1].lower(), (
+        "the dedupe index is partial again — ON CONFLICT (dedupe_key) cannot "
+        f"infer it and every generator insert will fail:\n{defs[-1]}")
