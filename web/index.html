@@ -119,17 +119,32 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
           letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
 /* The nav is one row: lockup + CTA. As it narrows, the descriptor goes
    first (the name still identifies the site), then the whole lockup steps
-   down — measured against the CTA at 375px so the two never meet. */
+   down, and only then does the CTA go.
+   The descriptor leaves at 500, not 430, and that gap is the whole point.
+   Measuring the breakpoints against 375px checked the width where the CTA is
+   already hidden and missed the band above it: from 431 to 469 the CTA and
+   the descriptor both came back at once, the lockup grew 214px wide against a
+   button that needed the rest of the row, and the button wrapped to two lines
+   (it still cleared by only 2px at 470). Dropping the descriptor first buys
+   back ~45px, which clears the collision down to ~420 — below where the CTA
+   itself goes. Right trade anyway: the descriptor is brand, the button is the
+   conversion, and the name alone still identifies the site. */
 @media (max-width:560px){
   .logo{gap:9px}
   .logo img{width:30px;height:30px}
   .logo-word{font-size:1.1875rem}
   .logo-tag{font-size:.5rem;letter-spacing:.18em}
 }
-@media (max-width:430px){
+@media (max-width:500px){
   .logo-tag{display:none}
+  /* The lockup steps down here too, for the same reason it used to at 430:
+     pressure from the CTA, which is on screen throughout this band. Dropping
+     the descriptor alone left 5px between the wordmark and the button at
+     431px — clear of it, but reading as a near-collision. */
   .logo img{width:28px;height:28px}
   .logo-word{font-size:1.125rem}
+}
+@media (max-width:430px){
   /* The nav CTA goes too. "Check my ZIP — free" cannot share a 375px row
      with a logo — it was wrapping to two lines and running over the
      wordmark. Nothing is lost: the identical hero button sits a few hundred
