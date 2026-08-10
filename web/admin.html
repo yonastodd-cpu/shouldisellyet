@@ -406,6 +406,7 @@ table.grid tr:hover td{background:#faf9f5}
           <button data-v="week" class="on" onclick="return mqSetView('week')">This week</button>
           <button data-v="cal" onclick="return mqSetView('cal')">Calendar</button>
         </div>
+        <button class="tag" style="cursor:pointer" onclick="return mqCsv()">Export schedule.csv</button>
       </div>
 
       <div id="mq-body"><div class="placeholder">Loading the queue…</div></div>
@@ -1299,6 +1300,42 @@ function mqUnavailable(e) {
     “function … does not exist” means <span class="mono">supabase/schema-v23.sql</span> has not been
     applied to this project yet; “forbidden” means the signed-in address is not in
     <span class="mono">admin_emails</span>. Nothing else on the dashboard is affected.</div>`;
+}
+
+// schedule.csv — the secondary path, for bulk-loading an external scheduler.
+// SCHEDULED AND SUGGESTED ONLY, current ET month: a CSV of things already
+// posted is a report, and this file's job is to be imported somewhere that
+// will post them again. Built from the month RPC's own rows so the export and
+// the calendar can never disagree.
+async function mqCsv() {
+  const head = ["scheduled_for", "channel", "type", "priority_score", "metro_cbsa",
+                "metro_name", "zip", "why_headline", "caption", "hashtags",
+                "utm_url", "asset_path", "status"];
+  const csvq = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  // The month is only in memory once the Calendar view has been opened.
+  // Exporting from the week view must not silently report an empty month, so
+  // fetch it here rather than trusting whatever the operator happened to click.
+  if (!MQ.month) {
+    try { MQ.month = await rpc("admin_marketing_month", { p_month: null }); }
+    catch (e) { showErr(e); return false; }
+  }
+  const days = (MQ.month && MQ.month.days) || [];
+  const rows = [];
+  days.forEach((d) => (d.tasks || []).forEach((t) => { if (mqLive(t)) rows.push(t); }));
+  if (!rows.length) {
+    showErr(new Error("Nothing scheduled this month to export — the CSV would be a header row."));
+    return false;
+  }
+  rows.sort((a, b) => String(a.scheduled_for).localeCompare(String(b.scheduled_for)));
+  const csv = [head.join(",")]
+    .concat(rows.map((r) => head.map((k) => csvq(r[k])).join(",")))
+    .join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "schedule-" + ((MQ.month && MQ.month.month) || "current") + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return false;
 }
 
 function mqSetView(v) {

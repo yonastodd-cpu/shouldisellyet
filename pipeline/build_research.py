@@ -266,7 +266,7 @@ def og_card(rep, out, w=1200, h=630):
     img.save(out, "PNG", optimize=True)
 
 
-def _social_frame(title_lines, month, w=1080, h=1350):
+def _social_frame(title_lines, month, w=1080, h=1350, foot=None):
     from PIL import Image, ImageDraw
     img = Image.new("RGB", (w, h), BG)
     d = ImageDraw.Draw(img)
@@ -276,7 +276,10 @@ def _social_frame(title_lines, month, w=1080, h=1350):
                fill=INK if i == 0 else MUTED)
         y += 62 if i == 0 else 44
     f = font(REG, 22)
-    line = f"ShouldISellYet Research · {pretty(month)} · {SITE}/research/"
+    # foot: marketing-queue cards (pipeline/post_pack.py) reuse this frame but
+    # are not research releases — they must not foot with a /research/ URL that
+    # has nothing to do with them. Default is unchanged.
+    line = foot or f"ShouldISellYet Research · {pretty(month)} · {SITE}/research/"
     d.text((64, h - 70), line, font=f, fill=FAINT)
     return img, d
 

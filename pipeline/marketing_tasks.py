@@ -356,6 +356,26 @@ def guard(cand):
 #   metro_cbsa/metro_name/zip/asset_path/source_id, plus optional
 #   channel (pin), week (pin), fixed_time / fixed_source (cap-exempt rows).
 
+def _record_is_alarming(rec, sup):
+    """Does this month's superlative point the WRONG way for a seller?
+
+    True only when the index ROSE into the record (more markets showing warning
+    signs). A record low, a "lowest since", or a falling run is good news and
+    must not be dressed as an alarm. Reads the same fields detect_records()
+    emits — no second source of truth about direction.
+    """
+    s = (sup or "").lower()
+    if "lowest" in s:
+        return False
+    if "highest" in s:
+        return True
+    # A run: the direction field is authoritative. Otherwise fall back to the
+    # month-over-month delta, and default to the calmer framing when unknown.
+    if rec.get("run_direction"):
+        return rec["run_direction"] == "up"
+    return (rec.get("delta") or 0) > 0
+
+
 def cand_record(rep):
     """Tier 1: the WSI printed a superlative this month. Trigger is
     strongest_record() — the same function the digest pitch leads with, so a
@@ -381,9 +401,22 @@ def cand_record(rep):
         "why_headline": f"WSI hit {rec['wsi']:.1f}% — {sup}. Records are "
                         f"headlines by construction.",
         "why_detail": "\n".join(lines),
-        "caption": (f"Warning signs are flashing in {rec['wsi']:.1f}% of U.S. ZIP "
-                    f"housing markets — {sup}. Fixed danger lines, ~25,000 ZIPs, "
-                    f"updated monthly.\nCheck your ZIP free: {{utm_url}}"),
+        # THE CAPTION FOLLOWS THE DATA, NOT THE MOOD. strongest_record() returns
+        # whichever superlative is strongest, and roughly half of them are GOOD
+        # news — a record low, or the lowest share since some month. An
+        # unconditional "warning signs are flashing" opener published against a
+        # falling index would contradict this card's own why_detail two lines
+        # down ("3rd consecutive monthly decline") and would be the exact kind
+        # of claim docs/GROWTH-OPS.md's reply bank tells us not to make. guard()
+        # cannot catch this: no banned word is involved, only a framing that
+        # does not track the direction. So the opener is chosen by direction.
+        "caption": ((f"Warning signs are flashing in {rec['wsi']:.1f}% of U.S. ZIP "
+                     f"housing markets — {sup}."
+                     if _record_is_alarming(rec, sup) else
+                     f"Warning signs eased this month: {rec['wsi']:.1f}% of U.S. ZIP "
+                     f"housing markets are showing them — {sup}.")
+                    + f" Fixed danger lines, ~25,000 ZIPs, updated monthly."
+                      f"\nCheck your ZIP free: {{utm_url}}"),
         "asset_path": f"/research/{period}/social/1-wsi.png",
         "render": {"wsi": rec["wsi"], "prev_wsi": rec.get("prev_wsi"),
                    "delta": rec.get("delta"), "superlative": sup},

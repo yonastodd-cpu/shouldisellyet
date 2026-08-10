@@ -28,6 +28,12 @@ web/s/
 # pipeline/research JSONs — pages, charts, CSVs.
 web/research/
 
+# Generated at deploy time by pipeline/post_pack.py from the committed
+# pack manifest — one card per marketing task. Public by design (they are
+# destined for public feeds) but never committed: they are re-rendered from
+# the manifest on every deploy, deterministically.
+web/assets/mkt/
+
 # Per-ZIP velocity payloads — the PAID layer. Served only through
 # verify-access (Supabase); committing them would publish the paid feature in
 # a public repo. The aggregate velocity-{month}.json files ARE committed.

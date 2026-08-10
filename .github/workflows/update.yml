@@ -312,6 +312,11 @@ jobs:
           pip install --quiet Pillow
           python3 pipeline/build_pages.py
           python3 pipeline/build_research.py
+          # Marketing cards, drawn from the committed pack manifest. Runs on
+          # every deploy like the pages above, and for the same reason: the
+          # output is gitignored, so a deploy that skipped it would upload a
+          # web/ with dead <img> URLs on the admin queue.
+          python3 pipeline/post_pack.py --render
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'

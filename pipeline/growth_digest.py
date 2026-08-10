@@ -372,6 +372,45 @@ def supabase_counts():
     return data, gaps
 
 
+def marketing_queue_summary(period):
+    """This refresh's marketing queue, for the digest's section 3.
+
+    Returns {"n": int, "headlines": [str, ...]} or None. None means UNREADABLE
+    — no Supabase config, a failed request, or schema-v23 not applied yet —
+    and the caller must render that as a labelled gap. It must never become
+    {"n": 0}: "no tasks this week" and "we could not ask" are different
+    sentences, and only one of them is the operator's problem.
+
+    Reads the queue's own columns only (why_headline, status, scheduled_for) —
+    no subscriber, no contact, nothing personal. The digest's privacy rule
+    (counts per ZIP and nothing else) is not weakened by this section.
+    """
+    url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not (url and key):
+        return None
+    # This week in ET, matching marketing_week_start (Sunday-based) so the
+    # count the digest prints is the count the tab shows.
+    now = datetime.now(timezone.utc)
+    et = now - timedelta(hours=4)               # ET is UTC-4/-5; a few hours
+    ws = et.date() - timedelta(days=(et.weekday() + 1) % 7)   # back to Sunday
+    q = (f"{url}/rest/v1/marketing_tasks?select=why_headline,priority_score,scheduled_for"
+         f"&period=eq.{period}"
+         f"&scheduled_for=gte.{ws.isoformat()}T00:00:00Z"
+         f"&scheduled_for=lt.{(ws + timedelta(days=7)).isoformat()}T00:00:00Z"
+         f"&status=in.(suggested,scheduled)"
+         f"&order=priority_score.asc,scheduled_for.asc")
+    try:
+        req = urllib.request.Request(q, headers={"apikey": key,
+                                                 "Authorization": f"Bearer {key}"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            rows = json.loads(r.read().decode())
+    except Exception as exc:
+        print(f"marketing queue unreadable ({exc}) — digest will label the gap")
+        return None
+    return {"n": len(rows),
+            "headlines": [x.get("why_headline", "") for x in rows[:3] if x.get("why_headline")]}
+
+
 def rate_now_and_prior(data_dir, prev_period_str):
     """(current, prior, asof). Prior comes from the stored rate stamp for last
     month — meta.json only ever holds the current figure."""
@@ -450,7 +489,7 @@ def _chip(level, text):
 
 def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
                   rate_now, rate_prior, rate_asof, places, baseline=False, demo=False,
-                  research_html=""):
+                  research_html="", queue=None):
     pm = pretty_month(period)
     n_flips = sum(len(v) for v in flips.values())
     dmv_flips = [(b, z) for b, zs in flips.items() for z in zs if is_dmv(z)]
@@ -510,13 +549,26 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
     if hook and hook["zips"]:
         st = hook["state"]
         line = f'<b>{len(hook["zips"])} {H(st)} ZIP codes {H(hook["phrase"])} this month.</b>'
-        csvline = (f'<div style="font-size:13px;color:#5c6673;margin-top:6px">Supporting rows: '
-                   f'<code>{H(hook_csv.name)}</code> in this month\'s archive folder.</div>'
-                   if hook_csv else "")
-        body = f'<div style="font-size:15px">{line}</div>{csvline}'
+        body = f'<div style="font-size:15px">{line}</div>'
     else:
         body = '<div style="font-size:14px;color:#5c6673">No same-state cluster this month — skip the pitch.</div>'
-    parts.append(_sec(3, "Press hook of the month", "One line a local reporter can run with; CSV backs it up.", body))
+
+    # The queue replaces what used to be a filename in <code> pointing at an
+    # archive folder that is gitignored, expires in 90 days, and was never a
+    # link. A count and a URL the operator can actually click is the whole
+    # point of the marketing queue existing.
+    if queue is None:
+        q_html = ('<div style="font-size:14px;color:#8a6414;margin-top:10px">'
+                  'Marketing queue unavailable this refresh (see gaps below).</div>')
+    else:
+        tops = "".join(f"<li>{H(h)}</li>" for h in queue.get("headlines") or [])
+        q_html = (f'<div style="font-size:15px;margin-top:12px">'
+                  f'<b>Your marketing queue: {queue["n"]} '
+                  f'task{"" if queue["n"] == 1 else "s"} this week</b> → '
+                  f'<a href="{SITE}/admin.html#marketing">open the queue</a></div>'
+                  + (f'<ol style="margin:6px 0 0;padding-left:20px;font-size:14px;'
+                     f'color:#5c6673">{tops}</ol>' if tops else ""))
+    parts.append(_sec(3, "Press hook of the month", "One line a local reporter can run with; the queue has the rest.", body + q_html))
 
     # 4 — subscriber-adjacent flips
     if counts:
@@ -835,10 +887,15 @@ def main():
     if args.demo and rate_prior is None and rate_now is not None:
         rate_prior = round(rate_now - 0.31, 2)      # show the burst banner
     research = load_research(period)
+    queue = ({"n": 3, "headlines": ["WSI hit 14.2% — the highest share since March 2023.",
+                                    "Austin-Round Rock-San Marcos, TX just crossed the line.",
+                                    "Homes in 20904 are taking 12 days longer to sell."]}
+             if args.demo else marketing_queue_summary(period))
     html = render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
                          rate_now, rate_prior, rate_asof, places,
                          baseline=baseline, demo=args.demo,
-                         research_html=research_section(research, out_dir))
+                         research_html=research_section(research, out_dir),
+                         queue=queue)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"digest-{period}.html").write_text(html, encoding="utf-8")

@@ -196,3 +196,63 @@ python3 -m pytest pipeline/test_marketing_tasks.py::test_et_slots_dst_and_std -q
   public render scalars per task); `post_pack.py --render` rebuilds the
   public card PNGs from it on every deploy. Aggregates only — the paid
   per-ZIP layer never reaches an asset.
+
+## The asset lifecycle (decided 2026-08-10)
+
+Two halves, split the way the rest of the pipeline splits: network at refresh,
+pure render at deploy.
+
+1. **Refresh** — `marketing_tasks.py` writes the rows *and* a committed
+   manifest, `pipeline/marketing/pack-{period}.json`, holding one entry per
+   task: its token, its type, its `asset_path`, and the public scalars its
+   card needs.
+2. **Every deploy** — `post_pack.py --render` reads that manifest and draws
+   `web/assets/mkt/{period}/{token}.png`. No network, no clock, no Supabase.
+   The same manifest always produces the same bytes.
+
+**The cards are public, and that is correct.** `web/` is uploaded wholesale,
+so every card has a URL. They exist to be posted to Instagram — publishing
+them is the point, not a leak. They are gitignored all the same, because they
+are re-rendered on every deploy; committing them would be committing a build
+artifact.
+
+Nothing personal can reach a card: every renderer takes explicit public
+scalars, never a dict passthrough — the same contract `og_card.py` enforces in
+its signature. A record card copies the research release's own WSI image
+rather than drawing a second one, so the number on the card and the number on
+the release page cannot diverge.
+
+Cards reuse `build_research._social_frame` with its footer overridden. One
+frame, one brand, one place to change it.
+
+## What the digest says now
+
+Section 3 used to end with a filename in `<code>` pointing at
+`archive/{period}/` — a directory that is gitignored, expires with the
+90-day Actions artifact, and was never a link. It now ends with the queue:
+
+> **Your marketing queue: 4 tasks this week** → open the queue
+> 1. WSI hit 62.2% — the lowest share since December 2025.
+> 2. …
+
+If the queue cannot be read — no Supabase config, a failed request,
+`schema-v23` not applied — the digest says **"Marketing queue unavailable
+this refresh"** and never "0 tasks". A zero is a measurement; a gap is not.
+`test_growth_digest.py` holds that line.
+
+## Verifying the whole chain
+
+```bash
+# The plan, offline, with no secrets — WOULD-INSERT / REFUSED lines, exit 0:
+env -u SUPABASE_URL -u SUPABASE_SERVICE_KEY \
+  python3 pipeline/marketing_tasks.py --dry-run --now 2026-08-10T14:00:00Z
+
+# The cards, from the committed manifest — byte-identical on a re-run:
+python3 pipeline/post_pack.py --render
+
+# The digest section, without touching Supabase or sending anything:
+python3 pipeline/growth_digest.py --demo --out /tmp/mqd
+grep -c "archive folder" /tmp/mqd/digest-*.html    # must be 0
+
+python3 -m pytest pipeline/ -q
+```
