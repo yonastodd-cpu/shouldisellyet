@@ -217,26 +217,40 @@ def build_angles(entries, flips, places, period, want=ANGLE_COUNT):
         # takes to sell — that is days-on-market, a different column. The old
         # sentence stated the second while computing the first.
         weeks = max(1, ceil(e['m']['mos'] * 30.44 / 7))
-        return z, (f"{label(z, places)} has just {e['m']['mos']:.1f} months of supply — "
-                   f"under {weeks} week{'s' if weeks != 1 else ''} of inventory left "
-                   f"at the current sales pace.")
+        # "0.6 months of supply" is trade vocabulary. What a homeowner wants to
+        # know is how little is left on the shelf, and how fast it is going.
+        return z, (f"There is under {weeks} week{'s' if weeks != 1 else ''}' worth of "
+                   f"homes for sale in {label(z, places)} — at the current pace, "
+                   f"that is how long today's listings would last.")
 
     def r_price(c):
         c = [(z, e) for z, e in c if e.get("m", {}).get("spy") is not None]
         if not c: return None
         z, e = max(c, key=lambda t: abs(t[1]["m"]["spy"]))
         v = e["m"]["spy"]
-        return z, (f"Typical sale prices in {label(z, places)} are "
-                   f"{'up' if v >= 0 else 'down'} {abs(v) * 100:.1f}% versus a year ago.")
+        return z, (f"Homes in {label(z, places)} are selling for "
+                   f"{abs(v) * 100:.1f}% {'more' if v >= 0 else 'less'} than they "
+                   f"were a year ago.")
 
     def r_flip(c):
         ok = {z for z, _ in c}
-        for bucket, verb in (("to_act", "crossed into ACT"), ("to_watch", "moved to WATCH"),
-                             ("to_strong", "flipped to a strong seller's market"),
-                             ("to_hold", "recovered to HOLD")):
+        # The verdict words are the product's own and stay — but ACT and WATCH
+        # mean nothing to someone meeting them in a feed, so each carries a
+        # short gloss. "Data release" is our word for it; "monthly update" is
+        # everyone else's.
+        # verb, then the gloss AFTER "this month" — appending the gloss to the
+        # verb produced "moved to ACT — our strongest warning this month",
+        # which reads as if the warning were strongest this month rather than
+        # ACT being the strongest verdict we issue.
+        for bucket, verb, gloss in (
+                ("to_act", "moved to ACT", " — our strongest warning —"),
+                ("to_watch", "moved to WATCH", " — the early-warning level —"),
+                ("to_strong", "turned into a strong seller's market", ""),
+                ("to_hold", "recovered to HOLD", " — no warning signs —")):
             for z in flips.get(bucket, []):
                 if z in ok:
-                    return z, f"{label(z, places)} {verb} this month — its first change since the last data release."
+                    return z, (f"{label(z, places)} {verb} this month{gloss} after "
+                               f"holding steady since our last update.")
         return None
 
     def r_season(c):

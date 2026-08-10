@@ -324,8 +324,8 @@ def test_narrative_unset_degrades(monkeypatch, capsys):
     c = MT.cand_contrarian(mkrep(wsi=14.2, delta=-0.3), PERIOD)
     assert c["why_headline"] == (
         'The narrative says "crash headlines dominating" — the data says '
-        "85.8% of scored ZIP markets still rate HOLD or better, and the "
-        "warning share fell 0.3 pts this month.")
+        "85.8% of the ZIP codes we track still look healthy, and fewer are "
+        "showing warning signs than last month.")
     assert c["tier"] == 2
     # the caption never quotes operator prose (HYPE guard checks captions)
     assert "crash" not in c["caption"]
@@ -543,7 +543,7 @@ def test_overlapping_shares_are_explained_not_left_to_add_up():
     out = MT.cand_flips(VEL, VEL_PREV, PERIOD)
     assert out, "the surge fixture should produce a story"
     cap = out[0]["caption"]
-    assert "largely the same ZIP codes" in cap, cap
+    assert "largely the same neighborhoods" in cap, cap
 
 
 def test_contrarian_leads_with_the_fact_that_makes_the_gap():
@@ -557,10 +557,10 @@ def test_contrarian_leads_with_the_fact_that_makes_the_gap():
     try:
         mc.NARRATIVE = {"text": "crash coverage", "period": PERIOD, "stance": "bearish"}
         calm = MT.cand_contrarian(mkrep(wsi=14.2, delta=-0.3), PERIOD)
-        assert calm["why_headline"].index("85.8%") < calm["why_headline"].index("fell")
+        assert calm["why_headline"].index("85.8%") < calm["why_headline"].index("fewer")
 
         loud = MT.cand_contrarian(mkrep(wsi=62.2, delta=-2.4), PERIOD)
-        assert "the warning share fell 2.4 points" in loud["why_headline"]
-        assert "37.8% of scored ZIP markets still rate HOLD" not in loud["why_headline"]
+        assert "fewer neighborhoods are showing warning signs" in loud["why_headline"]
+        assert "37.8%" not in loud["why_headline"]
     finally:
         mc.NARRATIVE = old

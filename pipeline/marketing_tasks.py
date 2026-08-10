@@ -410,13 +410,22 @@ def cand_record(rep):
         # of claim docs/GROWTH-OPS.md's reply bank tells us not to make. guard()
         # cannot catch this: no banned word is involved, only a framing that
         # does not track the direction. So the opener is chosen by direction.
-        "caption": ((f"Warning signs are flashing in {rec['wsi']:.1f}% of U.S. ZIP "
-                     f"housing markets — {sup}."
+        # Written for a homeowner, not an economist: no index name, no "share",
+        # no "basis points". The number stays exact; the sentence around it
+        # says what the number means for a person who owns one house.
+        "caption": ((f"More neighborhoods are showing housing warning signs than "
+                     f"at any point in recent months."
                      if _record_is_alarming(rec, sup) else
-                     f"Warning signs eased this month: {rec['wsi']:.1f}% of U.S. ZIP "
-                     f"housing markets are showing them — {sup}.")
-                    + f" Fixed danger lines, ~25,000 ZIPs, updated monthly."
-                      f"\nCheck your ZIP free: {{utm_url}}"),
+                     f"Fewer neighborhoods are showing housing warning signs than "
+                     f"at any point in recent months.")
+                    + f" We check about 25,000 ZIP codes every month against the "
+                      f"same danger lines — right now {rec['wsi']:.1f}% are showing at "
+                      f"least one warning sign"
+                    + (f", down from {rec['prev_wsi']:.1f}%."
+                       if (rec.get('delta') or 0) < 0 and rec.get('prev_wsi')
+                       else f", up from {rec['prev_wsi']:.1f}%."
+                       if (rec.get('delta') or 0) > 0 and rec.get('prev_wsi') else ".")
+                    + f"\nSee where your ZIP code stands, free: {{utm_url}}"),
         "asset_path": f"/research/{period}/social/1-wsi.png",
         "render": {"wsi": rec["wsi"], "prev_wsi": rec.get("prev_wsi"),
                    "delta": rec.get("delta"), "superlative": sup},
@@ -456,22 +465,21 @@ def cand_contrarian(rep, period):
             # The LEVEL is the gap: most markets are fine, whatever the
             # coverage says. That is the strongest true counter, so it leads,
             # and a falling trend rides along as support.
-            counter = f"{hold:.1f}% of scored ZIP markets still rate HOLD or better"
+            counter = f"{hold:.1f}% of the ZIP codes we track still look healthy"
             if (delta or 0) < 0:
-                counter += (f", and the warning share fell "
-                            f"{abs(delta):.1f} pts this month")
+                counter += ", and fewer are showing warning signs than last month"
         else:
             # The level is NOT calm — only the trend makes this a gap. Leading
             # with the HOLD share here would pick the weaker half of our own
             # data (37.8% while 62.2% show warning signs), which is the spin
             # the 20841 angle was pulled for.
-            counter = f"the warning share fell {abs(delta):.1f} points this month"
+            counter = "fewer neighborhoods are showing warning signs than last month"
             if run >= 2 and rec.get("run_direction") == "down":
-                counter += f", a {ordinal(run)} consecutive monthly decline"
+                counter += f" — the {ordinal(run)} month in a row they have dropped"
             if rec.get("lowest_since"):
-                counter += (" — the lowest share on record"
+                counter += (", the fewest we have ever recorded"
                             if rec["lowest_since"] == "record"
-                            else f" and the lowest since {pretty_month(rec['lowest_since'])}")
+                            else f", and the fewest since {pretty_month(rec['lowest_since'])}")
     elif stance == "bullish" and wsi > MC.CONTRARIAN_HOT_WSI and (delta or 0) > 0:
         counter = (f"warning signs are flashing in {wsi:.1f}% of scored ZIP "
                    f"markets, up {delta:+.1f} pts this month")
@@ -489,10 +497,10 @@ def cand_contrarian(rep, period):
             f"- Narrative set by the operator for {period} in "
             f"pipeline/marketing_config.py; this card exists only because the "
             f"verdict mix points the other way."]),
-        "caption": (f"Across ~25,000 scored U.S. ZIP housing markets, {counter} — "
-                    f"fixed danger lines, updated monthly. The headlines are "
-                    f"telling a different story.\n"
-                    f"Check your ZIP free: {{utm_url}}"),
+        "caption": (f"The headlines are telling one story. Our numbers tell a "
+                    f"quieter one: {counter}. We check about 25,000 ZIP codes "
+                    f"every month against the same danger lines.\n"
+                    f"See where your ZIP code stands, free: {{utm_url}}"),
         "render": {"wsi": wsi, "delta": delta, "counter": counter},
     }
 
@@ -551,6 +559,21 @@ def _mon_day_full(d):
 
 def _mon_day_d(d):
     return f"{d.strftime('%b')} {d.day}"
+
+
+def short_metro(name):
+    """"Grand Rapids-Wyoming-Kentwood, MI" -> "Grand Rapids, MI".
+
+    Census CBSA titles name every principal city and every state they touch.
+    Nobody says that out loud, and in a caption it reads like a spreadsheet
+    got pasted in. The first city and the first state is what a homeowner
+    calls the place they live. Kept OUT of why_headline and the admin card,
+    which stay precise — this is for public copy only.
+    """
+    if not name or "," not in name:
+        return name or ""
+    city, states = name.rsplit(",", 1)
+    return f"{city.split('-')[0].strip()}, {states.strip().split('-')[0]}"
 
 
 def cand_flips(vel, vel_prev, period):
@@ -622,15 +645,16 @@ def cand_flips(vel, vel_prev, period):
             # summing past 100%, and the post looks like it cannot add up. The
             # overlap is the story, so it is stated rather than left to trip
             # the reader.
-            "caption": (f"The housing warning signs are gathering in {g['name']}."
-                        f"\n\n{g['hold_share']:.0f}% of its scored ZIP codes "
-                        f"still rate HOLD today — and {g['share_det']:.0f}% are "
-                        f"already drifting toward a danger line. Those are "
-                        f"largely the same ZIP codes: calm on the surface, "
-                        f"moving underneath. At the current pace the median "
-                        f"nearest signal is {mtl_prose(g.get('median_mtl'))}.\n\n"
-                        f"Watch your own ZIP free: {{utm_url}}\n"
-                        f"(Source: ShouldISellYet Research, data through "
+            "caption": (f"Warning signs are building in {short_metro(g['name'])}."
+                        f"\n\nMost of its neighborhoods still look healthy — "
+                        f"{g['hold_share']:.0f}% rate HOLD today. But "
+                        f"{g['share_det']:.0f}% are already sliding toward one of "
+                        f"our danger lines, and they are largely the same "
+                        f"neighborhoods: steady on the surface, moving "
+                        f"underneath. At the pace of the last three months, the "
+                        f"typical one is {mtl_prose(g.get('median_mtl'))}.\n\n"
+                        f"See where your ZIP code stands, free: {{utm_url}}\n"
+                        f"(ShouldISellYet Research · data through "
                         f"{pretty_month(period)})"),
             "asset_path": f"/assets/mkt/{period}/{tok}.png",
             "render": {"name": g["name"], "zips": g["zips"],
@@ -738,6 +762,10 @@ def cand_evergreen(cases, ws, period):
         return None
     c = hits[(ws.toordinal() // 7) % len(hits)]
     pct = round(abs(c["peak_to_trough"]) * 100)
+    n = c["lead_months"]
+    lead_words = ("a full year" if n == 12 else
+                  f"{n // 12} years" if n >= 24 and n % 12 == 0 else
+                  f"{n} months")
     tok = token("evergreen", ws=ws.isoformat(), case_id=c["id"])
     return {
         "key": tok, "type": "evergreen", "tier": 5, "week": ws,
@@ -751,11 +779,14 @@ def cand_evergreen(cases, ws, period):
             f"{c['peak_to_trough'] * 100:.1f}% (chart: web/data/cases/{c['id']}.png).",
             f"- Used because the week of {_mon_day_d(ws)} would otherwise be "
             f"empty — evergreen never displaces a live angle."]),
-        "caption": (f"Our signals flagged {c['name']} {c['lead_months']} months "
-                    f"before its {pct}% peak-to-trough slide. Every case in the "
-                    f"track record is recomputed under today's danger lines — "
-                    f"including the market that crossed a line and recovered.\n"
-                    f"Check your ZIP free: {{utm_url}}"),
+        # "peak-to-trough" is how an analyst says it. A homeowner asks how far
+        # prices fell from the top, and how much warning they would have had.
+        "caption": (f"We flagged {short_metro(c['name'])} {lead_words} before "
+                    f"home prices there fell {pct}% from their high.\n\n"
+                    f"Every case we publish is re-run with the same danger "
+                    f"lines we use today — including one market that tripped a "
+                    f"line and then recovered. We show that one too.\n"
+                    f"See where your ZIP code stands, free: {{utm_url}}"),
         "asset_path": f"/assets/mkt/{period}/{tok}.png",
         "render": {"case_id": c["id"], "name": c["name"],
                    "lead_months": c["lead_months"],
