@@ -488,11 +488,27 @@ def case_chart(case, out, w=1200, h=675):
     Yp = panel(430, 600, pvals, lambda v: f"${v/1000:.0f}K",
                "MEDIAN SALE PRICE", GREEN if miss else RED)
 
-    # The crossing, drawn through both panels — the claim, checkable.
+    # The crossing, drawn through both panels — the claim, checkable. The
+    # label names what this marker actually is, which is not always the case's
+    # first flag: a metro can reach a sustained WATCH majority a month before
+    # any single dial's median holds past its own line (Austin did). Calling
+    # both "SIGNAL" printed two different dates for one word, and the footer
+    # then paired this month with a lead time measured from the other one —
+    # arithmetic that did not add up on the card.
     cx = X(ci)
-    for sy in range(150, 610, 12):
+    for sy in range(138, 610, 12):
         d.line([(cx, sy), (cx, sy + 6)], fill=AMBER, width=2)
-    d.text((cx + 8, 150), f"SIGNAL {cross_month}", font=_font(BOLD, 15), fill=AMBER)
+    marker = ("MAJORITY FLAGGED" if dial == "share_flagged" else "LINE CROSSED")
+    mtext = f"{marker} {cross_month}"
+    mfont = _font(BOLD, 15)
+    mw = d.textlength(mtext, font=mfont)
+    # Sits ABOVE the panel's own title rather than beside it. A crossing in the
+    # window's first months puts this label at the left edge, where it used to
+    # print straight through that title (Quincy, whose signal is its first
+    # month). Flips to the left of the line when a late crossing would push it
+    # off the canvas.
+    mx = cx + 8 if cx + 8 + mw < x1 else cx - 8 - mw
+    d.text((mx, 118), mtext, font=mfont, fill=AMBER)
 
     # x labels: one per year.
     seen = set()
@@ -506,8 +522,14 @@ def case_chart(case, out, w=1200, h=675):
         claim = (f"Crossed the line {cross_month} — and recovered. "
                  f"Worst dip {case['worst_drawdown']*100:+.1f}%, now {case['recovered_to']*100:+.1f}%.")
     else:
-        claim = (f"Signal {cross_month} · first price decline {case['first_negative_yoy']} "
-                 f"({case['lead_months']} months later) · peak to trough {case['peak_to_trough']*100:+.1f}%")
+        # Anchored on first_signal, NOT on the marker above: lead_months was
+        # measured from first_signal, so pairing it with any other month
+        # prints a subtraction the reader can check and find wrong. This is
+        # also the month the card's "First flag" chip shows, so chart and
+        # card now state one date and one arithmetic.
+        claim = (f"Flagged {case['first_signal']} · first price decline "
+                 f"{case['first_negative_yoy']} ({case['lead_months']} months later) "
+                 f"· peak to trough {case['peak_to_trough']*100:+.1f}%")
     d.text((60, 638), claim, font=_font(BOLD, 16), fill=INK)
     d.text((w - 60 - d.textlength("Computed from the same data and thresholds we use today.",
                                   font=_font(REG, 13)), 656),

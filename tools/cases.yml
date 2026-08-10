@@ -26,11 +26,19 @@ cases:
     outcome: ["2021-01", "2024-12"]
     story: "The pandemic boomtown that ran hottest — and turned first."
 
-  # Austin (CBSA 12420) REPRODUCED but is deliberately not published. Its
-  # honest lead was 6 months — real, but its 2021 dials compare against
-  # COVID-distorted year-ago bases, making it the noisiest of the three and
-  # the weakest card. Dropped on judgment, not on failure: the numbers stood
-  # up, we simply chose the two cleaner cases. Re-add this block to publish it.
+  # Austin was pulled once and is back. It always REPRODUCED; it was dropped on
+  # judgment, because its dials were read as comparing against COVID-distorted
+  # year-ago bases. That objection described a 2021 crossing which today's
+  # rules no longer produce: the 3-month persistence rule rejects the
+  # single-month 2021-05 print that caused it, and what survives is dated
+  # 2022-07 — a mid-2021 base, the same era as Cape Coral. The reason for the
+  # judgment call no longer describes the card, so the card is published.
+  - id: austin-2021
+    name: "Austin-Round Rock-San Marcos, TX"
+    cbsa: "12420"
+    window: ["2021-01", "2024-12"]
+    outcome: ["2021-01", "2024-12"]
+    story: "The most-hyped migration market of the boom."
 
   - id: cape-coral-2022
     name: "Cape Coral-Fort Myers, FL"
