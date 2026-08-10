@@ -1,13 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="512" height="512">
-<!-- Source for icon-maskable-512.png (Android adaptive icons). Android
-     guarantees only the inner 80%-diameter CIRCLE, which cuts deeper than
-     the iOS squircle — hence a tighter inset than apple-touch-icon.svg.
-     This is why the Android icon is not the iOS one resized. -->
-<rect width="56" height="56" fill="#141a14"></rect>
-<g transform="translate(28,28) scale(0.66) translate(-28,-28)">
-<path d="M28 4.5 L52.5 24 L47.5 24 L47.5 47 C47.5 48.4 46.4 49.5 45 49.5 L11 49.5 C9.6 49.5 8.5 48.4 8.5 47 L8.5 24 L3.5 24 Z" fill="#f2f1ec" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
-  <path d="M40.5 9 L45.5 9 L45.5 18.4 L40.5 14.4 Z" fill="#f2f1ec" stroke="#f2f1ec" stroke-width="2.5" stroke-linejoin="round"></path>
-  <g transform="translate(10.3,15.5) scale(0.68)"><path d="M26 6.5 C27.8 6.5 29.2 7.9 29.2 9.7 L29.2 10.6 C34.8 12.2 38.5 17.2 38.5 23.6 L38.5 31.2 L42.3 36.2 C43.1 37.3 42.3 38.8 41 38.8 L11 38.8 C9.7 38.8 8.9 37.3 9.7 36.2 L13.5 31.2 L13.5 23.6 C13.5 17.2 17.2 12.2 22.8 10.6 L22.8 9.7 C22.8 7.9 24.2 6.5 26 6.5 Z" fill="#141a14"></path><path d="M21.5 41.6 A4.5 4.5 0 0 0 30.5 41.6 Z" fill="#141a14"></path></g>
-  <circle cx="34.8" cy="23" r="4.4" fill="#d99a2b" stroke="#f2f1ec" stroke-width="2"></circle>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+<!-- Source for icon-maskable-512.png (Android adaptive icons).
+
+     Android guarantees only the inner 80%-diameter CIRCLE; everything outside
+     it may be cropped by the launcher's mask. At the delivered inset the
+     mark's bounding box (including its 2.6 stroke) is 37.8 of 64 wide, so
+     corner to corner it spans 37.8 × √2 ≈ 53.5 — about 83.5% of the canvas,
+     just outside that guarantee. The 0.90 scale about the centre below brings
+     it to roughly 75%, inside the safe circle with margin.
+
+     That scale is the entire difference from apple-touch-icon.svg, and it is
+     why the Android icon is not the iOS one resized: the iOS squircle crops
+     less than Android's circle, so the same art is safe there and clipped here.
+
+     REGENERATE THE PNGs (macOS, no extra tooling — there is no SVG rasterizer
+     in this repo's toolchain, and CI never rebuilds these; they are committed
+     artefacts). Note sips' short output flag: the long form spells out two
+     hyphens, which XML forbids inside a comment and which silently turns this
+     file into a parse error the rasterizer renders as a pink error card.
+       qlmanage -t -s 512 -o /tmp/ico web/apple-touch-icon.svg web/icon-maskable.svg
+       sips -z 180 180 /tmp/ico/apple-touch-icon.svg.png -o web/apple-touch-icon.png
+       sips -z 192 192 /tmp/ico/apple-touch-icon.svg.png -o web/icon-192.png
+       sips -z 512 512 /tmp/ico/apple-touch-icon.svg.png -o web/icon-512.png
+       sips -z 512 512 /tmp/ico/icon-maskable.svg.png    -o web/icon-maskable-512.png -->
+<rect width="64" height="64" fill="#1D3D5C"></rect>
+<g transform="translate(32,32) scale(0.90) translate(-32,-32)">
+  <g transform="translate(9.6,9.6) scale(1.6)">
+    <path d="M 3.5 12 L 14 3.5 L 24.5 12 L 24.5 24.5 L 3.5 24.5 Z" fill="#FBF7EF" stroke="#FBF7EF" stroke-width="2.6" stroke-linejoin="round"></path>
+    <path d="M 6.8 19.8 L 10.4 15.2 L 13.6 17.4 L 17.4 12.6" fill="none" stroke="#1D3D5C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="17.4" cy="12.6" r="2.7" fill="#DFA53C"></circle>
+  </g>
 </g>
 </svg>

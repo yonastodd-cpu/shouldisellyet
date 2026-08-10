@@ -103,26 +103,33 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
    9px tagline + leading ≈ 34px), so neither element towers over the other. */
 .logo{display:flex;align-items:center;gap:11px}
 .logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-/* nowrap on both: a wordmark that breaks mid-name ("Should I Sell / Yet")
+/* Type follows the delivered lockup: serif name over a mono descriptor.
+   Set in the site's own families — Newsreader for the name (the face the
+   headlines already use) and IBM Plex Mono for the descriptor — rather than
+   the lockup file's Source Serif 4, which would mean a third font request
+   for one line of text. The serif carries less weight per pixel than the
+   Archivo it replaces, so the name is set a shade larger to hold the same
+   presence beside the mark.
+   nowrap on both: a wordmark that breaks mid-name ("Should I Sell / Yet")
    stops reading as a logo and starts reading as a layout bug. It scales
    down instead. */
-.logo-word{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:1.25rem;
-           letter-spacing:-.022em;line-height:1;color:var(--ink);white-space:nowrap}
-.logo-tag{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:.5625rem;
-          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+.logo-word{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:1.375rem;
+           letter-spacing:-.01em;line-height:1;color:var(--ink);white-space:nowrap}
+.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:.5625rem;
+          letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
 /* The nav is one row: lockup + CTA. As it narrows, the descriptor goes
    first (the name still identifies the site), then the whole lockup steps
    down — measured against the CTA at 375px so the two never meet. */
 @media (max-width:560px){
   .logo{gap:9px}
   .logo img{width:30px;height:30px}
-  .logo-word{font-size:1.0625rem}
+  .logo-word{font-size:1.1875rem}
   .logo-tag{font-size:.5rem;letter-spacing:.18em}
 }
 @media (max-width:430px){
   .logo-tag{display:none}
   .logo img{width:28px;height:28px}
-  .logo-word{font-size:1rem}
+  .logo-word{font-size:1.125rem}
   /* The nav CTA goes too. "Check my ZIP — free" cannot share a 375px row
      with a logo — it was wrapping to two lines and running over the
      wordmark. Nothing is lost: the identical hero button sits a few hundred

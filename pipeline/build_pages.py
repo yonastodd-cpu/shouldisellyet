@@ -165,18 +165,20 @@ a{color:var(--navy)}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px 56px}
 nav.top{display:flex;align-items:center;justify-content:space-between;max-width:820px;margin:0 auto;padding:16px 20px;border-bottom:1px solid var(--hairline);flex-wrap:wrap;gap:10px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-/* Brand lockup — deliberately WITHOUT the Archivo webfont the rest of the
-   site uses. These 22.9k pages ship zero webfonts on purpose: they are the
-   SEO surface, and a font request in the head is paid on every one of them
-   for a 17px wordmark. system-ui is a neutral grotesque on every platform
-   (SF, Segoe, Roboto), so the lockup reads the same shape at the same
-   weight and tracking — near, not identical. If brand exactness beats the
-   request, add Archivo to the head here and drop the fallback. */
+/* Brand lockup — deliberately WITHOUT the webfonts the rest of the site
+   uses. These 22.9k pages ship zero webfonts on purpose: they are the SEO
+   surface, and a font request in the head is paid on every one of them for
+   a 17px wordmark. Georgia stands in for Newsreader, exactly as the h1 rule
+   below already does, so the whole page falls back consistently instead of
+   this one line reaching for a face nothing else here loads. The descriptor
+   takes the same ui-monospace fallback as .mono. Near, not identical: if
+   brand exactness beats the request, add the fonts to the head here and
+   drop the fallbacks. */
 .logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-.logo-word{font-family:system-ui,-apple-system,'Archivo',sans-serif;font-weight:700;font-size:17px;
-           letter-spacing:-.022em;line-height:1}
-.logo-tag{font-family:system-ui,-apple-system,'Archivo',sans-serif;font-weight:500;font-size:7.75px;
-          letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}
+.logo-word{font-family:Georgia,'Newsreader',serif;font-weight:600;font-size:18.5px;
+           letter-spacing:-.01em;line-height:1}
+.logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:7.5px;
+          letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}
 @media (max-width:400px){ .logo-tag{display:none} }
 .crumb{font-size:.8125rem;color:var(--muted);padding:14px 0 0}
 /* Arrival banner for shared links — slim, dismissible, no modal, no gate. */

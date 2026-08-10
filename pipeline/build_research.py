@@ -683,8 +683,8 @@ a{{color:var(--navy)}}
 nav{{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline);max-width:900px;margin:0 auto}}
 .logo{{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}}
 .logo-text{{display:flex;flex-direction:column;gap:2px}}
-.logo-word{{font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.022em;line-height:1}}
-.logo-tag{{font-family:'Archivo',system-ui,sans-serif;font-weight:500;font-size:7.75px;letter-spacing:.22em;line-height:1;color:#8a8d86;white-space:nowrap}}
+.logo-word{{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:18.5px;letter-spacing:-.01em;line-height:1}}
+.logo-tag{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:7.5px;letter-spacing:.24em;line-height:1;color:#8a8d86;white-space:nowrap}}
 .wrap{{max-width:900px;margin:0 auto;padding:34px 20px 80px}}
 .eyebrow{{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--gold)}}
 h1{{font-family:'Newsreader',serif;font-weight:500;font-size:clamp(1.7rem,3.4vw,2.4rem);line-height:1.15;margin:10px 0 8px}}
