@@ -125,3 +125,19 @@ def test_no_stale_amounts_left_in_consumer_copy():
             if s in text and s not in current:
                 hits.append(f"{p.name}: {s}")
     assert not hits, "stale prices in consumer copy: " + json.dumps(hits, indent=2)
+
+
+def test_notify_changes_upsell_mirror_matches():
+    """The alert email's upsell block mirrors two prices (a pipeline script
+    can't read web/prices.js at send time). Same drift guard as the webhook —
+    and it also checks the computed 39% claim in the block's copy stays true."""
+    src = (ROOT / "pipeline" / "notify_changes.py").read_text()
+    monthly = float(re.search(r"PRICE_MONTHLY = ([\d.]+)", src).group(1))
+    annual = float(re.search(r"PRICE_ANNUAL = ([\d.]+)", src).group(1))
+    assert monthly == P["MONTHLY"] and annual == P["ANNUAL"], (
+        f"notify_changes.py price mirror drifted: {monthly}/{annual} "
+        f"vs prices.js {P['MONTHLY']}/{P['ANNUAL']}")
+    # The block says "saves 39%" — recompute rather than trust.
+    pct = round((1 - annual / (monthly * 12)) * 100)
+    assert f"saves {pct}%" in src, (
+        f"upsell copy's save percentage is stale: computed {pct}%")

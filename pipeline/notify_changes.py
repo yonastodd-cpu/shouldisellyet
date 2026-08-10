@@ -40,6 +40,13 @@ SITE = "https://shouldisellyet.com"
 # block is invisible when rendered but is the first text a client finds, so
 # it becomes the preview line. The trailing zero-width joiners stop clients
 # padding the preview with markup that follows.
+# Mirrored from web/prices.js (PRICES.MONTHLY / PRICES.ANNUAL) — same pattern
+# as the stripe-webhook mirror, and test_prices.py fails if these drift.
+PRICE_MONTHLY = 3.99
+PRICE_ANNUAL = 29
+UPSELL_MAX_SHOWN = 2
+
+
 def preheader(text):
     return ('<div style="display:none;font-size:1px;color:#faf8f4;line-height:1px;'
             'max-height:0;max-width:0;opacity:0;overflow:hidden">' + text
@@ -64,7 +71,7 @@ def diff_verdicts(old, new):
             if z in old and old[z] != lvl}
 
 
-def render_email(zip_code, old_level, new_level, address="", token=""):
+def render_email(zip_code, old_level, new_level, address="", token="", upsell=False):
     worse = SEVERITY[new_level] > SEVERITY[old_level]
     word = WORDS[new_level]
     # Personalize to the home if we have the address; fall back to the area.
@@ -87,6 +94,18 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
         "strong": "Buyers are competing for homes in your area — multiple strength signals are past their thresholds. If selling was already on your mind, conditions favor you right now.",
     }[new_level]
     report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
+    # Monthly→annual upsell — the ONLY place it exists (no interstitials, no
+    # modals, per the brief). Caller gates it: monthly billing only, never for
+    # marketing_opt_out subscribers (it is promotional content), and at most
+    # the first UPSELL_MAX_SHOWN alerts ever — a recurring upsell inside a
+    # trusted alert stream erodes the stream.
+    upsell_block = ""
+    if upsell and token:
+        upsell_block = f"""<div style="margin:26px 0 0;padding:14px 16px;border:1px solid #e7e2d8;border-radius:10px;background:#fbfaf6">
+  <p style="font-size:14px;margin:0 0 6px"><b>This alert is what ${PRICE_MONTHLY} buys.</b> Lock it in for the year — ${PRICE_ANNUAL}.</p>
+  <p style="font-size:13px;margin:0;color:#667085"><a href="{report_url}" style="color:#1f3a5f">Open your report</a> and choose Manage subscription → annual. Takes a minute, saves 39%.</p>
+</div>
+"""
     html = f"""{preheader(headline + " " + action)}
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup Alert</p>
@@ -94,7 +113,7 @@ def render_email(zip_code, old_level, new_level, address="", token=""):
   <p style="font-size:14px;color:#667085">{home} · changed from {WORDS[old_level]} → {word}</p>
   <p style="font-size:16px;line-height:1.6"><b>{headline}</b> {action}</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your home's report →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions for the area your home is in — this is general market information, not an appraisal of your specific home. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice. You receive these because you set up MyMarketCheckup monitoring for this home.</p>
+  {upsell_block}<p style="font-size:12px;color:#98a2b3;line-height:1.5">We monitor local market conditions for the area your home is in — this is general market information, not an appraisal of your specific home. Data provided by <a href="https://www.redfin.com" style="color:#98a2b3">Redfin</a>, a national real estate brokerage. Not financial advice. You receive these because you set up MyMarketCheckup monitoring for this home. <a href="https://kfbjooteazwvdsonthba.supabase.co/functions/v1/unsubscribe?token={token}" style="color:#98a2b3">Unsubscribe</a> · ShouldISellYet.com is operated by Yayday LLC.</p>
 </div>"""
     return subject, html
 
@@ -113,7 +132,8 @@ def fetch_subscribers(supabase_url, service_key, zips):
     for i in range(0, len(zips), 100):
         batch = ",".join(zips[i:i + 100])
         url = (f"{supabase_url}/rest/v1/subscribers"
-               f"?select=email,zip,address,access_token"
+               f"?select=id,email,zip,address,access_token,"
+               f"billing_interval,marketing_opt_out,annual_upsell_shown_count"
                # status=active is set only by the payment webhook, which also
                # stamps confirmed_at (schema-v19) — so this filter IS the
                # double-opt-in gate. Never widen it to pending/waitlist rows:
@@ -166,12 +186,34 @@ def main():
             print("Send cap reached.")
             break
         old_l, new_l = changes[s["zip"]]
+        # Annual upsell: monthly billing only; NEVER for marketing_opt_out
+        # (the block is promotional — the alert itself still sends); at most
+        # the first UPSELL_MAX_SHOWN alert emails ever.
+        shown = s.get("annual_upsell_shown_count") or 0
+        upsell = (s.get("billing_interval") == "monthly"
+                  and not s.get("marketing_opt_out")
+                  and shown < UPSELL_MAX_SHOWN)
         subject, html = render_email(s["zip"], old_l, new_l,
                                      address=s.get("address", ""),
-                                     token=s.get("access_token", ""))
+                                     token=s.get("access_token", ""),
+                                     upsell=upsell)
         try:
             send_email(rs_key, sender, s["email"], subject, html)
             sent += 1
+            if upsell and s.get("id"):
+                # Count AFTER a successful send — a failed send must not burn
+                # one of the two showings. Failure here is non-fatal: worst
+                # case the subscriber sees the block once more.
+                try:
+                    urllib.request.urlopen(urllib.request.Request(
+                        f"{sb_url}/rest/v1/subscribers?id=eq.{s['id']}",
+                        data=json.dumps({"annual_upsell_shown_count": shown + 1}).encode(),
+                        headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}",
+                                 "Content-Type": "application/json",
+                                 "Prefer": "return=minimal"},
+                        method="PATCH"), timeout=30)
+                except Exception as e:
+                    print(f"upsell count update failed for {s['id']}: {e}", file=sys.stderr)
         except Exception as e:  # one bad address must not kill the batch
             print(f"send failed for {s['email']}: {e}", file=sys.stderr)
     print(f"Sent {sent} alerts.")

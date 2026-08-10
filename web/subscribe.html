@@ -308,9 +308,13 @@ function setBilling(b){
   document.getElementById("upgrade-note").style.display = (upgrade && b === "annual") ? "block" : "none";
   renderRenewalTerms();
 }
-document.getElementById("bill-annual").innerHTML =
-  "Annual — " + PRICES.usd(upgrade ? PRICES.UPGRADE : PRICES.ANNUAL) + (upgrade ? " first yr" : "/yr") +
-  "<small>" + (upgrade ? "your report credited" : PRICE_TEXT["annual-permo"] + " · " + PRICE_TEXT["save-line"]) + "</small>";
+// The annual option leads with the saving, not the price — "Save 39% —
+// $29/yr" (computed SAVE_PCT, so a price change can't strand the claim).
+// The upgrade path keeps its credited-report framing.
+document.getElementById("bill-annual").innerHTML = upgrade
+  ? "Annual — " + PRICES.usd(PRICES.UPGRADE) + " first yr<small>your report credited</small>"
+  : "Save " + PRICES.SAVE_PCT + "% — " + PRICES.usd(PRICES.ANNUAL) + "/yr" +
+    "<small>" + PRICE_TEXT["annual-permo"] + "</small>";
 document.getElementById("bill-monthly").innerHTML =
   "Monthly — " + PRICES.usd(PRICES.MONTHLY) + "/mo<small>billed monthly</small>";
 if (upgrade) {
