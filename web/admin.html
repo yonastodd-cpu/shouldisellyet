@@ -25,6 +25,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/prices.js"></script>
+<script src="/proof-config.js"></script>
 <style>
 :root{
   --bg:#faf8f4;--ink:#1c2430;--muted:#5c6673;--faint:#8a8578;--fainter:#a49d8d;
@@ -184,6 +185,12 @@ table.grid tr:hover td{background:#faf9f5}
 
     <section id="sec-overview">
       <div class="cards" id="ov-cards"></div>
+      <div class="panel">
+        <h2>Proof counters — value vs display threshold</h2>
+        <table class="grid"><thead><tr><th>Counter</th><th class="num">Value</th><th class="num">Threshold</th><th>On the homepage?</th></tr></thead>
+        <tbody id="ov-proof"><tr><td colspan="4" style="color:var(--fainter)">Loading…</td></tr></tbody></table>
+        <div class="note">A counter renders publicly only at or past its threshold — below it, nothing shows (no placeholder). Thresholds live in web/proof-config.js and change only by commit, so the bar can't drift downward in a weak month. Watch zip_checks here as it approaches eligibility.</div>
+      </div>
       <div class="panel">
         <h2>Most-checked ZIPs</h2>
         <table class="grid"><thead><tr><th>ZIP</th><th>State</th><th class="num">Checks</th><th>Verdict</th></tr></thead>
@@ -595,6 +602,30 @@ RENDER.overview = async function () {
   ];
   $("ov-cards").innerHTML = cards.map(([k, v, s]) =>
     `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+  // Proof counters vs thresholds. Values from the SAME sources the homepage
+  // uses (meta.json, data/proof.json), plus this dashboard's own live
+  // zip_check count for the month — often fresher than the digest's copy.
+  try {
+    const TH = window.PROOF_THRESHOLDS || {};
+    const [meta, proof] = await Promise.all([
+      fetch("/data/meta.json").then(r => r.ok ? r.json() : null),
+      fetch("/data/proof.json").then(r => r.ok ? r.json() : null),
+    ]);
+    const scored = meta && meta.national && meta.national.counts
+      ? Object.values(meta.national.counts).reduce((a, b) => a + b, 0) : null;
+    const rows = [
+      ["ZIP markets scored", scored, TH.markets_scored],
+      ["Flipped verdicts (month)", proof ? proof.flipped : null, TH.markets_flipped],
+      ["ZIP checks (month, per last digest)", proof ? proof.zip_checks_month : null, TH.zip_checks_month],
+    ];
+    $("ov-proof").innerHTML = rows.map(([k, v, th]) => {
+      const on = typeof v === "number" && v >= th;
+      return `<tr><td>${k}</td><td class="num">${v == null ? "—" : fmt(v)}</td>` +
+             `<td class="num">${fmt(th)}</td>` +
+             `<td><span class="tag ${on ? "green" : ""}">${on ? "SHOWN" : "hidden"}</span></td></tr>`;
+    }).join("");
+  } catch (e) { $("ov-proof").innerHTML = '<tr><td colspan="4" style="color:var(--fainter)">unavailable</td></tr>'; }
 
   const tz = await rpc("admin_top_zips", { days: DAYS, lim: 25 });
   if (!tz.length) {

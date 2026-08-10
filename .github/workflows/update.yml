@@ -238,6 +238,7 @@ jobs:
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
           git add pipeline/snapshots pipeline/research pipeline/velocity pipeline/validation || true
+          git add web/data/proof.json || true
           git diff --cached --quiet && { echo "no snapshot change"; exit 0; }
           git commit -m "Verdict snapshot + research index $(date +%Y-%m) [skip ci]"
           for i in 1 2 3; do

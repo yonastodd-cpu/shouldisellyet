@@ -322,6 +322,18 @@ def supabase_counts():
     data = {"subscribers": Counter(), "alerts": Counter(),
             "match_requests": Counter(), "recent": {}}
 
+    # ZIP checks month-to-date, from the events_daily VIEW (day buckets, no
+    # raw rows) — feeds the homepage proof counter via proof.json. A failure
+    # is a labelled gap like everything else, never a zero.
+    month_start = datetime.now(timezone.utc).strftime("%Y-%m-01")
+    ev, err = _sb(url, key, "events_daily",
+                  {"select": "n", "event": "eq.zip_check", "day": f"gte.{month_start}"})
+    if err:
+        gaps.append(f"events_daily unreadable — {err}")
+        data["recent"]["zip_checks_month"] = None
+    else:
+        data["recent"]["zip_checks_month"] = sum(r.get("n") or 0 for r in ev or [])
+
     rows, err = _sb(url, key, "subscribers", {"select": "zip,plan,status,watches,created_at"})
     if err:
         gaps.append(f"subscribers table unreadable — {err}")
@@ -579,9 +591,10 @@ def render_digest(period, entries, flips, angles, hook, hook_csv, counts, gaps,
             + cell("MyMarketCheckup signups", "equitywatch_signups_30d")
             + cell("Report purchases", "report_purchases_30d")
             + cell("Match requests", "match_requests_30d")
-            + '<tr><td style="padding:4px 14px 4px 0;color:#5c6673">Visits by utm_source</td>'
-              '<td style="padding:4px 0"><b><span style="color:#8a8578">not tracked yet</span></b> '
-              '<span style="font-size:12px;color:#8a8578">— no analytics installed</span></td></tr>'
+            + cell("ZIP checks this month", "zip_checks_month")
+            + '<tr><td style="padding:4px 14px 4px 0;color:#5c6673">Visits by channel</td>'
+              '<td style="padding:4px 0"><span style="font-size:12px;color:#8a8578">'
+              'admin dashboard → Funnel → By channel</span></td></tr>' 
             + '</table>')
     parts.append(_sec(7, "Scorecard — last 30 days", "If these are flat, the sections above are the levers.", body))
 
@@ -838,6 +851,17 @@ def main():
     # Demo renders never touch them — a preview must not poison the real diff.
     if not args.demo:
         write_snapshot(entries, period)
+        # Proof counters for the homepage (threshold-gated there; thresholds
+        # live in web/proof-config.js). Written only on REAL runs — a demo or
+        # baseline must not publish counter values. flipped is null on a
+        # baseline: "0 flips" would be a claim, "unknown" is the truth.
+        proof = {
+            "month": period,
+            "flipped": None if baseline else sum(len(v) for v in flips.values()),
+            "zip_checks_month": (counts or {}).get("recent", {}).get("zip_checks_month"),
+        }
+        (ROOT / "web" / "data" / "proof.json").write_text(
+            json.dumps(proof, separators=(",", ":"), sort_keys=True))
         write_rate_stamp(period, rate_now, rate_asof)
 
     n = sum(len(v) for v in flips.values())

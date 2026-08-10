@@ -38,6 +38,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="prices.js"></script>
 <script src="alert-copy.js"></script>
+<script src="proof-config.js"></script>
 <script src="turnstile.js" defer></script>
 <script src="/track.js" defer></script>
 <script src="verdict-copy.js"></script>
@@ -315,6 +316,8 @@ h1 em{font-style:italic;color:var(--navy)}
            box-shadow:0 6px 20px rgba(28,36,48,.08)}
 .pv-unlock .vbtn{min-height:50px}
 
+.proofline{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.08em;
+           color:var(--faint-ink);text-transform:uppercase;margin-bottom:18px}
 /* ————— Alerts in action ————— */
 .alerts-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:start}
 .mailcard{background:#fff;border:1px solid var(--hairline);border-radius:14px;
@@ -715,6 +718,11 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </section>
 
 <section class="band" id="pricing">
+  <!-- Proof line — renders ONLY counters past their thresholds
+       (web/proof-config.js), hides entirely when none pass. Values are
+       computed: scored from meta.json, flips/checks from data/proof.json
+       (written by the digest each refresh). Nothing here is ever typed. -->
+  <div class="proofline" id="proofline" hidden></div>
   <h2>Check your ZIP code free.</h2>
   <p class="lede" style="margin:10px 0 10px">You could come back and recheck every month. Or let the updates come to you — one email the moment your verdict changes, your report refreshed with every data release.</p>
   <!-- Borrowed-weight line (one placement only, data grammar — never "powered
@@ -884,6 +892,7 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
       "FREE ZIP CHECK · MARKET DATA THROUGH " + (m.period || "").toUpperCase();
     // Same counted total as the ticker — one source, so the hero and the feed
     // can never quote different sizes of the same product.
+    renderProofLine();
     const n = scoredZips();
     if (n >= 1000) {
       document.getElementById("map-label").textContent =
@@ -1330,6 +1339,30 @@ function pvPercentile(spy) {
     '<div class="ax-row"><span class="pv-togline" aria-hidden="true"><span class="pv-tog"></span>🔒</span><span>' +
     s + "</span></div>").join("");
 })();
+
+
+// Proof counters — threshold-gated (web/proof-config.js). Each candidate
+// either passes its bar and renders, or contributes NOTHING — no filler.
+// The whole line stays hidden unless at least one passes.
+async function renderProofLine() {
+  const el = $("proofline"), TH = window.PROOF_THRESHOLDS;
+  if (!el || !TH) return;
+  const parts = [];
+  const scored = scoredZips();
+  if (scored >= TH.markets_scored) {
+    parts.push("Scoring " + scored.toLocaleString() + " U.S. ZIP markets");
+  }
+  try {
+    const p = await fetch("data/proof.json").then(r => r.ok ? r.json() : null);
+    if (p) {
+      if (typeof p.flipped === "number" && p.flipped >= TH.markets_flipped)
+        parts.push(p.flipped.toLocaleString() + " flipped verdicts this month");
+      if (typeof p.zip_checks_month === "number" && p.zip_checks_month >= TH.zip_checks_month)
+        parts.push(p.zip_checks_month.toLocaleString() + " ZIP checks this month");
+    }
+  } catch (e) { /* proof.json absent → whatever already passed still shows */ }
+  if (parts.length) { el.textContent = parts.join(" · "); el.hidden = false; }
+}
 
 function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null, reqSeq = 0;
