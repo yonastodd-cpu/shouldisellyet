@@ -94,6 +94,46 @@ table.grid tr:hover td{background:#faf9f5}
 .tag.red{background:var(--red-soft);border-color:#ecc3c3;color:#a33}
 .err-note{background:var(--red-soft);border:1px solid #ecc3c3;border-radius:10px;padding:12px 16px;font-size:13px;color:#a33;margin-bottom:14px;display:none}
 
+/* ——— Marketing queue (sec-marketing only) ——— */
+/* .strip: the operating rules, always in view. Nothing inside <main> is
+   sticky today (only <aside> is), and making .panel sticky would move every
+   other tab, so this is its own class. */
+.strip{position:sticky;top:0;z-index:20;background:#fbfaf6;border:1px solid var(--hairline);border-radius:12px;padding:10px 16px;margin-bottom:14px;box-shadow:0 8px 16px -14px rgba(28,36,48,.35)}
+.strip .rules{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap;text-transform:uppercase}
+.strip .one{font-size:13.5px;margin-top:7px;line-height:1.5}
+/* .task: one to-do card — when/what column, why/caption column, asset
+   column. .stat is a small KPI tile and .panel a section container; neither
+   is a list item with a media column. The border-color transition is the
+   surface the 900ms green action flash writes to (rqStatus pattern). */
+.task{background:#fff;border:1px solid var(--hairline);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:96px minmax(0,1fr) 130px;gap:14px;transition:border-color .3s}
+.task.dim{opacity:.55}
+.task .why-h{font-family:'Newsreader',serif;font-size:15.5px;font-weight:600;line-height:1.35}
+.task .why-d{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:4px;white-space:pre-line}
+/* .cap: the paste-ready caption. It has to read as "this exact text ships"
+   and keep its line breaks; the repo has no code-block style. */
+.task .cap{font-size:12.5px;background:var(--hairline2);border-radius:8px;padding:8px 10px;margin-top:8px;white-space:pre-wrap;line-height:1.5}
+/* .when: stacked time/date chip. .tag is a one-line pill for a short code;
+   this stacks a bold time over the date over the channel and type tags. */
+.when{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5}
+.when b{display:block;font-size:13.5px;color:var(--ink)}
+/* .thumb / .thumb-missing: the first content <img> in the app shell. The
+   missing state is the house explicit-empty-state rule applied to an image
+   that is not there — a task can predate the deploy that renders its card. */
+.thumb{width:100%;border-radius:8px;border:1px solid var(--hairline);cursor:zoom-in;display:block}
+.thumb-missing{border:1px dashed var(--hairline);border-radius:8px;padding:10px;font-size:10.5px;color:var(--fainter);line-height:1.5;word-break:break-word}
+/* .cal*: the 7-column month grid. table.grid is a data table — it cannot
+   host stacked chips per cell or a full-width flag row (.cal-flag spans
+   1/-1). 1px gaps over a hairline background draw the grid lines. */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--hairline);border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.cal .h{background:#fbfaf6;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;padding:6px 8px}
+.cal .d{background:#fff;min-height:84px;padding:6px 7px}
+.cal .d.out{background:#faf9f5}
+.cal .dn{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fainter);margin-bottom:4px}
+.cal-chip{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--hairline);border-radius:6px;background:#fff;padding:2px 6px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-chip.posted{background:var(--green-soft);border-color:var(--green-line)}
+.cal-chip.burst{background:var(--red-soft);border-color:#ecc3c3}
+.cal-flag{grid-column:1/-1;background:var(--amber-soft);border-top:1px solid #e8d5a8;padding:7px 12px;font-size:11.5px;color:#8a6414;line-height:1.5}
+
 @media(max-width:760px){
   #app.on{grid-template-columns:1fr}
   aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--hairline);padding:10px 0}
@@ -103,6 +143,10 @@ table.grid tr:hover td{background:#faf9f5}
   .brand{border-bottom:none;margin-bottom:2px}
   .side-foot{display:none}
   main{padding:16px 14px 50px}
+  .task{grid-template-columns:1fr}
+  .task .thumb{max-width:220px}
+  .cal .d{min-height:56px}
+  .strip{position:static}   /* sticky steals too much height on a phone */
 }
 </style>
 </head>
@@ -165,6 +209,7 @@ table.grid tr:hover td{background:#faf9f5}
       <a href="#requests">Requests</a>
       <a href="#agents">Agents</a>
       <a href="#markets">Markets to Market</a>
+      <a href="#marketing">Marketing</a>
       <a href="#health">Data Health</a>
     </nav>
     <div class="side-foot">
@@ -339,6 +384,51 @@ table.grid tr:hover td{background:#faf9f5}
           archive/ is a 90-day workflow artifact). A manual "regenerate digest" hook doesn't exist —
           the digest writes verdict snapshots as a side effect, so a safe re-run needs a
           dedicated dry-run entry point first (TODO, noted 2026-08-09).</div>
+      </div>
+    </section>
+
+    <!-- ——— Marketing queue (schema-v23) ———
+         A list of things a human may choose to do. Every card here was
+         generated by a data refresh from its own numbers; nothing on this
+         screen posts, sends or schedules anything by itself, and "Mark
+         posted" records what the operator already did by hand. -->
+    <section id="sec-marketing">
+      <!-- The operating rules, live from admin_marketing_week().guidance —
+           computed, never typed into this file. Sticky so the caps stay in
+           view while scrolling a long week. -->
+      <div class="strip">
+        <div class="rules" id="mq-rules">Loading the operating rules…</div>
+        <div class="one" id="mq-one"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="range" id="mq-view">
+          <button data-v="week" class="on" onclick="return mqSetView('week')">This week</button>
+          <button data-v="cal" onclick="return mqSetView('cal')">Calendar</button>
+        </div>
+      </div>
+
+      <div id="mq-body"><div class="placeholder">Loading the queue…</div></div>
+      <div id="mq-demoted"></div>
+
+      <div class="panel" style="margin-top:18px">
+        <h2>Last 30 days — what the posts actually moved</h2>
+        <div id="mq-boards"></div>
+        <div id="mq-advice"></div>
+        <div class="note">Joined nightly from <span class="mono">events</span> on each post's own
+          campaign token — a post the join has not reached yet counts as unknown, never as zero.
+          Purchases stay unattributed by design; clicks are the deepest attributable stage, the same
+          rule as the Funnel tab. Advisory lines are sentences from fixed thresholds: they never
+          change a priority, a rotation or a schedule on their own. Skip reasons do feed generation —
+          a metro skipped “not newsworthy” twice runs a tier lower for 60 days, disclosed in its next
+          card's why.</div>
+      </div>
+
+      <!-- Full-size asset view. Click anywhere to close. Inline-styled like the
+           cu-drawer overlay rather than earning a class — it is a one-off. -->
+      <div id="mq-light" style="display:none;position:fixed;inset:0;background:rgba(28,36,48,.78);z-index:60;place-content:center;padding:28px;cursor:zoom-out"
+           onclick="return mqLight(null)">
+        <img id="mq-light-img" alt="" style="max-width:min(1080px,92vw);max-height:88vh;border-radius:10px;display:block">
       </div>
     </section>
 
@@ -518,7 +608,10 @@ function clearErr() { $("err").style.display = "none"; }
 
 // ————— routing + shared 7/30-day state —————
 let DAYS = 30;
-const RANGE_SECTIONS = new Set(["overview", "funnel"]);   // sections the toggle applies to
+// Sections the toggle applies to. Marketing is deliberately absent: its
+// windows are structural — this marketing week, this month, a fixed 30-day
+// leaderboard — so a 7/30 switch there would be a control that does nothing.
+const RANGE_SECTIONS = new Set(["overview", "funnel"]);
 document.querySelectorAll("#range button").forEach((b) =>
   b.addEventListener("click", () => {
     DAYS = +b.dataset.days;
@@ -529,11 +622,12 @@ document.querySelectorAll("#range button").forEach((b) =>
 // Filled in by each section's task; falsy entries render their placeholder.
 const RENDER = {
   overview: null, funnel: null, customers: null, map: null,
-  requests: null, agents: null, markets: null, health: null,
+  requests: null, agents: null, markets: null, marketing: null, health: null,
 };
 const TITLES = {
   overview: "Overview", funnel: "Funnel", customers: "Customers", map: "Map",
-  requests: "Requests", agents: "Agents", markets: "Markets to Market", health: "Data Health",
+  requests: "Requests", agents: "Agents", markets: "Markets to Market",
+  marketing: "Marketing", health: "Data Health",
 };
 
 function route() {
@@ -1110,6 +1204,536 @@ function pcExport() {
   a.click();
   URL.revokeObjectURL(a.href);
   return false;
+}
+
+// ————— Marketing queue —————
+// The operator's to-do list (schema-v23). Nothing on this screen posts
+// anything: "Mark posted" RECORDS what a human already did by hand, and the
+// cards are suggestions the last data refresh generated from its own numbers.
+//
+// THE CALENDAR IS DATA, AND THIS FILE DOES NOT HOLD A COPY OF IT. Every rule
+// rendered here arrives from the database: admin_marketing_week carries the
+// guidance strip's own cap/anchor/burst/next-refresh values, admin_marketing_
+// slots decides which slots the picker may offer and why the rest are greyed,
+// admin_marketing_leaderboard writes its own advisory sentences. A client-side
+// mirror of the posting windows would be a second rulebook to keep in sync,
+// which is exactly what v23 moved into a table to stop. Everything below is
+// rendering, formatting and empty states.
+//
+// All writes are pessimistic — await the RPC, then re-read from the server and
+// flash the card green for 900ms (the rqStatus pattern). Re-reading rather
+// than patching the local cache is deliberate: a skip changes the week's used
+// counts, a reschedule changes which slots remain, and a queue whose strip
+// disagreed with its own caps would be worse than a spinner.
+const ET_TZ = "America/New_York";
+// Every schedule rule is ET wall-clock, so all formatting pins the zone —
+// operator travel must not move the calendar.
+const etTime = (x) => new Date(x).toLocaleString("en-US",
+  { timeZone: ET_TZ, weekday: "short", hour: "numeric", minute: "2-digit" })
+  .replace(",", "").replace(" AM", "a").replace(" PM", "p");          // "Sun 7:30p"
+const etDay = (x) => new Date(x).toLocaleString("en-US",
+  { timeZone: ET_TZ, month: "short", day: "numeric" });               // "Aug 16"
+const etMonth = () => new Intl.DateTimeFormat("en-CA", { timeZone: ET_TZ })
+  .format(new Date()).slice(0, 7);                                    // "2026-08"
+// next_refresh is the update.yml cron instant; it is a UTC fact (13:00 UTC),
+// so it is shown in UTC — the same clock the Markets tab's pipeline panel uses.
+const utcStamp = (x) => {
+  const d = new Date(x);
+  return d.toLocaleString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })
+    .replace(",", "") + " " +
+    d.toLocaleString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC";
+};
+
+// Channels are mono chips, not icons: no icon assets exist in this repo and
+// the CSP forbids fetching any (img-src 'self').
+const MQ_CH = { ig: "IG", x: "X", fb: "FB", nextdoor_naomi: "ND" };
+const MQ_TYPE_TAG = {
+  burst: '<span class="tag red">BURST</span>',
+  press_pitch: '<span class="tag amber">PITCH</span>',
+  receipt_quote: '<span class="tag green">RECEIPT</span>',
+  evergreen: '<span class="tag">EVERGREEN</span>',
+  post: "",
+};
+let MQ = { week: null, month: null, cal: null, view: "week", by: {}, focus: null };
+const mqLive = (t) => t.status === "suggested" || t.status === "scheduled";
+// One id→task map across week, overdue, unscheduled and the month grid, so a
+// calendar chip can open a card that belongs to another week.
+function mqIndex(list) { (list || []).forEach((t) => { if (t && t.id) MQ.by[t.id] = t; }); }
+const mqWho = (t) => (t.channel ? (MQ_CH[t.channel] || t.channel) : "no channel") +
+  (t.metro_name ? " · " + t.metro_name : t.zip ? " · " + t.zip : "");
+
+RENDER.marketing = async function () {
+  MQ.focus = null; MQ.by = {}; MQ.month = null;
+  let w;
+  try {
+    // p_week_start is passed explicitly as null rather than omitted: PostgREST
+    // picks an overload from the argument KEYS it was given, and naming the
+    // one parameter this function has means the call can never resolve to a
+    // "without parameters" lookup. Null is the RPC's own default (this week).
+    w = await rpc("admin_marketing_week", { p_week_start: null });
+  } catch (e) {
+    // The tab must fail loudly but locally: an unapplied migration or a
+    // non-admin session shows up here, in this section, and leaves every
+    // other tab working. showErr (via route's .catch) names the RPC.
+    mqUnavailable(e);
+    throw e;
+  }
+  MQ.week = w;
+  mqIndex(w.tasks); mqIndex(w.overdue); mqIndex(w.unscheduled);
+  if (w.one_thing) mqIndex([w.one_thing]);
+  mqStrip();
+  await mqDemoted();
+  await (MQ.view === "cal" ? mqCal() : mqWeek());
+  await mqBoards();
+};
+
+function mqUnavailable(e) {
+  $("mq-rules").textContent = "operating rules unavailable — the queue could not be read";
+  $("mq-one").innerHTML = "";
+  $("mq-demoted").innerHTML = "";
+  $("mq-boards").innerHTML = ""; $("mq-advice").innerHTML = "";
+  $("mq-body").innerHTML = `<div class="placeholder" style="text-align:left;line-height:1.6">
+    <b>The marketing queue is not readable from this browser.</b><br>
+    <span class="mono" style="font-size:11px">${esc(String(e.message || e))}</span><br><br>
+    Every read on this tab goes through the schema-v23 admin RPCs.
+    “function … does not exist” means <span class="mono">supabase/schema-v23.sql</span> has not been
+    applied to this project yet; “forbidden” means the signed-in address is not in
+    <span class="mono">admin_emails</span>. Nothing else on the dashboard is affected.</div>`;
+}
+
+function mqSetView(v) {
+  MQ.view = v;
+  document.querySelectorAll("#mq-view button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  (v === "week" ? mqWeek() : mqCal()).catch(showErr);
+  return false;
+}
+
+// ——— guidance strip: the operating rules, as the database states them ———
+function mqStrip() {
+  const w = MQ.week, g = w.guidance || {};
+  const used = Object.entries(g.used || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  $("mq-rules").innerHTML = [
+    esc(String(g.weekly_cap ?? "—")) + "/week/channel cap",
+    "anchor " + esc(String(g.anchor || "—")),
+    // Only channels that actually hold a slot this week. A roster of every
+    // channel at 0/2 would quietly re-assert a posting calendar this file is
+    // not allowed to own — and would list nextdoor_naomi, which has no
+    // windows at all and can never be scheduled.
+    used.length
+      ? "used " + used.map(([c, n]) => esc((MQ_CH[c] || c) + " " + n)).join(" · ")
+      : "no slots used yet this week",
+    g.burst_open
+      ? '<span style="color:var(--red);font-weight:600">burst window OPEN</span>'
+      : "burst window closed",
+    g.next_refresh ? "next refresh " + esc(utcStamp(g.next_refresh)) : "next refresh unknown",
+  ].join(' <span style="color:var(--fainter)">·</span> ');
+
+  const t = w.one_thing;
+  const nothing = !(w.tasks || []).length && !(w.overdue || []).length && !(w.unscheduled || []).length;
+  $("mq-one").innerHTML = t
+    ? `If you do one thing today: <b>${esc(t.why_headline)}</b>
+       <span class="mono" style="font-size:11px;color:var(--faint)">— ${esc(t.scheduled_for ? etTime(t.scheduled_for) : "no slot")} · ${esc(mqWho(t))}</span>
+       <a href="#marketing" onclick="return mqJump('${t.id}')">open →</a>`
+    : nothing
+      ? "Nothing in the queue yet. Tasks arrive with the next data refresh (Mon &amp; Thu, and only when a source actually moved) and from the Friday rate job when the 30-year moves ≥0.25 points."
+      : "Queue clear — everything scheduled through this week is posted or skipped.";
+}
+
+function mqJump(id) {
+  MQ.focus = id;
+  const done = () => {
+    const el = $("mq-task-" + id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); mqFlash(id); }
+  };
+  if (MQ.view !== "week") { mqSetView("week"); setTimeout(done, 0); } else { mqWeek().then(done, showErr); }
+  return false;
+}
+function mqFlash(id) {
+  const el = $("mq-task-" + id); if (!el) return;
+  el.style.borderColor = "var(--green)";
+  setTimeout(() => { el.style.borderColor = ""; }, 900);
+}
+
+// ——— week view: overdue first, then the week, then what has no slot ———
+async function mqWeek() {
+  const w = MQ.week;
+  const tasks = w.tasks || [], overdue = w.overdue || [], unsched = w.unscheduled || [];
+  const lab = (txt, color) => `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:${color};text-transform:uppercase;margin:14px 0 8px">${txt}</div>`;
+  let html = "";
+
+  if (MQ.focus) {   // a calendar chip can point at a card outside this week
+    const ft = MQ.by[MQ.focus];
+    const here = [tasks, overdue, unsched].some((a) => a.some((x) => x.id === MQ.focus));
+    if (ft && !here) html += lab("From " + esc(ft.scheduled_for ? etDay(ft.scheduled_for) : "the queue") +
+      " — outside this week", "var(--faint)") + mqCard(ft);
+  }
+  if (overdue.length) html += lab("Overdue — the slot passed and nothing was posted", "var(--red)") +
+    overdue.map(mqCard).join("");
+  if (tasks.length) {
+    html += lab("Week of " + esc(String(w.week_start || "")), "var(--faint)") + tasks.map(mqCard).join("");
+  } else {
+    html += `<div class="placeholder" style="line-height:1.6">Nothing scheduled for the week of
+      ${esc(String(w.week_start || ""))}. An allowed week may stay empty — the cap is a ceiling, not a
+      quota. The Calendar view flags empty weeks and names the evergreen card sitting on the bench.</div>`;
+  }
+  if (unsched.length) html += lab("Unscheduled — generated, no slot yet", "var(--faint)") +
+    unsched.map(mqCard).join("");
+
+  html += `<div style="font-size:11.5px;color:var(--fainter);line-height:1.5;margin-top:14px">Cards are
+    the last refresh's suggestions — nothing posts itself, ever. Mark posted after you have posted by
+    hand; skip reasons are data, not notes (“not newsworthy” twice on one metro runs it a tier lower for
+    60 days, disclosed in the next card's why).</div>`;
+  $("mq-body").innerHTML = html;
+}
+
+// ——— the card ———
+function mqCard(t) {
+  const late = mqLive(t) && t.scheduled_for && Date.parse(t.scheduled_for) < Date.now();
+  const chip = `<div class="when">
+      <b>${esc(t.scheduled_for ? etTime(t.scheduled_for) : "no slot")}</b>${esc(t.scheduled_for ? etDay(t.scheduled_for) : "unscheduled")}
+      <div style="margin-top:6px">${t.channel
+        ? `<span class="tag">${esc(MQ_CH[t.channel] || t.channel)}</span>`
+        : '<span class="tag" title="Press pitches and burst cards carry no channel: they occupy no posting window and are exempt from the weekly cap (schema-v23 §5).">no channel</span>'}</div>
+      ${MQ_TYPE_TAG[t.type] ? `<div style="margin-top:4px">${MQ_TYPE_TAG[t.type]}</div>` : ""}
+      <div style="margin-top:4px" class="mono">P${esc(String(t.priority_score))}</div>
+      ${late ? '<div style="margin-top:4px"><span class="tag red">LATE</span></div>' : ""}
+      ${t.status === "posted" ? '<div style="margin-top:4px"><span class="tag green">POSTED</span></div>' : ""}
+    </div>`;
+
+  const cap = t.caption
+    ? `<div class="cap">${esc(t.caption)}${t.hashtags ? `\n<span style="color:var(--gold)">${esc(t.hashtags)}</span>` : ""}</div>`
+    : "";
+  // One tap per thing the operator has to paste somewhere else.
+  const tools = t.status === "skipped" ? "" :
+    `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      ${t.caption ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','caption',this)">Copy caption</button>` : ""}
+      ${t.hashtags ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','hashtags',this)">Copy tags</button>` : ""}
+      ${t.utm_url ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','utm_url',this)">Copy link</button>
+        <span class="mono" style="font-size:10.5px;color:var(--fainter);word-break:break-all">${esc(t.utm_url)}</span>` : ""}
+    </div>`;
+
+  let act = "";
+  if (t.status === "posted") {
+    // NULL perf is "the join has not reached this row", never zero — so the
+    // stamp, not the number, decides which sentence this is.
+    const perf = t.perf_checked_at
+      ? `<b>drove ${fmt(t.perf_checks)} check${t.perf_checks === 1 ? "" : "s"}</b>` +
+        (t.perf_clicks ? ` · ${fmt(t.perf_clicks)} purchase click${t.perf_clicks === 1 ? "" : "s"}` : "") +
+        ` <span style="color:var(--fainter)">· measured ${esc(d10(t.perf_checked_at))}</span>`
+      : '<span style="color:var(--fainter)">performance joins after tonight’s run</span>';
+    act = `<div style="font-size:12px;margin-top:10px">Posted ${esc(d10(t.posted_at))} · ${perf}</div>`;
+  } else if (t.status === "skipped") {
+    act = `<div style="font-size:12px;margin-top:10px;color:var(--fainter)">Skipped — ${esc(String(t.status_reason || "").replace(/_/g, " "))} · ${esc(d10(t.status_updated_at))}</div>`;
+  } else {
+    act = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+        <button class="tag green" style="cursor:pointer" onclick="return mqPosted('${t.id}')">Mark posted</button>
+        <button class="tag" style="cursor:pointer" onclick="return mqSkip('${t.id}')">Skip</button>
+        <button class="tag" style="cursor:pointer" onclick="return mqResched('${t.id}')">Reschedule</button>
+        ${t.channel === "nextdoor_naomi" ? mqNaomiLink(t) : ""}
+      </div>
+      <div id="mq-skip-${t.id}" style="display:none;margin-top:8px;background:var(--amber-soft);border:1px solid #e8d5a8;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7"></div>
+      <div id="mq-slots-${t.id}" style="display:none;margin-top:8px;background:var(--hairline2);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7"></div>`;
+  }
+
+  const side = t.asset_path
+    ? `<img class="thumb" src="${esc(t.asset_path)}" alt="" loading="lazy"
+         onclick="return mqLight('${esc(t.asset_path)}')" onerror="mqThumbErr(this)">`
+    : `<div class="thumb-missing">no asset — ${t.type === "press_pitch" ? "pitches are email-only" : "text-only post"}</div>`;
+
+  return `<div class="task${t.status === "skipped" ? " dim" : ""}" id="mq-task-${t.id}">
+    ${chip}
+    <div style="min-width:0">
+      <div class="why-h">${esc(t.why_headline)}</div>
+      ${t.why_detail ? `<div class="why-d">${esc(t.why_detail)}</div>` : ""}
+      ${cap}${tools}${act}
+    </div>
+    <div>${side}</div>
+  </div>`;
+}
+
+// ——— asset thumbnail plumbing ———
+function mqThumbErr(img) {
+  const d = document.createElement("div");
+  d.className = "thumb-missing";
+  d.innerHTML = `asset not built — <span class="mono">${esc(img.getAttribute("src"))}</span><br>
+    card images are rendered into the site on every deploy, so a task generated since the last push
+    points at a file that does not exist yet. It appears after the next deploy. On localhost it is
+    normal for this to be empty.`;
+  img.replaceWith(d);
+}
+function mqLight(src) {
+  const box = $("mq-light");
+  if (!src) { box.style.display = "none"; $("mq-light-img").src = ""; return false; }
+  $("mq-light-img").src = src;
+  box.style.display = "grid";
+  return false;
+}
+
+// ——— copy (the mkCopy pattern: 1400ms "Copied ✓"). Verbatim — the caption
+// and hashtag line were reviewed as stored, so what ships is what was read. ———
+async function mqCopy(id, field, btn) {
+  const t = MQ.by[id]; if (!t) return false;
+  try {
+    await navigator.clipboard.writeText(String(t[field] || ""));
+    const l = btn.textContent; btn.textContent = "Copied ✓";
+    setTimeout(() => { btn.textContent = l; }, 1400);
+  } catch (e) { showErr(e); }
+  return false;
+}
+
+// ——— action: Mark posted ———
+async function mqPosted(id) {
+  try {
+    const r = await rpc("admin_marketing_mark_posted", { tid: id });
+    // The RPC only moves an UNPOSTED row, so ok:false means a second click or
+    // a stale tab — not an error worth a red bar, but not a silent no-op either.
+    if (!r || !r.ok) throw new Error("that task is no longer unposted — reload the tab");
+    await RENDER.marketing(); mqFlash(id);
+  } catch (e) { showErr(e); }
+  return false;
+}
+
+// ——— action: Skip. THE REASON BUTTONS ARE THE SUBMIT. There is no bare
+// "confirm skip" control in the DOM and no free-text field, so a reasonless
+// skip is structurally impossible — and it has to be, because the reason is
+// data: two "not newsworthy" skips on one metro demote it (schema-v23 §6).
+// "other" is a plain button; the RPC stores picklist values only. ———
+function mqSkip(id) {
+  const box = $("mq-skip-" + id); if (!box) return false;
+  if (box.style.display === "block") { box.style.display = "none"; return false; }
+  box.innerHTML = "Why skip? The reason is the button — it is counted, not read. " +
+    "“Not newsworthy” twice on one metro runs it a tier lower for 60 days.<br>" +
+    [["not_newsworthy", "not newsworthy"], ["timing", "timing"],
+     ["duplicate", "duplicate"], ["other", "other"]]
+      .map(([v, l]) => `<button class="tag" style="cursor:pointer;margin:3px 3px 0 0" onclick="return mqSkipGo('${id}','${v}')">${l}</button>`)
+      .join("");
+  box.style.display = "block";
+  return false;
+}
+async function mqSkipGo(id, reason) {
+  try {
+    const r = await rpc("admin_marketing_skip", { tid: id, p_reason: reason });
+    if (!r || !r.ok) throw new Error("that task is already posted or skipped — reload the tab");
+    await RENDER.marketing(); mqFlash(id);
+  } catch (e) { showErr(e); }
+  return false;
+}
+
+// ——— action: Reschedule. The picker renders every window the channel has in
+// the next 21 days, including the ones it cannot use, each with the database's
+// own refusal sentence — an operator who can see WHY a slot is closed learns
+// the calendar; one who sees a short list learns nothing. ———
+async function mqResched(id) {
+  const box = $("mq-slots-" + id); if (!box) return false;
+  if (box.style.display === "block") { box.style.display = "none"; return false; }
+  box.innerHTML = "Reading the windows…"; box.style.display = "block";
+  let slots;
+  try { slots = await rpc("admin_marketing_slots", { tid: id, p_days: 21 }); }
+  catch (e) { box.style.display = "none"; showErr(e); return false; }
+  box.innerHTML = mqSlotBox(id, slots || []);
+  return false;
+}
+function mqSlotBox(id, slots) {
+  if (!slots.length) {
+    return `No posting window in the next 21 days. A card with no channel — a press pitch or a burst —
+      has none at all by design: it occupies no slot, so the generator places it and the weekly cap
+      does not apply.`;
+  }
+  const open = slots.filter((s) => s.ok), shut = slots.filter((s) => !s.ok);
+  let html = open.length
+    ? "Open slots — the server re-checks whichever you pick:<br>" + open.map((s) =>
+        `<button class="tag" style="cursor:pointer;margin:3px 3px 0 0" title="${esc(s.window || "")}"
+          onclick="return mqReschedGo('${id}','${esc(s.at)}')">${esc(s.label)}${s.anchor ? " ★" : ""}</button>`).join("")
+    : "Every window in the next 21 days is closed. Free a slot or skip this task.";
+  if (open.length && open.some((s) => s.anchor))
+    html += '<div style="font-size:11px;color:var(--fainter);margin-top:4px">★ the week’s anchor slot — the first one of the week, where the loudest card belongs.</div>';
+  if (shut.length) {
+    html += '<div style="margin-top:8px;font-size:11.5px;color:var(--fainter)">Not available:</div>' +
+      shut.map((s) => `<div style="font-size:11.5px;color:var(--fainter)">
+        <span class="mono">${esc(s.label)}</span> — ${esc(s.reason || "closed")}</div>`).join("");
+  }
+  return html;
+}
+async function mqReschedGo(id, iso) {
+  try {
+    const r = await rpc("admin_marketing_reschedule", { tid: id, p_when: iso });
+    if (!r || !r.ok) throw new Error("that task can no longer be moved — reload the tab");
+    await RENDER.marketing(); mqFlash(id);
+  } catch (e) {
+    // A cap or window refusal is EXPECTED feedback, not a fault: the picker's
+    // list can be seconds stale, and v23 re-runs every rule on the row it is
+    // actually moving. It belongs beside the button that caused it, not in the
+    // page-wide error bar. Anything else IS a fault and goes to showErr.
+    const m = String(e.message || e), box = $("mq-slots-" + id);
+    if (box && /refused|no posting window/i.test(m)) {
+      box.innerHTML = `<b>The server refused that slot.</b><br>
+        <span class="mono" style="font-size:11px">${esc(m)}</span><br>
+        The picker is a convenience; the database is the boundary. Choose another slot, or close and
+        reopen this box for a fresh list.`;
+      box.style.display = "block";
+    } else showErr(e);
+  }
+  return false;
+}
+
+// ——— Nextdoor / Naomi. Recipient-BLANK mailto on purpose: this file is
+// served publicly (see the header comment), and a real, unaffiliated agent's
+// address does not belong hardcoded in it — docs/ATTRIBUTION.md, correction
+// dated 2026-08-08. mailto cannot attach a file, so the asset travels as an
+// absolute URL. Purely data-driven: nextdoor_naomi has zero rows in
+// marketing_windows, so no task can carry that channel and this link cannot
+// render until a dated migration inserts one. ———
+function mqNaomiLink(t) {
+  const body = (t.caption || "") + (t.hashtags ? "\n\n" + t.hashtags : "") +
+    (t.asset_path ? "\n\nAsset: " + location.origin + t.asset_path : "") +
+    (t.utm_url ? "\n" + t.utm_url : "");
+  return ` <a class="tag" style="cursor:pointer;text-decoration:none"
+    href="mailto:?subject=${encodeURIComponent("Nextdoor post — " + (t.metro_name || t.zip || "draft"))}&body=${encodeURIComponent(body)}">Draft the email</a>`;
+}
+
+// ——— calendar view. Sunday-start, because marketing_week_start is: the
+// Sunday 19:30 ET anchor is the FIRST slot of its week, not the last of the
+// previous one. Empty weeks come from the RPC's own weeks[] flags. ———
+async function mqCal() {
+  if (!MQ.cal) MQ.cal = etMonth();
+  let m;
+  try { m = await rpc("admin_marketing_month", { p_month: MQ.cal }); }
+  catch (e) {
+    $("mq-body").innerHTML = '<div class="placeholder">Calendar unavailable — ' +
+      esc(String(e.message || e)) + "</div>";
+    return;
+  }
+  MQ.month = m;
+  (m.days || []).forEach((d) => mqIndex(d.tasks));
+  if (m.evergreen) mqIndex([m.evergreen]);
+
+  const [y, mo] = MQ.cal.split("-").map(Number);
+  const dim = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  const lead = new Date(Date.UTC(y, mo - 1, 1)).getUTCDay();     // 0 = Sunday
+  const byDay = {}; (m.days || []).forEach((d) => { byDay[d.day] = d.tasks || []; });
+  const wks = {}; (m.weeks || []).forEach((w) => { wks[w.week_start] = w; });
+  const ever = m.evergreen;
+
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push('<div class="d out"></div>');
+  for (let d = 1; d <= dim; d++) {
+    const key = MQ.cal + "-" + String(d).padStart(2, "0");
+    const chips = (byDay[key] || []).map((t) => `<span class="cal-chip${
+      t.status === "posted" ? " posted" : t.type === "burst" ? " burst" : ""}"
+      title="${esc(t.why_headline)}" style="cursor:pointer" onclick="return mqJump('${t.id}')"
+      >${esc((etTime(t.scheduled_for).split(" ")[1]) || "")} ${esc(t.channel ? (MQ_CH[t.channel] || t.channel) : "—")}${
+        t.metro_name ? " · " + esc(t.metro_name) : t.zip ? " · " + esc(t.zip) : ""}</span>`).join("");
+    cells.push(`<div class="d"><div class="dn">${d}</div>${chips}</div>`);
+  }
+  while (cells.length % 7) cells.push('<div class="d out"></div>');
+
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    rows.push(cells.slice(i, i + 7).join(""));
+    // The Sunday that opens this row, in the same YYYY-MM-DD shape the RPC
+    // keys weeks[] by. Plain UTC date arithmetic — these are dates, not
+    // instants, so DST cannot move them.
+    const ws = new Date(Date.UTC(y, mo - 1, 1 - lead + i)).toISOString().slice(0, 10);
+    const wk = wks[ws];
+    if (wk && wk.empty) {
+      const past = new Date(Date.UTC(y, mo - 1, 1 - lead + i + 7)) < new Date();
+      rows.push(`<div class="cal-flag">${past
+        ? "Week of " + esc(ws) + " went by with nothing scheduled — allowed; the cap is a ceiling, not a quota."
+        : "Empty week — allowed (the cap is a ceiling, not a quota)." + (ever
+            ? ` Evergreen on the bench: “${esc(ever.why_headline)}” — <span style="text-decoration:underline;cursor:pointer" onclick="return mqJump('${ever.id}')">open it</span> and reschedule it in if the week should not stay quiet.`
+            : " No evergreen in the bank either — the generator builds those from the published track-record cases.")
+      }</div>`);
+    }
+  }
+
+  const label = new Date(Date.UTC(y, mo - 1, 1))
+    .toLocaleString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
+  $("mq-body").innerHTML = `<div class="panel">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <h2 style="margin:0">${esc(label)}</h2>
+      <button class="tag" style="cursor:pointer" onclick="return mqCalNav(-1)">‹</button>
+      <button class="tag" style="cursor:pointer" onclick="return mqCalNav(1)">›</button>
+    </div>
+    <div class="cal">
+      ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => `<div class="h">${d}</div>`).join("")}
+      ${rows.join("")}
+    </div>
+    <div class="note">Weeks start Sunday — the 7:30p anchor opens the week. A chip click opens the
+      card. Times are ET. Skipped tasks are not drawn: the grid is the plan and the record, and a
+      declined card lives on its own card in the week view.</div>
+  </div>`;
+}
+function mqCalNav(dir) {
+  const [y, m] = MQ.cal.split("-").map(Number);
+  MQ.cal = new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 7);
+  mqCal().catch(showErr);
+  return false;
+}
+
+// ——— demoted metros: an explanation for a market that went quiet ———
+async function mqDemoted() {
+  let rows = MQ.week && MQ.week.demoted;
+  // The week payload already carries the list; admin_marketing_demotions reads
+  // the same view and is the fallback if that key is ever dropped.
+  if (!Array.isArray(rows)) {
+    try { rows = await rpc("admin_marketing_demotions", {}); } catch (e) { rows = []; }
+  }
+  if (!rows.length) { $("mq-demoted").innerHTML = ""; return; }
+  $("mq-demoted").innerHTML = `<div class="panel" style="margin-top:16px">
+    <h2>Running a tier lower</h2>
+    <div class="note" style="margin:0 0 10px">Skipped as “not newsworthy” twice inside 60 days, so the
+      generator ranks these metros one priority tier down until the older of the two skips ages out.
+      Derived from the skip log itself — there is no list to maintain and nothing to undo by hand;
+      stop skipping a metro and it comes back on its own.</div>
+    <table class="grid"><thead><tr><th>Metro</th><th class="num">Skips (60d)</th><th>Until</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr><td>${esc(r.metro_name || r.metro_cbsa)}
+      <span class="mono" style="color:var(--fainter);font-size:11px">${esc(r.metro_cbsa)}</span></td>
+      <td class="num">${esc(String(r.skips))}</td><td class="mono">${esc(d10(r.expires_at))}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+// ——— 30-day leaderboard + advisory lines, rendered verbatim ———
+async function mqBoards() {
+  let b;
+  try { b = await rpc("admin_marketing_leaderboard", { days: 30 }); }
+  catch (e) {
+    // Additive panel: the queue itself is the tab, and a leaderboard that
+    // cannot be read must not take the cards down with it.
+    $("mq-boards").innerHTML = '<div class="placeholder">Leaderboard unavailable — <span class="mono" style="font-size:11px">' +
+      esc(String(e.message || e)) + "</span></div>";
+    $("mq-advice").innerHTML = "";
+    return;
+  }
+  const boards = [["By metro", "Metro", b.by_metro || [], (r) => r.metro_name || r.metro_cbsa],
+                  ["By type", "Type", b.by_type || [], (r) => String(r.type || "").replace(/_/g, " ")],
+                  ["By channel", "Channel", b.by_channel || [], (r) => MQ_CH[r.channel] || r.channel]];
+  if (!boards.some(([, , rows]) => rows.length)) {
+    $("mq-boards").innerHTML = `<div class="placeholder">No posted tasks in the last 30 days — the
+      leaderboard starts with the first card you mark posted.</div>`;
+  } else {
+    const tbl = (title, col, rows, keyf) => `<div>
+      <h2 style="font-family:'Newsreader',serif;font-size:15px;font-weight:600;margin:0 0 8px">${title}</h2>
+      <table class="grid"><thead><tr><th>${col}</th><th class="num">Posts</th><th class="num">Checks</th><th class="num">Clicks</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td>${esc(keyf(r))}</td>
+        <td class="num">${fmt(r.posts)}${r.measured < r.posts
+          ? `<span style="color:var(--fainter)" title="not measured yet"> (${fmt(r.posts - r.measured)} joining)</span>` : ""}</td>
+        <td class="num">${fmt(r.checks)}</td><td class="num">${fmt(r.clicks)}</td></tr>`).join("") ||
+        '<tr><td colspan="4" style="color:var(--fainter)">nothing yet</td></tr>'}</tbody></table></div>`;
+    $("mq-boards").innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px">' +
+      boards.map(([t, c, rows, k]) => tbl(t, c, rows, k)).join("") + "</div>" +
+      `<div style="font-size:11.5px;color:var(--fainter);margin-top:10px">Measured through ${
+        b.measured_through ? esc(d10(b.measured_through)) : "— the nightly join has not run yet"}. ${
+        b.unmeasured ? esc(fmt(b.unmeasured)) + " posted task(s) in this window are still unmeasured — counted as unknown, never as zero."
+                     : "Every posted task in this window has been measured."}</div>`;
+  }
+  // Verbatim from the RPC. These sentences are composed in SQL by a STABLE
+  // function that cannot write, and nothing on this page or in the pipeline
+  // reads them back — they end here, in front of a human.
+  $("mq-advice").innerHTML = (b.advisories || []).map((s) =>
+    `<div style="background:var(--hairline2);border:1px solid var(--hairline);border-left:3px solid var(--gold);border-radius:8px;padding:8px 12px;font-size:12.5px;margin-top:10px">${esc(s)}</div>`).join("") ||
+    `<div style="font-size:12px;color:var(--fainter);margin-top:10px">No advisory crosses its threshold
+      in this window.</div>`;
 }
 
 RENDER.health = async function () {

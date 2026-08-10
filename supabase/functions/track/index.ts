@@ -19,7 +19,7 @@
 // No extra secrets — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected.
 //
 // POST body (text/plain to avoid a CORS preflight per pageview; parsed as
-// JSON regardless): {event, zip?, plan?, source?, path?, ref?, ns?}
+// JSON regardless): {event, zip?, plan?, source?, campaign?, path?, ref?, ns?}
 //   200 {ok:true}                    stored
 //   400 {ok:false,error:"…"}         malformed / unknown event
 //   403 {ok:false}                   Origin not ours — browsers can't spoof
@@ -115,6 +115,13 @@ Deno.serve(async (req) => {
   const planRaw = String(b.plan ?? "");
   const plan = ["annual", "monthly", "report"].includes(planRaw) ? planRaw : null;
   const utm = String(b.source ?? "").trim().slice(0, 60) || null;
+  // Campaign token: the marketing queue's join key (schema-v23). Normalize to
+  // the column's shape and DROP anything that still doesn't match — a mangled
+  // share link must degrade to "uncounted", never fail the whole insert and
+  // silently stop counting page views. Keep this regex identical to the
+  // events.utm_campaign check constraint.
+  const campRaw = String(b.campaign ?? "").trim().toLowerCase().slice(0, 60);
+  const campaign = /^[a-z0-9][a-z0-9_-]{1,59}$/.test(campRaw) ? campRaw : null;
   const priceMode = ["monthly_led", "annual_led"].includes(String(b.price_mode ?? ""))
     ? String(b.price_mode) : null;
   const clickSource = ["sticky_bar"].includes(String(b.click_source ?? ""))
@@ -131,6 +138,7 @@ Deno.serve(async (req) => {
     ts: new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString(),
     is_new_session: b.ns === true,
     utm_source: utm,
+    utm_campaign: campaign,
     price_mode: priceMode,
     click_source: clickSource,
     referrer: refDomain(b.ref),

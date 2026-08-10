@@ -51,12 +51,27 @@
   } catch (e) {}
 
   // Capture channel on the landing page only; carry it for the session.
-  var utm = "", ref = "";
+  // utm_campaign rides the same rails as utm_source: OUR OWN label typed into
+  // a link by the marketing queue, never a fact about the visitor — the
+  // performance loop joins posted tasks to their clicks on it. Same shape the
+  // events column enforces (lowercase slug, ≤60); anything else is dropped
+  // here so a mangled share link degrades to "uncounted", never to a failed
+  // insert (the server normalizes and drops again — see track/index.ts).
+  var utm = "", ref = "", camp = "";
   try {
     utm = sessionStorage.getItem("sisy_utm") || "";
     ref = sessionStorage.getItem("sisy_ref") || "";
-    var qsUtm = new URLSearchParams(location.search).get("utm_source");
+    camp = sessionStorage.getItem("sisy_camp") || "";
+    var qs = new URLSearchParams(location.search);
+    var qsUtm = qs.get("utm_source");
     if (qsUtm && !utm) { utm = qsUtm.slice(0, 60); sessionStorage.setItem("sisy_utm", utm); }
+    var qsCamp = qs.get("utm_campaign");
+    if (qsCamp && !camp) {
+      qsCamp = qsCamp.toLowerCase().slice(0, 60);
+      if (/^[a-z0-9][a-z0-9_-]{1,59}$/.test(qsCamp)) {
+        camp = qsCamp; sessionStorage.setItem("sisy_camp", camp);
+      }
+    }
     if (document.referrer && !ref) {
       var h = new URL(document.referrer).hostname;
       if (h && h !== location.hostname) { ref = h; sessionStorage.setItem("sisy_ref", ref); }
@@ -69,6 +84,7 @@
       event: event,
       ns: extra.ns === true,
       source: utm || undefined,
+      campaign: camp || undefined,
       ref: ref || undefined,
       // pathname ONLY — location.search may carry a report access token,
       // and that must never reach analytics. The server strips again.

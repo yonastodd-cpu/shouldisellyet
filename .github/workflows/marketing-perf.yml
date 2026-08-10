@@ -1,0 +1,33 @@
+name: Nightly marketing performance join
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # 08:00 UTC daily = 3–4am ET: a full US day of clicks
+                          # is in, and the numbers are fresh before the
+                          # operator opens the queue in the morning.
+  workflow_dispatch: {}
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Measurement only: fills perf_checks / perf_clicks / perf_checked_at on
+      # posted tasks by joining them to events on the campaign token. Never
+      # posts, never emails, never changes a priority or a schedule — see
+      # "ADVISORY ONLY" in schema-v23 and pipeline/test_marketing_advisory.py.
+      #
+      # NO continue-on-error, deliberately, unlike this repo's other jobs. The
+      # neighbours (renewal reminders, event purge, the digest) ride alongside
+      # something that must not fail with them; this workflow has exactly one
+      # step, so red IS the alert and there is nothing else here to protect.
+      # A missing SUPABASE_URL / SUPABASE_SERVICE_KEY still exits 0 — a fork
+      # without secrets must not go red every single night.
+      - name: Join posted tasks to events
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/marketing_perf.py
