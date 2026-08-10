@@ -34,8 +34,13 @@ def mkrep(wsi=14.2, prev_wsi=13.4, delta=0.8, highest="2023-03", run=3,
                         "month": PERIOD}}
 
 
+# surge=True is the trigger since 2026-08-10 (a 25% crossing fired zero times
+# against real data — every gathering metro was already 65-83% deteriorating).
+# share_det is set above BIG_STORY_MIN_SHARE and zips above BIG_STORY_MIN_ZIPS
+# so this fixture clears the two floors that guard the surge.
 AUSTIN = {"cbsa": "12420", "name": "Austin-Round Rock-San Marcos, TX",
-          "zips": 61, "share_det": 28.3, "hold_share": 72.0, "median_mtl": 0.0,
+          "zips": 61, "share_det": 68.3, "hold_share": 72.0, "median_mtl": 0.0,
+          "surge": True,
           "sig": {"mos": {"near": 19, "median_mtl": 0.0},
                   "spy": {"near": 7, "median_mtl": 2.1}}}
 VEL = {"period": PERIOD, "gathering": [AUSTIN]}
@@ -101,7 +106,11 @@ def test_refresh_populates_queue():
     assert "14.2%" in rec["why_headline"]
     assert "since March 2023" in rec["why_headline"]
     flip = next(r for r in rows if r["type"] == "post" and r["metro_cbsa"] == "12420")
-    assert "28% of its 61 scored ZIPs" in flip["why_headline"]
+    assert "68% of its 61 scored ZIPs" in flip["why_headline"]
+    # The copy must not claim a crossing any more — it claims a surge, which
+    # is what the rule now actually detects.
+    assert "entered the top of our watch list" in flip["why_headline"]
+    assert "crossed the line" not in flip["why_headline"]
     assert "supply" in flip["why_detail"]          # the dial that moved
 
     # every scheduled_for sits on a window instant the calendar offers
@@ -490,3 +499,48 @@ def test_dedupe_index_is_inferable_by_on_conflict():
     assert "where" not in defs[-1].lower(), (
         "the dedupe index is partial again — ON CONFLICT (dedupe_key) cannot "
         f"infer it and every generator insert will fail:\n{defs[-1]}")
+
+
+# ————— publish guards (added 2026-08-10 from the first filled queue) —————
+# Three sentences reached the live queue that should never have been posted.
+# Each one gets a test named after what it did.
+
+def test_mix_shift_price_angle_is_not_published():
+    """22044 printed "prices are up 193.0% versus a year ago" off 36 sales,
+    because its median went 290k → 855k when different homes sold. No sales
+    floor catches a basket changing; a plausibility band does."""
+    entries = {"22044": {"m": {"spy": 1.93, "sold": 36}, "l": "strong", "r": []}}
+    assert MT.publishable("22044", entries) is not None
+    got = MT.cand_geo(["22044 (Falls Church, VA) prices are up 193.0% versus a year ago."],
+                      "2026-06", {}, {}, entries)
+    assert got == [], "a 193% y/y median move must never reach a caption"
+    # A normal move still publishes.
+    ok = {"22034": {"m": {"spy": 0.072, "sold": 26}, "l": "green", "r": []}}
+    assert MT.publishable("22034", ok) is None
+
+
+def test_improving_speed_angle_is_not_published_for_a_warned_zip():
+    """20841 printed "taking 43 days less to sell than a year ago" while the
+    site itself rated that ZIP yellow and its prices were down 4.1%. True, and
+    the wrong half of the picture — the cherry-pick our own reply bank warns
+    against."""
+    entries = {"20841": {"m": {"spy": -0.041, "sold": 43}, "l": "yellow",
+                         "r": [["price_falling"]]}}
+    got = MT.cand_geo(["Homes in 20841 (Boyds, MD) are taking 43 days less to sell "
+                       "than a year ago (69 days now)."], "2026-06", {}, {}, entries)
+    assert got == [], "an improving-speed angle must not lead on a warned ZIP"
+    # The same sentence on a healthy ZIP is fine.
+    healthy = {"20841": {"m": {"spy": 0.02, "sold": 43}, "l": "green", "r": []}}
+    assert len(MT.cand_geo(["Homes in 20841 (Boyds, MD) are taking 43 days less to "
+                            "sell than a year ago (69 days now)."],
+                           "2026-06", {}, {}, healthy)) == 1
+
+
+def test_overlapping_shares_are_explained_not_left_to_add_up():
+    """hold_share and share_det describe the SAME ZIPs from two angles and
+    routinely sum past 100. "63% still rate HOLD — but 76% are deteriorating"
+    reads as a maths error; the caption has to say they overlap."""
+    out = MT.cand_flips(VEL, VEL_PREV, PERIOD)
+    assert out, "the surge fixture should produce a story"
+    cap = out[0]["caption"]
+    assert "largely the same ZIP codes" in cap, cap

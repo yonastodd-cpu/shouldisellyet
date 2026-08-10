@@ -29,6 +29,7 @@ import sys
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
+from math import ceil
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -206,9 +207,19 @@ def build_angles(entries, flips, places, period, want=ANGLE_COUNT):
         c = [(z, e) for z, e in c if e.get("m", {}).get("mos") is not None]
         if not c: return None
         z, e = min(c, key=lambda t: t[1]["m"]["mos"])
+        # WEEKS BY CEILING, AND A MONTH IS 4.35 WEEKS, NOT 4. round(mos * 4)
+        # published "under 2 weeks" for 0.6 months of supply, which is 18.3
+        # days — over two and a half weeks. An "under N" claim has to round UP
+        # or it is false by construction, and it was false at almost every
+        # value (0.6→2 not 3, 1.2→5 not 6, 2.0→8 not 9).
+        # WORDING: months of supply is how long the CURRENT INVENTORY would
+        # take to clear at the current sales pace. It is not how long one home
+        # takes to sell — that is days-on-market, a different column. The old
+        # sentence stated the second while computing the first.
+        weeks = max(1, ceil(e['m']['mos'] * 30.44 / 7))
         return z, (f"{label(z, places)} has just {e['m']['mos']:.1f} months of supply — "
-                   f"at that pace every home listed there sells in under "
-                   f"{max(1, round(e['m']['mos'] * 4))} weeks.")
+                   f"under {weeks} week{'s' if weeks != 1 else ''} of inventory left "
+                   f"at the current sales pace.")
 
     def r_price(c):
         c = [(z, e) for z, e in c if e.get("m", {}).get("spy") is not None]

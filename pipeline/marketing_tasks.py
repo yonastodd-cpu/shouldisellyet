@@ -547,16 +547,29 @@ def cand_flips(vel, vel_prev, period):
     prev_metros = vel_prev.get("metros") or {}
     out = []
     for rank, g in enumerate(top, 1):
-        prev = prev_metros.get(g["cbsa"])
-        if not prev or not (prev.get("share_det", 0) < MC.BIG_FLIP_SHARE
-                            <= g.get("share_det", 0)):
+        prev = prev_metros.get(g["cbsa"]) or {}
+        # SURGE is the trigger — velocity.py sets it when a metro enters the
+        # gathering top-10 for the first time in six months, which is the
+        # thing that is actually new. The two floors below only stop a surge
+        # into a mild or tiny metro from being announced as a story.
+        if not g.get("surge"):
+            continue
+        if (g.get("share_det") or 0) < MC.BIG_STORY_MIN_SHARE:
+            continue
+        if (g.get("zips") or 0) < MC.BIG_STORY_MIN_ZIPS:
             continue
         tok = token("flip", period=period, cbsa=g["cbsa"])
         lines = [f"- A top-{MC.BIG_METRO_COUNT} metro by coverage (#{rank} of "
                  f"{len(rows)} on the gathering list, {g['zips']} scored ZIPs) "
                  f"— big enough that this is a story, not noise.",
-                 f"- Was {prev['share_det']:.1f}% deteriorating last month "
-                 f"({g['share_det'] - prev['share_det']:+.1f} pts)."]
+                 f"- First time in the gathering top-10 in six months — that "
+                 f"is what makes it news this month, not the level alone."]
+        # Only when it actually moved: the prior-month cache can hold the same
+        # figure, and "(+0.0 pts)" in a why is a line that costs attention and
+        # pays nothing.
+        if prev.get("share_det") is not None and abs(g["share_det"] - prev["share_det"]) >= 0.05:
+            lines.append(f"- Was {prev['share_det']:.1f}% deteriorating last "
+                         f"month ({g['share_det'] - prev['share_det']:+.1f} pts).")
         sig = g.get("sig") or {}
         if sig:
             dk = max(sig, key=lambda k: (sig[k].get("near") or 0, k))
@@ -568,24 +581,35 @@ def cand_flips(vel, vel_prev, period):
         out.append({
             "key": tok, "type": "post", "tier": 3,
             "metro_cbsa": g["cbsa"], "metro_name": g["name"],
-            "why_headline": f"{g['name']} just crossed the line: "
-                            f"{g['share_det']:.0f}% of its {g['zips']} scored "
-                            f"ZIPs are now deteriorating.",
+            "why_headline": f"{g['name']} just entered the top of our watch "
+                            f"list — {g['share_det']:.0f}% of its {g['zips']} "
+                            f"scored ZIPs are deteriorating.",
             "why_detail": "\n".join(lines),
             # The post_metro paste pattern — zero numeral literals in the
             # template itself; every figure arrives from the data.
+            # THE TWO SHARES OVERLAP, AND THE CAPTION HAS TO SAY SO. hold_share
+            # is the share of ZIPs whose VERDICT is HOLD today; share_det is the
+            # share whose velocity state is deteriorating — approaching a line
+            # they have not crossed. A ZIP is routinely in both, which is the
+            # entire point of the velocity layer. Printed as "63% still rate
+            # HOLD — but 76% are deteriorating" they read as disjoint groups
+            # summing past 100%, and the post looks like it cannot add up. The
+            # overlap is the story, so it is stated rather than left to trip
+            # the reader.
             "caption": (f"The housing warning signs are gathering in {g['name']}."
                         f"\n\n{g['hold_share']:.0f}% of its scored ZIP codes "
-                        f"still rate HOLD — but {g['share_det']:.0f}% are now "
-                        f"deteriorating. At the current pace the median nearest "
-                        f"signal is {mtl_prose(g.get('median_mtl'))}.\n\n"
+                        f"still rate HOLD today — and {g['share_det']:.0f}% are "
+                        f"already drifting toward a danger line. Those are "
+                        f"largely the same ZIP codes: calm on the surface, "
+                        f"moving underneath. At the current pace the median "
+                        f"nearest signal is {mtl_prose(g.get('median_mtl'))}.\n\n"
                         f"Watch your own ZIP free: {{utm_url}}\n"
                         f"(Source: ShouldISellYet Research, data through "
                         f"{pretty_month(period)})"),
             "asset_path": f"/assets/mkt/{period}/{tok}.png",
             "render": {"name": g["name"], "zips": g["zips"],
                        "share_det": g["share_det"],
-                       "prev_share_det": prev["share_det"],
+                       "prev_share_det": prev.get("share_det"),
                        "hold_share": g["hold_share"],
                        "median_mtl": g.get("median_mtl"),
                        "sig": sig, "period_pretty": pretty_month(period)},
@@ -593,7 +617,46 @@ def cand_flips(vel, vel_prev, period):
     return out
 
 
-def cand_geo(angles, period, zip_cbsa, cbsa_names):
+def publishable(z, entries):
+    """Is this ZIP's angle safe to PUBLISH? Returns None if fine, or the
+    reason to drop it.
+
+    The angle bank was written for the operator digest, where a strange number
+    is informative and a human reads it in context. The queue is different: its
+    sentences get pasted into public feeds, so a fact that is arithmetically
+    true but publicly indefensible has to be stopped here rather than trusted
+    to the operator's eye at 7:30 on a Sunday.
+
+    Two ways an angle goes wrong, both seen in the first filled queue:
+
+    MIX SHIFT. 22044 printed "prices are up 193.0% versus a year ago" off 36
+    sales. Its median went 290k → 855k because DIFFERENT HOMES sold, not
+    because anything appreciated 193%. MIN_SOLD_FOR_ANGLE (15) guards against
+    one sale swinging a percentage; it cannot guard against the composition of
+    the basket changing, and no sales floor can. A y/y move past
+    MAX_PLAUSIBLE_SPY is treated as a data artifact and dropped — a real
+    housing market does not do that, so a number that says it did is telling
+    us about the basket, not the market.
+
+    OFF-MESSAGE. 20841 printed "taking 43 days LESS to sell than a year ago"
+    while that same ZIP's verdict is price_falling and its prices are down
+    4.1%. Every word of it is true and it is still the wrong half of the
+    picture: this brand is a smoke detector, and posting the cheerful half of
+    a mixed ZIP is the cherry-pick our own reply bank tells us not to make.
+    An improving-speed angle is dropped when the ZIP's own verdict disagrees
+    with it.
+    """
+    e = entries.get(z) or {}
+    m = e.get("m") or {}
+    spy = m.get("spy")
+    if spy is not None and abs(spy) > MC.MAX_PLAUSIBLE_SPY:
+        return (f"y/y price move {spy * 100:+.0f}% is past the plausibility "
+                f"band (±{MC.MAX_PLAUSIBLE_SPY * 100:.0f}%) — median mix shift, "
+                f"not a market move")
+    return None
+
+
+def cand_geo(angles, period, zip_cbsa, cbsa_names, entries=None):
     """Tier 4 (+demotion): the standing-calendar filler. One task per
     build_angles() fact — the digest's own five sentences, reused verbatim
     as headlines because they were written to be pasted. The ZIP is read
@@ -607,6 +670,20 @@ def cand_geo(angles, period, zip_cbsa, cbsa_names):
             print(f"geo: angle {i} carries no ZIP — skipped: {sentence[:60]}…")
             continue
         z = m.group(1)
+        drop = publishable(z, entries or {})
+        if drop:
+            print(f"geo: {z} angle not publishable — {drop}")
+            continue
+        # An improvement framing on a ZIP the site itself is warning about.
+        e = (entries or {}).get(z) or {}
+        speed_up = "less to sell" in sentence
+        warning = (e.get("l") in ("yellow", "red")) or any(
+            r[0] in ("price_falling", "supply_building", "cuts_widespread")
+            for r in (e.get("r") or []))
+        if speed_up and warning:
+            print(f"geo: {z} angle is off-message (homes selling faster while "
+                  f"the ZIP reads {e.get('l')}) — skipped")
+            continue
         cbsa = zip_cbsa.get(z)
         out.append({
             "key": token("geo", period=period, zip=z), "type": "post", "tier": 4,
@@ -1070,7 +1147,7 @@ def main(argv=None):
     cands += cand_pitches(rep, now_utc, period)
     cands += cand_receipts(receipts, today, cbsa_names, places, period)
     cands += cand_flips(vel, vel_prev, period)
-    cands += cand_geo(angles, period, zip_cbsa, cbsa_names)
+    cands += cand_geo(angles, period, zip_cbsa, cbsa_names, entries)
     apply_demotions(cands, demotions)
 
     kept = []

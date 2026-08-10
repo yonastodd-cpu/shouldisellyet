@@ -36,9 +36,34 @@ NARRATIVE = {"text": "", "period": ""}
 CONTRARIAN_CALM_WSI = 20.0   # bearish narrative + WSI below this = gap
 CONTRARIAN_HOT_WSI = 10.0    # bullish narrative + WSI above this = gap
 
-# ——— Big-metro flip rule ———
-BIG_METRO_COUNT = 30    # "top-30" = most scored ZIPs on the gathering list
-BIG_FLIP_SHARE = 25.0   # share_det crossing this upward is the flip
+# ——— Publish guards for the queue's copy ———
+# A year-over-year median move larger than this is treated as a MIX SHIFT
+# (different homes sold), not a market move, and the angle is dropped rather
+# than posted. Set from the failure that produced it: 22044 printed "+193.0%"
+# off 36 sales because its median went 290k → 855k. A real ZIP-level housing
+# market does not appreciate 40% in a year; a basket of houses instead of
+# condos does. The operator digest keeps showing these — a strange number is
+# informative to a human reading in context. Only the PUBLIC queue drops them.
+MAX_PLAUSIBLE_SPY = 0.40
+
+# ——— Big-metro story rule ———
+# WHY THIS IS NOT A 25% CROSSING ANY MORE (changed 2026-08-10).
+# The rule used to fire when a top-30 metro's deteriorating share crossed 25%
+# upward. Checked against the first real queue, it fired ZERO times and could
+# not have fired at all: every one of the 25 metros on the gathering list was
+# already between 65.7% and 83.3% deteriorating, and had been the month
+# before. A threshold every candidate cleared years ago is not a filter, it is
+# an off switch — and it was the reason the queue held nothing but tier-4
+# filler while the actual news went unposted.
+#
+# The signal that IS live is velocity.py's own `surge` flag: a metro entering
+# the gathering top-10 for the first time in six months. That is genuinely new
+# information, computed upstream, and it does not need a hand-set threshold to
+# stay meaningful as the market moves. BIG_STORY_MIN_SHARE is a floor, not the
+# trigger — it only stops a surge into a mild metro from being called a story.
+BIG_METRO_COUNT = 30       # "top-30" = most scored ZIPs on the gathering list
+BIG_STORY_MIN_SHARE = 50.0 # a surging metro below this is not yet a story
+BIG_STORY_MIN_ZIPS = 20    # and one too small to generalise from is not either
 
 # ——— Receipts ———
 RECEIPT_LOOKBACK_DAYS = 35   # a receipt older than one cycle is stale news
