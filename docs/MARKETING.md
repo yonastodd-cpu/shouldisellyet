@@ -256,3 +256,38 @@ grep -c "archive folder" /tmp/mqd/digest-*.html    # must be 0
 
 python3 -m pytest pipeline/ -q
 ```
+
+## Receipts: why the queue starts without them (2026-08-10)
+
+The receipt rule works — `test_receipt_rules` covers it, and a fixture renders
+the card correctly — but it generated nothing on the first fills, and that is
+correct rather than broken. `press_corroboration` is empty, and a receipt is
+not something the pipeline can compute. Every row asserts that a **named
+outlet published a specific headline on a specific date**, and the card turns
+that assertion into a public post that quotes it:
+
+> On Jun 20 our index flagged Boise City, ID. On Jul 31, Idaho Statesman
+> reported it: "Boise home sellers face longest waits since 2022." A 41-day
+> head start is the kind sellers can actually use.
+
+A seeded or guessed row here is a fabricated citation published as marketing,
+on the one surface whose whole pitch is that nothing is quoted from memory.
+So the table stays empty until a human logs real coverage. The form is on the
+**Markets to Market** tab, panel 2; it refuses to save without a URL and an
+article date, and computes `lead_days` itself rather than accepting one.
+
+**THE LEAD TIME IS CAPPED BY OUR OWN RECORD, NOT BY THE PRESS.** `flag_date`
+means "when WE first said it", and the earliest date we can prove is
+**2026-08-02** — when `verdicts-2026-05.json`, the first committed verdict
+snapshot, entered the repo. A receipt logged today can therefore claim at most
+an 8-day head start, however long ago the market actually turned. That number
+grows one day per day and cannot be hurried; claiming more would mean dating a
+flag we cannot show. This is the same discipline the track-record cases follow
+(`tools/cases.yml`: no case publishes unless it reproduces), applied to the
+present tense.
+
+Practical consequence: expect receipts to start firing meaningfully around
+late 2026, once the snapshot history is deep enough for a real lead. Until
+then, log coverage as it appears — the rows accumulate, `lead_days` is
+computed per row, and the admin panel's median lead time is the number that
+eventually becomes the marketing claim.
