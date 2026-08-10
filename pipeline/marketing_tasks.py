@@ -443,9 +443,35 @@ def cand_contrarian(rep, period):
     hold = 100.0 - wsi
     stance = n.get("stance", "bearish")
     if stance == "bearish" and (wsi < MC.CONTRARIAN_CALM_WSI or (delta or 0) < 0):
-        counter = (f"{hold:.1f}% of scored ZIP markets still rate HOLD or better"
-                   + (f", and the warning share fell {abs(delta):.1f} pts this month"
-                      if (delta or 0) < 0 else ""))
+        # LEAD WITH WHATEVER ACTUALLY MAKES THE GAP. Two different facts can
+        # open this branch and they are not equally honest to lead with.
+        # When the LEVEL is calm (wsi below the calm line) the HOLD share is
+        # the counter. When the level is high and only the TREND is falling —
+        # 62.2% warning, down 2.4 pts — leading with "37.8% still rate HOLD or
+        # better" picks the weaker half of our own data and reads as spin,
+        # which is the failure the 20841 angle was pulled for. The trend is
+        # the honest counter there, and it is also the stronger one.
+        run = rec.get("run_length") or 0
+        if wsi < MC.CONTRARIAN_CALM_WSI:
+            # The LEVEL is the gap: most markets are fine, whatever the
+            # coverage says. That is the strongest true counter, so it leads,
+            # and a falling trend rides along as support.
+            counter = f"{hold:.1f}% of scored ZIP markets still rate HOLD or better"
+            if (delta or 0) < 0:
+                counter += (f", and the warning share fell "
+                            f"{abs(delta):.1f} pts this month")
+        else:
+            # The level is NOT calm — only the trend makes this a gap. Leading
+            # with the HOLD share here would pick the weaker half of our own
+            # data (37.8% while 62.2% show warning signs), which is the spin
+            # the 20841 angle was pulled for.
+            counter = f"the warning share fell {abs(delta):.1f} points this month"
+            if run >= 2 and rec.get("run_direction") == "down":
+                counter += f", a {ordinal(run)} consecutive monthly decline"
+            if rec.get("lowest_since"):
+                counter += (" — the lowest share on record"
+                            if rec["lowest_since"] == "record"
+                            else f" and the lowest since {pretty_month(rec['lowest_since'])}")
     elif stance == "bullish" and wsi > MC.CONTRARIAN_HOT_WSI and (delta or 0) > 0:
         counter = (f"warning signs are flashing in {wsi:.1f}% of scored ZIP "
                    f"markets, up {delta:+.1f} pts this month")

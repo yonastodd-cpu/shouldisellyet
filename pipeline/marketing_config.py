@@ -30,7 +30,16 @@ from growth_config import RATE_BURST_POINTS, is_dmv  # noqa: F401 — re-exporte
 # Optional third key "stance": what the HEADLINES are saying, not what we
 # think — "bearish" (crash-coverage dominating; the default when omitted) or
 # "bullish" (boom/FOMO coverage dominating).
-NARRATIVE = {"text": "", "period": ""}
+# SET 2026-08-10 FOR THE 2026-06 DATA MONTH. This is a claim about what the
+# COVERAGE says, not about what the market is doing or what we believe — the
+# rule exists to find the gap between the two. Re-read it before each data
+# month and change or clear it; a stale narrative is worse than none, which is
+# why "period" has to match or the rule sits out on its own.
+NARRATIVE = {
+    "text": "housing-crash coverage dominating the national headlines",
+    "period": "2026-06",
+    "stance": "bearish",
+}
 
 # The gap only exists when the data disagrees with the stance:
 CONTRARIAN_CALM_WSI = 20.0   # bearish narrative + WSI below this = gap

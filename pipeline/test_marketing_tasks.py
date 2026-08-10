@@ -544,3 +544,23 @@ def test_overlapping_shares_are_explained_not_left_to_add_up():
     assert out, "the surge fixture should produce a story"
     cap = out[0]["caption"]
     assert "largely the same ZIP codes" in cap, cap
+
+
+def test_contrarian_leads_with_the_fact_that_makes_the_gap():
+    """Two different facts open the bearish branch and they are not equally
+    honest to lead with. At a CALM level the HOLD share is the counter; at a
+    high level where only the trend is falling, leading with the HOLD share
+    picks the weaker half of our own data (37.8% while 62.2% show warning
+    signs) — the spin the 20841 angle was pulled for."""
+    import marketing_config as mc
+    old = mc.NARRATIVE
+    try:
+        mc.NARRATIVE = {"text": "crash coverage", "period": PERIOD, "stance": "bearish"}
+        calm = MT.cand_contrarian(mkrep(wsi=14.2, delta=-0.3), PERIOD)
+        assert calm["why_headline"].index("85.8%") < calm["why_headline"].index("fell")
+
+        loud = MT.cand_contrarian(mkrep(wsi=62.2, delta=-2.4), PERIOD)
+        assert "the warning share fell 2.4 points" in loud["why_headline"]
+        assert "37.8% of scored ZIP markets still rate HOLD" not in loud["why_headline"]
+    finally:
+        mc.NARRATIVE = old
