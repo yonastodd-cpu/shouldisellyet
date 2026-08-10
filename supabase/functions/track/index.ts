@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
   const utm = String(b.source ?? "").trim().slice(0, 60) || null;
   const priceMode = ["monthly_led", "annual_led"].includes(String(b.price_mode ?? ""))
     ? String(b.price_mode) : null;
+  const clickSource = ["sticky_bar"].includes(String(b.click_source ?? ""))
+    ? String(b.click_source) : null;
 
   // Pathname only. Cut at ? and # so tokens and query params can't arrive
   // even if a caller sends a full URL.
@@ -130,6 +132,7 @@ Deno.serve(async (req) => {
     is_new_session: b.ns === true,
     utm_source: utm,
     price_mode: priceMode,
+    click_source: clickSource,
     referrer: refDomain(b.ref),
     zip,
     plan,

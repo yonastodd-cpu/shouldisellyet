@@ -80,6 +80,7 @@
       // (prices.js publishes window.PRICE_DISPLAY_MODE; pages without
       // prices.js send no mode, and the column stays null.)
       price_mode: (event.indexOf("purchase_click") === 0 && window.PRICE_DISPLAY_MODE) || undefined,
+      click_source: extra.click_source || undefined,
     };
     try {
       fetch(FN, {
@@ -102,6 +103,7 @@
     if (!el) return;
     var name = el.getAttribute("data-track");
     if (!name) return;
-    send(name, { zip: el.getAttribute("data-track-zip") || undefined });
+    send(name, { zip: el.getAttribute("data-track-zip") || undefined,
+                 click_source: el.getAttribute("data-track-source") || undefined });
   });
 })();

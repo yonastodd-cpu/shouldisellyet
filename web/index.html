@@ -318,6 +318,25 @@ h1 em{font-style:italic;color:var(--navy)}
 
 .proofline{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.08em;
            color:var(--faint-ink);text-transform:uppercase;margin-bottom:18px}
+/* Mobile sticky unlock bar */
+#sticky-unlock{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;
+  align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  background:#fffdf9;border-top:1px solid var(--hairline);
+  box-shadow:0 -6px 20px rgba(28,36,48,.10)}
+#sticky-unlock .btn{flex:1;text-align:center;text-decoration:none;font-size:var(--fs-ui)}
+#sticky-dismiss{flex:none;width:40px;height:40px;border:1px solid var(--hairline);
+  border-radius:10px;background:#fff;color:var(--muted);font-size:1.2rem;cursor:pointer}
+@media (min-width:769px){ #sticky-unlock{display:none!important} }
+@media (max-width:768px){
+  /* No entrance animation, deliberately. A slide-from-below holds its FIRST
+     keyframe whenever animations are paused (backgrounded tab, energy
+     saver), and frame 0 of translateY(100%) is "resting off-screen" — an
+     appear-effect whose failure mode is invisibility. The brief allowed a
+     slide; instant is the version with no failure mode, and it satisfies
+     prefers-reduced-motion by construction. */
+  #sticky-unlock.on{display:flex}
+}
+
 /* ————— Alerts in action ————— */
 .alerts-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:start}
 .mailcard{background:#fff;border:1px solid var(--hairline);border-radius:14px;
@@ -613,7 +632,19 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       </div>
     </div>
 
-    <div class="card waitcard" id="waitcard">
+    <!-- Mobile sticky unlock — docks to the viewport bottom AFTER the visitor
+     scrolls past the inline unlock bar (≤768px only). Hidden while the
+     inline bar or the action row is on screen (never overlaps them), while
+     any input is focused (never fights the keyboard), and forever within
+     the session once dismissed. Same plan link, same price token; its
+     clicks carry click_source=sticky_bar so its contribution is measurable
+     against the inline bar. -->
+<div id="sticky-unlock" hidden>
+  <a class="btn" id="cta-sticky-monitor" data-track="purchase_click_monitor" data-track-source="sticky_bar" href="subscribe.html?plan=monitor">Unlock + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
+  <button type="button" id="sticky-dismiss" aria-label="Dismiss">&times;</button>
+</div>
+
+<div class="card waitcard" id="waitcard">
       <div class="t">We're not scoring <span id="wl-zip"></span> yet</div>
       <p>Smaller markets report too few sales for a reliable verdict. Leave your email and we'll tell you the moment your ZIP goes live.</p>
       <form onsubmit="return joinWaitlist(event)">
@@ -1364,6 +1395,58 @@ async function renderProofLine() {
   if (parts.length) { el.textContent = parts.join(" · "); el.hidden = false; }
 }
 
+
+// ————— Mobile sticky unlock bar —————
+// Shows only after the visitor has scrolled PAST the inline unlock bar, and
+// hides whenever the inline bar or the action row is on screen (never
+// overlaps them), while any input is focused (never fights the keyboard),
+// and forever within the session once dismissed.
+//
+// Geometry on a rAF-throttled scroll listener, NOT IntersectionObserver: an
+// instant jump (scrollIntoView, an in-page anchor) can move an anchor from
+// below the viewport to above it without ever intersecting, and the observer
+// never fires for a 0→0 ratio change — the first implementation missed
+// exactly that and the bar never appeared.
+(function () {
+  const bar = document.getElementById("sticky-unlock");
+  if (!bar) return;
+  const KEY = "sisy_sticky_dismissed";
+  let dismissed = false, typing = false;
+  try { dismissed = sessionStorage.getItem(KEY) === "1"; } catch (e) {}
+
+  function sync() {
+    let on = false;
+    if (!dismissed && !typing && innerWidth <= 768) {
+      const inline = document.getElementById("unlock-bar");
+      const ctas = document.querySelector(".v-ctas");
+      const preview = document.getElementById("preview");
+      if (inline && ctas && preview && !preview.hidden) {
+        const ib = inline.getBoundingClientRect(), cb = ctas.getBoundingClientRect();
+        const visible = r => r.bottom > 0 && r.top < innerHeight;
+        on = ib.bottom < 0 && !visible(ib) && !visible(cb);
+      }
+    }
+    bar.hidden = !on;
+    bar.classList.toggle("on", on);
+  }
+  // sync runs DIRECTLY on scroll — two rect reads, cheap. The first version
+  // throttled through requestAnimationFrame with a ticking flag; rAF does not
+  // fire in a backgrounded tab, so one scroll while hidden left the flag
+  // stuck and every later scroll a no-op. A throttle whose failure mode is
+  // "permanently off" is worse than no throttle.
+  addEventListener("scroll", sync, { passive: true });
+  addEventListener("resize", sync);
+  document.addEventListener("focusin", e => {
+    if (e.target.matches && e.target.matches("input,textarea,select")) { typing = true; sync(); }
+  });
+  document.addEventListener("focusout", () => { typing = false; sync(); });
+  document.getElementById("sticky-dismiss").addEventListener("click", () => {
+    dismissed = true;
+    try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
+    sync();
+  });
+})();
+
 function show(el, on) { el.classList.toggle("hidden", !on); }
 let lastVerdict = null, reqSeq = 0;
 // When the waitlist card became visible — the "form rendered" moment for the
@@ -1455,7 +1538,7 @@ function setPlanLinks(zip) {
   // unlock bar's pair remain.
   [["cta-price-report", "report"], ["cta-unlock-report", "report"],
    ["cta-price-monitor", "monitor"], ["cta-unlock-monitor", "monitor"],
-   ["cta-strip-monitor", "monitor"]]
+   ["cta-strip-monitor", "monitor"], ["cta-sticky-monitor", "monitor"]]
     .forEach(([id, plan]) => {
       const a = document.getElementById(id);         // monthly is subscribe.html's default
       if (a) a.href = "subscribe.html?plan=" + plan + q;
