@@ -1,0 +1,1102 @@
+"""
+ShouldISellYet — marketing queue generator.
+
+    python3 pipeline/marketing_tasks.py [--data web/data] [--dry-run]
+                                        [--force-period YYYY-MM] [--now ISO]
+
+Runs in the refresh workflow (update.yml, changed==true path) BEFORE
+growth_digest.py, so the digest reports this refresh's queue and not last
+refresh's. Derives NOTHING itself — every candidate reuses a fact another
+module already computed:
+
+  research     pipeline/research/research-{period}.json (growth_digest.load_research)
+  velocity     web/data/velocity-aggregates.json (gathering rows) + the
+               committed pipeline/velocity/velocity-{prev}.json for crossings
+  angles       growth_digest.build_angles — the digest's own five facts
+  receipts     public.press_corroboration via PostgREST (service key)
+  cases        web/data/cases/*.json (kind != "miss" only)
+  windows      public.marketing_windows via PostgREST — THE DB IS THE
+               RULEBOOK; marketing_config.FALLBACK_WINDOWS only in dry-run
+  demotions    public.marketing_demotions view (derived, no table)
+  narrative    marketing_config.NARRATIVE (operator, monthly)
+
+and writes rows to public.marketing_tasks. Nothing here posts, emails, or
+auto-sends anything, ever: the queue is a list of things a human may choose
+to do.
+
+REFUSE, DON'T WARN. A candidate that cannot be placed inside the caps is
+never written anywhere — it prints `REFUSED <dedupe_key> <reason>` and is
+returned in the Plan for tests. Python refuses first; the marketing_tasks
+trigger is the backstop, which is why rows go up ONE PER POST (a PostgREST
+array is one statement — one refused row would roll back the whole batch).
+
+IDEMPOTENT. dedupe_key = utm_campaign = asset filename stem (pipeline/utm.py),
+deterministic from the triggering fact; inserts use ?on_conflict=dedupe_key
+with `Prefer: resolution=ignore-duplicates,return=minimal`, so a re-run
+inserts zero new rows and never clobbers a status the operator set —
+ignore-duplicates, not merge, is the whole design.
+
+DETERMINISTIC. No LLM calls, no wall-clock reads outside the --now default:
+the same data files, DB reads, and --now instant produce the same rows and
+the same pack-manifest bytes.
+
+Missing config prints and exits 0, always: no Supabase env = full dry run —
+the plan prints WOULD-INSERT lines, nothing is written, a fork without
+secrets stays green.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.parse
+import urllib.request
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+import marketing_config as MC
+from build_research import mtl_prose            # the "0.0 months" guard — one home
+from growth_digest import (build_angles, diff_verdicts, load_current,
+                           load_places, load_research, load_snapshot,
+                           pitch_draft, pretty_month, prev_period,
+                           strongest_record)
+from utm import SLUG_RE, metro_tag, slug, token, utm_url
+from velocity import load_cbsa                  # zip -> cbsa, cbsa -> title
+
+ROOT = Path(__file__).resolve().parents[1]
+CASES_DIR = ROOT / "web" / "data" / "cases"
+PACK_DIR = Path(__file__).parent / "marketing"  # tests point this at a tmpdir
+SCHEMA_V23 = ROOT / "supabase" / "schema-v23.sql"
+
+# Signal label vocabulary — mirrors admin.html's VEL_SIG_LABEL and the
+# research page's dial names. Keep the pairs in step.
+SIG_LABEL = {"spy": "price trend", "dom": "time to sell",
+             "mos": "supply", "pd": "price cuts"}
+
+# Deterministic slot ordering when several channels share an instant (the
+# three Sunday anchors): the rotation the audience actually sees first.
+CHANNEL_ORDER = ("ig", "x", "fb", "nextdoor_naomi")
+
+# corroborates value -> the word the receipt copy uses for our flag.
+FLAG_WORD = {"first_watch": "WATCH", "first_act": "ACT",
+             "gathering_entry": "gathering-list"}
+
+
+# ————— ET clock arithmetic —————
+# scheduled_for is timestamptz and CI runs UTC; every window is an ET wall
+# time. zoneinfo (stdlib) first; on a machine with no tz database the
+# fallback is the post-2007 US DST rule — second Sunday of March to first
+# Sunday of November = UTC-4, else UTC-5 — which is only wrong inside the
+# 02:00 transition hour itself, and no configured slot can occupy it.
+try:
+    from zoneinfo import ZoneInfo
+    _ET = ZoneInfo("America/New_York")
+except Exception:                                # pragma: no cover
+    _ET = None
+
+
+def _dst(d):
+    """True when US Eastern daylight time is in effect on date d."""
+    def nth_sunday(month, n):
+        first = date(d.year, month, 1)
+        first += timedelta(days=(6 - first.weekday()) % 7)
+        return first + timedelta(days=7 * (n - 1))
+    return nth_sunday(3, 2) <= d < nth_sunday(11, 1)
+
+
+def et_to_utc(d, hhmm):
+    """Naive America/New_York wall time -> aware UTC datetime."""
+    h, m = int(hhmm[:2]), int(hhmm[3:5])
+    naive = datetime(d.year, d.month, d.day, h, m)
+    if _ET is not None:
+        return naive.replace(tzinfo=_ET).astimezone(timezone.utc)
+    return (naive + timedelta(hours=4 if _dst(d) else 5)).replace(tzinfo=timezone.utc)
+
+
+def et_date(dt):
+    """UTC instant -> ET calendar date (same zoneinfo/arithmetic pair)."""
+    if _ET is not None:
+        return dt.astimezone(_ET).date()
+    d = (dt - timedelta(hours=5)).date()
+    return (dt - timedelta(hours=4)).date() if _dst(d) else d
+
+
+def week_start(d_et):
+    """The marketing week starts SUNDAY in ET — the Sunday 19:30 anchor is
+    the week's first slot, not the last of the previous one. Mirrors
+    public.marketing_week_start in schema-v23.sql; change one, change both."""
+    return d_et - timedelta(days=(d_et.weekday() + 1) % 7)
+
+
+def _fmt_et(dt):
+    """'Sun Aug 9, 9:00 AM ET' — no leading-zero day/hour, no %-d (BSD/GNU
+    strftime disagree on it)."""
+    local = dt.astimezone(_ET) if _ET is not None else \
+        dt.astimezone(timezone(timedelta(hours=-4 if _dst(et_date(dt)) else -5)))
+    h = local.hour % 12 or 12
+    ampm = "AM" if local.hour < 12 else "PM"
+    return (f"{local.strftime('%a %b')} {local.day}, {h}:{local.minute:02d} "
+            f"{ampm} ET")
+
+
+def _mon_day(dt):
+    """'Aug 9' without a leading zero."""
+    return f"{dt.strftime('%b')} {dt.day}"
+
+
+def parse_ts(s):
+    """ISO timestamp (Z or offset) -> aware UTC datetime."""
+    dt = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def iso_z(dt):
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def ordinal(n):
+    if 10 <= n % 100 <= 20:
+        suf = "th"
+    else:
+        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suf}"
+
+
+# ————— Supabase I/O (urllib only, the growth_digest._sb pattern) —————
+
+def sb_env():
+    """(url, key) from the PIPELINE env names. Edge functions use
+    SUPABASE_SERVICE_ROLE_KEY; that name is never read here."""
+    return (os.environ.get("SUPABASE_URL", "").rstrip("/"),
+            os.environ.get("SUPABASE_SERVICE_KEY", ""))
+
+
+def _http(req):
+    """One seam for the tests to monkeypatch. Returns (status, body_text)."""
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.status, r.read().decode("utf-8", "replace")
+
+
+def sb_get(url, key, path, params):
+    """GET against PostgREST. (rows, error_string) — a failure is a labelled
+    gap for the caller to print, never a raise."""
+    q = urllib.parse.urlencode(params, safe="().,*:-")
+    req = urllib.request.Request(
+        f"{url}/rest/v1/{path}?{q}",
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Accept": "application/json"})
+    try:
+        _, body = _http(req)
+        return json.loads(body), None
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
+def post_task_row(url, key, row):
+    """ONE row per POST — the v23 trigger raises per row, and a PostgREST
+    array is a single statement, so batching would let one refused row roll
+    back every task beside it. (ok, error_string)."""
+    req = urllib.request.Request(
+        f"{url}/rest/v1/marketing_tasks?on_conflict=dedupe_key",
+        data=json.dumps([row]).encode(),
+        method="POST",
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json",
+                 "Prefer": "resolution=ignore-duplicates,return=minimal"})
+    try:
+        _http(req)
+        return True, None
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode()).get("message", "")
+        except Exception:
+            detail = ""
+        return False, f"HTTP {exc.code} {detail}".strip()
+    except Exception as exc:
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+# ————— data loaders —————
+
+def load_windows(url, key, dry):
+    """The posting calendar. The DATABASE is the single rulebook; the
+    FALLBACK_WINDOWS mirror serves dry runs and secretless forks, and a
+    fetch failure degrades to it with a labelled line (the trigger still
+    enforces the real calendar on insert)."""
+    if dry or not (url and key):
+        return [dict(w) for w in MC.FALLBACK_WINDOWS], "fallback"
+    rows, err = sb_get(url, key, "marketing_windows",
+                       {"select": "channel,dow,at_time,label,anchor"})
+    if err or rows is None:
+        print(f"windows unreadable — {err}; planning against FALLBACK_WINDOWS "
+              f"(the DB trigger still enforces the real calendar)")
+        return [dict(w) for w in MC.FALLBACK_WINDOWS], "fallback"
+    for w in rows:
+        w["at_time"] = str(w["at_time"])[:5]     # PostgREST time -> 'HH:MM'
+    return rows, "db"
+
+
+def load_receipts(url, key, getter=sb_get):
+    """press_corroboration rows, or [] with a labelled gap printed."""
+    rows, err = getter(url, key, "press_corroboration",
+                       {"select": "id,url,outlet,headline,published_on,"
+                                  "metro_cbsa,zip,corroborates,flag_date"})
+    if err or rows is None:
+        print(f"receipts unreadable — {err} (rule sits out)")
+        return []
+    return rows
+
+
+def load_demotions(url, key, getter=sb_get):
+    """The marketing_demotions VIEW — derived from the skip log, no second
+    source of truth. [] with a labelled gap on failure (a metro is then
+    simply not demoted this run; the disclosure returns next run)."""
+    rows, err = getter(url, key, "marketing_demotions",
+                       {"select": "metro_cbsa,metro_name,skips,last_skip_at,expires_at"})
+    if err or rows is None:
+        print(f"demotions unreadable — {err} (no demotions applied this run)")
+        return []
+    return rows
+
+
+def load_existing(url, key, h_start, h_end):
+    """Rows the plan must respect: anything scheduled inside the horizon
+    ±METRO_COOLDOWN_DAYS that still holds a slot or a metro. Skipped rows
+    release everything they held and are not fetched."""
+    pad = timedelta(days=MC.METRO_COOLDOWN_DAYS)
+    rows, err = sb_get(url, key, "marketing_tasks", [
+        ("select", "dedupe_key,channel,scheduled_for,metro_cbsa,status"),
+        ("scheduled_for", f"gte.{iso_z(h_start - pad)}"),
+        ("scheduled_for", f"lte.{iso_z(h_end + pad)}"),
+        ("status", "in.(suggested,scheduled,posted)")])
+    if err or rows is None:
+        print(f"existing tasks unreadable — {err}; planning against an empty "
+              f"queue (on_conflict still prevents duplicates)")
+        return []
+    return rows
+
+
+def existing_keys(url, key, keys):
+    """Which candidate dedupe_keys already have rows (any status, any age —
+    a receipt task posted last month must not be re-planned this month)."""
+    out = set()
+    for i in range(0, len(keys), 100):
+        chunk = keys[i:i + 100]
+        rows, err = sb_get(url, key, "marketing_tasks", {
+            "select": "dedupe_key",
+            "dedupe_key": "in.(" + ",".join(chunk) + ")"})
+        if err or rows is None:
+            print(f"dedupe pre-check unreadable — {err}; relying on "
+                  f"on_conflict=dedupe_key alone")
+            return out
+        out |= {r["dedupe_key"] for r in rows}
+    return out
+
+
+def load_velocity_current(data_dir):
+    p = Path(data_dir) / "velocity-aggregates.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def load_velocity_prev(period):
+    p = Path(__file__).parent / "velocity" / f"velocity-{prev_period(period)}.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def load_case_index():
+    p = CASES_DIR / "index.json"
+    if not p.exists():
+        return []
+    return json.loads(p.read_text()).get("published") or []
+
+
+def case_cbsa(cid):
+    p = CASES_DIR / f"{cid}.json"
+    if not p.exists():
+        return None
+    return json.loads(p.read_text()).get("cbsa")
+
+
+# ————— copy guards —————
+
+def guard(cand):
+    """The generator-side mirror of the DB's refusals, plus the two lists
+    the DB does not know. Returns the tripped words (empty = compliant).
+
+    BANNED (affiliation grammar) is checked on every field, byte-matching
+    the marketing_tasks_no_affiliation_claim constraint. NAOMI_NEVER is
+    checked on every field — a real, unaffiliated person's name never rides
+    generated copy. HYPE is checked on the CAPTION only: captions are what
+    gets pasted into public channels, and the contrarian headline must be
+    allowed to QUOTE a hype-laden narrative in order to refute it. The
+    zero-months regex enforces the mtl_prose discipline mechanically on
+    every field — our own templates route through mtl_prose, but reused
+    sentences (the angle bank) must clear the same bar."""
+    everything = " ".join(filter(None, [cand.get("why_headline"),
+                                        cand.get("why_detail"),
+                                        cand.get("caption"),
+                                        cand.get("hashtags")])).lower()
+    capt = (cand.get("caption") or "").lower()
+    hits = [w for w in MC.BANNED if w in everything]
+    hits += [w for w in MC.NAOMI_NEVER if w in everything]
+    hits += [w for w in MC.HYPE if w in capt]
+    if re.search(r"\b0(\.0)? months?\b", everything):
+        hits.append("zero-months")
+    return hits
+
+
+# ————— the six triage rules —————
+# Every builder returns plain dicts:
+#   key/type/tier/why_headline/why_detail/caption (with a literal {utm_url}
+#   placeholder — the link needs the channel, which the scheduler assigns) /
+#   metro_cbsa/metro_name/zip/asset_path/source_id, plus optional
+#   channel (pin), week (pin), fixed_time / fixed_source (cap-exempt rows).
+
+def cand_record(rep):
+    """Tier 1: the WSI printed a superlative this month. Trigger is
+    strongest_record() — the same function the digest pitch leads with, so a
+    fact strong enough to pitch is exactly a fact strong enough to post."""
+    if not rep:
+        return None
+    rec, sup = rep["records"], strongest_record(rep)
+    if not sup:
+        print("records: no record-shaped fact this month — rule sits out")
+        return None
+    period = rep["month"]
+    lines = [f"- Warning signs in {rec['wsi']:.1f}% of ~25,000 scored U.S. ZIP markets"
+             + (f", {'up' if rec['delta'] > 0 else 'down'} from {rec['prev_wsi']:.1f}% "
+                f"({rec['delta']:+.1f} pts)." if rec.get("delta") else ".")]
+    if rec.get("run_length", 0) >= 2:
+        lines.append(f"- {ordinal(rec['run_length'])} consecutive monthly "
+                     f"{'rise' if rec['run_direction'] == 'up' else 'decline'}.")
+    lines.append(f"- Basis: continuous series since {pretty_month(rec['basis_since'])} "
+                 f"({rec['basis_months']} months) — superlatives never cross the "
+                 f"source seam.")
+    return {
+        "key": token("record", period=period), "type": "post", "tier": 1,
+        "why_headline": f"WSI hit {rec['wsi']:.1f}% — {sup}. Records are "
+                        f"headlines by construction.",
+        "why_detail": "\n".join(lines),
+        "caption": (f"Warning signs are flashing in {rec['wsi']:.1f}% of U.S. ZIP "
+                    f"housing markets — {sup}. Fixed danger lines, ~25,000 ZIPs, "
+                    f"updated monthly.\nCheck your ZIP free: {{utm_url}}"),
+        "asset_path": f"/research/{period}/social/1-wsi.png",
+        "render": {"wsi": rec["wsi"], "prev_wsi": rec.get("prev_wsi"),
+                   "delta": rec.get("delta"), "superlative": sup},
+    }
+
+
+def cand_contrarian(rep, period):
+    """Tier 2: the data contradicts the month's dominant narrative.
+    NARRATIVE is operator-set monthly in marketing_config.py; unset, stale,
+    or gap-less all degrade to a printed line, never a crash and never a
+    stale claim. The caption never quotes the narrative text — operator
+    prose does not ride into public copy, only the counter-numbers do."""
+    n = getattr(MC, "NARRATIVE", None) or {}
+    text = (n.get("text") or "").strip()
+    if n.get("period") != period or not text:
+        print(f"contrarian: NARRATIVE unset/stale for {period} — rule skipped "
+              f"(set it in pipeline/marketing_config.py)")
+        return None
+    rec = rep["records"] if rep else {}
+    wsi, delta = rec.get("wsi"), rec.get("delta")
+    if wsi is None:
+        print("contrarian: no research file this month — rule skipped")
+        return None
+    hold = 100.0 - wsi
+    stance = n.get("stance", "bearish")
+    if stance == "bearish" and (wsi < MC.CONTRARIAN_CALM_WSI or (delta or 0) < 0):
+        counter = (f"{hold:.1f}% of scored ZIP markets still rate HOLD or better"
+                   + (f", and the warning share fell {abs(delta):.1f} pts this month"
+                      if (delta or 0) < 0 else ""))
+    elif stance == "bullish" and wsi > MC.CONTRARIAN_HOT_WSI and (delta or 0) > 0:
+        counter = (f"warning signs are flashing in {wsi:.1f}% of scored ZIP "
+                   f"markets, up {delta:+.1f} pts this month")
+    else:
+        print(f"contrarian: narrative set but no gap (stance {stance}, "
+              f"WSI {wsi:.1f}%, delta {delta}) — rule skipped")
+        return None
+    return {
+        "key": token("contrarian", period=period), "type": "post", "tier": 2,
+        "why_headline": f'The narrative says "{text}" — the data says {counter}.',
+        "why_detail": "\n".join([
+            f"- Verdict mix for {pretty_month(period)}: {wsi:.1f}% warning, "
+            f"{hold:.1f}% HOLD-or-better, across ~25,000 scored ZIPs against "
+            f"fixed danger lines.",
+            f"- Narrative set by the operator for {period} in "
+            f"pipeline/marketing_config.py; this card exists only because the "
+            f"verdict mix points the other way."]),
+        "caption": (f"Across ~25,000 scored U.S. ZIP housing markets, {counter} — "
+                    f"fixed danger lines, updated monthly. The headlines are "
+                    f"telling a different story.\n"
+                    f"Check your ZIP free: {{utm_url}}"),
+        "render": {"wsi": wsi, "delta": delta, "counter": counter},
+    }
+
+
+def cand_receipts(rows, today, cbsa_names, places, period):
+    """Tier 2, type receipt_quote — one task per FRESH receipt where we were
+    actually ahead. lead_days <= 0 is skipped (a receipt where we were not
+    ahead is not a brag), stale (> RECEIPT_LOOKBACK_DAYS) is skipped. The
+    token carries the row uuid, so a receipt mints one task in its lifetime
+    no matter how many refreshes see it."""
+    out = []
+    for r in rows:
+        try:
+            pub = date.fromisoformat(str(r["published_on"]))
+            flag = date.fromisoformat(str(r["flag_date"]))
+        except (KeyError, ValueError):
+            continue
+        lead = (pub - flag).days
+        if (today - pub).days > MC.RECEIPT_LOOKBACK_DAYS or lead <= 0:
+            continue
+        geo = cbsa_names.get(r.get("metro_cbsa") or "")
+        if not geo and r.get("zip") and r["zip"] in places:
+            c = places[r["zip"]]
+            geo = f"{c[0]}, {c[1]}"
+        geo = geo or f"CBSA {r.get('metro_cbsa') or '?'}"
+        word = FLAG_WORD.get(r.get("corroborates"), "WATCH")
+        hl = (r.get("headline") or "").strip().rstrip(".")
+        out.append({
+            "key": token("receipt", uuid=r["id"]), "type": "receipt_quote",
+            "tier": 2, "source_id": r["id"],
+            "metro_cbsa": r.get("metro_cbsa"), "metro_name": geo,
+            "zip": r.get("zip"),
+            "why_headline": f"Receipt: {r['outlet']} reported what our index "
+                            f"flagged in {geo} {lead} days earlier.",
+            "why_detail": "\n".join([
+                f"- Our first {word} flag: {_mon_day_full(flag)}. Their piece: "
+                f'"{hl}" ({_mon_day_full(pub)}).',
+                f"- Receipt logged in press_corroboration with the source URL "
+                f"— the claim is checkable."]),
+            "caption": (f"On {_mon_day_d(flag)} our index flagged {geo}. On "
+                        f'{_mon_day_d(pub)}, {r["outlet"]} reported it: "{hl}." '
+                        f"A {lead}-day head start is the kind sellers can "
+                        f"actually use. Check your ZIP free: {{utm_url}}"),
+            "asset_path": f"/assets/mkt/{period}/{token('receipt', uuid=r['id'])}.png",
+            "render": {"outlet": r["outlet"], "headline": hl, "geo": geo,
+                       "flag_word": word, "flag_date": str(r["flag_date"]),
+                       "published_on": str(r["published_on"]),
+                       "lead_days": lead},
+        })
+    return out
+
+
+def _mon_day_full(d):
+    return f"{d.strftime('%B')} {d.day}, {d.year}"
+
+
+def _mon_day_d(d):
+    return f"{d.strftime('%b')} {d.day}"
+
+
+def cand_flips(vel, vel_prev, period):
+    """Tier 3: a top-30 metro's deteriorating share crossed BIG_FLIP_SHARE
+    upward. Current month = the gathering rows in web/data/velocity-aggregates
+    .json; the crossing is asserted against the committed velocity-{prev}
+    .json metros — no prior file, no crossings, printed. Every median_mtl is
+    phrased through build_research.mtl_prose so a 0.0 median renders
+    'already at its danger line', never '0.0 months' — these strings end up
+    in press emails."""
+    if not vel or not (vel.get("gathering") or []):
+        print("metro flips: no velocity aggregates — rule sits out")
+        return []
+    if not vel_prev:
+        print("metro flips: no prior velocity file — cannot assert a "
+              "crossing; rule sits out")
+        return []
+    rows = sorted(vel["gathering"], key=lambda g: (-g["zips"], g["cbsa"]))
+    top = rows[:MC.BIG_METRO_COUNT]
+    prev_metros = vel_prev.get("metros") or {}
+    out = []
+    for rank, g in enumerate(top, 1):
+        prev = prev_metros.get(g["cbsa"])
+        if not prev or not (prev.get("share_det", 0) < MC.BIG_FLIP_SHARE
+                            <= g.get("share_det", 0)):
+            continue
+        tok = token("flip", period=period, cbsa=g["cbsa"])
+        lines = [f"- A top-{MC.BIG_METRO_COUNT} metro by coverage (#{rank} of "
+                 f"{len(rows)} on the gathering list, {g['zips']} scored ZIPs) "
+                 f"— big enough that this is a story, not noise.",
+                 f"- Was {prev['share_det']:.1f}% deteriorating last month "
+                 f"({g['share_det'] - prev['share_det']:+.1f} pts)."]
+        sig = g.get("sig") or {}
+        if sig:
+            dk = max(sig, key=lambda k: (sig[k].get("near") or 0, k))
+            d = sig[dk]
+            lines.append(f"- The dial that moved: {SIG_LABEL.get(dk, dk)} — near "
+                         f"its danger line in {d['near']} of {g['zips']} ZIPs, "
+                         f"median {mtl_prose(d.get('median_mtl'))} at the "
+                         f"current 3-month pace.")
+        out.append({
+            "key": tok, "type": "post", "tier": 3,
+            "metro_cbsa": g["cbsa"], "metro_name": g["name"],
+            "why_headline": f"{g['name']} just crossed the line: "
+                            f"{g['share_det']:.0f}% of its {g['zips']} scored "
+                            f"ZIPs are now deteriorating.",
+            "why_detail": "\n".join(lines),
+            # The post_metro paste pattern — zero numeral literals in the
+            # template itself; every figure arrives from the data.
+            "caption": (f"The housing warning signs are gathering in {g['name']}."
+                        f"\n\n{g['hold_share']:.0f}% of its scored ZIP codes "
+                        f"still rate HOLD — but {g['share_det']:.0f}% are now "
+                        f"deteriorating. At the current pace the median nearest "
+                        f"signal is {mtl_prose(g.get('median_mtl'))}.\n\n"
+                        f"Watch your own ZIP free: {{utm_url}}\n"
+                        f"(Source: ShouldISellYet Research, data through "
+                        f"{pretty_month(period)})"),
+            "asset_path": f"/assets/mkt/{period}/{tok}.png",
+            "render": {"name": g["name"], "zips": g["zips"],
+                       "share_det": g["share_det"],
+                       "prev_share_det": prev["share_det"],
+                       "hold_share": g["hold_share"],
+                       "median_mtl": g.get("median_mtl"),
+                       "sig": sig, "period_pretty": pretty_month(period)},
+        })
+    return out
+
+
+def cand_geo(angles, period, zip_cbsa, cbsa_names):
+    """Tier 4 (+demotion): the standing-calendar filler. One task per
+    build_angles() fact — the digest's own five sentences, reused verbatim
+    as headlines because they were written to be pasted. The ZIP is read
+    back out of the sentence (every angle leads with label(z), which starts
+    with the ZIP); an angle without one is a malformed fact and is skipped
+    aloud rather than guessed at."""
+    out = []
+    for i, sentence in enumerate(angles, 1):
+        m = re.search(r"\b(\d{5})\b", sentence)
+        if not m:
+            print(f"geo: angle {i} carries no ZIP — skipped: {sentence[:60]}…")
+            continue
+        z = m.group(1)
+        cbsa = zip_cbsa.get(z)
+        out.append({
+            "key": token("geo", period=period, zip=z), "type": "post", "tier": 4,
+            "zip": z, "metro_cbsa": cbsa,
+            "metro_name": cbsa_names.get(cbsa) if cbsa else None,
+            "why_headline": sentence,
+            "why_detail": "\n".join([
+                f"- Angle bank pick {i} of {len(angles)} for "
+                f"{pretty_month(period)} (DMV pool first, minimum 15 sales, one "
+                f"ZIP per rule — same facts as the Growth Ops digest).",
+                f"- Standing-calendar filler: any priority 0–3 card outranks it "
+                f"this week."]),
+            "caption": f"{sentence}\nCheck your ZIP free: {{utm_url}}",
+            "render": {"zip": z, "sentence": sentence},
+        })
+    return out
+
+
+def cand_evergreen(cases, ws, period):
+    """Tier 5: fills a horizon week that would otherwise be EMPTY — it never
+    displaces a live angle (enforced by only being called for such weeks).
+    kind != 'miss' only: the near-miss is methodology-page material, not a
+    brag post. Rotation is deterministic in the week date."""
+    hits = [c for c in cases if c.get("kind") != "miss"]
+    if not hits:
+        return None
+    c = hits[(ws.toordinal() // 7) % len(hits)]
+    pct = round(abs(c["peak_to_trough"]) * 100)
+    tok = token("evergreen", ws=ws.isoformat(), case_id=c["id"])
+    return {
+        "key": tok, "type": "evergreen", "tier": 5, "week": ws,
+        "metro_cbsa": case_cbsa(c["id"]), "metro_name": c["name"],
+        "why_headline": f"Evergreen: our signals flagged {c['name']} "
+                        f"{c['lead_months']} months before its {pct}% "
+                        f"peak-to-trough slide.",
+        "why_detail": "\n".join([
+            f"- Track-record case {c['id']}: first signal "
+            f"{pretty_month(c['first_signal'])}, peak-to-trough "
+            f"{c['peak_to_trough'] * 100:.1f}% (chart: web/data/cases/{c['id']}.png).",
+            f"- Used because the week of {_mon_day_d(ws)} would otherwise be "
+            f"empty — evergreen never displaces a live angle."]),
+        "caption": (f"Our signals flagged {c['name']} {c['lead_months']} months "
+                    f"before its {pct}% peak-to-trough slide. Every case in the "
+                    f"track record is recomputed under today's danger lines — "
+                    f"including the market that crossed a line and recovered.\n"
+                    f"Check your ZIP free: {{utm_url}}"),
+        "asset_path": f"/assets/mkt/{period}/{tok}.png",
+        "render": {"case_id": c["id"], "name": c["name"],
+                   "lead_months": c["lead_months"],
+                   "peak_to_trough": c["peak_to_trough"],
+                   "first_signal": c["first_signal"]},
+    }
+
+
+def third_business_day(after):
+    """docs/RESEARCH.md's pitch timing, as code: the third business day
+    after the refresh date."""
+    d, n = after, 0
+    while n < 3:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            n += 1
+    return d
+
+
+def cand_pitches(rep, now_utc, period):
+    """Tier 1, channel NULL (a pitch email is not a brand post — null
+    channel IS the cap exemption, by the v23 trigger's own rules). One task
+    per configured outlet batch; the caption is pitch_draft() verbatim with
+    the subject prepended and the bare release link swapped for the tracked
+    one, so even a pitch's clicks join the performance loop."""
+    batches = list(MC.PRESS_OUTLET_BATCHES)
+    if not batches and os.environ.get("PRESS_LIST", "").strip():
+        batches = [{"slug": "press", "name": "Press list"}]
+    if not rep:
+        if batches:
+            print("press pitches: no research file this month — none generated")
+        return []
+    if not batches:
+        print("press pitches: no outlet batches configured "
+              "(PRESS_OUTLET_BATCHES empty, PRESS_LIST unset) — none generated")
+        return []
+    subject, body = pitch_draft(rep)
+    rel = f"https://shouldisellyet.com/research/{rep['month']}/"
+    when = et_to_utc(third_business_day(et_date(now_utc)), "09:00")
+    out = []
+    for b in batches:
+        tok = token("pitch", period=period, batch_slug=b["slug"])
+        tracked = body.replace(rel, utm_url("press", tok))
+        out.append({
+            "key": tok, "type": "press_pitch", "tier": 1,
+            "fixed_time": when, "fixed_source": "press",
+            "why_headline": f"Press pitch ({b['name']}): {subject}",
+            "why_detail": f"Subject: {subject}\n\n{tracked}",
+            "caption": f"{subject}\n\n{tracked}",
+            "render": {"subject": subject, "batch": b["slug"]},
+        })
+    return out
+
+
+# ————— demotion —————
+
+def apply_demotions(cands, demotions):
+    """min(5, tier+1) for any candidate whose metro sits in the
+    marketing_demotions view, plus the disclosure sentence appended verbatim
+    as the final why_detail line. Burst and press pitches are never demoted
+    (no metro; not brand posts). Machine refusals can never feed this rule —
+    they are not rows, and the view counts only the operator's
+    not_newsworthy picklist value."""
+    by_cbsa = {d["metro_cbsa"]: d for d in demotions}
+    for c in cands:
+        d = by_cbsa.get(c.get("metro_cbsa") or "")
+        if not d or c.get("fixed_time"):
+            continue
+        exp = parse_ts(d["expires_at"])
+        last = parse_ts(d["last_skip_at"])
+        c["tier"] = min(5, c["tier"] + 1)
+        c["why_detail"] = (c.get("why_detail") or "") + (
+            f"\n- Heads-up: {d['metro_name']} is running one priority tier "
+            f"lower until {exp.strftime('%b')} {exp.day}, {exp.year} — skipped "
+            f"as not newsworthy twice in the last 60 days (most recently "
+            f"{last.strftime('%b')} {last.day}).")
+    return cands
+
+
+# ————— the scheduler —————
+
+class Plan:
+    def __init__(self):
+        self.placed = []    # (cand, when_utc, channel)
+        self.refused = []   # (cand, reason)
+
+
+def build_slots(windows, now_utc):
+    """{week_start_date: [(when_utc, channel, anchor), …]} for the horizon —
+    HORIZON_WEEKS Sunday-start ET weeks beginning with the week containing
+    now. Instants earlier than now + MIN_LEAD_HOURS are gone (you cannot
+    schedule the past); a Monday refresh therefore finds its own week's
+    Sunday anchor already behind it and fills Tue/Wed — correct, not a bug.
+    Within a week, slots sort anchor-first then chronologically, so the
+    first placement in a week naturally takes Sunday 19:30."""
+    ws0 = week_start(et_date(now_utc))
+    horizon = [ws0 + timedelta(days=7 * k) for k in range(MC.HORIZON_WEEKS)]
+    lead = now_utc + timedelta(hours=MC.MIN_LEAD_HOURS)
+    out = {}
+    for ws in horizon:
+        slots = []
+        for w in windows:
+            when = et_to_utc(ws + timedelta(days=int(w["dow"])), w["at_time"])
+            if when >= lead:
+                slots.append((when, w["channel"], bool(w.get("anchor"))))
+        slots.sort(key=lambda s: (not s[2], s[0], CHANNEL_ORDER.index(s[1])))
+        out[ws] = slots
+    return out
+
+
+def plan_schedule(cands, existing, windows, now_utc):
+    """Pure function: candidates + existing rows + windows -> Plan. No I/O;
+    deterministic given now_utc — this is the unit the tests grip.
+
+    Caps are checked here FIRST, mirroring marketing_slot_conflict R1–R4
+    (the trigger is the backstop):
+      weekly   MAX_WEEKLY_PER_CHANNEL per (marketing week, channel)
+      metro    the same metro within ±METRO_COOLDOWN_DAYS, any channel
+      slot     the exact (channel, instant) is taken
+    Null-channel candidates (press pitches, bursts) pin fixed_time, occupy
+    no slot, and are exempt from all of it — null channel IS the exemption,
+    same as the trigger. A candidate that cannot be placed lands in
+    plan.refused with a machine-readable reason and is NEVER written:
+      refused:weekly_cap:{channel}:{week_start}
+      refused:metro_cooldown:{metro}:{days_remaining}d
+      refused:no_slot
+    Fractional priorities exist only in this sort — the stored value is the
+    integer tier (priority_score int in v23)."""
+    slots_by_week = build_slots(windows, now_utc)
+    weeks = sorted(slots_by_week)
+
+    used_slots = set()          # (channel, when_utc)
+    week_counts = {}            # (week_start, channel) -> n
+    metro_times = []            # (metro_cbsa, when_utc)
+    for r in existing:
+        if not r.get("scheduled_for"):
+            continue
+        when = parse_ts(r["scheduled_for"])
+        ch = r.get("channel")
+        if ch:
+            used_slots.add((ch, when))
+            wk = week_start(et_date(when))
+            week_counts[(wk, ch)] = week_counts.get((wk, ch), 0) + 1
+            if r.get("metro_cbsa"):
+                metro_times.append((r["metro_cbsa"], when))
+
+    plan = Plan()
+    ordered = sorted(enumerate(cands), key=lambda t: (t[1]["tier"], t[0]))
+    for _, c in ordered:
+        if c.get("fixed_time"):
+            plan.placed.append((c, c["fixed_time"], None))
+            continue
+        capped_week = None
+        cooldown = None
+        spot = None
+        for ws in weeks:
+            if c.get("week") and ws != c["week"]:
+                continue
+            for when, ch, _anchor in slots_by_week[ws]:
+                if c.get("channel") and ch != c["channel"]:
+                    continue
+                # nextdoor_naomi is Naomi's own local network: only a DMV
+                # ZIP fact belongs there, ever (and with the v23 seed the
+                # channel has no windows at all, so this line is dormant).
+                if ch == "nextdoor_naomi" and not (c.get("zip") and MC.is_dmv(c["zip"])):
+                    continue
+                if week_counts.get((ws, ch), 0) >= MC.MAX_WEEKLY_PER_CHANNEL:
+                    capped_week = capped_week or (ch, ws)
+                    continue
+                if (ch, when) in used_slots:
+                    continue
+                m = c.get("metro_cbsa")
+                hit = next((t for mm, t in metro_times if mm == m
+                            and abs((when - t).total_seconds())
+                            <= MC.METRO_COOLDOWN_DAYS * 86400), None) \
+                    if m else None
+                if hit is not None:
+                    days_left = max(0, (hit + timedelta(
+                        days=MC.METRO_COOLDOWN_DAYS) - now_utc).days)
+                    cooldown = cooldown or (m, days_left)
+                    continue
+                spot = (when, ch, ws)
+                break
+            if spot:
+                break
+        if spot:
+            when, ch, ws = spot
+            plan.placed.append((c, when, ch))
+            used_slots.add((ch, when))
+            week_counts[(ws, ch)] = week_counts.get((ws, ch), 0) + 1
+            if c.get("metro_cbsa"):
+                metro_times.append((c["metro_cbsa"], when))
+        elif cooldown:
+            # Cooldown outranks the cap in the report: it means a free slot
+            # existed and the METRO was the blocker — the actionable truth.
+            plan.refused.append(
+                (c, f"refused:metro_cooldown:{cooldown[0]}:{cooldown[1]}d"))
+        elif capped_week:
+            plan.refused.append(
+                (c, f"refused:weekly_cap:{capped_week[0]}:{capped_week[1]}"))
+        else:
+            plan.refused.append((c, "refused:no_slot"))
+    return plan
+
+
+def evergreen_pass(plan, existing, windows, cases, period, now_utc):
+    """Second pass, AFTER live candidates have been placed: one evergreen
+    per horizon week that ended up with zero channel-bearing placements —
+    so evergreen can never displace a live angle."""
+    busy = {week_start(et_date(when)) for _, when, ch in plan.placed if ch}
+    for r in existing:
+        if r.get("channel") and r.get("scheduled_for"):
+            busy.add(week_start(et_date(parse_ts(r["scheduled_for"]))))
+    pseudo = list(existing) + [
+        {"channel": ch, "scheduled_for": iso_z(when),
+         "metro_cbsa": c.get("metro_cbsa"), "status": "suggested"}
+        for c, when, ch in plan.placed if ch]
+    ws0 = week_start(et_date(now_utc))
+    for k in range(MC.HORIZON_WEEKS):
+        ws = ws0 + timedelta(days=7 * k)
+        if ws in busy:
+            continue
+        c = cand_evergreen(cases, ws, period)
+        if not c:
+            continue
+        sub = plan_schedule([c], pseudo, windows, now_utc)
+        for p in sub.placed:
+            plan.placed.append(p)
+            pseudo.append({"channel": p[2], "scheduled_for": iso_z(p[1]),
+                           "metro_cbsa": p[0].get("metro_cbsa"),
+                           "status": "suggested"})
+        plan.refused.extend(sub.refused)
+    return plan
+
+
+# ————— rows + manifest —————
+
+def hashtags_for(channel, metro_name):
+    tags = MC.HASHTAGS.get(channel or "", ())
+    if metro_name and channel in ("ig", "x"):
+        tags = tags + (metro_tag(metro_name),)
+    return " ".join(tags) or None
+
+
+def row_from_placement(c, when, channel, period):
+    """One insert-ready dict. status defaults to 'suggested' in the DB; the
+    caption's {utm_url} placeholder resolves only now, because the link's
+    utm_source is the channel the scheduler just assigned."""
+    src = c.get("fixed_source") or channel or "x"   # burst: X is the named channel
+    url = utm_url(src, c["key"])
+    return {
+        "type": c["type"], "channel": channel,
+        "scheduled_for": iso_z(when),
+        "priority_score": int(c["tier"]),
+        "why_headline": c["why_headline"], "why_detail": c.get("why_detail"),
+        "metro_cbsa": c.get("metro_cbsa"), "metro_name": c.get("metro_name"),
+        "zip": c.get("zip"),
+        "asset_path": c.get("asset_path"),
+        "caption": (c.get("caption") or "").replace("{utm_url}", url) or None,
+        "hashtags": hashtags_for(channel or c.get("fixed_source"),
+                                 c.get("metro_name")),
+        "utm_campaign": c["key"], "utm_url": url,
+        "period": period, "source_id": c.get("source_id"),
+        "dedupe_key": c["key"],
+    }
+
+
+def write_pack_manifest(rows, cands_by_key, period):
+    """pipeline/marketing/pack-{period}.json — the deploy-time contract with
+    post_pack.py --render: per task the token, the type, the asset path, and
+    the PUBLIC scalars its card renders from. Committed by update.yml's
+    snapshot step; deterministic bytes (sorted keys, no clock)."""
+    tasks = []
+    for r in sorted(rows, key=lambda r: r["dedupe_key"]):
+        c = cands_by_key.get(r["dedupe_key"], {})
+        tasks.append({"utm_campaign": r["dedupe_key"], "type": r["type"],
+                      "asset_path": r.get("asset_path"),
+                      "render": c.get("render", {})})
+    PACK_DIR.mkdir(parents=True, exist_ok=True)
+    p = PACK_DIR / f"pack-{period}.json"
+    p.write_text(json.dumps({"period": period, "tasks": tasks},
+                            separators=(",", ":"), sort_keys=True))
+    return p
+
+
+# ————— burst (called from rate_watch.py, not from the refresh) —————
+
+def insert_burst_task(now_rate, prior_rate, rate_period,
+                      now_utc=None, dry_run=False):
+    """Called by rate_watch.main() after the >= RATE_BURST_POINTS gate.
+
+    Tier 0, channel NULL — a Friday burst cannot reach any X window inside
+    48 hours, so null-channel is the only schedulable shape (exempt from the
+    window trigger by construction); the copy names X as the intended
+    channel. Pinned to the FIRST 09:00/19:30 ET instant inside
+    BURST_WINDOW_HOURS. No asset: a 48h window cannot depend on a deploy
+    cycle. dedupe key mq-burst-{rate_period}-{week_start} makes a same-week
+    Friday re-run a no-op. NEVER raises past its own prints — the rate email
+    must send even when Supabase is down; any failure returns None."""
+    now_utc = now_utc or datetime.now(timezone.utc)
+    delta = now_rate - prior_rate
+    ws = week_start(et_date(now_utc))
+    tok = token("burst", rate_period=rate_period, ws=ws.isoformat())
+    d0 = et_date(now_utc)
+    slot = min(et_to_utc(d0 + timedelta(days=k), t)
+               for k in range(3) for t in MC.BURST_SLOT_TIMES_ET
+               if et_to_utc(d0 + timedelta(days=k), t) > now_utc)
+    closes = now_utc + timedelta(hours=MC.BURST_WINDOW_HOURS)
+    direction = "dropped" if delta < 0 else "rose"
+    play = ("Rate-drop play: buyers just gained purchasing power — the moment "
+            "sellers start asking the question." if delta < 0 else
+            "Rates-rose play: the pressure story is live — every point costs "
+            "your sellers' buyers real purchasing power.")
+    cand = {
+        "key": tok, "type": "burst", "tier": 0, "fixed_source": "x",
+        "why_headline": f"The 30-year rate {direction} {abs(delta):.2f} points "
+                        f"— burst window open for {MC.BURST_WINDOW_HOURS} hours.",
+        "why_detail": "\n".join([
+            f"- {now_rate:.2f}% now vs {prior_rate:.2f}% at the "
+            f"{pretty_month(rate_period)} data refresh ({delta:+.2f} pts; "
+            f"threshold {MC.RATE_BURST_POINTS}).",
+            f"- {play}",
+            f"- Post on X first. Window closes {_fmt_et(closes)}; this card "
+            f"outranks everything until then."]),
+        "caption": (f"Mortgage rates just moved {delta:+.2f} points in a week "
+                    f"({prior_rate:.2f}% → {now_rate:.2f}%). A move that size "
+                    f"changes the monthly math for buyers — which changes the "
+                    f"market sellers are selling into. Free monthly checkup "
+                    f"for any ZIP: {{utm_url}}"),
+    }
+    tripped = guard(cand)
+    if tripped:
+        print(f"REFUSED {tok} refused:copy:{','.join(tripped)}")
+        return None
+    row = row_from_placement(cand, slot, None, rate_period)
+    if dry_run:
+        print(f"--dry-run: WOULD-INSERT {tok} burst t0 no-channel {iso_z(slot)}")
+        return tok
+    url, key = sb_env()
+    if not (url and key):
+        print("burst task: Supabase not configured — not written "
+              "(rate email unaffected)")
+        return None
+    ok, err = post_task_row(url, key, row)
+    if not ok:
+        print(f"burst task not written ({err}) — rate email unaffected")
+        return None
+    print(f"burst task written: {tok} scheduled {iso_z(slot)}")
+    return tok
+
+
+# ————— main —————
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default=str(ROOT / "web" / "data"))
+    ap.add_argument("--dry-run", action="store_true",
+                    help="plan and print; write nothing, fetch nothing")
+    ap.add_argument("--force-period", default="",
+                    help="override the data period (testing)")
+    ap.add_argument("--now", default="",
+                    help="frozen clock, ISO8601 (testing; default: real now)")
+    args = ap.parse_args(argv)
+
+    now_utc = parse_ts(args.now) if args.now else datetime.now(timezone.utc)
+
+    meta_p = Path(args.data) / "meta.json"
+    if not meta_p.exists():
+        print(f"no meta.json under {args.data} — nothing to generate; exiting 0")
+        return 0
+    period = args.force_period or json.loads(meta_p.read_text()).get("period", "")
+    if not period:
+        print("no data period in meta.json — nothing to generate; exiting 0")
+        return 0
+
+    url, key = sb_env()
+    dry = args.dry_run or not (url and key)
+    if not (url and key):
+        print("DRY RUN (Supabase not configured — SUPABASE_URL / "
+              "SUPABASE_SERVICE_KEY unset)")
+    elif args.dry_run:
+        print("DRY RUN (--dry-run)")
+    print(f"marketing tasks — period {period} · now {iso_z(now_utc)}")
+
+    # — inputs (each absence degrades to a printed line, never a crash) —
+    rep = load_research(period)
+    if not rep:
+        print(f"research-{period}.json missing — records/contrarian/pitch "
+              f"rules sit out")
+    vel = load_velocity_current(args.data)
+    vel_prev = load_velocity_prev(period)
+    entries = load_current(args.data)
+    places = load_places()
+    snap = load_snapshot(prev_period(period))
+    flips = diff_verdicts(snap or {}, entries) if snap else \
+        {"to_watch": [], "to_act": [], "to_hold": [], "to_strong": []}
+    angles = build_angles(entries, flips, places, period)
+    zip_cbsa, cbsa_names = load_cbsa()
+    cases = load_case_index()
+
+    windows, windows_src = load_windows(url, key, dry)
+    if dry:
+        receipts, demotions = [], []
+        print("receipts/demotions not fetched (dry run) — rules sit out")
+    else:
+        receipts = load_receipts(url, key)
+        demotions = load_demotions(url, key)
+
+    # — candidates, in tier order —
+    today = et_date(now_utc)
+    cands = []
+    for c in [cand_record(rep), cand_contrarian(rep, period)]:
+        if c:
+            cands.append(c)
+    cands += cand_pitches(rep, now_utc, period)
+    cands += cand_receipts(receipts, today, cbsa_names, places, period)
+    cands += cand_flips(vel, vel_prev, period)
+    cands += cand_geo(angles, period, zip_cbsa, cbsa_names)
+    apply_demotions(cands, demotions)
+
+    kept = []
+    for c in cands:
+        tripped = guard(c)
+        if tripped:
+            print(f"REFUSED {c['key']} refused:copy:{','.join(tripped)}")
+        else:
+            kept.append(c)
+
+    # — idempotency: a key that already has a row is not re-planned; its
+    # schedule is owned by the first write plus the operator's Reschedule,
+    # never by a re-run. on_conflict remains the backstop. —
+    if not dry and kept:
+        seen = existing_keys(url, key, [c["key"] for c in kept])
+        for c in [c for c in kept if c["key"] in seen]:
+            print(f"exists {c['key']} — left untouched")
+        kept = [c for c in kept if c["key"] not in seen]
+
+    ws0 = week_start(today)
+    h_start = et_to_utc(ws0, "00:00")
+    h_end = et_to_utc(ws0 + timedelta(days=7 * MC.HORIZON_WEEKS), "00:00")
+    existing = [] if dry else load_existing(url, key, h_start, h_end)
+
+    plan = plan_schedule(kept, existing, windows, now_utc)
+    plan = evergreen_pass(plan, existing, windows, cases, period, now_utc)
+
+    for c, reason in plan.refused:
+        print(f"REFUSED {c['key']} {reason}")
+
+    rows = [row_from_placement(c, when, ch, period)
+            for c, when, ch in plan.placed]
+    inserted = 0
+    for row in rows:
+        label_line = (f"{row['dedupe_key']} · {row['type']} "
+                      f"t{row['priority_score']} · {row['channel'] or 'no-channel'} "
+                      f"· {row['scheduled_for']}")
+        if dry:
+            print(f"WOULD-INSERT {label_line}")
+            continue
+        ok, err = post_task_row(url, key, row)
+        if ok:
+            inserted += 1
+            print(f"insert {label_line}")
+        else:
+            # The trigger is the backstop (a concurrent writer, a calendar
+            # migration mid-run): its raise arrives here as an HTTP error,
+            # is printed as a refusal, and the run continues.
+            print(f"REFUSED {row['dedupe_key']} {err}")
+
+    cands_by_key = {c["key"]: c for c, _, _ in plan.placed}
+    pack = write_pack_manifest(rows, cands_by_key, period)
+
+    print(f"marketing queue: {len(plan.placed)} placed · "
+          f"{len(plan.refused)} refused · "
+          f"{inserted if not dry else 0} inserted · period {period} · "
+          f"windows {windows_src} · pack {pack.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,198 @@
+# Marketing queue
+
+Every data refresh ends by writing a to-do list: rows in
+`public.marketing_tasks`, each with a schedule slot, a paste-ready caption,
+and — the part that makes it a queue rather than a content dump — an
+explicit "why this, why now" carrying the actual numbers. Generated
+deterministically from the data files and Supabase reads — **no LLM calls
+anywhere in the pipeline**, so the same data and the same clock always
+produce the same rows.
+
+- Generator: [`pipeline/marketing_tasks.py`](../pipeline/marketing_tasks.py)
+- Settings: [`pipeline/marketing_config.py`](../pipeline/marketing_config.py)
+- Tokens: [`pipeline/utm.py`](../pipeline/utm.py)
+- DB layer: [`supabase/schema-v23.sql`](../supabase/schema-v23.sql)
+  (after [`supabase/schema-repair-v20-v21.sql`](../supabase/schema-repair-v20-v21.sql)
+  on a fresh environment)
+
+## The one rule that governs everything
+
+**Nothing here posts, emails, or sends anything, ever.** The queue is a
+list of things a human may choose to do. The generator writes rows with
+`status = 'suggested'`; the admin Marketing tab is where a human marks them
+posted, skipped, or rescheduled. If you find yourself wiring an API client
+for a social network into this pipeline, stop — that is a different product
+decision, made on purpose or not at all.
+
+## The calendar is data, not prose (decided 2026-08-10)
+
+The posting rules — 2 brand posts per channel per week, Sunday 19:30 ET is
+the anchor, no metro repeated inside 14 days — live in **the database**:
+`marketing_windows` holds the slots, `marketing_slot_conflict()` holds the
+caps, and the `marketing_tasks_caps` trigger enforces both on every write.
+Three readers agree because there is exactly one rulebook:
+
+1. the Python generator fetches `marketing_windows` at run start and
+   refuses in Python first (`REFUSED <dedupe_key> <reason>` on stdout, row
+   never written);
+2. the admin reschedule picker asks `admin_marketing_slots` and renders the
+   refusal reasons;
+3. the trigger is the backstop for both, plus any hand-rolled service-role
+   write.
+
+`marketing_config.FALLBACK_WINDOWS` is a **mirror of the v23 seed for dry
+runs and secretless forks only** — `test_windows_fallback_matches_seed`
+parses the seed INSERT out of the SQL file and fails the build on drift.
+Changing the calendar is a migration, deliberately: an operator-editable
+toggle would make "2 posts a week" mean whatever it meant last Tuesday.
+
+## Priority tiers
+
+Stored on the row as `priority_score` (int, 0–5). Lower is louder.
+
+| tier | rule | type | trigger |
+| --- | --- | --- | --- |
+| 0 | rate burst | `burst` | 30-yr rate moved ≥ 0.25 pts (`rate_watch.py`, Fridays) — 48-hour window, channel NULL, no asset |
+| 1 | records | `post` | `strongest_record()` printed a superlative this month |
+| 1 | press pitch | `press_pitch` | research release + a configured outlet batch; channel NULL, third business day 09:00 ET |
+| 2 | contrarian gap | `post` | operator narrative set for this period AND the verdict mix points the other way |
+| 2 | receipt | `receipt_quote` | fresh press corroboration (≤ 35 days) where we were ahead (`lead_days > 0`) |
+| 3 | big-metro flip | `post` | top-30 gathering metro's `share_det` crossed 25.0 upward |
+| 4 | geo rotation | `post` | the digest's own angle bank — standing-calendar filler |
+| 5 | evergreen | `evergreen` | a horizon week would otherwise be empty; `kind != "miss"` cases only |
+
+A skip-demotion adds 1 (capped at 5) — see below. Null-channel rows (burst,
+press pitch) are exempt from every cap by the trigger's own rules: null
+channel IS the exemption, not a flag.
+
+## Setting NARRATIVE (monthly operator task)
+
+The contrarian rule needs to know what the headlines are saying; that is an
+editorial judgement, so it is typed in by hand each month, in
+[`marketing_config.py`](../pipeline/marketing_config.py):
+
+```python
+NARRATIVE = {"text": "crash headlines dominating", "period": "2026-08"}
+```
+
+`period` must equal the data period the refresh runs for — a stale or empty
+period makes the rule sit the month out with a loud stdout line, never a
+stale claim in a caption. Optional `"stance"` key: `"bearish"` (default) or
+`"bullish"`. The narrative text appears in the card's **why**, never in the
+caption — operator prose does not ride into public copy; only the
+counter-numbers do.
+
+## How Naomi turns on (and why there is no flag)
+
+`nextdoor_naomi` exists in the channel enum but has **zero rows in
+`marketing_windows`**, and a channel with no windows can never be scheduled
+— the conflict check refuses it by construction. That absence is the off
+switch. There is no `NAOMI_ACTIVE` constant anywhere, on purpose (decided
+2026-08-10): a config flag can be flipped by accident, in a fork, without a
+record. Turning the channel on is a **dated migration**, after a signed
+agreement exists — quoting `schema-v23.sql` §2:
+
+```sql
+insert into public.marketing_windows (channel, dow, at_time, label, anchor)
+values ('nextdoor_naomi', 2, '08:30', 'Tuesday morning', false)
+on conflict do nothing;
+```
+
+Until that INSERT ships, the generator cannot emit the string
+`nextdoor_naomi` into any row (`test_naomi_never_generated`), and even
+after it ships, only DMV-ZIP facts are eligible for the channel. Her name
+never appears in generated copy either way (`NAOMI_NEVER` guard; see
+docs/ATTRIBUTION.md, correction dated 2026-08-08).
+
+## The token scheme
+
+One string does three jobs: `dedupe_key` = `utm_campaign` = asset filename
+stem. Minted in [`pipeline/utm.py`](../pipeline/utm.py), deterministic from
+the triggering fact, always matching `^[a-z0-9][a-z0-9_-]{1,59}$` — the
+same regex the `events.utm_campaign` and `marketing_tasks.utm_campaign`
+checks enforce.
+
+| rule | token | example |
+| --- | --- | --- |
+| records | `mq-{period}-record-us` | `mq-2026-08-record-us` |
+| contrarian | `mq-{period}-contrarian-us` | `mq-2026-08-contrarian-us` |
+| metro flip | `mq-{period}-flip-{cbsa}` | `mq-2026-08-flip-12420` |
+| receipt | `mq-receipt-{uuid}` | `mq-receipt-8b6f…` (one per receipt, ever) |
+| geo | `mq-{period}-geo-{zip}` | `mq-2026-08-geo-20904` |
+| evergreen | `mq-{ws}-ever-{case_id}` | `mq-2026-08-23-ever-boise-2021` |
+| burst | `mq-burst-{rate_period}-{ws}` | `mq-burst-2026-07-2026-08-09` |
+| press pitch | `mq-{period}-pitch-{batch_slug}` | `mq-2026-08-pitch-national` |
+
+`{ws}` is the Sunday week-start date — marketing weeks are **Sunday-based
+ET** (`marketing_week_start` in v23; the Sunday 19:30 anchor opens the
+week). The link is always
+`https://shouldisellyet.com/?utm_source={channel}&utm_medium={social|email}&utm_campaign={token}`
+— utm_source keeps feeding the existing By-channel funnel; utm_campaign is
+the nightly performance join key. Inserts go up **one row per POST** with
+`on_conflict=dedupe_key` and `Prefer: resolution=ignore-duplicates` — a
+re-run mints identical tokens and inserts nothing, and never resets a
+status the operator set (ignore, not merge, is the whole design).
+
+## The demotion rule
+
+A metro skipped **not newsworthy** twice inside 60 days runs one priority
+tier lower until the older skip ages out. No table for this: the
+`marketing_demotions` VIEW derives it from the skip log, so it cannot
+drift. The generator reads the view at run time, adds 1 to the tier
+(capped at 5), and **discloses it** — the card's final why line reads:
+
+> Heads-up: Austin-Round Rock-San Marcos, TX is running one priority tier
+> lower until Oct 8, 2026 — skipped as not newsworthy twice in the last 60
+> days (most recently Aug 9).
+
+Machine refusals can never feed this rule: they are not rows, and the view
+counts only the operator's `not_newsworthy` picklist value. Burst and press
+pitches are never demoted.
+
+## Press pitches
+
+`PRESS_OUTLET_BATCHES` is empty and `PRESS_LIST` is not a CI secret, so no
+press tasks generate yet — the rule prints a labelled gap. That is an
+operational gap, not a code gap: configure a batch when there is a list
+worth pitching. The task's caption/why carry the full drafted email
+(`pitch_draft()` verbatim, release link swapped for the tracked one);
+sending it stays a human act, always.
+
+## Verifying a change
+
+```bash
+# Everything green, including the seed-mirror and Naomi guards:
+python3 -m pytest pipeline/ -q
+
+# The plan, offline — WOULD-INSERT / REFUSED lines, exit 0 without secrets:
+env -u SUPABASE_URL -u SUPABASE_SERVICE_KEY \
+  python3 pipeline/marketing_tasks.py --dry-run --now 2026-08-10T14:00:00Z
+
+# No banned construction can survive generation (expect 0):
+python3 pipeline/marketing_tasks.py --dry-run --now 2026-08-10T14:00:00Z \
+  | grep -icE "powered by|in partnership with|official partner"
+
+# The DST pin — Sunday 19:30 ET is 23:30Z in August, 00:30Z+1d in January:
+python3 -m pytest pipeline/test_marketing_tasks.py::test_et_slots_dst_and_std -q
+```
+
+## Decision notes
+
+- **2026-08-10 — windows in the DB, not in config.** The first draft of the
+  generator carried a `CHANNEL_WINDOWS` constant and the admin tab would
+  have carried a second copy; both were deleted in favour of
+  `marketing_windows` + one conflict function. Two copies of a calendar
+  disagree eventually; a trigger cannot be out-argued.
+- **2026-08-10 — refusals are not rows.** An unschedulable task in the
+  queue is over-scheduling wearing a disguise, and it would consume caps on
+  the next run. Dropped candidates regenerate from durable data at the next
+  refresh; the REFUSED stdout line is the record.
+- **2026-08-10 — `mtl_prose` is imported, never reimplemented.** A median
+  months-to-line of 0.0 renders "already at its danger line" — the
+  generator additionally refuses any rendered string matching
+  `\b0(\.0)? months?\b`, because these strings end up in press emails.
+- **2026-08-10 — the pack manifest is the deploy contract.** The generator
+  writes `pipeline/marketing/pack-{period}.json` (token, type, asset path,
+  public render scalars per task); `post_pack.py --render` rebuilds the
+  public card PNGs from it on every deploy. Aggregates only — the paid
+  per-ZIP layer never reaches an asset.

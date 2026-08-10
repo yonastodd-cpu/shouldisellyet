@@ -187,6 +187,21 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python3 pipeline/upsert_velocity.py
 
+      # Marketing queue: turn this refresh's facts into suggested task rows
+      # (public.marketing_tasks — nothing here posts or sends anything; the
+      # queue is a list of things a human may choose to do). MUST run before
+      # growth_digest.py so the digest reports THIS refresh's queue, not last
+      # refresh's. continue-on-error for the same reason the digest carries
+      # it: derived output must never cost a deploy. A fork without secrets
+      # prints a dry-run plan and exits 0 by construction.
+      - name: Marketing queue refresh
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/marketing_tasks.py
+
       # Digest failure must never fail the refresh: the site data is already
       # good at this point and a broken marketing email is not worth losing a
       # deploy over. continue-on-error plus an explicit fallback notice.
@@ -238,6 +253,9 @@ jobs:
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
           git add pipeline/snapshots pipeline/research pipeline/velocity pipeline/validation || true
+          # pipeline/marketing/ holds the pack manifest post_pack.py renders
+          # from at deploy time — it must ride the same snapshot commit.
+          git add pipeline/marketing || true
           git add web/data/proof.json || true
           git diff --cached --quiet && { echo "no snapshot change"; exit 0; }
           git commit -m "Verdict snapshot + research index $(date +%Y-%m) [skip ci]"

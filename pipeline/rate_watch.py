@@ -66,6 +66,17 @@ def main():
         print("below threshold — no email sent")
         return
 
+    # The same gate that opens this email opens a 48-hour burst window in the
+    # marketing queue (priority 0, channel NULL — see marketing_tasks.py).
+    # Guarded start to finish, import included: a Supabase outage or a broken
+    # queue module must never cost the rate email, which is the job this file
+    # exists to do (2026-08-10).
+    try:
+        import marketing_tasks
+        marketing_tasks.insert_burst_task(now, prior, period, dry_run=args.dry_run)
+    except Exception as exc:
+        print(f"burst task not written ({exc}) — rate email unaffected")
+
     direction = "dropped" if delta < 0 else "rose"
     play = ("Run the rate-drop play: buyers just gained purchasing power, which is the "
             "moment sellers care about." if delta < 0 else
