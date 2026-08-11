@@ -684,7 +684,8 @@ def cand_flips(vel, vel_prev, period):
             # overlap is the story, so it is stated rather than left to trip
             # the reader.
 "asset_path": f"/assets/mkt/{period}/{tok}.png",
-            "render": {"name": g["name"], "zips": g["zips"],
+            "render": {"name": g["name"], "short_name": short_metro(g["name"]),
+                       "zips": g["zips"],
                        "share_det": g["share_det"],
                        "prev_share_det": prev.get("share_det"),
                        "hold_share": g["hold_share"],
@@ -910,6 +911,8 @@ def cand_evergreen(cases, ws, period):
         "caption": _ev_long, "caption_short": _ev_short,
         "asset_path": f"/assets/mkt/{period}/{tok}.png",
         "render": {"case_id": c["id"], "name": c["name"],
+                   "short_name": short_metro(c["name"]),
+                   "period_pretty": pretty_month(period),
                    "lead_months": c["lead_months"],
                    "peak_to_trough": c["peak_to_trough"],
                    "first_signal": c["first_signal"]},

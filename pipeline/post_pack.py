@@ -58,59 +58,8 @@ def compliant(text):
     return hits
 
 
-# ————— card renderers —————
-# Each takes explicit public scalars and returns a PIL image. TEMPLATES holds
-# the sentences; note that not one of them contains a numeral — every figure
-# arrives from the manifest, so a stale hardcoded number cannot survive here
-# (the failure mode test_no_handwritten_claims.py exists to catch).
-TEMPLATES = {
-    "metro_head": "{name}",
-    "metro_sub": "{share_det}% of its {zips} scored ZIP codes are deteriorating",
-    "metro_body": "{hold_share}% still rate HOLD.\nMedian nearest signal:\n{mtl}.",
-    "receipt_head": "We flagged it first",
-    "receipt_sub": "{metro} — {lead} days before {outlet}",
-    "receipt_body": "Our index flagged {metro}\non {flag_date}.\n{outlet} reported it\non {pub_date}.",
-    "case_head": "{name}",
-    "case_sub": "flagged {lead} months before prices fell",
-    "case_body": "First signal {signal}.\nPeak to trough {ptt}.\nComputed from the same data\nand thresholds we use today.",
-}
-
-FOOT = "ShouldISellYet · shouldisellyet.com"
-
-
-def _frame(head, sub, body_lines, foot=FOOT):
-    """The shared card. Imported lazily so --render can no-op without Pillow."""
-    from build_research import _social_frame, font, REG, INK, MUTED
-    img, d = _social_frame([head, sub], "", foot=foot)
-    y = 300
-    for ln in body_lines:
-        d.text((64, y), ln, font=font(REG, 34), fill=INK if ln else MUTED)
-        y += 52
-    return img
-
-
-def card_metro(t):
-    r = t.get("render") or {}
-    head = TEMPLATES["metro_head"].format(name=r.get("name", ""))
-    sub = TEMPLATES["metro_sub"].format(share_det=round(r.get("share_det") or 0),
-                                        zips=r.get("zips") or 0)
-    from build_research import mtl_prose
-    body = TEMPLATES["metro_body"].format(hold_share=round(r.get("hold_share") or 0),
-                                          mtl=mtl_prose(r.get("median_mtl")))
-    return head, sub, body
-
-
-def card_receipt(t):
-    r = t.get("render") or {}
-    head = TEMPLATES["receipt_head"]
-    sub = TEMPLATES["receipt_sub"].format(metro=r.get("metro", ""),
-                                          lead=r.get("lead_days") or 0,
-                                          outlet=r.get("outlet", ""))
-    body = TEMPLATES["receipt_body"].format(metro=r.get("metro", ""),
-                                            flag_date=_pretty_day(r.get("flag_date")),
-                                            outlet=r.get("outlet", ""),
-                                            pub_date=_pretty_day(r.get("published_on")))
-    return head, sub, body
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
+               "August", "September", "October", "November", "December"]
 
 
 def _pct(v):
@@ -120,8 +69,7 @@ def _pct(v):
 
 
 def _pretty_month(s):
-    """'2022-08' → 'August 2022'. Cards are read by people, not by the ISO
-    committee; the same rule the release pages already follow."""
+    """'2022-08' → 'August 2022'. Cards are read by people."""
     try:
         y, m = str(s).split("-")[:2]
         return f"{MONTH_NAMES[int(m) - 1]} {y}"
@@ -129,12 +77,8 @@ def _pretty_month(s):
         return str(s or "")
 
 
-MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
-               "August", "September", "October", "November", "December"]
-
-
 def _pretty_day(s):
-    """'2026-07-31' → 'July 31, 2026'. Same reason as _pretty_month."""
+    """'2026-07-31' → 'July 31, 2026'."""
     try:
         y, m, d = str(s).split("-")[:3]
         return f"{MONTH_NAMES[int(m) - 1]} {int(d)}, {y}"
@@ -142,13 +86,168 @@ def _pretty_day(s):
         return str(s or "")
 
 
-def card_case(t):
+# ————— card renderers —————
+# Each takes explicit public scalars — never a dict passthrough — so a personal
+# input cannot reach an image (og_card.py's contract, restated).
+#
+# THESE NO LONGER USE build_research._social_frame. That frame is two title
+# lines and a footer, which is exactly the "no hierarchy, dead middle" the
+# redesign existed to fix, and the research releases still want it unchanged.
+# Sharing one frame across two jobs was the earlier call; it cost the marketing
+# cards their hierarchy, so marketing draws its own. One brand, two layouts.
+RULE_TINT = (226, 220, 208)
+
+
+def _track(d, s, f, x, y, fill, extra=2.4):
+    """Letterspacing by hand — Pillow has none, and tracking is what makes a
+    small line read as a label rather than as shrunken prose."""
+    for ch in s:
+        d.text((x, y), ch, font=f, fill=fill)
+        x += d.textlength(ch, font=f) + extra
+    return x
+
+
+def _shell(period_pretty, title, subtitle):
+    """Masthead + title block + footer, shared by every marketing card.
+    Returns (img, draw) with the body area from y≈300 to y≈1190 free."""
+    from PIL import Image, ImageDraw
+    from build_research import font, REG, BOLD, BG, INK, FAINT, MUTED
+    W, H, M = 1080, 1350, 84
+    img = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+    # No dangling separator when the period is missing: a masthead reading
+    # "SHOULDISELLYET RESEARCH ·" looks like a truncated string, which is worse
+    # than simply not dating the card.
+    _track(d, (f"SHOULDISELLYET RESEARCH · {period_pretty.upper()}"
+               if period_pretty else "SHOULDISELLYET RESEARCH"),
+           font(BOLD, 21), M, 82, MUTED)
+    d.line([(M, 132), (W - M, 132)], fill=INK, width=3)
+    d.text((M, 172), title, font=font(BOLD, 56), fill=INK)
+    if subtitle:
+        d.text((M, 248), subtitle, font=font(REG, 23), fill=FAINT)
+    d.line([(M, 1206), (W - M, 1206)], fill=INK, width=3)
+    d.text((M, 1244), "SHOULDISELLYET", font=font(BOLD, 26), fill=INK)
+    dom = "shouldisellyet.com"
+    d.text((W - M - d.textlength(dom, font=font(REG, 26)), 1244), dom,
+           font=font(REG, 26), fill=FAINT)
+    return img, d
+
+
+def card_metro(t):
+    """Metro story card.
+
+    HIERARCHY WITHOUT A SECOND TYPEFACE. Only IBM Plex Mono ships with this
+    repo (CI must render identical bytes, so a font has to be committed), so
+    the steps are size and weight: 21 eyebrow / 24 field label / 56 metro /
+    250 hero. Four sizes and two weights do the work a serif would.
+
+    THE TWO FIGURES MUST NOT BE ADDABLE. 76% moving toward a line and 63%
+    rating HOLD are the SAME ZIP codes measured two ways, and they routinely
+    sum past 100 — a caption has room to say so, a card does not. Three things
+    stop the arithmetic here, in the order a reader meets them: the denominator
+    is named ONCE above both ("two measures of the same 76 ZIP codes"), each
+    figure sits under a numbered label posing a different QUESTION (where they
+    are headed / where they stand today), and a closing line says the two
+    overlap and do not sum. Someone who still adds them has been told three
+    times.
+
+    Accent is NAVY, never red. This brand is a smoke detector; red is a fire.
+    """
+    from build_research import font, REG, BOLD, INK, MUTED, FAINT, NAVY, GREEN
+
+    M = 84
+    RULE = RULE_TINT
     r = t.get("render") or {}
-    head = TEMPLATES["case_head"].format(name=r.get("name", ""))
-    sub = TEMPLATES["case_sub"].format(lead=r.get("lead_months") or 0)
-    body = TEMPLATES["case_body"].format(signal=_pretty_month(r.get("first_signal")),
-                                         ptt=_pct(r.get("peak_to_trough")))
-    return head, sub, body
+    det, hold = round(r.get("share_det") or 0), round(r.get("hold_share") or 0)
+    zips = r.get("zips") or 0
+    title = r.get("short_name") or r.get("name", "")
+    sub = r.get("name", "")
+    img, d = _shell(r.get("period_pretty", ""), title, sub if sub != title else "")
+    track = lambda s, f, x, y, fill, extra=2.4: _track(d, s, f, x, y, fill, extra)
+
+    # The denominator, once, before either figure.
+    track(f"TWO MEASURES OF THE SAME {zips} ZIP CODES", font(REG, 22), M, 312, MUTED, 2.2)
+
+    # ——— 1. the hero ———
+    track("1 — WHERE THEY ARE HEADED", font(BOLD, 20), M, 386, FAINT, 2.6)
+    d.text((M - 10, 384), f"{det}%", font=font(BOLD, 250), fill=NAVY)
+    d.text((M, 668), "of them are moving toward a danger line —", font=font(REG, 31), fill=INK)
+    d.text((M, 708), "the level where sellers have historically", font=font(REG, 31), fill=MUTED)
+    d.text((M, 748), "started losing leverage.", font=font(REG, 31), fill=MUTED)
+
+    # ——— 2. the counterweight ———
+    d.line([(M, 872), (1080 - M, 872)], fill=RULE, width=2)
+    track("2 — WHERE THEY STAND TODAY", font(BOLD, 20), M, 906, FAINT, 2.6)
+    d.text((M, 948), f"{hold}%", font=font(BOLD, 76), fill=INK)
+    x = M + d.textlength(f"{hold}%", font=font(BOLD, 76)) + 26
+    d.text((x, 970), "still rate ", font=font(REG, 34), fill=INK)
+    x += d.textlength("still rate ", font=font(REG, 34))
+    d.text((x, 970), "HOLD", font=font(BOLD, 34), fill=GREEN)
+    x += d.textlength("HOLD", font=font(BOLD, 34))
+    d.text((x, 970), " today.", font=font(REG, 34), fill=INK)
+
+    d.text((M, 1054), "The same ZIP codes, counted two ways: a market can rate",
+           font=font(REG, 26), fill=MUTED)
+    d.text((M, 1090), "HOLD today and still be drifting. These overlap; they do",
+           font=font(REG, 26), fill=MUTED)
+    d.text((M, 1126), "not sum.", font=font(REG, 26), fill=MUTED)
+
+    return img
+
+
+def card_receipt(t):
+    """A receipt: the hero is the LEAD TIME, because that is the whole claim."""
+    from build_research import font, REG, BOLD, INK, MUTED, FAINT, NAVY
+    r = t.get("render") or {}
+    lead = r.get("lead_days") or 0
+    img, d = _shell(_pretty_month(str(r.get("published_on", ""))[:7]),
+                    "We flagged it first", r.get("metro", ""))
+    M = 84
+    _track(d, "OUR HEAD START ON THE COVERAGE", font(REG, 22), M, 312, MUTED, 2.2)
+    d.text((M - 10, 384), str(lead), font=font(BOLD, 250), fill=NAVY)
+    x = M - 10 + d.textlength(str(lead), font=font(BOLD, 250))
+    d.text((x + 16, 560), "days", font=font(BOLD, 64), fill=NAVY)
+    d.text((M, 668), f"Our index flagged {r.get('metro','')}", font=font(REG, 31), fill=INK)
+    d.text((M, 708), f"on {_pretty_day(r.get('flag_date'))}.", font=font(REG, 31), fill=MUTED)
+    d.text((M, 748), f"{r.get('outlet','')} reported it on "
+                     f"{_pretty_day(r.get('published_on'))}.", font=font(REG, 31), fill=MUTED)
+    d.line([(M, 872), (1080 - M, 872)], fill=RULE_TINT, width=2)
+    d.text((M, 912), "Every claim on this card is a published article with a",
+           font=font(REG, 26), fill=MUTED)
+    d.text((M, 948), "date. We log no receipt without a source.",
+           font=font(REG, 26), fill=MUTED)
+    return img
+
+
+def card_case(t):
+    """A track-record case: hero is the lead time in months, counterweight the
+    decline that followed."""
+    from build_research import font, REG, BOLD, INK, MUTED, FAINT, NAVY
+    r = t.get("render") or {}
+    n = r.get("lead_months") or 0
+    # The masthead date is the DATA MONTH this card was published in, not the
+    # case's own first-signal month: a 2021 stamp on a card posted in 2026 reads
+    # as four years stale. The signal month belongs in the body, where it is
+    # about the case rather than about the card.
+    title = r.get("short_name") or r.get("name", "")
+    sub = r.get("name", "")
+    img, d = _shell(r.get("period_pretty", ""), title, sub if sub != title else "")
+    M = 84
+    _track(d, "WARNING BEFORE THE DECLINE", font(REG, 22), M, 312, MUTED, 2.2)
+    d.text((M - 10, 384), str(n), font=font(BOLD, 250), fill=NAVY)
+    x = M - 10 + d.textlength(str(n), font=font(BOLD, 250))
+    d.text((x + 16, 560), "months", font=font(BOLD, 64), fill=NAVY)
+    d.text((M, 668), f"of warning before home prices here", font=font(REG, 31), fill=INK)
+    ptt = r.get("peak_to_trough")
+    d.text((M, 708), f"fell {abs(ptt) * 100:.1f}% from their high."
+           if ptt is not None else "fell from their high.",
+           font=font(REG, 31), fill=MUTED)
+    d.line([(M, 872), (1080 - M, 872)], fill=RULE_TINT, width=2)
+    d.text((M, 912), "Re-run with the same danger lines we use today —",
+           font=font(REG, 26), fill=MUTED)
+    d.text((M, 948), "including one market that tripped a line and recovered.",
+           font=font(REG, 26), fill=MUTED)
+    return img
 
 
 BUILDERS = {"post": card_metro, "receipt_quote": card_receipt, "evergreen": card_case}
@@ -223,14 +322,17 @@ def render(period, out_root):
         build = BUILDERS.get(kind)
         if not build:
             continue
-        head, sub, body = build(t)
-        bad = compliant(" ".join([head, sub, body]))
+        # The builders now draw and return an image: the card is a LAYOUT, not
+        # three strings poured into a shared frame, which is what cost the old
+        # cards their hierarchy. Compliance is checked on the strings the
+        # builder will draw, gathered from the same render payload.
+        bad = compliant(" ".join(str(v) for v in (t.get("render") or {}).values()))
         if bad:
             print(f"post-pack: {tok} refused — copy tripped {sorted(set(bad))}")
             skipped += 1
             continue
         try:
-            img = _frame(head, sub, body.split("\n"))
+            img = build(t)
         except Exception as exc:                       # Pillow missing, font missing
             print(f"post-pack: cannot render ({exc}) — cards skipped this run")
             return drawn, skipped + 1

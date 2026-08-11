@@ -22,11 +22,49 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import post_pack as pp
 
 
-def test_templates_carry_no_literal_numbers():
-    """Every figure arrives from the manifest. A numeral in a template is a
-    number that cannot be refreshed and will eventually be wrong."""
-    offenders = {k: v for k, v in pp.TEMPLATES.items() if re.search(r"\d", v)}
-    assert not offenders, f"hardcoded digits in card templates: {offenders}"
+def test_no_drawn_string_carries_a_hardcoded_number():
+    """Every figure on a card arrives from the manifest. A numeral baked into a
+    drawn string is a number nobody can refresh and that will eventually be
+    wrong — the failure test_no_handwritten_claims.py exists to catch.
+
+    The TEMPLATES dict this used to read is gone: the 2026-08-10 redesign made
+    the cards layouts rather than three strings poured into a shared frame, so
+    the check reads the strings actually handed to d.text().
+    """
+    src = (ROOT / "pipeline" / "post_pack.py").read_text()
+    drawn = re.findall(r'd\.text\(\([^)]*\),\s*(f?"[^"]*")', src)
+    bad = [s for s in drawn
+           if re.search(r"\d", s) and "{" not in s          # interpolated is fine
+           and "1080" not in s]                              # geometry, not copy
+    assert not bad, f"hardcoded digits in drawn card copy: {bad}"
+
+
+def test_cards_render_for_every_type(tmp_path):
+    """All three builders produce a 1080x1350 image from a realistic payload."""
+    pytest.importorskip("PIL")
+    payloads = {
+        "post": {"name": "Grand Rapids-Wyoming-Kentwood, MI",
+                 "short_name": "Grand Rapids, MI", "share_det": 76.3,
+                 "hold_share": 63.2, "zips": 76, "period_pretty": "June 2026"},
+        "receipt_quote": {"metro": "Boise City, ID", "lead_days": 41,
+                          "outlet": "Idaho Statesman", "flag_date": "2026-06-20",
+                          "published_on": "2026-07-31"},
+        "evergreen": {"name": "Boise City, ID", "short_name": "Boise City, ID",
+                      "lead_months": 12, "first_signal": "2021-11",
+                      "peak_to_trough": -0.1786, "period_pretty": "June 2026"},
+    }
+    for kind, r in payloads.items():
+        img = pp.BUILDERS[kind]({"render": r})
+        assert img.size == (1080, 1350), kind
+
+
+def test_a_decline_is_not_printed_as_a_double_negative():
+    """"fell -17.9% from their high" — the minus and the word "fell" say the
+    same thing twice and read as a rise."""
+    pytest.importorskip("PIL")
+    src = (ROOT / "pipeline" / "post_pack.py").read_text()
+    assert "lstrip('+')" not in src, "sign handling regressed to lstrip"
+    assert "abs(ptt)" in src
 
 
 def test_no_banned_constructions_in_any_rendered_caption():
@@ -39,27 +77,29 @@ def test_no_banned_constructions_in_any_rendered_caption():
     assert not pp.compliant("Austin-Round Rock, TX — 28% of scored ZIPs deteriorating")
 
 
-def test_zero_median_never_renders_zero_months():
-    """mtl_prose discipline: a 0.0 median is 'already at its danger line'.
-    These strings get pasted into press emails."""
-    head, sub, body = pp.card_metro({"render": {
-        "name": "Austin-Round Rock, TX", "share_det": 28.3, "zips": 61,
-        "hold_share": 71.0, "median_mtl": 0.0}})
-    joined = " ".join([head, sub, body])
-    assert not re.search(r"\b0(\.0)? months?\b", joined), joined
-    assert "danger line" in joined
-    assert not pp.compliant(joined)
+def test_zero_median_cannot_reach_a_card():
+    """mtl_prose discipline. The redesigned metro card does not print the
+    median at all — that number lives in the caption, where there is room to
+    phrase it — so the check is that no card string can express it and that a
+    0.0 median still renders."""
+    pytest.importorskip("PIL")
+    src = (ROOT / "pipeline" / "post_pack.py").read_text()
+    assert "months" not in re.sub(r"#[^\n]*", "", src).split("def card_metro")[1][:2000], \
+        "the metro card started printing a months figure again"
+    img = pp.card_metro({"render": {
+        "name": "Austin-Round Rock, TX", "short_name": "Austin, TX",
+        "share_det": 28.3, "zips": 61, "hold_share": 71.0,
+        "median_mtl": 0.0, "period_pretty": "June 2026"}})
+    assert img.size == (1080, 1350)
 
 
 def test_ratios_render_as_percentages():
-    """A stored ratio is not a published number. -0.1775 must reach the card
-    as -17.8%, or the card has published nothing a reader can use."""
-    head, sub, body = pp.card_case({"render": {
-        "name": "Cape Coral-Fort Myers, FL", "lead_months": 10,
-        "first_signal": "2022-08", "peak_to_trough": -0.1775}})
-    assert "-17.8%" in body, body
-    assert "-0.1775" not in body
-    assert "August 2022" in body, "ISO dates are for databases, not cards"
+    """A stored ratio is not a published number. -0.1775 must reach a reader as
+    17.9%, not as the float a database holds."""
+    assert pp._pct(-0.1775) == "-17.8%"
+    assert pp._pct(None) == "—"
+    assert pp._pretty_month("2022-08") == "August 2022"
+    assert pp._pretty_day("2026-07-31") == "July 31, 2026"
 
 
 def test_render_is_deterministic(tmp_path):

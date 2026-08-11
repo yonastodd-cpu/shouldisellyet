@@ -352,3 +352,45 @@ The analyst bullets ("#3 of 25 on the gathering list", "the dial that moved")
 were never part of a caption — they are `why_detail`, admin-only. They now sit
 below the caption behind a disclosure labelled INTERNAL NOTES — NOT PART OF THE
 POST, so nobody reviewing a card can mistake them for copy.
+
+## The card (redesigned 2026-08-10)
+
+The old card was two title lines and a footer borrowed from the research
+release's `_social_frame`, with body text starting at y=300 and 900px of
+nothing under it. Sharing one frame across two jobs was the earlier call; it
+cost the marketing cards their hierarchy, so marketing now draws its own.
+`_social_frame` is untouched and still serves the research releases.
+
+    masthead    SHOULDISELLYET RESEARCH · JUNE 2026   + a heavy rule
+    market      Grand Rapids, MI  /  full CBSA name beneath, small
+    field 1     1 — WHERE THEY ARE HEADED
+    hero        76%  at 250pt, navy, ~40% of the card
+                + the danger-line definition in plain words
+    field 2     2 — WHERE THEY STAND TODAY
+    counter     63% still rate HOLD today  (HOLD in the verdict green)
+    note        the same ZIP codes, counted two ways — they do not sum
+    footer      SHOULDISELLYET                      shouldisellyet.com
+
+**Hierarchy without a second typeface.** Only IBM Plex Mono ships with this
+repo — CI must render identical bytes, so a font has to be committed — so the
+steps are size and weight: 21 eyebrow / 22 field label / 56 market / 250 hero.
+Adding a serif is a one-file change (drop a TTF in `pipeline/fonts/` and point
+`font()` at it) if that trade ever looks worth it.
+
+**The accent is navy, never red.** Red reads as fire. This is a smoke detector.
+
+**No sparkline, and not for want of trying.** A six-month share series per
+metro is computable from the committed `velocity-{period}.json` files, but a
+metro drops off the gathering list in months where it does not qualify —
+Grand Rapids has four of six points. A line with holes misrepresents a trend,
+so the card carries no chart.
+
+### Why the two figures are laid out the way they are
+
+76% moving toward a danger line and 63% rating HOLD are the SAME ZIP codes
+measured two ways, and they routinely sum past 100. A caption has room to say
+so; a card does not. Three things stop the arithmetic, in the order a reader
+meets them: the denominator is named once above both ("two measures of the
+same 76 ZIP codes"), each figure sits under a numbered label posing a
+different QUESTION, and a closing line says the two overlap and do not sum.
+Someone who still adds them has been told three times.
