@@ -1437,8 +1437,27 @@ function mqCard(t) {
       ${t.status === "posted" ? '<div style="margin-top:4px"><span class="tag green">POSTED</span></div>' : ""}
     </div>`;
 
-  const cap = t.caption
-    ? `<div class="cap">${esc(t.caption)}${t.hashtags ? `\n<span style="color:var(--gold)">${esc(t.hashtags)}</span>` : ""}</div>`
+  // X without premium posts the SHORT caption, so that is the one shown first
+  // on an X card — the operator should be reading what they will actually
+  // paste, not a longer version they then have to cut by hand.
+  const primaryShort = t.channel === "x" && t.caption_short;
+  const primary = primaryShort ? t.caption_short : t.caption;
+  const secondary = primaryShort ? t.caption : t.caption_short;
+  const cap = primary
+    ? `<div class="cap">${esc(primary)}${t.hashtags ? `\n<span style="color:var(--gold)">${esc(t.hashtags)}</span>` : ""}</div>`
+      + (secondary ? `<details style="margin-top:6px"><summary class="mono"
+           style="font-size:10.5px;color:var(--fainter);cursor:pointer">${
+           primaryShort ? "long version (IG/FB)" : "280-character version (X)"
+         }</summary><div class="cap" style="margin-top:6px">${esc(secondary)}</div></details>` : "")
+    : "";
+
+  // Lint: why this caption may not be postable. [] means it passed; null means
+  // the row predates the linter. Shown ON the card, because a problem found
+  // after posting is not a problem the operator can act on.
+  const lint = Array.isArray(t.lint) && t.lint.length
+    ? `<div class="note" style="background:var(--amber-soft);border:1px solid #e8d5a8;
+         border-radius:8px;padding:8px 10px;margin-top:8px;color:#8a6414">
+         <b>Check before posting:</b> ${t.lint.map(esc).join(" · ")}</div>`
     : "";
   // One tap per thing the operator has to paste somewhere else.
   const tools = t.status === "skipped" ? "" :
@@ -1446,7 +1465,9 @@ function mqCard(t) {
       ${t.caption ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','caption',this)">Copy caption</button>` : ""}
       ${t.hashtags ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','hashtags',this)">Copy tags</button>` : ""}
       ${t.utm_url ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','utm_url',this)">Copy link</button>
-        <span class="mono" style="font-size:10.5px;color:var(--fainter);word-break:break-all">${esc(t.utm_url)}</span>` : ""}
+        <span class="mono" style="font-size:10.5px;color:var(--fainter);word-break:break-all"
+          title="The caption shows the short link; both carry the same campaign token.">${
+          esc(t.short_path ? "shouldisellyet.com" + t.short_path : t.utm_url)}</span>` : ""}
     </div>`;
 
   let act = "";
@@ -1481,8 +1502,12 @@ function mqCard(t) {
     ${chip}
     <div style="min-width:0">
       <div class="why-h">${esc(t.why_headline)}</div>
-      ${t.why_detail ? `<div class="why-d">${esc(t.why_detail)}</div>` : ""}
-      ${cap}${tools}${act}
+      ${cap}${lint}${tools}
+      ${t.why_detail ? `<details class="why-d" style="margin-top:10px">
+        <summary class="mono" style="font-size:10.5px;color:var(--fainter);
+          cursor:pointer;letter-spacing:.06em">INTERNAL NOTES — NOT PART OF THE POST</summary>
+        <div style="margin-top:6px;white-space:pre-wrap">${esc(t.why_detail)}</div></details>` : ""}
+      ${act}
     </div>
     <div>${side}</div>
   </div>`;

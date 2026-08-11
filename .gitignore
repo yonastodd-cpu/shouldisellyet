@@ -34,6 +34,11 @@ web/research/
 # the manifest on every deploy, deterministically.
 web/assets/mkt/
 
+# Generated at deploy time by pipeline/post_pack.py — one static redirect
+# per marketing task, so the short link in a caption carries the campaign
+# token the nightly performance join reads.
+web/go/
+
 # Per-ZIP velocity payloads — the PAID layer. Served only through
 # verify-access (Supabase); committing them would publish the paid feature in
 # a public repo. The aggregate velocity-{month}.json files ARE committed.

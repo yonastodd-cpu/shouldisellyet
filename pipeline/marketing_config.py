@@ -106,8 +106,12 @@ BURST_WINDOW_HOURS = 48
 BURST_SLOT_TIMES_ET = ("09:00", "19:30")   # first instant inside the window
 
 # ——— Hashtags (stored pre-rendered on the row; Copy copies verbatim) ———
+# EXACTLY TWO, EVERYWHERE THEY APPEAR: #housingmarket plus one metro tag.
+# Four tags read as reach-chasing and are the single clearest tell that a post
+# came from a content pipeline rather than a newsroom. Cut from four on
+# 2026-08-10; MAX_HASHTAGS lints the result so this cannot creep back.
 HASHTAGS = {
-    "ig": ("#housingmarket", "#realestate", "#homeselling", "#housingdata"),
+    "ig": ("#housingmarket",),
     "x":  ("#housingmarket",),
     "fb": (),               # FB hashtags don't aid reach; keep captions clean
     "nextdoor_naomi": (),   # no hashtag culture on Nextdoor; reads as spam
@@ -125,8 +129,36 @@ BANNED = ("powered by", "in partnership with", "partnered with",
 # HYPE: constructions that turn a smoke detector into a doom account. Checked
 # on rendered CAPTIONS (the strings that get pasted into public channels) —
 # which also protects against operator-entered narrative/quote text.
-HYPE = ("crash", "collapse", "plummet", "guarantee", "will fall",
-        "act now", "before it's too late")
+# The voice is a wire-service data journalist: neutral, declarative, present
+# tense. The data is surprising on its own; an adjective that tries to make it
+# surprising is admitting it is not. Everything here is checked against the
+# rendered CAPTION (the string that gets pasted), which also catches
+# operator-entered narrative text riding in.
+HYPE = ("crash", "collapse", "bubble", "plummet", "soar", "skyrocket",
+        "alarming", "brace", "red alert", "guarantee", "will fall",
+        "act now", "before it's too late", "you need to know",
+        "warning signs are building")
+
+# ——— Caption lint ———
+# X is not a premium account (X_PREMIUM False), so a post there is 280 chars
+# INCLUDING the link and the tags. The long caption is not truncatable into
+# that, so the generator writes two captions from the same facts and the
+# channel picks. Flip this and X starts using the long one.
+X_PREMIUM = False
+CAPTION_MAX_SHORT = 280        # X, non-premium
+CAPTION_RANGE_LONG = (400, 900)  # IG/FB — the skeleton with room to breathe
+MAX_NUMBERS_SHORT = 3          # one hero number, at most two supporting
+MAX_NUMBERS_LONG = 3
+MAX_HASHTAGS = 2               # #housingmarket + one metro tag, end of post
+# "danger line" is ours and worth owning, but it means nothing to a stranger.
+# Every caption that uses it must ground it in plain words on first use; the
+# linter checks for one of these follow-ons rather than a fixed sentence, so
+# each rule can phrase its own definition from the metric it actually moved.
+# Checked in the ~90 characters FOLLOWING the term, so a rule can phrase the
+# definition from whichever metric actually moved instead of reciting a fixed
+# sentence. What is required is that a definition follows closely, not that it
+# is worded a particular way.
+DANGER_LINE_GLOSSES = ("the level where", "the point where", "where ")
 # NAOMI_NEVER: Naomi Todd is a real, independent licensed agent with no
 # corporate affiliation to this site (docs/ATTRIBUTION.md, correction dated
 # 2026-08-08). Her name and company never appear in generated copy.

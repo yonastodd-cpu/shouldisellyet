@@ -154,6 +154,46 @@ def card_case(t):
 BUILDERS = {"post": card_metro, "receipt_quote": card_receipt, "evergreen": card_case}
 
 
+def write_redirects(period, web_root):
+    """/go/{token}/ — the short link that still measures.
+
+    A caption cannot carry a 90-character UTM URL and stay readable, and the
+    obvious fix (show the bare domain, keep the tracked link in the admin Copy
+    button) quietly breaks the performance loop: the operator pastes the
+    caption, the posted link has no campaign token, and perf_checks measures
+    nothing for the life of the post. So the short link is a REAL page that
+    redirects to the tracked one — the same static-redirect trick /s/{zip}
+    already uses on a host with no server.
+
+    Scrapers read the meta refresh, humans get location.replace, and anyone
+    with JS off gets a visible link. noindex because these are not content.
+    """
+    man = MANIFEST_DIR / f"pack-{period}.json"
+    if not man.exists():
+        return 0
+    n = 0
+    for task in json.loads(man.read_text()).get("tasks") or []:
+        tok, dest = task.get("utm_campaign"), task.get("utm_url")
+        if not tok or not dest:
+            continue
+        d = web_root / "go" / tok
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "index.html").write_text(
+            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"robots\" content=\"noindex,nofollow\">"
+            f"<title>ShouldISellYet</title>"
+            f"<script>location.replace({json.dumps(dest)});</script>"
+            f"<meta http-equiv=\"refresh\" content=\"0;url={dest}\">"
+            "<style>body{font-family:system-ui,-apple-system,sans-serif;"
+            "background:#faf8f4;color:#5c6673;padding:40px 20px;text-align:center}"
+            "a{color:#1f3a5f}</style></head><body>"
+            f"<p>Taking you to the free ZIP checker… <a href=\"{dest}\">continue</a></p>"
+            "</body></html>", encoding="utf-8")
+        n += 1
+    print(f"post-pack: {n} short link(s) written to {web_root / 'go'}")
+    return n
+
+
 def render(period, out_root):
     """Draw every card the manifest asks for. Returns (drawn, skipped)."""
     man = MANIFEST_DIR / f"pack-{period}.json"
@@ -216,6 +256,7 @@ def main(argv=None):
         print("post-pack: no data period — nothing to render")
         return 0
     render(period, Path(args.out))
+    write_redirects(period, ROOT / "web")
     return 0
 
 

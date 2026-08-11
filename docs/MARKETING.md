@@ -291,3 +291,64 @@ late 2026, once the snapshot history is deep enough for a real lead. Until
 then, log coverage as it appears — the rows accumulate, `lead_days` is
 computed per row, and the admin panel's median lead time is the number that
 eventually becomes the marketing claim.
+
+## Caption design (redesigned 2026-08-10)
+
+The first queue read like research notes pushed to social. Every caption now
+comes out of one assembler, `compose()`, so the shape is structural rather
+than a thing each rule remembers:
+
+    HOOK       one sentence, the single most surprising fact, hero number
+    CONTRAST   the surface-vs-underneath tension — our signature move
+    EVIDENCE   one line on why THIS month
+    CTA        one link, the short one
+    ATTRIB     ShouldISellYet Research · data through {month} + two hashtags
+
+**Two lengths, both written — never truncated.** X is not a premium account
+(`X_PREMIUM = False`), so a post there is 280 characters including the link and
+the tags, and the long caption does not survive being cut: the contrast is the
+one move the brand has, and truncation lands mid-contrast. Each rule supplies a
+tight hook and contrast as well, and `caption_short` is BUILT. The admin card
+shows whichever one that channel will actually post, with the other behind a
+disclosure.
+
+**Number discipline.** At most three numbers, one of them the hero, in the
+hook. Thousands separators keep a figure whole (`25,000` is one number a reader
+holds, not two) and a year after a month name is a date, not a statistic —
+counting those made clean captions fail. Small ordinals are spelled as words:
+"the third month in a row" reads, and "3rd" spends one of the three numbers on
+a figure nobody needs precisely.
+
+### The linter is not a retry loop
+
+There is no LLM in this pipeline and the templates are pure functions, so
+"regenerate on failure" would return the identical string forever. What
+`lint_caption()` does instead is attach the reason to the row, and the admin
+card shows it in an amber band above the actions — a problem found after
+posting is not one the operator can act on. It checks length against the
+channel's real limit, exactly one link, at most two hashtags, at most three
+numbers, the attribution line, and that "danger line" is defined in plain words
+within ~90 characters of its first use.
+
+It lints against the REAL short link. An earlier version measured a stand-in
+20 characters shorter and passed a 299-character post as clean.
+
+### The short link is a real page
+
+`/go/{token}/` is a generated static redirect to the full tracked URL, written
+by `post_pack.py --render` — the same trick `/s/{zip}` uses on a host with no
+server. The obvious alternative (show the bare domain, keep the tracked link in
+the admin Copy button) silently breaks the performance loop: the operator
+pastes the caption, the posted link carries no campaign token, and
+`perf_checks` measures nothing for the life of the post. The link a reader taps
+and the link the nightly join counts are the same link.
+
+The token stays in the path. A prettier slug would need a map that can drift,
+collide between metros, or 404 a post that is already public.
+
+### Internal notes stay internal
+
+The analyst bullets ("#3 of 25 on the gathering list", "the dial that moved")
+were never part of a caption — they are `why_detail`, admin-only. They now sit
+below the caption behind a disclosure labelled INTERNAL NOTES — NOT PART OF THE
+POST, so nobody reviewing a card can mistake them for copy.

@@ -396,6 +396,32 @@ def cand_record(rep):
     lines.append(f"- Basis: continuous series since {pretty_month(rec['basis_since'])} "
                  f"({rec['basis_months']} months) — superlatives never cross the "
                  f"source seam.")
+    sentence = lambda s: (s[:1].upper() + s[1:]) if s else s
+    # Small ordinals as WORDS in prose: "the third month in a row" reads, and
+    # "3rd" spends one of the three numbers a caption is allowed on a figure
+    # nobody needs to hold precisely.
+    _ordinal_word = lambda n: {2: "second", 3: "third", 4: "fourth", 5: "fifth",
+                               6: "sixth", 7: "seventh", 8: "eighth",
+                               9: "ninth"}.get(n, ordinal(n))
+    direction = "More" if _record_is_alarming(rec, sup) else "Fewer"
+    moved = ((f", down from {rec['prev_wsi']:.1f}%" if (rec.get('delta') or 0) < 0
+              else f", up from {rec['prev_wsi']:.1f}%") if rec.get('prev_wsi') else "")
+    _rec_long, _rec_short = compose(
+        hook=(f"{direction} neighborhoods across the country are showing housing "
+              f"warning signs than at any point since {pretty_month(rec['basis_since']) if sup.startswith('a record') else sup.split('since ')[-1].rstrip('.')}."),
+        contrast=(f"We check about 25,000 ZIP codes every month against the same "
+                  f"danger lines — the levels where sellers have historically "
+                  f"started losing leverage. Right now {rec['wsi']:.1f}% are "
+                  f"showing at least one{moved}."),
+        evidence=(f"That is the {_ordinal_word(rec['run_length'])} month in a row the "
+                  f"share has fallen." if (rec.get("run_length") or 0) >= 2
+                  and rec.get("run_direction") == "down" else
+                  f"{sentence(sup)}."),
+        period=period,
+        short_hook=(f"{direction} neighborhoods are showing housing warning signs "
+                    f"than at any point in recent months: {rec['wsi']:.1f}% of the "
+                    f"25,000 ZIP codes we track{moved}."),
+        short_contrast=f"{sentence(sup)}.")
     return {
         "key": token("record", period=period), "type": "post", "tier": 1,
         "why_headline": f"WSI hit {rec['wsi']:.1f}% — {sup}. Records are "
@@ -413,19 +439,7 @@ def cand_record(rep):
         # Written for a homeowner, not an economist: no index name, no "share",
         # no "basis points". The number stays exact; the sentence around it
         # says what the number means for a person who owns one house.
-        "caption": ((f"More neighborhoods are showing housing warning signs than "
-                     f"at any point in recent months."
-                     if _record_is_alarming(rec, sup) else
-                     f"Fewer neighborhoods are showing housing warning signs than "
-                     f"at any point in recent months.")
-                    + f" We check about 25,000 ZIP codes every month against the "
-                      f"same danger lines — right now {rec['wsi']:.1f}% are showing at "
-                      f"least one warning sign"
-                    + (f", down from {rec['prev_wsi']:.1f}%."
-                       if (rec.get('delta') or 0) < 0 and rec.get('prev_wsi')
-                       else f", up from {rec['prev_wsi']:.1f}%."
-                       if (rec.get('delta') or 0) > 0 and rec.get('prev_wsi') else ".")
-                    + f"\nSee where your ZIP code stands, free: {{utm_url}}"),
+        "caption": _rec_long, "caption_short": _rec_short,
         "asset_path": f"/research/{period}/social/1-wsi.png",
         "render": {"wsi": rec["wsi"], "prev_wsi": rec.get("prev_wsi"),
                    "delta": rec.get("delta"), "superlative": sup},
@@ -487,6 +501,15 @@ def cand_contrarian(rep, period):
         print(f"contrarian: narrative set but no gap (stance {stance}, "
               f"WSI {wsi:.1f}%, delta {delta}) — rule skipped")
         return None
+    _con_long, _con_short = compose(
+        hook="The headlines are telling one story. The data tells a quieter one.",
+        contrast=(f"Across the roughly 25,000 ZIP codes we track against fixed "
+                  f"danger lines — the levels where sellers have historically "
+                  f"started losing leverage — {counter}."),
+        evidence="We publish the same measurement every month, moved or not.",
+        period=period,
+        short_hook="The headlines are telling one story. The data tells a quieter one:",
+        short_contrast=f"across the 25,000 ZIP codes we track, {counter}.")
     return {
         "key": token("contrarian", period=period), "type": "post", "tier": 2,
         "why_headline": f'The narrative says "{text}" — the data says {counter}.',
@@ -497,10 +520,7 @@ def cand_contrarian(rep, period):
             f"- Narrative set by the operator for {period} in "
             f"pipeline/marketing_config.py; this card exists only because the "
             f"verdict mix points the other way."]),
-        "caption": (f"The headlines are telling one story. Our numbers tell a "
-                    f"quieter one: {counter}. We check about 25,000 ZIP codes "
-                    f"every month against the same danger lines.\n"
-                    f"See where your ZIP code stands, free: {{utm_url}}"),
+        "caption": _con_long, "caption_short": _con_short,
         "render": {"wsi": wsi, "delta": delta, "counter": counter},
     }
 
@@ -627,8 +647,26 @@ def cand_flips(vel, vel_prev, period):
                          f"its danger line in {d['near']} of {g['zips']} ZIPs, "
                          f"median {mtl_prose(d.get('median_mtl'))} at the "
                          f"current 3-month pace.")
+        name = short_metro(g["name"])
+        det, hold = round(g["share_det"]), round(g["hold_share"])
+        hook = (f"{det}% of the ZIP codes we track in {name} are now moving "
+                f"toward a danger line — the level where local price trends "
+                f"have historically turned against sellers.")
+        contrast = (f"On the surface the market looks steady: {hold}% of "
+                    f"neighborhoods still rate HOLD today. Underneath, most of "
+                    f"those same neighborhoods are drifting the same way, and "
+                    f"at the pace of the last three months the typical one is "
+                    f"{mtl_prose(g.get('median_mtl'))}.")
+        evidence = (f"This is {name}'s first month among the fastest-shifting "
+                    f"markets we track.")
+        short_hook = (f"{det}% of ZIP codes we track in {name} are moving toward "
+                      f"a danger line — where sellers start losing leverage.")
+        short_contrast = f"{hold}% still rate HOLD: largely the same neighborhoods."
+        cap_long, cap_short = compose(hook, contrast, evidence, period,
+                                      short_hook, short_contrast)
         out.append({
             "key": tok, "type": "post", "tier": 3,
+            "caption": cap_long, "caption_short": cap_short,
             "metro_cbsa": g["cbsa"], "metro_name": g["name"],
             "why_headline": f"{g['name']} just entered the top of our watch "
                             f"list — {g['share_det']:.0f}% of its {g['zips']} "
@@ -645,18 +683,7 @@ def cand_flips(vel, vel_prev, period):
             # summing past 100%, and the post looks like it cannot add up. The
             # overlap is the story, so it is stated rather than left to trip
             # the reader.
-            "caption": (f"Warning signs are building in {short_metro(g['name'])}."
-                        f"\n\nMost of its neighborhoods still look healthy — "
-                        f"{g['hold_share']:.0f}% rate HOLD today. But "
-                        f"{g['share_det']:.0f}% are already sliding toward one of "
-                        f"our danger lines, and they are largely the same "
-                        f"neighborhoods: steady on the surface, moving "
-                        f"underneath. At the pace of the last three months, the "
-                        f"typical one is {mtl_prose(g.get('median_mtl'))}.\n\n"
-                        f"See where your ZIP code stands, free: {{utm_url}}\n"
-                        f"(ShouldISellYet Research · data through "
-                        f"{pretty_month(period)})"),
-            "asset_path": f"/assets/mkt/{period}/{tok}.png",
+"asset_path": f"/assets/mkt/{period}/{tok}.png",
             "render": {"name": g["name"], "zips": g["zips"],
                        "share_det": g["share_det"],
                        "prev_share_det": prev.get("share_det"),
@@ -664,6 +691,92 @@ def cand_flips(vel, vel_prev, period):
                        "median_mtl": g.get("median_mtl"),
                        "sig": sig, "period_pretty": pretty_month(period)},
         })
+    return out
+
+
+# ————— the caption skeleton —————
+# Every public caption is assembled here rather than written out by each rule,
+# so the SHAPE is structural: hook, contrast, evidence, one CTA, attribution,
+# two tags. A rule supplies three plain-language parts and cannot produce an
+# off-skeleton post even by accident.
+#
+# TWO LENGTHS FROM THE SAME FACTS. X is not premium (MC.X_PREMIUM), so a post
+# there is 280 characters including the link and the tags — and the long
+# caption does not survive truncation: cutting it mid-contrast destroys the
+# one move the brand has. So a rule also supplies a tight version of the hook
+# and contrast, and the short caption is BUILT, never cut.
+CTA = "See where your ZIP stands (free): {short_url}"
+
+
+def compose(hook, contrast, evidence, period, short_hook=None, short_contrast=None):
+    """(long, short). Placeholders {short_url} and {tags} resolve at row build,
+    where the channel is finally known."""
+    pm = pretty_month(period)
+    long_parts = [hook, contrast, evidence, CTA,
+                  f"ShouldISellYet Research · data through {pm}\n{{tags}}"]
+    long_caption = "\n\n".join(x for x in long_parts if x)
+
+    # The short one drops the why-now line first (it is the least load-bearing
+    # of the three) and runs hook and contrast together as one paragraph.
+    lead = " ".join(x for x in (short_hook or hook, short_contrast or contrast) if x)
+    short_caption = (f"{lead}\n\n{{short_url}}\n"
+                     f"ShouldISellYet · {pm}\n{{tags}}")
+    return long_caption, short_caption
+
+
+# ————— the linter —————
+# NOT a regenerate loop: there is no LLM here and the templates are pure
+# functions, so re-running one returns the identical string forever. What a
+# linter can do is (a) fail the build when a TEMPLATE could emit something
+# banned, via the tests, and (b) attach a reason to a row so the operator sees
+# it on the card before posting. Both, rather than a retry that cannot work.
+MONTHS_RE = "|".join(["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November",
+                      "December"])
+# Thousands separators keep their number whole ("25,000" is one figure a reader
+# holds, not two), and a year following a month name is a date, not a stat.
+NUMERAL_RE = re.compile(r"(?<![\d,.])\d[\d,]*(?:\.\d+)?%?")
+DATE_YEAR_RE = re.compile(rf"(?:{MONTHS_RE})\s+\d{{4}}")
+
+
+def lint_caption(text, channel, hashtags, short_url=""):
+    """Everything wrong with this caption, as plain sentences. [] means clean.
+
+    short_url MUST be the real link. Linting against a stand-in shorter than
+    the live one is how a 299-character post passes a 280-character check.
+    """
+    out = []
+    if not text:
+        return ["caption is empty"]
+    body = (text.replace("{short_url}", short_url or "shouldisellyet.com/go/placeholder/")
+                .replace("{tags}", hashtags or ""))
+    n = len(body)
+    if channel == "x" and not MC.X_PREMIUM:
+        if n > MC.CAPTION_MAX_SHORT:
+            out.append(f"{n} characters — X allows {MC.CAPTION_MAX_SHORT} without premium")
+    else:
+        lo, hi = MC.CAPTION_RANGE_LONG
+        if n > hi:
+            out.append(f"{n} characters — over the {hi} target")
+    links = body.count("shouldisellyet.com")
+    if links != 1:
+        out.append(f"{links} links — a post gets exactly one")
+    tags = body.count("#")
+    if tags > MC.MAX_HASHTAGS:
+        out.append(f"{tags} hashtags — the cap is {MC.MAX_HASHTAGS}")
+    # Numbers, excluding the ones inside the link and the attribution date.
+    countable = DATE_YEAR_RE.sub("", body.split("shouldisellyet.com")[0])
+    nums = NUMERAL_RE.findall(countable)
+    if len(nums) > MC.MAX_NUMBERS_LONG:
+        out.append(f"{len(nums)} numbers ({', '.join(nums[:5])}…) — at most "
+                   f"{MC.MAX_NUMBERS_LONG}, one of them the hero")
+    if "ShouldISellYet" not in body:
+        out.append("attribution line missing")
+    low = body.lower()
+    if "danger line" in low:
+        after = low.split("danger line", 1)[1][:90]
+        if not any(g in after for g in MC.DANGER_LINE_GLOSSES):
+            out.append('"danger line" used without defining it in plain words')
     return out
 
 
@@ -735,6 +848,10 @@ def cand_geo(angles, period, zip_cbsa, cbsa_names, entries=None):
                   f"the ZIP reads {e.get('l')}) — skipped")
             continue
         cbsa = zip_cbsa.get(z)
+        _geo_long, _geo_short = compose(
+            hook=sentence, contrast=None,
+            evidence="One of five local facts we pull from this month's data.",
+            period=period)
         out.append({
             "key": token("geo", period=period, zip=z), "type": "post", "tier": 4,
             "zip": z, "metro_cbsa": cbsa,
@@ -746,7 +863,7 @@ def cand_geo(angles, period, zip_cbsa, cbsa_names, entries=None):
                 f"ZIP per rule — same facts as the Growth Ops digest).",
                 f"- Standing-calendar filler: any priority 0–3 card outranks it "
                 f"this week."]),
-            "caption": f"{sentence}\nCheck your ZIP free: {{utm_url}}",
+            "caption": _geo_long, "caption_short": _geo_short,
             "render": {"zip": z, "sentence": sentence},
         })
     return out
@@ -767,6 +884,15 @@ def cand_evergreen(cases, ws, period):
                   f"{n // 12} years" if n >= 24 and n % 12 == 0 else
                   f"{n} months")
     tok = token("evergreen", ws=ws.isoformat(), case_id=c["id"])
+    _ev_long, _ev_short = compose(
+        hook=(f"We flagged {short_metro(c['name'])} {lead_words} before home "
+              f"prices there fell {pct}% from their high."),
+        contrast=("Every case we publish is re-run with the same danger lines we "
+                  "use today — the levels where sellers have historically started "
+                  "losing leverage. That includes one market that tripped a line "
+                  "and then recovered; we show that one too."),
+        evidence=None, period=period,
+        short_contrast="Every case is re-run with the lines we use today.")
     return {
         "key": tok, "type": "evergreen", "tier": 5, "week": ws,
         "metro_cbsa": case_cbsa(c["id"]), "metro_name": c["name"],
@@ -781,12 +907,7 @@ def cand_evergreen(cases, ws, period):
             f"empty — evergreen never displaces a live angle."]),
         # "peak-to-trough" is how an analyst says it. A homeowner asks how far
         # prices fell from the top, and how much warning they would have had.
-        "caption": (f"We flagged {short_metro(c['name'])} {lead_words} before "
-                    f"home prices there fell {pct}% from their high.\n\n"
-                    f"Every case we publish is re-run with the same danger "
-                    f"lines we use today — including one market that tripped a "
-                    f"line and then recovered. We show that one too.\n"
-                    f"See where your ZIP code stands, free: {{utm_url}}"),
+        "caption": _ev_long, "caption_short": _ev_short,
         "asset_path": f"/assets/mkt/{period}/{tok}.png",
         "render": {"case_id": c["id"], "name": c["name"],
                    "lead_months": c["lead_months"],
@@ -1037,6 +1158,19 @@ def row_from_placement(c, when, channel, period):
     utm_source is the channel the scheduler just assigned."""
     src = c.get("fixed_source") or channel or "x"   # burst: X is the named channel
     url = utm_url(src, c["key"])
+    # The visible link is a REAL redirect that carries the campaign token, so
+    # the link a reader taps and the link the nightly join counts are the same
+    # one. post_pack.py --render writes the page; see schema-v25.
+    short_path = f"/go/{c['key']}/"
+    short_link = f"shouldisellyet.com{short_path}"
+    tags = hashtags_for(channel or c.get("fixed_source"), c.get("metro_name"))
+    fill = lambda s: (s or "").replace("{short_url}", short_link) \
+                              .replace("{utm_url}", url).replace("{tags}", tags or "")
+    cap_long = fill(c.get("caption"))
+    cap_short = fill(c.get("caption_short"))
+    # X without premium posts the short one, so that is what gets linted for X.
+    lint = lint_caption(c.get("caption_short") if (channel == "x" and not MC.X_PREMIUM)
+                        else c.get("caption"), channel, tags, short_link)
     return {
         "type": c["type"], "channel": channel,
         "scheduled_for": iso_z(when),
@@ -1045,9 +1179,11 @@ def row_from_placement(c, when, channel, period):
         "metro_cbsa": c.get("metro_cbsa"), "metro_name": c.get("metro_name"),
         "zip": c.get("zip"),
         "asset_path": c.get("asset_path"),
-        "caption": (c.get("caption") or "").replace("{utm_url}", url) or None,
-        "hashtags": hashtags_for(channel or c.get("fixed_source"),
-                                 c.get("metro_name")),
+        "caption": cap_long or None,
+        "caption_short": cap_short or None,
+        "short_path": short_path,
+        "lint": lint,
+        "hashtags": tags,
         "utm_campaign": c["key"], "utm_url": url,
         "period": period, "source_id": c.get("source_id"),
         "dedupe_key": c["key"],
@@ -1062,8 +1198,12 @@ def write_pack_manifest(rows, cands_by_key, period):
     tasks = []
     for r in sorted(rows, key=lambda r: r["dedupe_key"]):
         c = cands_by_key.get(r["dedupe_key"], {})
+        # utm_url rides along so post_pack can write the /go/ redirect from
+        # the manifest alone — the renderer must stay pure, and rebuilding the
+        # tracked URL there would duplicate the channel logic that lives here.
         tasks.append({"utm_campaign": r["dedupe_key"], "type": r["type"],
                       "asset_path": r.get("asset_path"),
+                      "utm_url": r.get("utm_url"),
                       "render": c.get("render", {})})
     PACK_DIR.mkdir(parents=True, exist_ok=True)
     p = PACK_DIR / f"pack-{period}.json"

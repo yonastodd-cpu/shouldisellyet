@@ -543,7 +543,9 @@ def test_overlapping_shares_are_explained_not_left_to_add_up():
     out = MT.cand_flips(VEL, VEL_PREV, PERIOD)
     assert out, "the surge fixture should produce a story"
     cap = out[0]["caption"]
-    assert "largely the same neighborhoods" in cap, cap
+    assert "most of those same neighborhoods" in cap, cap
+    # and the short variant keeps the overlap too, in fewer words
+    assert "largely the same neighborhoods" in out[0]["caption_short"]
 
 
 def test_contrarian_leads_with_the_fact_that_makes_the_gap():
@@ -564,3 +566,56 @@ def test_contrarian_leads_with_the_fact_that_makes_the_gap():
         assert "37.8%" not in loud["why_headline"]
     finally:
         mc.NARRATIVE = old
+
+
+# ————— caption skeleton + linter (2026-08-10 redesign) —————
+
+def test_every_caption_lints_clean_on_real_data():
+    """The whole point of the linter: no post reaches the queue over length,
+    with two links, four hashtags, or an undefined 'danger line'."""
+    import json as _j
+    root = Path(__file__).resolve().parents[1]
+    rep = _j.loads((root / "pipeline/research/research-2026-06.json").read_text())
+    vel = _j.loads((root / "web/data/velocity-aggregates.json").read_text())
+    prev = _j.loads((root / "pipeline/velocity/velocity-prev-aggregates.json").read_text())
+    cands = [MT.cand_record(rep)] + MT.cand_flips(vel, prev, "2026-06")
+    for c in [x for x in cands if x]:
+        url = f"shouldisellyet.com/go/{c['key']}/"
+        for field, channel in (("caption", "ig"), ("caption_short", "x")):
+            problems = MT.lint_caption(c.get(field), channel, "#housingmarket #X", url)
+            assert not problems, f"{c['key']} {field}: {problems}"
+
+
+def test_linter_measures_the_real_link_not_a_stub():
+    """A 299-char post passed once because the linter measured a stand-in URL
+    20 characters shorter than the live one."""
+    body = "x" * 240 + "\n\n{short_url}\n{tags}\nShouldISellYet · June 2026"
+    long_url = "shouldisellyet.com/go/mq-2026-06-flip-24340/"
+    assert MT.lint_caption(body, "x", "#a #b", long_url), "over-length not caught"
+    assert any("characters" in p for p in MT.lint_caption(body, "x", "#a #b", long_url))
+
+
+def test_linter_catches_each_rule_it_claims_to():
+    base = "A fact.\n\n{short_url}\n{tags}\nShouldISellYet · June 2026"
+    u = "shouldisellyet.com/go/t/"
+    assert any("hashtags" in p for p in MT.lint_caption(base, "ig", "#a #b #c", u))
+    assert any("links" in p for p in
+               MT.lint_caption(base.replace("A fact.", "shouldisellyet.com twice"), "ig", "#a", u))
+    assert any("attribution" in p for p in MT.lint_caption("no attrib {short_url}{tags}", "ig", "#a", u))
+    assert any("danger line" in p for p in
+               MT.lint_caption("It crossed a danger line and stopped.\n{short_url}\n{tags}\n"
+                               "ShouldISellYet · June 2026", "ig", "#a", u))
+    # a gloss that follows the term, phrased freely, passes
+    assert not any("danger line" in p for p in
+                   MT.lint_caption("Past its danger line — where sellers lose leverage.\n"
+                                   "{short_url}\n{tags}\nShouldISellYet · June 2026",
+                                   "ig", "#a", u))
+
+
+def test_dates_and_thousands_are_not_counted_as_stats():
+    """'25,000' is one figure and 'June 2026' is context. Counting them as
+    three competing numbers made clean captions fail."""
+    cap = ("We track 25,000 ZIP codes and 62.2% show a sign.\n\n{short_url}\n"
+           "{tags}\nShouldISellYet · data through June 2026")
+    assert not any("numbers" in p for p in
+                   MT.lint_caption(cap, "ig", "#a", "shouldisellyet.com/go/t/"))
