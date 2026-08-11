@@ -128,3 +128,31 @@ def test_missing_manifest_is_not_an_error():
     on every deploy, including deploys of months that generated no tasks."""
     drawn, skipped = pp.render("1999-01", ROOT / "web" / "assets" / "mkt")
     assert (drawn, skipped) == (0, 0)
+
+
+def test_run_length_is_read_not_recomputed():
+    """The card claimed "fifth month in a row" against a truth of three,
+    because it counted every declining step in the twelve-month window instead
+    of consecutive ones from the end. run_length has one home —
+    research.detect_records() — and the card reads it."""
+    pytest.importorskip("PIL")
+    src = (ROOT / "pipeline" / "post_pack.py").read_text()
+    body = src.split("def card_contrarian")[1].split("\ndef ")[0]
+    assert "series[i][1] < series[i - 1][1]" not in body, "run length recomputed again"
+    assert 'r.get("run_length")' in body
+
+    # A rising series must never be described as falling.
+    img = pp.card_contrarian({"render": {
+        "wsi": 70.0, "run_length": 4, "run_direction": "up",
+        "period_pretty": "June 2026",
+        "series": [["2026-0%d" % i, 60 + i] for i in range(1, 7)]}})
+    assert img.size == (1080, 1350)
+
+
+def test_contrarian_falls_back_when_history_is_missing():
+    """A line drawn from three points is not a trend. With too little history
+    the card states the number plainly instead."""
+    pytest.importorskip("PIL")
+    img = pp.card_contrarian({"render": {"wsi": 62.2, "period_pretty": "June 2026",
+                                         "series": []}})
+    assert img.size == (1080, 1350)

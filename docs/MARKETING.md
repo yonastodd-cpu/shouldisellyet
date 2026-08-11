@@ -394,3 +394,31 @@ meets them: the denominator is named once above both ("two measures of the
 same 76 ZIP codes"), each figure sits under a numbered label posing a
 different QUESTION, and a closing line says the two overlap and do not sum.
 Someone who still adds them has been told three times.
+
+### The contrarian card is a chart, and that is a deliberate exception
+
+Every other card here refuses one. The per-metro series has holes — a metro
+drops off the gathering list in months it does not qualify — and a line with
+gaps misrepresents a trend. The NATIONAL series has no such problem: 73
+continuous points, read through `research.national_series(segment="continuous")`
+so it can never cross the 2020-06 source seam.
+
+It earns the exception because **the story is a shape, not a figure**. "Fewer
+neighborhoods are showing warning signs than last month" is an argument about
+direction, and no single number can make it: 62.2% on the way down is
+indistinguishable from 62.2% on the way up. The line shows the rise, the turn,
+and the three months since — the whole claim, before a word is read.
+
+The falling segment is drawn in the verdict green. A falling warning share is
+good news, and colouring it like the rest of the line would hide the one thing
+the card exists to say. Still no red anywhere.
+
+Below four usable points the card falls back to stating the number plainly. A
+line drawn from three points is not a trend.
+
+**run_length is read, never recomputed.** The card first claimed "the fifth
+month in a row" against a truth of three, because it counted every declining
+step in the twelve-month window instead of consecutive ones from the end. That
+number has one home — `research.detect_records()` — and the card, the caption
+and the release page all read it from there. `test_run_length_is_read_not_recomputed`
+fails the build if the derivation comes back.

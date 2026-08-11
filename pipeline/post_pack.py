@@ -250,7 +250,106 @@ def card_case(t):
     return img
 
 
-BUILDERS = {"post": card_metro, "receipt_quote": card_receipt, "evergreen": card_case}
+def card_contrarian(t):
+    """The contrarian card is a CHART, and that is a deliberate exception.
+
+    Every other card here refuses a chart: the per-metro series has holes,
+    because a metro drops off the gathering list in months it does not qualify,
+    and a line with gaps misrepresents a trend. The NATIONAL series has no such
+    problem — 73 continuous points read through research.national_series() so
+    it can never cross the 2020-06 source seam.
+
+    It earns the exception because the story is a SHAPE, not a figure. "Fewer
+    neighborhoods are showing warning signs than last month" is an argument
+    about direction, and a single big number cannot make it: 62.2% on its own
+    is indistinguishable from 62.2% on the way up. The line shows the rise, the
+    turn, and the three months since — which is the whole claim, visible before
+    a word is read.
+
+    The falling segment is drawn in the verdict GREEN. A falling warning share
+    is good news, and colouring it like the rest of the line would hide the one
+    thing the card exists to say. Still no red anywhere.
+    """
+    from build_research import font, REG, BOLD, INK, MUTED, FAINT, NAVY, GREEN
+    r = t.get("render") or {}
+    series = [(m, float(w)) for m, w in (r.get("series") or []) if w is not None]
+    img, d = _shell(r.get("period_pretty", ""), "The headlines, and the data", "")
+    M = 84
+
+    _track(d, "SHARE OF U.S. ZIP CODES SHOWING WARNING SIGNS",
+           font(REG, 22), M, 312, MUTED, 2.2)
+
+    if len(series) < 4:
+        # No usable history: say the number plainly rather than draw a line
+        # from three points and call it a trend.
+        d.text((M - 10, 400), f"{r.get('wsi', 0):.1f}%", font=font(BOLD, 250), fill=NAVY)
+        d.text((M, 700), "of the ZIP codes we track are showing", font=font(REG, 31), fill=INK)
+        d.text((M, 740), "at least one warning sign.", font=font(REG, 31), fill=MUTED)
+        return img
+
+    # ——— the plot ———
+    # The right margin is reserved for the end label — drawn over its own
+    # marker in the first render, which made both unreadable.
+    X0, X1, Y0, Y1 = M + 8, 1080 - M - 190, 400, 812
+    lo = min(w for _, w in series) - 3
+    hi = max(w for _, w in series) + 3
+    px = lambda i: X0 + (X1 - X0) * i / (len(series) - 1)
+    py = lambda w: Y1 - (Y1 - Y0) * (w - lo) / (hi - lo)
+
+    # A faint baseline only — gridlines would turn a story into a spreadsheet.
+    d.line([(X0, Y1 + 26), (1080 - M, Y1 + 26)], fill=RULE_TINT, width=2)
+
+    # The peak is where the turn happened; naming it is what makes the last
+    # three months read as a reversal rather than as noise.
+    peak_i = max(range(len(series)), key=lambda i: series[i][1])
+    pts = [(px(i), py(w)) for i, (_, w) in enumerate(series)]
+    d.line(pts[:peak_i + 1], fill=(150, 160, 172), width=7, joint="curve")
+    d.line(pts[peak_i:], fill=GREEN, width=9, joint="curve")
+
+    for i in (peak_i, len(series) - 1):
+        x, y = pts[i]
+        c = GREEN if i == len(series) - 1 else (150, 160, 172)
+        d.ellipse([x - 11, y - 11, x + 11, y + 11], fill=(250, 248, 244), outline=c, width=6)
+
+    # End label: the current figure, set large, beside its own dot.
+    cur = series[-1][1]
+    lbl = f"{cur:.1f}%"
+    d.text((pts[-1][0] + 30, pts[-1][1] - 44), lbl, font=font(BOLD, 70), fill=INK)
+    # Peak label, small, above its dot.
+    pk = f"{series[peak_i][1]:.1f}%"
+    d.text((pts[peak_i][0] - d.textlength(pk, font=font(REG, 26)) / 2,
+            pts[peak_i][1] - 62), pk, font=font(REG, 26), fill=MUTED)
+
+    # x labels: first and last only. Twelve tick labels is furniture.
+    d.text((X0, Y1 + 44), _pretty_month(series[0][0]), font=font(REG, 24), fill=FAINT)
+    last = _pretty_month(series[-1][0])
+    d.text((1080 - M - d.textlength(last, font=font(REG, 24)), Y1 + 44), last,
+           font=font(REG, 24), fill=FAINT)
+
+    # ——— the claim, in words, under the line ———
+    d.line([(M, 928), (1080 - M, 928)], fill=RULE_TINT, width=2)
+    # run_length comes from research.detect_records() — the same number the
+    # caption and the release page use. Deriving it here again is how the card
+    # came to claim a fifth consecutive fall against a truth of three.
+    run = r.get("run_length") or 0
+    falling = r.get("run_direction") == "down"
+    d.text((M, 968),
+           f"Down for the {_ordinal_word(run)} month in a row." if (falling and run >= 2)
+           else ("Lower than last month." if falling else "Higher than last month."),
+           font=font(BOLD, 40), fill=INK)
+    d.text((M, 1036), "The headlines are telling a different story. We publish",
+           font=font(REG, 27), fill=MUTED)
+    d.text((M, 1072), "this measurement every month, whichever way it moves.",
+           font=font(REG, 27), fill=MUTED)
+    return img
+
+
+_ordinal_word = lambda n: {2: "second", 3: "third", 4: "fourth", 5: "fifth",
+                           6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth",
+                           10: "tenth", 11: "eleventh", 12: "twelfth"}.get(n, f"{n}th")
+
+
+BUILDERS = {"post": card_metro, "contrarian": card_contrarian, "receipt_quote": card_receipt, "evergreen": card_case}
 
 
 def write_redirects(period, web_root):
@@ -319,7 +418,10 @@ def render(period, out_root):
                 print(f"post-pack: {tok} wants {path} — not built yet, skipped")
                 skipped += 1
             continue
-        build = BUILDERS.get(kind)
+        # render["card"] names the builder when the TYPE is not enough: the
+        # contrarian post is type "post" like every metro story but needs a
+        # different layout entirely (national trend, not a single market).
+        build = BUILDERS.get((t.get("render") or {}).get("card") or kind)
         if not build:
             continue
         # The builders now draw and return an image: the card is a LAYOUT, not

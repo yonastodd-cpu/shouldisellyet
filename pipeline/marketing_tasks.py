@@ -446,6 +446,23 @@ def cand_record(rep):
     }
 
 
+def _wsi_series(n=12):
+    """The last n months of the national Warning-Sign Index, as [(month, wsi)].
+
+    Read through research.national_series(segment="continuous") so the line can
+    never cross the 2020-06 source seam — the same discipline that stops a
+    superlative reaching across it. Returns [] if the history is missing, and
+    the card falls back to a number-only layout rather than drawing a lie.
+    """
+    try:
+        import research as _R
+        h = json.loads((ROOT / "pipeline" / "research" / "history.json").read_text())
+        return [[m, round(w, 1)] for m, w in _R.national_series(h, segment="continuous")[-n:]]
+    except Exception as exc:
+        print(f"contrarian: no WSI history for the chart ({exc}) — card will be text-only")
+        return []
+
+
 def cand_contrarian(rep, period):
     """Tier 2: the data contradicts the month's dominant narrative.
     NARRATIVE is operator-set monthly in marketing_config.py; unset, stale,
@@ -521,7 +538,13 @@ def cand_contrarian(rep, period):
             f"pipeline/marketing_config.py; this card exists only because the "
             f"verdict mix points the other way."]),
         "caption": _con_long, "caption_short": _con_short,
-        "render": {"wsi": wsi, "delta": delta, "counter": counter},
+        "asset_path": f"/assets/mkt/{period}/{token('contrarian', period=period)}.png",
+        "render": {"wsi": wsi, "delta": delta, "counter": counter,
+                   "card": "contrarian",
+                   "run_length": rec.get("run_length"),
+                   "run_direction": rec.get("run_direction"),
+                   "series": _wsi_series(12),
+                   "period_pretty": pretty_month(period)},
     }
 
 
