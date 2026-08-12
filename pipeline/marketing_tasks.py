@@ -802,6 +802,29 @@ def lint_caption(text, channel, hashtags, short_url="", target=None):
     if "ShouldISellYet" not in body:
         out.append("attribution line missing")
     low = body.lower()
+    # ACRONYMS NEVER LEAD. An index name in the hook asks a stranger to care
+    # about our vocabulary before they have been given a reason to care about
+    # the number. The plain-language meaning leads; the acronym may appear once,
+    # later, in parentheses. All-caps anywhere is checked by the same pass —
+    # shouting is not tone.
+    hook = re.split(r"(?<=[.!?])\s", body.strip())[0] if body.strip() else ""
+    shouted = [w for w in re.findall(r"\b[A-Z][A-Z.]{1,}\b", hook)
+               if w.upper().strip(".") not in MC.CAPS_ALLOWED]
+    if shouted:
+        out.append(f"acronym or all-caps in the hook ({', '.join(sorted(set(shouted)))}) "
+                   f"— lead with what it means")
+    body_caps = [w for w in re.findall(r"\b[A-Z][A-Z.]{2,}\b", body)
+                 if w.upper().strip(".") not in MC.CAPS_ALLOWED]
+    if body_caps:
+        out.append(f"all-caps word(s) ({', '.join(sorted(set(body_caps)))})")
+
+    # "76% of 76 scored ZIPs" reads as a typo. Restate as a count OR a share.
+    for a, b in re.findall(r"(\d+)%[^.]{0,26}?\bof\b[^.]{0,14}?(\d+)\b", body):
+        if abs(int(a) - int(b)) <= MC.NEAR_EQUAL_TOLERANCE:
+            out.append(f"{a}% sits beside a near-equal denominator ({b}) — "
+                       f"state a count or a share, not both")
+            break
+
     if "danger line" in low:
         after = low.split("danger line", 1)[1][:90]
         if not any(g in after for g in MC.DANGER_LINE_GLOSSES):

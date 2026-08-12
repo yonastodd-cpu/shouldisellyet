@@ -468,3 +468,32 @@ overlap and sum past 100.
 The page also counts the same population as the post: ZIPs without a usable
 verdict are excluded, which is the filter `build_pages.py` already applies.
 Before that fix the page said 78 ZIP codes while the post said 76.
+
+## The voice charter, enforced (PR 2, 2026-08-10)
+
+Most of the charter already shipped with the caption redesign. PR 2 closed the
+three rules that were stated but not checked, so a future template edit cannot
+quietly reintroduce them.
+
+**Acronyms never lead.** An index name in the hook asks a stranger to care
+about our vocabulary before we have given them a reason to care about the
+number. The hook states the plain-language meaning; the acronym may appear once,
+later, in parentheses, and is optional. Checked on the first sentence.
+
+**All-caps is not tone.** Shouting is refused anywhere in the post. The
+exceptions in `CAPS_ALLOWED` each earn it: HOLD / WATCH / ACT / STRONG are the
+product's own vocabulary and the site defines them; ZIP, US and the state codes
+are how people write the places they live.
+
+**A percentage never sits beside its own denominator.** "76% of its 76 scored
+ZIPs" reads as a typo to everyone who is not us — state a count or a share,
+never both. Tolerance is 3 points.
+
+`why_headline` is exempt from all of this, deliberately: it is the admin card's
+title, read by one operator who knows what WSI means, and precision there is
+worth more than accessibility. Only `caption` and `caption_short` reach the
+public, and the jargon table is enforced against real generated output rather
+than trusted to the templates (`test_jargon_never_reaches_a_public_field`).
+
+Nothing in the live queue violated any of the three when they were switched on —
+the copy was already right. The rules exist so it stays that way.

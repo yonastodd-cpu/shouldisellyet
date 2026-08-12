@@ -159,6 +159,25 @@ MAX_HASHTAGS = 2               # #housingmarket + one metro tag, end of post
 # sentence. What is required is that a definition follows closely, not that it
 # is worded a particular way.
 DANGER_LINE_GLOSSES = ("the level where", "the point where", "where ")
+
+# ——— Words allowed to appear in capitals ———
+# The charter bans acronyms in the hook and all-caps words anywhere: an index
+# name is a thing WE know and a stranger does not, and shouting is not tone.
+# These are the exceptions, and each earns it: the verdict words are the
+# product's own vocabulary and the site defines them; ZIP, US and the state
+# codes are how people write the places they live.
+CAPS_ALLOWED = {
+    "HOLD", "WATCH", "ACT", "STRONG",          # verdicts — product vocabulary
+    "ZIP", "ZIPS", "US", "U.S.", "USA",        # everyday capitals
+    "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
+    "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH",
+    "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+    "VT","VA","WA","WV","WI","WY","PR",        # state codes
+}
+# How close two numbers have to be before "N% of M" reads as a coincidence
+# rather than a statistic — "76% of 76 scored ZIPs" is the failure this exists
+# to catch, and it looks like a typo to everyone who is not us.
+NEAR_EQUAL_TOLERANCE = 3
 # NAOMI_NEVER: Naomi Todd is a real, independent licensed agent with no
 # corporate affiliation to this site (docs/ATTRIBUTION.md, correction dated
 # 2026-08-08). Her name and company never appear in generated copy.

@@ -664,3 +664,68 @@ def test_every_generated_post_has_a_deep_target():
         path = t["utm_url"].split("shouldisellyet.com")[1].split("?")[0]
         assert path != "/", f"{t['utm_campaign']} still points at the homepage"
         assert path.startswith(("/metro/", "/zip/", "/research/")), path
+
+
+# ————— voice charter, enforced (PR 2) —————
+
+U = "shouldisellyet.com/go/t/"
+FOOT = "\n\nShouldISellYet · June 2026"
+
+
+def _cap(hook):
+    return hook + "\n\n{short_url}\n{tags}" + FOOT
+
+
+def test_an_acronym_may_not_lead_a_post():
+    """An index name in the hook asks a stranger to care about our vocabulary
+    before we have given them a reason to care about the number."""
+    bad = MT.lint_caption(_cap("WSI hit 62.2% this month."), "ig", "#a #b", U, "/metro/x/")
+    assert any("acronym" in p for p in bad), bad
+    good = MT.lint_caption(_cap("Fewer neighborhoods are showing warning signs."),
+                           "ig", "#a #b", U, "/metro/x/")
+    assert not any("acronym" in p for p in good), good
+
+
+def test_verdict_words_and_state_codes_are_not_shouting():
+    """HOLD/WATCH/ACT are the product's own vocabulary and the site defines
+    them; ZIP and the state codes are how people write where they live."""
+    for ok in ("63% still rate HOLD today.",
+               "20005 (Washington, DC) moved to ACT this month.",
+               "76% of the ZIP codes we track in York, PA are moving."):
+        assert not any("acronym" in p or "all-caps" in p
+                       for p in MT.lint_caption(_cap(ok), "ig", "#a #b", U, "/metro/x/")), ok
+
+
+def test_all_caps_shouting_is_refused_anywhere_in_the_post():
+    bad = MT.lint_caption(_cap("Sellers are losing leverage.") + " This is HUGE.",
+                          "ig", "#a #b", U, "/metro/x/")
+    assert any("all-caps" in p for p in bad), bad
+
+
+def test_a_percentage_beside_its_own_denominator_is_refused():
+    """"76% of its 76 scored ZIPs" reads as a typo to everyone who is not us."""
+    bad = MT.lint_caption(_cap("76% of its 76 ZIP codes are moving toward a line."),
+                          "ig", "#a #b", U, "/metro/x/")
+    assert any("near-equal" in p for p in bad), bad
+    ok = MT.lint_caption(_cap("76% of the ZIP codes we track are moving toward a line."),
+                         "ig", "#a #b", U, "/metro/x/")
+    assert not any("near-equal" in p for p in ok), ok
+
+
+def test_jargon_never_reaches_a_public_field():
+    """The translation table, enforced on real generated output rather than
+    trusted to the templates."""
+    import json as _j
+    root = Path(__file__).resolve().parents[1]
+    pack = root / "pipeline" / "marketing" / "pack-2026-06.json"
+    if not pack.exists():
+        return
+    rep = _j.loads((root / "pipeline/research/research-2026-06.json").read_text())
+    vel = _j.loads((root / "web/data/velocity-aggregates.json").read_text())
+    prev = _j.loads((root / "pipeline/velocity/velocity-prev-aggregates.json").read_text())
+    cands = [MT.cand_record(rep)] + MT.cand_flips(vel, prev, "2026-06")
+    for c in [x for x in cands if x]:
+        public = " ".join(str(c.get(k) or "") for k in ("caption", "caption_short"))
+        for term in ("scored ZIP", "gathering list", "deteriorating",
+                     "the dial that moved", "share_det", "CBSA"):
+            assert term.lower() not in public.lower(), f"{c['key']}: {term!r} leaked"
