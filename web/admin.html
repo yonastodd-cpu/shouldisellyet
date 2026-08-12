@@ -401,6 +401,18 @@ table.grid tr:hover td{background:#faf9f5}
         <div class="one" id="mq-one"></div>
       </div>
 
+      <!-- Mix meter: what KINDS of post this month is made of, live from
+           admin_marketing_mix(). Deliberately shows counts and shares only,
+           with no target column: the monthly quota lives in
+           pipeline/marketing_config.MONTHLY_QUOTA, and mirroring it into SQL
+           would create one more pair of numbers that has to be changed in two
+           places at once. The generator enforces the quota; this reports. -->
+      <details id="mq-mix-wrap" style="margin-bottom:12px">
+        <summary class="mono" style="font-size:11px;color:var(--fainter);cursor:pointer">
+          post mix this month</summary>
+        <div id="mq-mix" style="margin-top:8px"></div>
+      </details>
+
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div class="range" id="mq-view">
           <button data-v="week" class="on" onclick="return mqSetView('week')">This week</button>
@@ -1255,6 +1267,15 @@ const MQ_TYPE_TAG = {
   evergreen: '<span class="tag">EVERGREEN</span>',
   post: "",
 };
+const MQ_POST_TYPE = {
+  national_pulse: "national pulse", contrarian: "contrarian",
+  metro_mover: "metro mover", zip_spotlight: "ZIP spotlight",
+  divergence: "divergence", steady_market: "steady market",
+  explainer: "explainer", receipt: "receipt", press_pitch: "press pitch",
+  burst: "burst", recap_thread: "recap thread", threshold_event: "threshold event",
+};
+const mqTypeName = (k) => MQ_POST_TYPE[k] || k;
+
 let MQ = { week: null, month: null, cal: null, view: "week", by: {}, focus: null };
 const mqLive = (t) => t.status === "suggested" || t.status === "scheduled";
 // One id→task map across week, overdue, unscheduled and the month grid, so a
@@ -1283,15 +1304,67 @@ RENDER.marketing = async function () {
   mqIndex(w.tasks); mqIndex(w.overdue); mqIndex(w.unscheduled);
   if (w.one_thing) mqIndex([w.one_thing]);
   mqStrip();
+  await mqMix();
   await mqDemoted();
   await (MQ.view === "cal" ? mqCal() : mqWeek());
   await mqBoards();
 };
 
+// ——— mix meter: what kinds of post this month is made of ———
+// Reads admin_marketing_mix(). No targets (see the markup comment); the value
+// here is seeing at a glance that one rule has not run away with the month,
+// which is the failure this taxonomy exists to prevent.
+async function mqMix() {
+  const el = $("mq-mix");
+  if (!el) return;
+  // NOT the wall-clock month. `period` on a task is the DATA period it
+  // describes — June 2026 rows are scheduled through August — so asking for
+  // today's month reported an empty mix on a full queue. Null lets the RPC
+  // pick max(period), which is the month the queue is actually about. Passed
+  // explicitly rather than omitted for the PostgREST overload reason given on
+  // admin_marketing_week above.
+  let m;
+  try {
+    m = await rpc("admin_marketing_mix", { p_period: null });
+  } catch (e) {
+    el.innerHTML = '<span class="mono" style="font-size:11px;color:var(--fainter)">'
+      + "post mix unavailable — " + esc(String(e.message || e)) + "</span>";
+    return;
+  }
+  const by = m.by_type || {}, total = m.total || 0;
+  if (!total) {
+    el.innerHTML = '<span class="mono" style="font-size:11px;color:var(--fainter)">'
+      + "no posts generated yet</span>";
+    return;
+  }
+  const rows = Object.entries(by).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const top = rows[0];
+  const lopsided = top && top[1] / total > 0.5;
+  el.innerHTML = rows.map(([k, n]) => {
+    const pct = (n / total) * 100;
+    // "unclassified" is a real state, not an error: rows generated before the
+    // taxonomy existed, and the track-record post, which has no type in it.
+    const muted = k === "unclassified";
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="mono" style="font-size:11px;width:120px;flex:none;color:var(--${
+        muted ? "fainter" : "faint"})">${esc(mqTypeName(k))}</span>
+      <span style="flex:1;height:8px;background:var(--hairline);border-radius:4px;overflow:hidden">
+        <span style="display:block;height:100%;width:${pct.toFixed(1)}%;background:var(--${
+          muted ? "fainter" : "gold"})"></span></span>
+      <span class="mono" style="font-size:11px;width:64px;flex:none;text-align:right;color:var(--fainter)">${
+        esc(String(n))} · ${esc(pct.toFixed(0))}%</span>
+    </div>`;
+  }).join("") + `<div class="mono" style="font-size:10.5px;color:var(--${
+      lopsided ? "red" : "fainter"});margin-top:6px">${
+      esc(String(total))} posts in ${esc(m.period || "—")}${
+      lopsided ? ` — ${esc(mqTypeName(top[0]))} is over half the month` : ""}</div>`;
+}
+
 function mqUnavailable(e) {
   $("mq-rules").textContent = "operating rules unavailable — the queue could not be read";
   $("mq-one").innerHTML = "";
   $("mq-demoted").innerHTML = "";
+  if ($("mq-mix")) $("mq-mix").innerHTML = "";
   $("mq-boards").innerHTML = ""; $("mq-advice").innerHTML = "";
   $("mq-body").innerHTML = `<div class="placeholder" style="text-align:left;line-height:1.6">
     <b>The marketing queue is not readable from this browser.</b><br>
@@ -1432,6 +1505,12 @@ function mqCard(t) {
         ? `<span class="tag">${esc(MQ_CH[t.channel] || t.channel)}</span>`
         : '<span class="tag" title="Press pitches and burst cards carry no channel: they occupy no posting window and are exempt from the weekly cap (schema-v23 §5).">no channel</span>'}</div>
       ${MQ_TYPE_TAG[t.type] ? `<div style="margin-top:4px">${MQ_TYPE_TAG[t.type]}</div>` : ""}
+      ${t.post_type ? `<div style="margin-top:4px"><span class="tag"
+          title="What kind of story this is. Set by the rule that generated it.">${
+          esc(mqTypeName(t.post_type))}</span></div>` : ""}
+      ${t.thread_key ? `<div style="margin-top:4px"><span class="tag"
+          title="Part of a thread. 0 is the lead post; 1 and up are replies, in order.">${
+          esc(t.thread_position === 0 ? "thread lead" : "reply " + t.thread_position)}</span></div>` : ""}
       <div style="margin-top:4px" class="mono">P${esc(String(t.priority_score))}</div>
       ${late ? '<div style="margin-top:4px"><span class="tag red">LATE</span></div>' : ""}
       ${t.status === "posted" ? '<div style="margin-top:4px"><span class="tag green">POSTED</span></div>' : ""}

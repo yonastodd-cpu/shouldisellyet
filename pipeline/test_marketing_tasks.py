@@ -18,6 +18,7 @@ import marketing_config as MC
 import marketing_tasks as MT
 import utm
 
+REPO = Path(__file__).resolve().parents[1]
 SCHEMA = (Path(__file__).resolve().parents[1] / "supabase" / "schema-v23.sql").read_text()
 
 NOW = datetime(2026, 8, 10, 14, 0, tzinfo=timezone.utc)   # Monday 10:00 ET
@@ -684,7 +685,7 @@ def test_every_generated_post_has_a_deep_target():
     for t in _j.loads(pack.read_text())["tasks"]:
         path = t["utm_url"].split("shouldisellyet.com")[1].split("?")[0]
         assert path != "/", f"{t['utm_campaign']} still points at the homepage"
-        assert path.startswith(("/metro/", "/zip/", "/research/")), path
+        assert path.startswith(("/metro/", "/zip/", "/research/")) or path == "/methodology/", path
 
 
 # ————— voice charter, enforced (PR 2) —————
@@ -750,3 +751,28 @@ def test_jargon_never_reaches_a_public_field():
         for term in ("scored ZIP", "gathering list", "deteriorating",
                      "the dial that moved", "share_det", "CBSA"):
             assert term.lower() not in public.lower(), f"{c['key']}: {term!r} leaked"
+
+
+def test_the_mix_meter_does_not_ask_for_the_wall_clock_month():
+    """`period` on a task is the DATA period it describes, not the month it is
+    posted in: June 2026 rows are scheduled through August. The meter first
+    asked for new Date().slice(0,7), so on a full queue it reported an empty
+    mix — the RPC already defaults to max(period), and the UI was overriding
+    that default with the wrong number."""
+    src = (REPO / "web" / "admin.html").read_text()
+    body = src.split("async function mqMix")[1].split("\nfunction ")[0]
+    assert "toISOString().slice(0, 7)" not in body, \
+        "mqMix went back to deriving the period from the wall clock"
+    assert 'rpc("admin_marketing_mix", { p_period: null })' in body
+
+
+def test_post_type_labels_cover_every_value_the_database_accepts():
+    """A badge that silently renders nothing is worse than an ugly one. Every
+    value in the schema-v28 CHECK needs a label in MQ_POST_TYPE."""
+    sql = (REPO / "supabase" / "schema-v28.sql").read_text()
+    allowed = set(re.findall(r"'([a-z_]+)'", 
+                  re.search(r"post_type.*?in \(([^)]*)\)", sql, re.S).group(1)))
+    labels = set(re.findall(r"([a-z_]+):\s*\"",
+                 (REPO / "web" / "admin.html").read_text()
+                 .split("const MQ_POST_TYPE = {")[1].split("};")[0]))
+    assert allowed <= labels, f"post types with no label: {sorted(allowed - labels)}"

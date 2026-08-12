@@ -297,6 +297,26 @@ def existing_keys(url, key, keys):
     return out
 
 
+def load_history():
+    """pipeline/research/history.json — the per-metro monthly verdict counts.
+    Complete back to 2012, which is what lets the taxonomy rules ask about six
+    months of a metro without holes."""
+    p = ROOT / "pipeline" / "research" / "history.json"
+    try:
+        return json.loads(p.read_text())
+    except Exception as exc:
+        print(f"history unavailable ({exc}) — divergence/steady/spotlight sit out")
+        return None
+
+
+def load_streaks():
+    p = ROOT / "pipeline" / "research" / "streaks.json"
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return {}
+
+
 def load_velocity_current(data_dir):
     p = Path(data_dir) / "velocity-aggregates.json"
     return json.loads(p.read_text()) if p.exists() else None
@@ -423,7 +443,8 @@ def cand_record(rep):
                     f"25,000 ZIP codes we track{moved}."),
         short_contrast=f"{sentence(sup)}.")
     return {
-        "key": token("record", period=period), "type": "post", "tier": 1,
+        "key": token("record", period=period), "type": "post",
+        "post_type": "national_pulse", "tier": 1,
         "why_headline": f"WSI hit {rec['wsi']:.1f}% — {sup}. Records are "
                         f"headlines by construction.",
         "why_detail": "\n".join(lines),
@@ -528,7 +549,8 @@ def cand_contrarian(rep, period):
         short_hook="The headlines are telling one story. The data tells a quieter one:",
         short_contrast=f"across the 25,000 ZIP codes we track, {counter}.")
     return {
-        "key": token("contrarian", period=period), "type": "post", "tier": 2,
+        "key": token("contrarian", period=period), "type": "post",
+        "post_type": "contrarian", "tier": 2,
         "why_headline": f'The narrative says "{text}" — the data says {counter}.',
         "why_detail": "\n".join([
             f"- Verdict mix for {pretty_month(period)}: {wsi:.1f}% warning, "
@@ -688,7 +710,7 @@ def cand_flips(vel, vel_prev, period):
         cap_long, cap_short = compose(hook, contrast, evidence, period,
                                       short_hook, short_contrast)
         out.append({
-            "key": tok, "type": "post", "tier": 3,
+            "key": tok, "type": "post", "post_type": "metro_mover", "tier": 3,
             "caption": cap_long, "caption_short": cap_short,
             "metro_cbsa": g["cbsa"], "metro_name": g["name"],
             "why_headline": f"{g['name']} just entered the top of our watch "
@@ -795,6 +817,10 @@ def lint_caption(text, channel, hashtags, short_url="", target=None):
         out.append(f"{tags} hashtags — the cap is {MC.MAX_HASHTAGS}")
     # Numbers, excluding the ones inside the link and the attribution date.
     countable = DATE_YEAR_RE.sub("", body.split("shouldisellyet.com")[0])
+    # A bare five-digit integer in this domain is a ZIP code — an identifier and
+    # the subject of the sentence, not a competing figure. A price carries a $
+    # or a separator and still counts.
+    countable = re.sub(r"(?<![\d$,.])\d{5}(?![\d,.%])", "", countable)
     nums = NUMERAL_RE.findall(countable)
     if len(nums) > MC.MAX_NUMBERS_LONG:
         out.append(f"{len(nums)} numbers ({', '.join(nums[:5])}…) — at most "
@@ -905,7 +931,8 @@ def cand_geo(angles, period, zip_cbsa, cbsa_names, entries=None):
             evidence="One of five local facts we pull from this month's data.",
             period=period)
         out.append({
-            "key": token("geo", period=period, zip=z), "type": "post", "tier": 4,
+            "key": token("geo", period=period, zip=z), "type": "post",
+            "post_type": "zip_spotlight", "tier": 4,
             "zip": z, "metro_cbsa": cbsa,
             "metro_name": cbsa_names.get(cbsa) if cbsa else None,
             "why_headline": sentence,
@@ -919,6 +946,226 @@ def cand_geo(angles, period, zip_cbsa, cbsa_names, entries=None):
             "render": {"zip": z, "sentence": sentence},
         })
     return out
+
+
+def label_zip(z, places):
+    """"20874 (Boyds, MD)" — the same shape the angle bank uses."""
+    c = places.get(z)
+    return f"{z} ({c[0]}, {c[1]})" if c else z
+
+
+def _metro_share_series(hist, cbsa, n=6):
+    """[(month, warning share)] for one metro. Same definition research.py uses:
+    STRONG is an upside verdict and stays out of the numerator."""
+    rows = (hist.get("metros") or {}).get(cbsa) or {}
+    out = []
+    for m in sorted(rows)[-n:]:
+        g, y, r, s = (list(rows[m]) + [0, 0, 0, 0])[:4]
+        tot = g + y + r + s
+        out.append((m, (100.0 * (y + r) / tot) if tot else None))
+    return out
+
+
+def cand_spotlight(hist, streaks, entries, places, zip_cbsa, cbsa_names,
+                   covered, period, want=4):
+    """zip_spotlight (tier 4): one ZIP as a micro-profile.
+
+    PREFERS ZIPs INSIDE METROS ALREADY COVERED THIS MONTH, per the brief: a
+    spotlight is most useful as the close-up on a market the slate already
+    established, not as a ninth unrelated place.
+
+    The streak is a WARNING run, not a calm one — see SPOTLIGHT_MIN_STREAK.
+    """
+    warn = (streaks or {}).get("warn") or {}
+    if not warn:
+        print("zip spotlight: no streak file — rule sits out")
+        return []
+    ranked = sorted(((z, n) for z, n in warn.items()
+                     if n >= MC.SPOTLIGHT_MIN_STREAK and z in entries and z in places),
+                    key=lambda t: (zip_cbsa.get(t[0]) not in covered, -t[1], t[0]))
+    out, used_metros = [], set()
+    for z, months in ranked:
+        if len(out) >= want:
+            break
+        cb = zip_cbsa.get(z)
+        if cb in used_metros:
+            continue          # one per metro, or the cooldown eats the rest
+        e = entries[z]
+        m = e.get("m") or {}
+        if (m.get("sold") or 0) < MC.SPOTLIGHT_MIN_SOLD:
+            continue
+        drop = publishable(z, entries)
+        if drop:
+            print(f"zip spotlight: {z} not publishable — {drop}")
+            continue
+        cbsa = cb
+        used_metros.add(cb)
+        where = label_zip(z, places)
+        yrs = months // 12
+        span = (f"{yrs} year{'s' if yrs != 1 else ''}" if months % 12 == 0 and yrs
+                else f"{months} months")
+        tok = token("geo", period=period, zip=z)          # same shape, one namespace
+        tok = tok.replace("-geo-", "-spot-")
+        hook = (f"{where} has shown at least one housing warning sign for "
+                f"{span} straight.")
+        short_hook = (f"{z} ({places[z][0]}) has shown a housing warning sign for "
+                      f"{span} straight.")
+        contrast = (f"Its months of supply sit at {m['mos']:.1f} against a danger line "
+                    f"of 4.0 — the level where sellers have historically started "
+                    f"losing leverage."
+                    if m.get("mos") is not None else
+                    f"Its dials are still past at least one danger line — the level "
+                    f"where sellers have historically started losing leverage.")
+        short_contrast = (f"Its months of supply sit at {m['mos']:.1f}, past the 4.0 "
+                          f"danger line where sellers start losing leverage."
+                          if m.get("mos") is not None else
+                          f"It is past a danger line — where sellers start losing leverage.")
+        cap_l, cap_s = compose(hook, contrast,
+                               "Nothing about that run is dramatic month to month, "
+                               "which is exactly why it is worth naming.", period,
+                               short_hook=short_hook, short_contrast=short_contrast)
+        out.append({
+            "key": tok, "type": "post", "post_type": "zip_spotlight", "tier": 4,
+            "zip": z, "metro_cbsa": cbsa,
+            "metro_name": cbsa_names.get(cbsa) if cbsa else None,
+            "why_headline": hook,
+            "why_detail": "\n".join([
+                f"- Flagged for {months} consecutive months (research streak file).",
+                f"- Chosen because its metro is already on this month's slate."
+                if cbsa in covered else
+                f"- No metro from this month's slate had a qualifying ZIP.",
+            ]),
+            "caption": cap_l, "caption_short": cap_s,
+            "render": {"card": "spotlight", "zip": z, "where": where,
+                       "months": months, "span": span,
+                       "mos": m.get("mos"), "period_pretty": pretty_month(period)},
+        })
+    if not out:
+        print("zip spotlight: no ZIP cleared the streak and sales floors")
+    return out
+
+
+def cand_steady(hist, cbsa_names, period):
+    """steady_market (tier 5): a market that looks fine AND has been fine.
+
+    The neutrality proof — the post that exists to show the index is not a
+    doom account. Both bars must clear, and on 2026-08 real data NONE do: the
+    calmest metro swings 25 points over six months. The rule stays honest and
+    silent rather than loosening until something qualifies, because a
+    manufactured neutrality proof is worth less than none.
+    """
+    out = []
+    for cbsa in (hist.get("metros") or {}):
+        series = _metro_share_series(hist, cbsa)
+        vals = [v for _, v in series if v is not None]
+        if len(vals) < 6:
+            continue
+        counts = (hist["metros"][cbsa].get(sorted(hist["metros"][cbsa])[-1]) or [])
+        if sum(counts) < MC.STEADY_MIN_ZIPS:
+            continue
+        if vals[-1] > MC.STEADY_MAX_WARN_SHARE or (max(vals) - min(vals)) > MC.STEADY_MAX_RANGE:
+            continue
+        name = cbsa_names.get(cbsa) or cbsa
+        short = short_metro(name)
+        hold = 100.0 - vals[-1]
+        hook = (f"{short} has not moved much in six months: {hold:.0f}% of the ZIP "
+                f"codes we track there still rate HOLD or better.")
+        cap_l, cap_s = compose(
+            hook,
+            f"Its warning share has stayed inside {max(vals) - min(vals):.0f} points "
+            f"across that window — no danger lines in sight, and none approaching.",
+            "We publish the quiet markets too. A measure that only ever finds "
+            "trouble is not a measure.", period)
+        out.append({
+            "key": token("geo", period=period, zip="0")[:-1].replace("-geo-", "-steady-") + cbsa,
+            "type": "post", "post_type": "steady_market", "tier": 5,
+            "metro_cbsa": cbsa, "metro_name": name,
+            "why_headline": hook,
+            "why_detail": f"- Warning share {vals[-1]:.1f}%, six-month range "
+                          f"{max(vals) - min(vals):.1f} points.",
+            "caption": cap_l, "caption_short": cap_s,
+            "render": {"card": "steady", "name": name, "short_name": short,
+                       "hold_share": hold, "range": max(vals) - min(vals),
+                       "period_pretty": pretty_month(period)},
+        })
+    if not out:
+        print(f"steady market: no metro is both calm (<={MC.STEADY_MAX_WARN_SHARE:.0f}% "
+              f"warning) and steady (<={MC.STEADY_MAX_RANGE:.0f}pt range) — rule sits out")
+    return out[:2]
+
+
+def cand_divergence(hist, cbsa_names, period):
+    """divergence (tier 3): two metros, same national headlines, opposite signals."""
+    moves = []
+    for cbsa in (hist.get("metros") or {}):
+        series = _metro_share_series(hist, cbsa)
+        vals = [v for _, v in series if v is not None]
+        if len(vals) < 6:
+            continue
+        counts = hist["metros"][cbsa].get(sorted(hist["metros"][cbsa])[-1]) or []
+        if sum(counts) < MC.DIVERGENCE_MIN_ZIPS:
+            continue
+        moves.append((cbsa, vals[-1] - vals[0], vals[-1]))
+    if not moves:
+        return None
+    worse = max(moves, key=lambda t: t[1])
+    better = min(moves, key=lambda t: t[1])
+    if worse[1] < MC.DIVERGENCE_MIN_MOVE or better[1] > -MC.DIVERGENCE_MIN_MOVE:
+        print(f"divergence: no opposing pair cleared ±{MC.DIVERGENCE_MIN_MOVE:.0f} "
+              f"points — rule sits out")
+        return None
+    wn = short_metro(cbsa_names.get(worse[0]) or worse[0])
+    bn = short_metro(cbsa_names.get(better[0]) or better[0])
+    # The metro carrying the SURPRISE is the link target — the improving one,
+    # since "somewhere got better" is the half a reader does not expect.
+    hook = (f"Two housing markets, six months, opposite directions: {wn} and {bn}.")
+    contrast = (f"In {wn} the share of ZIP codes we track showing a warning sign rose "
+                f"{worse[1]:.0f} points. In {bn} it fell {abs(better[1]):.0f}. Same "
+                f"national headlines over both.")
+    cap_l, cap_s = compose(hook, contrast,
+                           "Housing is not one market, and a national number is an "
+                           "average of places that are not averaging.", period,
+                           short_contrast=f"{wn} up {worse[1]:.0f} points, {bn} down "
+                                          f"{abs(better[1]):.0f}. Same headlines over both.")
+    return {
+        "key": token("contrarian", period=period).replace("-contrarian-us", "-diverge-us"),
+        "type": "post", "post_type": "divergence", "tier": 3,
+        "metro_cbsa": better[0], "metro_name": cbsa_names.get(better[0]),
+        "why_headline": hook,
+        "why_detail": f"- {wn} {worse[1]:+.1f} pts; {bn} {better[1]:+.1f} pts over six months.\n"
+                      f"- Links to {bn}: the improving half is the surprise.",
+        "caption": cap_l, "caption_short": cap_s,
+        "render": {"card": "divergence", "worse": wn, "better": bn,
+                   "worse_move": worse[1], "better_move": better[1],
+                   "period_pretty": pretty_month(period)},
+    }
+
+
+def cand_explainer(period, ws):
+    """explainer (tier 5): one concept, evergreen, recycled quarterly.
+
+    No data input by design — it defines the vocabulary the other posts use,
+    and links to the methodology page rather than to a market.
+    """
+    tok = f"mq-{ws.isoformat()}-explain-danger-line"
+    hook = "A danger line is not a prediction. It is a level."
+    contrast = ("For each of the four signals we track — supply, price trend, time "
+                "to sell, price cuts — there is a level past which sellers have "
+                "historically started losing leverage. A market past enough of them "
+                "reads WATCH or ACT.")
+    cap_l, cap_s = compose(
+        hook, contrast,
+        "The lines are published and do not move to fit a story.", period,
+        short_contrast="Past enough of them, a market reads WATCH or ACT. The lines "
+                       "are published and do not move.")
+    return {
+        "key": tok, "type": "post", "post_type": "explainer", "tier": 5,
+        "why_headline": "Explainer: what a danger line is.",
+        "why_detail": "- Evergreen. Recycle quarterly; links to /methodology.",
+        "caption": cap_l, "caption_short": cap_s,
+        "fixed_target": "/methodology/",
+        "render": {"card": "definition", "period_pretty": pretty_month(period)},
+    }
 
 
 def cand_evergreen(cases, ws, period):
@@ -1206,6 +1453,13 @@ def hashtags_for(channel, metro_name):
     return " ".join(tags) or None
 
 
+# Editorial label for the rules that predate the taxonomy. A row without one
+# shows as "unclassified" in the mix meter rather than silently counting as
+# something it is not.
+POST_TYPE_DEFAULT = {"press_pitch": "press_pitch", "burst": "burst",
+                     "receipt_quote": "receipt"}
+
+
 def row_from_placement(c, when, channel, period):
     """One insert-ready dict. status defaults to 'suggested' in the DB; the
     caption's {utm_url} placeholder resolves only now, because the link's
@@ -1218,7 +1472,8 @@ def row_from_placement(c, when, channel, period):
     # MOST SPECIFIC WINS. A post about 20001 belongs on 20001's page, not on
     # Washington DC's — a geo candidate carries both a ZIP and the metro that
     # contains it, and resolving metro-first sent ZIP posts to the wrong page.
-    target = ((f"/zip/{c['zip']}/" if c.get("zip") else None)
+    target = (c.get("fixed_target")
+              or (f"/zip/{c['zip']}/" if c.get("zip") else None)
               or metro_slug(c.get("metro_cbsa"))
               or (f"/research/{period}/" if period else "/"))
     url = utm_url(src, c["key"], target)
@@ -1236,7 +1491,8 @@ def row_from_placement(c, when, channel, period):
     lint = lint_caption(c.get("caption_short") if (channel == "x" and not MC.X_PREMIUM)
                         else c.get("caption"), channel, tags, short_link, target)
     return {
-        "type": c["type"], "channel": channel,
+        "type": c["type"],
+        "post_type": c.get("post_type") or POST_TYPE_DEFAULT.get(c["type"]), "channel": channel,
         "scheduled_for": iso_z(when),
         "priority_score": int(c["tier"]),
         "why_headline": c["why_headline"], "why_detail": c.get("why_detail"),
@@ -1410,6 +1666,19 @@ def main(argv=None):
     cands += cand_receipts(receipts, today, cbsa_names, places, period)
     cands += cand_flips(vel, vel_prev, period)
     cands += cand_geo(angles, period, zip_cbsa, cbsa_names, entries)
+
+    # The taxonomy rules. A spotlight prefers a metro the slate already covers,
+    # so it runs AFTER the metro stories and reads which ones landed.
+    covered = {c.get("metro_cbsa") for c in cands if c.get("metro_cbsa")}
+    hist = load_history()
+    if hist:
+        d = cand_divergence(hist, cbsa_names, period)
+        if d:
+            cands.append(d)
+        cands += cand_steady(hist, cbsa_names, period)
+        cands += cand_spotlight(hist, load_streaks(), entries, places, zip_cbsa,
+                                cbsa_names, covered, period)
+    cands.append(cand_explainer(period, week_start(et_date(now_utc))))
     apply_demotions(cands, demotions)
 
     kept = []

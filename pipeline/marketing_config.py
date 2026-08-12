@@ -161,7 +161,11 @@ MAX_HASHTAGS = 2               # #housingmarket + one metro tag, end of post
 # definition from whichever metric actually moved instead of reciting a fixed
 # sentence. What is required is that a definition follows closely, not that it
 # is worded a particular way.
-DANGER_LINE_GLOSSES = ("the level where", "the point where", "where ")
+# "is a level" and "level past which" are here for the EXPLAINER, whose whole
+# job is to define the term and which defines it across two sentences — the
+# gloss check flagged the one post that exists to gloss it.
+DANGER_LINE_GLOSSES = ("the level where", "the point where", "where ",
+                       "is a level", "level past which")
 
 # ——— Words allowed to appear in capitals ———
 # The charter bans acronyms in the hook and all-caps words anywhere: an index
@@ -204,3 +208,50 @@ FALLBACK_WINDOWS = [
     {"channel": "ig", "dow": 5, "at_time": "08:30", "label": "Friday morning", "anchor": False},
     {"channel": "fb", "dow": 5, "at_time": "08:30", "label": "Friday morning", "anchor": False},
 ]
+
+
+# ——— The monthly slate (post taxonomy) ———
+# What a good month looks like, as counts. NOTHING enforces these: the mix
+# meter shows the slate against them and the operator decides. A quota that
+# refused a genuinely newsworthy post because a bucket was full would be the
+# tail wagging the dog, and a quota that MANUFACTURED a post to fill a bucket
+# would be worse — see STEADY_* below for a rule that correctly generates
+# nothing this month.
+MONTHLY_QUOTA = {
+    "metro_mover":     (8, 10),
+    "zip_spotlight":   (4, 6),
+    "national_pulse":  (1, 1),
+    "recap_thread":    (1, 1),
+    "divergence":      (0, 2),
+    "threshold_event": (0, 99),   # as it occurs; scarcity is the point
+    "steady_market":   (2, 2),
+    "explainer":       (1, 1),
+}
+
+# ——— zip_spotlight ———
+# The brief's example was a HOLD streak ("HOLD 14 straight months, now 2 points
+# from its danger line"). research.py tracks WARNING streaks and not calm ones,
+# and with two committed verdict snapshots there is no way to compute a calm
+# run honestly — so the spotlight is built on the streak that exists. A ZIP
+# flagged for fourteen straight months is the same kind of fact and is provable.
+SPOTLIGHT_MIN_STREAK = 12     # months flagged in a row before it is a story
+SPOTLIGHT_MIN_SOLD = 15       # same thin-ZIP floor the angle bank uses
+
+# ——— steady_market ———
+# "A market that looks fine and is fine" — the neutrality proof. Both bars must
+# clear: calm NOW and calm ALL ALONG. Checked against real data on 2026-08-10:
+# ZERO metros qualify. The calmest (Reading, PA at 21% warning) swings 25 points
+# over six months, and no metro is under 40% with a range under 8. That is the
+# market, not the threshold — so the rule ships correct and generates nothing,
+# and will start producing the month a market actually earns it. Loosening these
+# to force a post would manufacture the one claim whose whole value is that we
+# did not manufacture it.
+STEADY_MAX_WARN_SHARE = 40.0  # calm today
+STEADY_MAX_RANGE = 8.0        # and calm across the window, in points
+STEADY_MIN_ZIPS = 15
+
+# ——— divergence ———
+# Two metros moving opposite ways over the same window, both big enough to
+# generalise from. The pair is the story, so both halves must be real moves.
+DIVERGENCE_MIN_ZIPS = 20
+DIVERGENCE_MIN_MOVE = 12.0    # points, each side, over the window
