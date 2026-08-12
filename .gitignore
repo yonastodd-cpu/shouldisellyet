@@ -39,6 +39,11 @@ web/assets/mkt/
 # token the nightly performance join reads.
 web/go/
 
+# Generated at deploy time by pipeline/build_metro.py — one page per metro
+# area, plus the hub and the /methodology short route.
+web/metro/
+web/methodology/
+
 # Per-ZIP velocity payloads — the PAID layer. Served only through
 # verify-access (Supabase); committing them would publish the paid feature in
 # a public repo. The aggregate velocity-{month}.json files ARE committed.

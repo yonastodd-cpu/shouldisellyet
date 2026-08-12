@@ -62,7 +62,7 @@ from growth_digest import (build_angles, diff_verdicts, load_current,
                            load_places, load_research, load_snapshot,
                            pitch_draft, pretty_month, prev_period,
                            strongest_record)
-from utm import SLUG_RE, metro_tag, slug, token, utm_url
+from utm import SLUG_RE, metro_slug, metro_tag, slug, token, utm_url
 from velocity import load_cbsa                  # zip -> cbsa, cbsa -> title
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -763,7 +763,7 @@ NUMERAL_RE = re.compile(r"(?<![\d,.])\d[\d,]*(?:\.\d+)?%?")
 DATE_YEAR_RE = re.compile(rf"(?:{MONTHS_RE})\s+\d{{4}}")
 
 
-def lint_caption(text, channel, hashtags, short_url=""):
+def lint_caption(text, channel, hashtags, short_url="", target=None):
     """Everything wrong with this caption, as plain sentences. [] means clean.
 
     short_url MUST be the real link. Linting against a stand-in shorter than
@@ -785,6 +785,11 @@ def lint_caption(text, channel, hashtags, short_url=""):
     links = body.count("shouldisellyet.com")
     if links != 1:
         out.append(f"{links} links — a post gets exactly one")
+    # A homepage destination is a wasted click, so it is a lint failure and not
+    # a style note. Checked on the RESOLVED target, because the visible link is
+    # a /go/ redirect and reveals nothing about where it lands.
+    if target is not None and target in ("/", "", None):
+        out.append("link lands on the homepage — a post must open the page it is about")
     tags = body.count("#")
     if tags > MC.MAX_HASHTAGS:
         out.append(f"{tags} hashtags — the cap is {MC.MAX_HASHTAGS}")
@@ -1183,7 +1188,17 @@ def row_from_placement(c, when, channel, period):
     caption's {utm_url} placeholder resolves only now, because the link's
     utm_source is the channel the scheduler just assigned."""
     src = c.get("fixed_source") or channel or "x"   # burst: X is the named channel
-    url = utm_url(src, c["key"])
+    # WHERE THE CLICK LANDS. A post about one metro that opens the homepage has
+    # thrown the click away. Resolution: the metro's own page if it has one,
+    # else the ZIP's page, else the month's report — never the homepage, which
+    # lint_caption() refuses outright.
+    # MOST SPECIFIC WINS. A post about 20001 belongs on 20001's page, not on
+    # Washington DC's — a geo candidate carries both a ZIP and the metro that
+    # contains it, and resolving metro-first sent ZIP posts to the wrong page.
+    target = ((f"/zip/{c['zip']}/" if c.get("zip") else None)
+              or metro_slug(c.get("metro_cbsa"))
+              or (f"/research/{period}/" if period else "/"))
+    url = utm_url(src, c["key"], target)
     # The visible link is a REAL redirect that carries the campaign token, so
     # the link a reader taps and the link the nightly join counts are the same
     # one. post_pack.py --render writes the page; see schema-v25.
@@ -1196,7 +1211,7 @@ def row_from_placement(c, when, channel, period):
     cap_short = fill(c.get("caption_short"))
     # X without premium posts the short one, so that is what gets linted for X.
     lint = lint_caption(c.get("caption_short") if (channel == "x" and not MC.X_PREMIUM)
-                        else c.get("caption"), channel, tags, short_link)
+                        else c.get("caption"), channel, tags, short_link, target)
     return {
         "type": c["type"], "channel": channel,
         "scheduled_for": iso_z(when),
@@ -1208,6 +1223,7 @@ def row_from_placement(c, when, channel, period):
         "caption": cap_long or None,
         "caption_short": cap_short or None,
         "short_path": short_path,
+        "link_target": target,
         "lint": lint,
         "hashtags": tags,
         "utm_campaign": c["key"], "utm_url": url,

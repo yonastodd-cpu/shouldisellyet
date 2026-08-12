@@ -1467,7 +1467,11 @@ function mqCard(t) {
       ${t.utm_url ? `<button class="tag" style="cursor:pointer" onclick="return mqCopy('${t.id}','utm_url',this)">Copy link</button>
         <span class="mono" style="font-size:10.5px;color:var(--fainter);word-break:break-all"
           title="The caption shows the short link; both carry the same campaign token.">${
-          esc(t.short_path ? "shouldisellyet.com" + t.short_path : t.utm_url)}</span>` : ""}
+          esc(t.short_path ? "shouldisellyet.com" + t.short_path : t.utm_url)}</span>
+        ${t.link_target ? `<a class="tag" style="text-decoration:none"
+          href="${esc(t.link_target)}" target="_blank" rel="noopener"
+          title="Where the click actually lands. Open it and check the page keeps the post's promise."
+          >opens ${esc(t.link_target)} ↗</a>` : ""}` : ""}
     </div>`;
 
   let act = "";

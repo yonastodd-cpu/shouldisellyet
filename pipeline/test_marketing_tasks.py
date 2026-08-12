@@ -619,3 +619,48 @@ def test_dates_and_thousands_are_not_counted_as_stats():
            "{tags}\nShouldISellYet · data through June 2026")
     assert not any("numbers" in p for p in
                    MT.lint_caption(cap, "ig", "#a", "shouldisellyet.com/go/t/"))
+
+
+# ————— link architecture (PR 1) —————
+
+def test_no_post_links_to_the_homepage():
+    """A post about one market that opens the homepage throws its click away.
+    The lint refuses it, so the utm_url default cannot ship by accident."""
+    problems = MT.lint_caption("A fact.\n\n{short_url}\n{tags}\nShouldISellYet · June 2026",
+                               "ig", "#a #b", "shouldisellyet.com/go/t/", target="/")
+    assert any("homepage" in p for p in problems), problems
+    assert not any("homepage" in p for p in
+                   MT.lint_caption("A fact.\n\n{short_url}\n{tags}\nShouldISellYet · June 2026",
+                                   "ig", "#a #b", "shouldisellyet.com/go/t/",
+                                   target="/metro/grand-rapids-mi/"))
+
+
+def test_link_target_is_the_most_specific_page():
+    """A geo candidate carries both a ZIP and its metro. Resolving metro-first
+    sent posts about 20001 to Washington DC's page."""
+    import utm
+    assert utm.metro_slug("24340") == "/metro/grand-rapids-mi/"
+    assert utm.metro_slug("00000") is None
+    url = utm.utm_url("x", "mq-2026-06-flip-24340", "/metro/grand-rapids-mi/")
+    assert url.startswith("https://shouldisellyet.com/metro/grand-rapids-mi/?")
+    assert "utm_campaign=mq-2026-06-flip-24340" in url
+
+
+def test_utm_url_refuses_a_malformed_target():
+    import utm, pytest as _p
+    for bad in ("metro/x/", "/metro/x/?a=1", "/metro/x/#f"):
+        with _p.raises(ValueError):
+            utm.utm_url("x", "mq-test-token", bad)
+
+
+def test_every_generated_post_has_a_deep_target():
+    """End to end on real data: no row leaves the generator pointing at '/'."""
+    import json as _j
+    root = Path(__file__).resolve().parents[1]
+    pack = root / "pipeline" / "marketing" / "pack-2026-06.json"
+    if not pack.exists():
+        return                       # nothing generated in this checkout
+    for t in _j.loads(pack.read_text())["tasks"]:
+        path = t["utm_url"].split("shouldisellyet.com")[1].split("?")[0]
+        assert path != "/", f"{t['utm_campaign']} still points at the homepage"
+        assert path.startswith(("/metro/", "/zip/", "/research/")), path

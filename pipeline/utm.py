@@ -20,7 +20,9 @@ utm_campaign carries the token and is the nightly performance join key
 'email') and carries no attribution weight.
 """
 
+import json
 import re
+from pathlib import Path
 
 SITE = "https://shouldisellyet.com"
 
@@ -72,14 +74,44 @@ SOURCE = {"ig": "ig", "x": "x", "fb": "fb",
           "nextdoor_naomi": "nextdoor", "press": "press"}
 
 
-def utm_url(channel, tok):
-    """The tracked link for one task. channel is the row's channel value —
-    or 'x' for a burst (channel NULL; X is the named intended channel), or
-    'press' for a pitch. utm_campaign is the join key; the rest is hygiene."""
+def utm_url(channel, tok, target="/"):
+    """The tracked link for one task.
+
+    target is the DEEP destination — /metro/{slug}/, /research/{yyyy-mm}/,
+    /zip/{zip}/ — and defaults to the homepage only so an unmigrated caller
+    still produces a valid URL. A post that lands on the homepage throws its
+    own click away: someone who tapped a sentence about Grand Rapids arrives
+    somewhere that does not mention Grand Rapids. lint_caption() refuses a
+    homepage target, so the default cannot ship by accident.
+    """
     if not SLUG_RE.match(tok):
         raise ValueError(f"utm_url given a non-slug token: {tok!r}")
+    if not target.startswith("/") or "?" in target or "#" in target:
+        raise ValueError(f"utm_url given a bad target: {target!r}")
     medium = "email" if channel == "press" else "social"
-    return f"{SITE}/?utm_source={SOURCE[channel]}&utm_medium={medium}&utm_campaign={tok}"
+    return (f"{SITE}{target}?utm_source={SOURCE[channel]}"
+            f"&utm_medium={medium}&utm_campaign={tok}")
+
+
+def metro_slug(cbsa):
+    """CBSA code -> /metro/{slug}/, or None when that metro has no page.
+
+    Reads the map build_metro.py commits, so a link can only point at a page
+    that was actually generated — the lint proves the destination exists
+    rather than trusting a slug rule to agree with the builder.
+    """
+    global _SLUGS
+    if _SLUGS is None:
+        p = Path(__file__).parent / "data" / "metro_slugs.json"
+        try:
+            _SLUGS = {v: k for k, v in json.loads(p.read_text()).items()}
+        except Exception:
+            _SLUGS = {}
+    s = _SLUGS.get(str(cbsa or ""))
+    return f"/metro/{s}/" if s else None
+
+
+_SLUGS = None
 
 
 def metro_tag(cbsa_name):

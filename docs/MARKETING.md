@@ -422,3 +422,49 @@ step in the twelve-month window instead of consecutive ones from the end. That
 number has one home — `research.detect_records()` — and the card, the caption
 and the release page all read it from there. `test_run_length_is_read_not_recomputed`
 fails the build if the derivation comes back.
+
+## Where a click lands (PR 1, 2026-08-10)
+
+Every post used to open the homepage. Someone who tapped "76% of the ZIP codes
+we track in Grand Rapids are moving toward a danger line" arrived somewhere
+that does not mention Grand Rapids — the click was spent and nothing kept the
+promise that earned it.
+
+    caption shows   shouldisellyet.com/go/{token}/
+    redirects to    /metro/grand-rapids-mi/?utm_source=x&…&utm_campaign={token}
+    which is        a page about Grand Rapids
+
+`link_target` resolves **most-specific-first**: the ZIP's page if the post is
+about a ZIP, else the metro's, else the month's report. Resolving metro-first
+sent posts about 20001 to Washington DC's page. The homepage is refused by the
+caption lint AND by a CHECK constraint on the column — a convention would
+drift, so it is a rule in two places.
+
+`pipeline/build_metro.py` generates 608 metro pages on every deploy from
+committed data, plus `/metro/` and the `/methodology` short route (the page
+itself has lived at `/research/methodology.html` since the research build
+shipped; this is the quotable path to it, not a second copy).
+
+**What already existed, and was wired rather than rebuilt:** `/research/{yyyy-mm}/`,
+`/zip/{zip}/`, `/?zip=`, the methodology page, and the `/go/{token}/` short
+links. Only the metro page was missing.
+
+### The paywall is not crossed by these pages
+
+Per-ZIP approach velocity — the projected months until a ZIP reaches a danger
+line, and its 3-month pace — is the **paid product**. So a metro page shows
+each ZIP's public dial values against their published danger lines (the same
+numbers every `/zip/` page shows) and never the projection. Metro-level
+velocity is public and appears as one figure.
+
+### Two figures, again
+
+The hero is two labelled measures side by side — "where they stand today"
+(rating share) and "where they are headed" (velocity share) — for the same
+reason the card carries them that way. A post leading with 76% that landed on
+a page whose hero read 30% would have broken its own promise, and the two
+overlap and sum past 100.
+
+The page also counts the same population as the post: ZIPs without a usable
+verdict are excluded, which is the filter `build_pages.py` already applies.
+Before that fix the page said 78 ZIP codes while the post said 76.

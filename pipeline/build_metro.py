@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""ShouldISellYet — /metro/{slug} pages.
+
+    python3 pipeline/build_metro.py [--web web] [--only 24340] [--min-zips 8]
+
+WHY THIS EXISTS. Every marketing post about a metro used to land on the
+homepage, which throws the click away: someone who tapped "76% of the ZIP codes
+we track in Grand Rapids are moving toward a danger line" arrives somewhere
+that does not mention Grand Rapids. A post's destination has to keep the
+post's promise.
+
+Runs on EVERY deploy beside build_pages.py and build_research.py, from
+committed data only — no network, no Supabase, no clock. Same inputs, same
+bytes.
+
+THE PAYWALL IS NOT CROSSED HERE, and this is the one design constraint worth
+reading before editing. Per-ZIP approach VELOCITY — the projected months until
+a ZIP reaches a danger line, and its 3-month pace — is the paid product
+(velocity.py's header; pipeline/velocity/zip-velocity-latest.json is
+gitignored and served only through verify-access for a valid purchase token).
+So the ZIP table below shows each ZIP's PUBLIC dial values against their
+published danger lines — the gap you can read off the same numbers every
+/zip/ page already shows — and never the projection. Metro-level velocity IS
+public (velocity-aggregates.json) and appears as one aggregate line.
+
+The 6-month sparkline is drawn from pipeline/research/history.json, which
+carries a complete monthly verdict-count series per metro back to 2012. That
+completeness is why this chart exists and the metro cards carry none: the
+velocity gathering list drops a metro in months it does not qualify, and a
+line with holes misrepresents a trend.
+"""
+
+import argparse
+import csv
+import html
+import json
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+ROOT = Path(__file__).resolve().parents[1]
+SITE = "https://shouldisellyet.com"
+UTM = "utm_source=metropage&utm_medium=organic&utm_campaign=metro_seo"
+MIN_ZIPS = 8          # the velocity gathering floor: any metro a post can name has a page
+SPARK_MONTHS = 6
+
+esc = lambda s: html.escape(str(s), quote=True)
+
+WORD = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "STRONG"}
+TAGCLASS = {"green": "green", "yellow": "amber", "red": "red", "strong": "strong"}
+# The four public dials and the published line each is measured against. These
+# are the same numbers and the same thresholds every /zip/ page shows.
+DIALS = [
+    ("mos", "Months of supply", 4.0, "gt", lambda v: f"{v:.1f}"),
+    ("spy", "Price vs. last yr", -0.02, "lt", lambda v: f"{v * 100:+.1f}%"),
+    ("pd", "Listings cutting price", 0.35, "gt", lambda v: f"{v * 100:.0f}%"),
+]
+
+
+def short_metro(name):
+    """"Grand Rapids-Wyoming-Kentwood, MI" -> "Grand Rapids, MI" — the name a
+    person uses. The full CBSA title stays on the page, once, as the subtitle."""
+    if not name or "," not in name:
+        return name or ""
+    city, states = name.rsplit(",", 1)
+    return f"{city.split('-')[0].strip()}, {states.strip().split('-')[0]}"
+
+
+def slugify(name):
+    return re.sub(r"[^a-z0-9]+", "-", short_metro(name).lower()).strip("-")
+
+
+def load_places():
+    p = Path(__file__).parent / "data" / "zip_places.csv"
+    if not p.exists():
+        return {}
+    return {r["zip"]: (r["city"], r["state"])
+            for r in csv.DictReader(open(p, encoding="utf-8"))}
+
+
+def load_zip_cbsa():
+    p = Path(__file__).parent / "data" / "zip_cbsa.csv"
+    if not p.exists():
+        return {}
+    return {r["zip"]: r["cbsa"] for r in csv.DictReader(open(p, encoding="utf-8"))}
+
+
+def load_entries(data_dir):
+    """Only ZIPs with a usable verdict — the same filter build_pages.py applies
+    before giving a ZIP a page, and the same population research.py restates
+    and velocity.py scores. Without it this page counted 78 ZIPs while the post
+    that links to it said 76, a discrepancy with no honest explanation."""
+    out = {}
+    for f in sorted(Path(data_dir, "zips").glob("*.json")):
+        for z, e in json.loads(f.read_text()).items():
+            if any(r[0] == "insufficient_data" for r in (e.get("r") or [])):
+                continue
+            if e.get("l") in ("green", "yellow", "red", "strong"):
+                out[z] = e
+    return out
+
+
+def spark(series, w=560, h=90):
+    """Inline SVG, not a PNG: it stays crisp at any zoom, costs no Pillow call,
+    and needs no separate file to deploy. Returns "" below four points — a line
+    drawn from three is not a trend."""
+    pts = [v for _, v in series if v is not None]
+    if len(pts) < 4:
+        return ""
+    lo, hi = min(pts), max(pts)
+    span = (hi - lo) or 1.0
+    step = w / (len(pts) - 1)
+    xy = [(i * step, h - (v - lo) / span * (h - 14) - 7) for i, v in enumerate(pts)]
+    d = " ".join(("M" if i == 0 else "L") + f"{x:.1f} {y:.1f}" for i, (x, y) in enumerate(xy))
+    lx, ly = xy[-1]
+    return (f'<svg class="spark" viewBox="0 0 {w} {h}" width="{w}" height="{h}" '
+            f'role="img" aria-label="Warning-sign share, last {len(pts)} months">'
+            f'<path d="{d}" fill="none" stroke="#1f3a5f" stroke-width="3" '
+            f'stroke-linejoin="round" stroke-linecap="round"/>'
+            f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="5.5" fill="#1f3a5f"/></svg>')
+
+
+def metro_series(hist, cbsa, n=SPARK_MONTHS):
+    """[(month, warning share)] — the share of a metro's scored ZIPs rating
+    WATCH or ACT. Counts are [green, yellow, red, strong]; STRONG is an upside
+    verdict and stays out of the numerator, matching research.wsi_of()."""
+    rows = (hist.get("metros") or {}).get(cbsa) or {}
+    out = []
+    for m in sorted(rows)[-n:]:
+        g, y, r, s = (list(rows[m]) + [0, 0, 0, 0])[:4]
+        tot = g + y + r + s
+        out.append((m, (100.0 * (y + r) / tot) if tot else None))
+    return out
+
+
+def read_line(share, prev):
+    """One plain sentence. No adjective does any work here — the direction and
+    the number are the whole read."""
+    if prev is None:
+        return f"{share:.0f}% of the ZIP codes we track here are showing at least one warning sign."
+    d = share - prev
+    if abs(d) < 0.5:
+        return (f"{share:.0f}% of the ZIP codes we track here are showing at least one "
+                f"warning sign — about the same as last month.")
+    return (f"{share:.0f}% of the ZIP codes we track here are showing at least one "
+            f"warning sign, {'up' if d > 0 else 'down'} from {prev:.0f}% last month.")
+
+
+def zip_row(z, e, places):
+    city = places.get(z, ("", ""))[0]
+    lvl = e.get("l")
+    m = e.get("m") or {}
+    cells = []
+    for key, _label, line, op, fmt in DIALS:
+        v = m.get(key)
+        if v is None:
+            cells.append('<td class="num">—</td>')
+            continue
+        past = (v > line) if op == "gt" else (v < line)
+        cells.append(f'<td class="num{" past" if past else ""}">{esc(fmt(v))}</td>')
+    return (f'<tr><td class="mono"><a href="/zip/{esc(z)}/">{esc(z)}</a></td>'
+            f'<td>{esc(city)}</td>'
+            f'<td><span class="tag {TAGCLASS.get(lvl, "")}">{esc(WORD.get(lvl, "—"))}</span></td>'
+            + "".join(cells) + "</tr>")
+
+
+def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
+    short = short_metro(name)
+    series = metro_series(hist, cbsa)
+    share = series[-1][1] if series else None
+    prev = series[-2][1] if len(series) > 1 else None
+    scored = len(zips)
+    holds = sum(1 for z in zips if entries[z].get("l") in ("green", "strong"))
+    url = f"{SITE}/metro/{slugify(name)}/"
+    title = f"{short} housing market: is it time to sell? ({period})"
+    desc = (f"{share:.0f}% of the {scored} ZIP codes we track in {short} are showing a "
+            f"housing warning sign as of {period}. Free per-ZIP ratings, updated monthly."
+            if share is not None else
+            f"Per-ZIP housing ratings for {short}, updated monthly.")
+
+    rows = "".join(zip_row(z, entries[z], places)
+                   for z in sorted(zips, key=lambda z: (entries[z].get("l") != "red",
+                                                        entries[z].get("l") != "yellow", z)))
+
+    # Metro-level velocity is public (velocity-aggregates.json). Per-ZIP
+    # velocity is the paid product and appears nowhere on this page.
+    # The second figure is the one a marketing post leads with, so it belongs
+    # beside the first rather than in a footnote: a reader who tapped "76% are
+    # moving toward a danger line" must see 76% here, not hunt for it.
+    det = (vel_row or {}).get("share_det")
+    det_block, vel = "", ""
+    if det is not None:
+        det_block = (f'<div class="mfig"><div class="mlabel">Where they are headed</div>'
+                     f'<div class="mhero">{det:.0f}%</div>'
+                     f'<div class="mcap">moving toward a danger line</div></div>')
+        vel = (f'<p class="note">A danger line is the level where sellers have '
+               f'historically started losing leverage. The two figures above measure '
+               f'the same ZIP codes two different ways — a market can rate HOLD today '
+               f'and still be drifting — so they overlap and do not sum.</p>')
+
+    jsonld = json.dumps({
+        "@context": "https://schema.org",
+        "@graph": [
+            {"@type": "Dataset", "name": f"{short} per-ZIP housing signals, {period}",
+             "description": desc, "url": url,
+             "creator": {"@type": "Organization", "name": "ShouldISellYet",
+                         "url": SITE + "/"},
+             "temporalCoverage": period, "isAccessibleForFree": True,
+             "license": SITE + "/research/methodology.html"},
+            {"@type": "Article", "headline": title, "datePublished": f"{period}-01",
+             "mainEntityOfPage": url,
+             "author": {"@type": "Organization", "name": "ShouldISellYet Research"},
+             "publisher": {"@type": "Organization", "name": "ShouldISellYet",
+                           "logo": {"@type": "ImageObject",
+                                    "url": SITE + "/apple-touch-icon.png"}}},
+        ]}, separators=(",", ":"))
+
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)}</title>
+<meta name="description" content="{esc(desc)}">
+<link rel="canonical" href="{url}">
+<meta property="og:title" content="{esc(title)}">
+<meta property="og:description" content="{esc(desc)}">
+<meta property="og:url" content="{url}">
+<meta property="og:image" content="{og}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{og}">
+<link rel="stylesheet" href="/zip/zip.css">
+<link rel="icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#faf8f4">
+<style>
+.spark{{display:block;margin:10px 0 4px;max-width:100%;height:auto}}
+.mfigs{{display:flex;gap:34px;flex-wrap:wrap;margin:14px 0 0}}
+.mfig{{min-width:150px}}
+.mlabel{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.625rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}}
+.mcap{{font-size:.8125rem;color:var(--muted);max-width:190px;line-height:1.35}}
+.mhero{{font-family:Georgia,'Newsreader',serif;font-size:clamp(2.4rem,8vw,3.6rem);
+  line-height:1;margin:2px 0 2px;color:var(--navy)}}
+.msub{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.8125rem;
+  color:var(--faint-ink);letter-spacing:.04em}}
+table.zips{{width:100%;border-collapse:collapse;font-size:.9375rem;margin-top:6px}}
+table.zips th{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.6875rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;
+  padding:8px 8px;border-bottom:1px solid var(--hairline)}}
+table.zips td{{padding:9px 8px;border-bottom:1px solid var(--hairline2)}}
+table.zips td.num{{text-align:right;font-variant-numeric:tabular-nums}}
+table.zips td.past{{color:#a33;font-weight:600}}
+.tag{{display:inline-block;font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.6875rem;letter-spacing:.06em;padding:2px 7px;border-radius:20px;
+  border:1px solid var(--hairline)}}
+.tag.green{{background:#e9f4ee;border-color:#bcdcc9;color:#1e6b3f}}
+.tag.amber{{background:#faf1dd;border-color:#e8d5a8;color:#8a6414}}
+.tag.red{{background:#fbe9e9;border-color:#ecc3c3;color:#a33}}
+.tag.strong{{background:#e8eef7;border-color:#c3d2e8;color:#1f3a5f}}
+</style>
+<script type="application/ld+json">{jsonld}</script>
+</head><body>
+<nav class="top">
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="40" height="40" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet?</span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
+  <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
+</nav>
+<div class="wrap">
+  <div class="crumb"><a href="/">Home</a> › <a href="/research/">Research</a> › {esc(short)}</div>
+
+  <!-- The check module sits ABOVE the data: a reader who arrived from a post
+       about this metro wants their own ZIP, and making them scroll past a
+       table of other people's ZIP codes to find the box is a tax on the one
+       action this page exists to produce. -->
+  <div class="answer" style="margin:14px 0 18px">
+    <b>Check your own ZIP code, free.</b>
+    <form action="/" method="get" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <input name="zip" inputmode="numeric" maxlength="5" pattern="\\d{{5}}"
+             placeholder="ZIP code" aria-label="ZIP code"
+             style="flex:1;min-width:140px;font-family:'IBM Plex Mono',monospace;
+                    font-size:1rem;padding:11px 14px;border:1.5px solid #d7d0c2;
+                    border-radius:8px;background:#fff">
+      <button class="btn btn-primary" type="submit">Check my ZIP — free</button>
+    </form>
+  </div>
+
+  <h1 style="margin:0">{esc(short)}</h1>
+  <div class="msub">{esc(name)} · data through {esc(period)}</div>
+  <div class="mfigs">
+    <div class="mfig">
+      <div class="mlabel">Where they stand today</div>
+      <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
+      <div class="mcap">rate WATCH or ACT</div>
+    </div>
+    {det_block}
+  </div>
+  <p style="margin:10px 0 0">{esc(read_line(share, prev)) if share is not None else ""}</p>
+  {spark(series)}
+  <div class="msub">Warning-sign share, last {len(series)} months</div>
+  {vel}
+
+  <h2>Every ZIP code we track here</h2>
+  <p class="note">{holds} of {scored} rate HOLD or better today. A value in red is
+  past its published danger line. Tap a ZIP for its full reading.</p>
+  <div style="overflow-x:auto">
+  <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
+  <th class="num">Supply</th><th class="num">Price y/y</th><th class="num">Cutting price</th>
+  </tr></thead><tbody>{rows}</tbody></table></div>
+
+  <p class="note" style="margin-top:14px">Ratings and danger lines are defined on the
+  <a href="/methodology">methodology page</a>. Data through {esc(period)}, refreshed
+  when a new release publishes.</p>
+</div>
+<footer class="stamp">ShouldISellYet Research · data through {esc(period)} ·
+<a href="/research/">monthly national report</a></footer>
+</body></html>"""
+
+
+def redirect_page(dest, note):
+    """A static redirect. GitHub Pages has no server, so every "route" that is
+    not a real directory is one of these — the same shim /s/{zip} uses."""
+    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            f'<meta name="robots" content="noindex,nofollow">'
+            f'<title>ShouldISellYet</title>'
+            f'<link rel="canonical" href="{dest}">'
+            f'<script>location.replace({json.dumps(dest)});</script>'
+            f'<meta http-equiv="refresh" content="0;url={dest}">'
+            f'<style>body{{font-family:system-ui,-apple-system,sans-serif;'
+            f'background:#faf8f4;color:#5c6673;padding:40px 20px;text-align:center}}'
+            f'a{{color:#1f3a5f}}</style></head><body>'
+            f'<p>{esc(note)} <a href="{dest}">continue</a></p></body></html>')
+
+
+def hub_page(index, names, period):
+    """/metro/ — every metro page, so they are reachable and crawlable rather
+    than only linkable from a post."""
+    items = "".join(
+        f'<li><a href="/metro/{esc(s)}/">{esc(short_metro(names[c]))}</a></li>'
+        for s, c in sorted(index.items(), key=lambda kv: short_metro(names[kv[1]])))
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Housing market by metro area — ShouldISellYet</title>
+<meta name="description" content="Per-ZIP housing ratings for {len(index)} U.S. metro areas, updated monthly.">
+<link rel="canonical" href="{SITE}/metro/">
+<link rel="stylesheet" href="/zip/zip.css">
+<link rel="icon" href="/favicon.svg">
+<style>.hubgrid{{columns:3;column-gap:26px}}@media(max-width:700px){{.hubgrid{{columns:2}}}}
+.hubgrid li{{break-inside:avoid;list-style:none;padding:3px 0;font-size:.9375rem}}</style>
+</head><body>
+<nav class="top">
+  <a class="logo" href="/"><img src="/logo-mark.svg" alt="" width="40" height="40" style="display:block"><span class="logo-text"><span class="logo-word">Should I sell yet?</span><span class="logo-tag">LOCAL HOUSING MARKET SIGNALS</span></span></a>
+  <a href="/#check" style="font-size:.875rem">Check any ZIP free →</a>
+</nav>
+<div class="wrap">
+  <div class="crumb"><a href="/">Home</a> › Metro areas</div>
+  <h1>Housing market by metro area</h1>
+  <p>Per-ZIP ratings for {len(index)} metro areas, data through {esc(period)}.</p>
+  <ul class="hubgrid">{items}</ul>
+</div>
+<footer class="stamp">ShouldISellYet Research · data through {esc(period)}</footer>
+</body></html>"""
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--web", default=str(ROOT / "web"))
+    ap.add_argument("--only", default="", help="comma-separated CBSA codes (smoke tests)")
+    ap.add_argument("--min-zips", type=int, default=MIN_ZIPS)
+    args = ap.parse_args(argv)
+    web = Path(args.web)
+
+    meta_p = web / "data" / "meta.json"
+    if not meta_p.exists():
+        print("build_metro: no web/data/meta.json — nothing to build")
+        return 0
+    period = json.loads(meta_p.read_text()).get("period", "")
+
+    hist_p = ROOT / "pipeline" / "research" / "history.json"
+    if not hist_p.exists():
+        print("build_metro: no research history — metro pages need the trend; skipped")
+        return 0
+    hist = json.loads(hist_p.read_text())
+    names = {c: v[0] for c, v in (hist.get("metro_names") or {}).items()}
+
+    entries = load_entries(web / "data")
+    places, zip_cbsa = load_places(), load_zip_cbsa()
+    vel = {}
+    vp = web / "data" / "velocity-aggregates.json"
+    if vp.exists():
+        vel = {g["cbsa"]: g for g in (json.loads(vp.read_text()).get("gathering") or [])}
+
+    by_metro = {}
+    for z in entries:
+        c = zip_cbsa.get(z)
+        if c and c in names:
+            by_metro.setdefault(c, []).append(z)
+
+    only = {c.strip() for c in args.only.split(",") if c.strip()}
+    stage = web / ".metro-build"
+    if stage.exists():
+        import shutil
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+
+    index, n = {}, 0
+    for cbsa, zips in sorted(by_metro.items()):
+        if only and cbsa not in only:
+            continue
+        if len(zips) < args.min_zips:
+            continue
+        name = names[cbsa]
+        s = slugify(name)
+        if s in index:                      # verified zero today; refuse to guess
+            print(f"build_metro: slug collision {s!r} ({index[s]} vs {cbsa}) — skipped")
+            continue
+        og = f"{SITE}/assets/mkt/{period}/mq-{period}-flip-{cbsa}.png"
+        if not (web / "assets" / "mkt" / period / f"mq-{period}-flip-{cbsa}.png").exists():
+            og = f"{SITE}/og/default.png"
+        d = stage / s
+        d.mkdir(parents=True)
+        (d / "index.html").write_text(
+            page(cbsa, name, zips, entries, places, hist, period, vel.get(cbsa), og),
+            encoding="utf-8")
+        index[s] = cbsa
+        n += 1
+
+    # slug -> cbsa, committed so the generator can resolve a link target without
+    # rebuilding the site, and so the lint can prove a destination exists.
+    (ROOT / "pipeline" / "data" / "metro_slugs.json").write_text(
+        json.dumps(index, separators=(",", ":"), sort_keys=True))
+
+    (stage / "index.html").write_text(hub_page(index, names, period), encoding="utf-8")
+
+    final = web / "metro"
+    if final.exists():
+        import shutil
+        shutil.rmtree(final)
+    stage.rename(final)
+    # /methodology is the path every definition links to. The page itself has
+    # lived at /research/methodology.html since the research build shipped;
+    # this is the short, quotable route to it rather than a second copy.
+    meth = web / "methodology"
+    meth.mkdir(parents=True, exist_ok=True)
+    (meth / "index.html").write_text(
+        redirect_page(f"{SITE}/research/methodology.html",
+                      "Taking you to the methodology…"), encoding="utf-8")
+
+    print(f"build_metro: {n} metro page(s) + hub + /methodology · "
+          f"min {args.min_zips} ZIPs · period {period}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
