@@ -497,3 +497,44 @@ than trusted to the templates (`test_jargon_never_reaches_a_public_field`).
 
 Nothing in the live queue violated any of the three when they were switched on —
 the copy was already right. The rules exist so it stays that way.
+
+## Three a week, and the windows to hold them (2026-08-10)
+
+The cap went from 2 to 3 per channel per week, to make room for the post
+taxonomy: its quota table wants roughly 18–22 posts a month, and 2/week across
+three channels tops out near 24 with no slack — low-priority types would have
+been refused every week rather than occasionally.
+
+**Raising the number alone would have done nothing.** The real limit is
+`min(cap, windows the channel has)`, and ig and fb had exactly two windows —
+Sunday 19:30 and Wednesday 08:30. So schema-v27 adds a Friday 08:30 window to
+both before raising the cap. The two changes belong in one migration for that
+reason. X already carried three (it has Tuesday as well) and is unchanged.
+
+The cap is a **matched set** and moves together or not at all:
+`marketing_slot_conflict` (enforcement) · `admin_marketing_week`'s guidance
+(what the operator is told) · `MAX_WEEKLY_PER_CHANNEL` (the Python refusal) ·
+`FALLBACK_WINDOWS` (the dry-run mirror). `test_weekly_cap_matches_the_sql_that_enforces_it`
+fails the build if the Python and the SQL disagree — otherwise the generator
+plans a post the database rejects, which reads as a mystery failure in CI.
+
+Note that with three windows and a cap of three, the cap is currently
+non-binding: R1 (no window) or R4 (slot taken) refuses first. It stays as
+defence in depth and starts binding the moment a fourth window is added.
+
+## thread_position
+
+A recap thread is a lead plus three to five replies plus a closer, and the
+model is one row per POST. Operator decision: `thread_position`, not a
+parent/child id.
+
+`thread_key` groups the rows; `thread_position` is 0 for the lead and 1..n for
+the replies in order. Both NULL for a standalone post, which is almost all of
+them, and a CHECK makes the pair all-or-nothing — a position with no thread is
+a reply to nothing.
+
+**Why position and not a parent uuid.** The generator inserts one row per POST
+request precisely so a refused row cannot roll back its siblings, so a parent
+id would have to dangle until the lead lands. An order needs nothing to exist
+first and cannot point at a row that was never written. `(thread_key,
+thread_position)` is unique, so a re-run cannot double a reply.

@@ -97,7 +97,10 @@ MIN_LEAD_HOURS = 2      # never plan a slot closer than this to the run
 # Caps — MIRRORS of marketing_slot_conflict R2/R3 in supabase/schema-v23.sql.
 # Python refuses first (REFUSED lines, row never written); the trigger is the
 # backstop. Change the SQL, change these, in the same commit.
-MAX_WEEKLY_PER_CHANNEL = 2
+# Raised 2 -> 3 on 2026-08-10 with schema-v27, which also added the third
+# ig/fb window the higher cap needs: the real limit is min(cap, windows the
+# channel has), so raising this alone would have changed nothing.
+MAX_WEEKLY_PER_CHANNEL = 3
 METRO_COOLDOWN_DAYS = 14
 
 # ——— Burst play ———
@@ -198,4 +201,6 @@ FALLBACK_WINDOWS = [
     {"channel": "fb", "dow": 3, "at_time": "08:30", "label": "Wednesday morning", "anchor": False},
     {"channel": "x",  "dow": 2, "at_time": "08:30", "label": "Tuesday morning", "anchor": False},
     {"channel": "x",  "dow": 3, "at_time": "08:30", "label": "Wednesday morning", "anchor": False},
+    {"channel": "ig", "dow": 5, "at_time": "08:30", "label": "Friday morning", "anchor": False},
+    {"channel": "fb", "dow": 5, "at_time": "08:30", "label": "Friday morning", "anchor": False},
 ]

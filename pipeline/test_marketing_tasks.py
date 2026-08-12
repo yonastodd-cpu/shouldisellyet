@@ -127,17 +127,22 @@ def test_refresh_populates_queue():
     assert counts and all(n <= MC.MAX_WEEKLY_PER_CHANNEL for n in counts.values())
 
 
-def test_third_weekly_post_refused(monkeypatch):
-    """The Python layer refuses the third same-channel post in a week —
+def test_over_cap_post_refused(monkeypatch):
+    """The Python layer refuses the post that would exceed the weekly cap —
     printed, returned in the plan, and never among the rows to write. (The
-    v23 trigger is the live backstop; see the (LIVE) checklist item.)"""
+    trigger is the live backstop; see the (LIVE) checklist item.)
+
+    Written against MAX_WEEKLY_PER_CHANNEL rather than a literal, because the
+    cap moved from 2 to 3 on 2026-08-10 and a test that hardcodes it fails for
+    the wrong reason — it should prove the RULE, not the number of the week."""
+    cap = MC.MAX_WEEKLY_PER_CHANNEL
     monkeypatch.setattr(MC, "HORIZON_WEEKS", 1)
     sunday = datetime(2026, 8, 16, 14, 0, tzinfo=timezone.utc)   # Sun 10:00 ET
     cands = [{"key": f"mq-2026-08-geo-2000{i}", "type": "post", "tier": 4,
               "channel": "ig", "why_headline": f"headline {i}"}
-             for i in range(3)]
+             for i in range(cap + 1)]
     plan = MT.plan_schedule(cands, [], MC.FALLBACK_WINDOWS, sunday)
-    assert len(plan.placed) == 2
+    assert len(plan.placed) == cap
     assert len(plan.refused) == 1
     refused_cand, reason = plan.refused[0]
     assert reason.startswith("refused:weekly_cap:ig:")
@@ -460,24 +465,40 @@ def test_token_contract():
 
 
 def test_windows_fallback_matches_seed():
-    """The mirror drift guard: FALLBACK_WINDOWS must equal the v23 seed
-    INSERT, parsed out of the SQL itself. Commented rows (the dormant Naomi
-    INSERT) are stripped first — the off switch must stay off here too."""
-    live = "\n".join(l for l in SCHEMA.splitlines()
-                     if not l.lstrip().startswith("--"))
-    m = re.search(r"insert into public\.marketing_windows\s*"
-                  r"\(channel, dow, at_time, label, anchor\)\s*values(.*?)"
-                  r"on conflict", live, re.S)
-    assert m, "seed INSERT not found in schema-v23.sql"
-    seed = {(ch, int(dow), at, label, anch == "true")
-            for ch, dow, at, label, anch in re.findall(
-                r"\('(\w+)',\s*(\d),\s*'(\d\d:\d\d)',\s*'([^']*)',\s*(true|false)\)",
-                m.group(1))}
-    ours = {(w["channel"], w["dow"], w["at_time"], w["label"], w["anchor"])
-            for w in MC.FALLBACK_WINDOWS}
-    assert seed == ours
-    assert not any(w["channel"] == "nextdoor_naomi" for w in MC.FALLBACK_WINDOWS)
+    """FALLBACK_WINDOWS is a dry-run mirror of what the database actually holds.
+    Windows are seeded across MORE THAN ONE migration now (v23 seeded the first
+    seven, v27 added the Friday pair with the cap raise), so the parse walks
+    every schema file — reading only v23 would have passed while the mirror was
+    two windows short, which is exactly the drift this test exists to catch."""
+    sqldir = Path(__file__).resolve().parents[1] / "supabase"
+    seeded = set()
+    for f in sorted(sqldir.glob("schema-v*.sql")):
+        for m in re.finditer(
+                r"insert into public\.marketing_windows[^;]*?values(.*?)on conflict",
+                re.sub(r"--[^\n]*", "", f.read_text()), re.S | re.I):
+            for ch, dow, at in re.findall(
+                    r"\('(\w+)',\s*(\d+),\s*'([\d:]+)'", m.group(1)):
+                seeded.add((ch, int(dow), at[:5]))
+    mirror = {(w["channel"], w["dow"], w["at_time"][:5]) for w in MC.FALLBACK_WINDOWS}
+    assert mirror == seeded, (
+        f"FALLBACK_WINDOWS has drifted from the seeded calendar\n"
+        f"  only in mirror: {sorted(mirror - seeded)}\n"
+        f"  only in SQL   : {sorted(seeded - mirror)}")
 
+
+def test_weekly_cap_matches_the_sql_that_enforces_it():
+    """The Python refuses first and the trigger is the backstop. If they
+    disagree the generator plans a post the database then rejects, which reads
+    as a mystery failure in CI rather than as a cap."""
+    sqldir = Path(__file__).resolve().parents[1] / "supabase"
+    latest = None
+    for f in sorted(sqldir.glob("schema-v*.sql")):
+        m = re.search(r"if n >= (\d+) then\s*\n\s*return format\('weekly cap", f.read_text())
+        if m:
+            latest = int(m.group(1))
+    assert latest is not None, "could not find the weekly-cap check in any migration"
+    assert latest == MC.MAX_WEEKLY_PER_CHANNEL, (
+        f"SQL enforces {latest}/week, Python refuses at {MC.MAX_WEEKLY_PER_CHANNEL}")
 
 def test_dedupe_index_is_inferable_by_on_conflict():
     """The generator upserts through PostgREST with ?on_conflict=dedupe_key,
