@@ -697,25 +697,64 @@ def cand_flips(vel, vel_prev, period):
         hook = (f"{det}% of the ZIP codes we track in {name} are now moving "
                 f"toward a danger line — the level where local price trends "
                 f"have historically turned against sellers.")
+        # hold_share counts green AND strong — HOLD or better, not HOLD. Calling
+        # it "rate HOLD" both overstates the calm and contradicts the metro page
+        # this post links to, which says "N of M rate HOLD or better today".
+        # STRONG is its own verdict; the site was fixed elsewhere for exactly
+        # this conflation.
         contrast = (f"On the surface the market looks steady: {hold}% of "
-                    f"neighborhoods still rate HOLD today. Underneath, most of "
+                    f"neighborhoods still rate HOLD or better today. Underneath, most of "
                     f"those same neighborhoods are drifting the same way, and "
                     f"at the pace of the last three months the typical one is "
                     f"{mtl_prose(g.get('median_mtl'))}.")
-        evidence = (f"This is {name}'s first month among the fastest-shifting "
-                    f"markets we track.")
+        # WAS: "This is {name}'s first month among the fastest-shifting markets
+        # we track." Not what the flag means, and not true. velocity.py sets
+        # surge when a metro enters the top 10 having been absent from it in the
+        # previous six files — a RANK move over a six-file window. York-Hanover
+        # was on the gathering list in eight earlier months, including the month
+        # immediately before, at an identical 83.3%. The post announced an
+        # arrival at a place the metro had occupied for a year.
+        #
+        # What IS true is its standing this month, phrased so a tie cannot make
+        # it false: two metros share 83.3%, so "third-highest" would be wrong
+        # and "second" would be arguable. Counting how many are strictly above
+        # is exactly right either way.
+        #
+        # And when the metro's own share has not moved, that is the story: it
+        # climbed the list because other markets improved, not because it got
+        # worse. Saying so is the difference between a fact and a narrative.
+        above = sum(1 for r in (vel.get("gathering") or [])
+                    if (r.get("share_det") or 0) > g["share_det"])
+        # Spelled out, not because it reads better but because the caption has a
+        # budget of three FIGURES and this sentence is not carrying one of them.
+        # The reader's three are the share, the hold share and last month's.
+        _w = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+              7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+        evidence = ("No metro we track has a higher share this month."
+                    if above == 0 else
+                    f"Only {_w.get(above, above)} metro"
+                    f"{'' if above == 1 else 's'} we track "
+                    f"{'has' if above == 1 else 'have'} a higher share this month.")
+        prev_det = prev.get("share_det")
+        if prev_det is not None:
+            if abs(g["share_det"] - prev_det) < 0.5:
+                evidence += (" Its own share has not moved since last month — it sits "
+                             "this high because other markets improved, not because "
+                             "this one got worse.")
+            else:
+                evidence += f" Last month it was {round(prev_det)}%."
         short_hook = (f"{det}% of ZIP codes we track in {name} are moving toward "
                       f"a danger line — where sellers start losing leverage.")
-        short_contrast = f"{hold}% still rate HOLD: largely the same neighborhoods."
+        short_contrast = f"{hold}% still rate HOLD or better: largely the same neighborhoods."
         cap_long, cap_short = compose(hook, contrast, evidence, period,
                                       short_hook, short_contrast)
         out.append({
             "key": tok, "type": "post", "post_type": "metro_mover", "tier": 3,
             "caption": cap_long, "caption_short": cap_short,
             "metro_cbsa": g["cbsa"], "metro_name": g["name"],
-            "why_headline": f"{g['name']} just entered the top of our watch "
-                            f"list — {g['share_det']:.0f}% of its {g['zips']} "
-                            f"scored ZIPs are deteriorating.",
+            "why_headline": f"{g['name']} is high on our watch list — "
+                            f"{g['share_det']:.0f}% of its {g['zips']} scored "
+                            f"ZIPs are deteriorating or drifting.",
             "why_detail": "\n".join(lines),
             # The post_metro paste pattern — zero numeral literals in the
             # template itself; every figure arrives from the data.

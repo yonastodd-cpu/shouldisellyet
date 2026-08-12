@@ -110,7 +110,10 @@ def test_refresh_populates_queue():
     assert "68% of its 61 scored ZIPs" in flip["why_headline"]
     # The copy must not claim a crossing any more — it claims a surge, which
     # is what the rule now actually detects.
-    assert "entered the top of our watch list" in flip["why_headline"]
+    # WAS "entered the top of our watch list", removed along with the caption
+    # claim it mirrored: the surge flag is a rank move over a six-file window,
+    # not an arrival, and the metro it fired on had been on the list a year.
+    assert "is high on our watch list" in flip["why_headline"]
     assert "crossed the line" not in flip["why_headline"]
     assert "supply" in flip["why_detail"]          # the dial that moved
 
@@ -928,3 +931,39 @@ def test_a_thread_is_recognised_as_already_generated(tmp_path):
     assert 'f"{c[\'key\']}-0" if c.get("thread")' in block, \
         "the existence probe went back to the bare candidate key"
     assert "probe(c) not in seen" in block
+
+
+def test_a_flip_post_never_claims_a_first_appearance():
+    """velocity.py's surge flag means "entered the top 10 having been absent
+    from it in the previous six files" — a rank move over a six-file window.
+    The caption read "This is York, PA's first month among the fastest-shifting
+    markets we track", and York-Hanover appears in EIGHT earlier velocity files
+    including the month immediately before, at an identical 83.3% share. The
+    post announced an arrival at a place the metro had held for a year."""
+    import re as _re
+    src = (REPO / "pipeline" / "marketing_tasks.py").read_text()
+    body = src.split("def cand_flips")[1].split("\ndef ")[0]
+    code = _re.sub(r"^\s*#.*$", "", body, flags=_re.M)   # comments are not copy
+    assert "first month among" not in code, "the first-appearance claim is back"
+    assert "above = sum(" in code, "the standing claim stopped being counted"
+
+
+def test_a_flip_post_calls_hold_share_what_it_is():
+    """velocity.py computes hold_share over levels ("green", "strong") — HOLD
+    OR BETTER. Calling it "rate HOLD" overstates the calm and contradicts the
+    metro page the post links to, which says "N of M rate HOLD or better"."""
+    import json as _j
+    vel = _j.loads((REPO / "web" / "data" / "velocity-aggregates.json").read_text())
+    g = next(x for x in vel["gathering"] if x["cbsa"] == "49620")
+    zips = _j.loads((REPO / "web" / "data" / "zips" / "PA.json").read_text())
+    members = [z for z in g["member_zips"] if z in zips]
+    green = sum(1 for z in members if zips[z].get("l") == "green")
+    both = sum(1 for z in members if zips[z].get("l") in ("green", "strong"))
+    assert round(100 * both / len(members), 1) == g["hold_share"], \
+        "hold_share is no longer green+strong; the caption wording must follow it"
+    assert green != both, "fixture no longer distinguishes HOLD from HOLD-or-better"
+
+    src = (REPO / "pipeline" / "marketing_tasks.py").read_text()
+    body = src.split("def cand_flips")[1].split("\ndef ")[0]
+    assert "still rate HOLD or better today" in body
+    assert "still rate HOLD today" not in body
