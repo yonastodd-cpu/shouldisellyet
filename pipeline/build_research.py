@@ -352,7 +352,9 @@ def social_set(rep, series, outdir):
         place = f"{s['city']}, {s['state']}" if s["city"] else s["state"]
         d.text((64, 240), s["zip"], font=font(BOLD, 150), fill=NAVY)
         d.text((64, 420), place[:30], font=font(BOLD, 44), fill=INK)
-        d.text((64, 500), f"{s['months']} consecutive months", font=font(BOLD, 60), fill=RED)
+        _span, _clamped = streak_span(s["months"], rep)
+        d.text((64, 500), f"{_span}{'+' if _clamped else ''} consecutive months",
+               font=font(BOLD, 60), fill=RED)
         d.text((64, 580), "showing market warning signs", font=font(REG, 34), fill=MUTED)
         d.text((64, 660), "The longest current streak of any", font=font(REG, 30), fill=MUTED)
         d.text((64, 700), "scored U.S. ZIP market.", font=font(REG, 30), fill=MUTED)
@@ -406,7 +408,7 @@ def mtl_prose(v):
 CASES_DIR = ROOT / "web" / "data" / "cases"
 
 EXPLAINER = """
-<h2>How this works: the smoke detector</h2>
+<h2 id="smoke-detector">How this works: the smoke detector</h2>
 <p><b>Markets slow before they fall.</b> Prices are the last thing to move,
 because sellers hold their asking price long after buyers have stopped
 paying it. What changes first is behaviour, and behaviour is visible.</p>
@@ -489,7 +491,7 @@ def track_record(rel_prefix=""):
         return ""
     window = json.loads((CASES_DIR / "index.json").read_text()).get("window", ["", ""])
     return f"""
-<h2>Times the signals spoke first</h2>
+<h2 id="track-record">Times the signals spoke first</h2>
 <p>Every number on these cards is recomputed — the dials and danger lines
 below, run over the historical source data for that market, month by month.
 None of it is quoted from memory or from press coverage. Where a case would
@@ -523,7 +525,7 @@ def methodology_page(h, changelog, outdir):
                 f'<td class="n">{bt["sig"][k]["c"]:.1f}%</td></tr>'
                 for k, nm in sig_names.items() if k in bt.get("sig", {}))
             backtest = f"""
-<h2>The danger lines are backtested</h2>
+<h2 id="backtest">The danger lines are backtested</h2>
 <p>Each signal's threshold was tested against the FHFA's official ZIP-level
 house-price outcomes ({bt.get("n", 0):,} zip-year pairs, {bt.get("y0")}–{bt.get("y1")},
 outcomes through {bt.get("fhfa")}): of markets past a line at year-end, the share whose
@@ -548,7 +550,7 @@ described on the <a href="/">homepage's signal explanations</a>.</p>"""
                   "downturns may differ")
         if val.get("collecting"):
             measured = f"""
-<h2>Measured, not promised</h2>
+<h2 id="scorecard">Measured, not promised</h2>
 <p>From {esc(val.get("first_snapshot", ""))} onward we snapshot every month's
 verdicts as published, so they can be scored against what prices actually do
 next — recall on real declines, precision of the flags, and lead time. The
@@ -561,7 +563,7 @@ numbers. Updated monthly once live. One caveat applies now and always:
             fmtp = lambda x: f"{round(x * 100)}%" if x is not None else "—"
             lead = val.get("lead_days_median")
             measured = f"""
-<h2>Measured, not promised</h2>
+<h2 id="scorecard">Measured, not promised</h2>
 <p>Updated monthly, scored against outcomes — verdicts published 12 months
 earlier versus realized price changes since (thresholds: a real decline is
 ≤−5%; a flag counts as right at ≤−2%). Data through {esc(val.get("period", ""))}.</p>
@@ -582,14 +584,14 @@ The definition is versioned; changes are listed at the bottom and annotated
 on the chart at the month they take effect. History is restated on cutover,
 never silently redefined.</p>
 
-<h2>Definition</h2>
+<h2 id="definition">Definition</h2>
 <p><b>WSI = ZIP markets at WATCH or ACT ÷ all scored ZIP markets</b>, as a
 percentage, computed monthly. A ZIP is <b>scored</b> when at least two of the
 four index signals are known for the month. Insufficient-data ZIPs are
 excluded from both numerator and denominator. STRONG (seller's-market)
 verdicts count in the denominator only.</p>
 
-<h2>The four signals</h2>
+<h2 id="danger-lines">The four signals</h2>
 <p>Identical thresholds to the site's published danger lines, evaluated by
 the same verdict engine — restated on a constant four-signal basis so every
 month of the series measures the same thing:</p>
@@ -604,7 +606,7 @@ listings with price cuts (&gt; 35%) where Redfin publishes it. That signal has
 no history before 2026 and is deliberately excluded from the index; measured
 impact of the exclusion at adoption was 0.2 points (62.2% vs 62.4%).</p>
 
-<h2>Sources and the seam</h2>
+<h2 id="seam">Sources and the seam</h2>
 <p>The <b>continuous series</b> begins {esc(pretty(seam))}: Redfin Data Center
 hub data, the same file the site refreshes from, ~25,000 scored ZIPs per
 month. The <b>2012–2019 tail</b> is reconstructed from Redfin's legacy market
@@ -616,14 +618,14 @@ across the seam. The current month is always computed from the site's own
 published per-ZIP data, so the index and the ZIP pages a reader can check
 agree by construction.</p>
 
-<h2>Records and streaks</h2>
+<h2 id="records">Records and streaks</h2>
 <p>"Highest since {{month}}" names the last month the index was <b>at or
 above</b> the current value — ties block the bigger claim, so no superlative
 can contradict the archive. "Record" always means "within the continuous
 series", never "ever". ZIP warning streaks count consecutive months at WATCH
 or ACT; a month without a score breaks the streak.</p>
 
-<h2>Metro definitions</h2>
+<h2 id="metros">Metro definitions</h2>
 <p>ZIPs map to Metropolitan Statistical Areas via the Census 2020
 ZCTA↔county relationship file (largest land-overlap county per ZCTA) chained
 to the OMB 2023 CBSA delineation — the same definitions the press already
@@ -635,14 +637,14 @@ require ≥ 15 scored ZIPs.</p>
 {track}
 {measured}
 
-<h2>Use and citation</h2>
+<h2 id="citation">Use and citation</h2>
 <p>Index values, league tables, and release CSVs are free to use, chart, and
 republish with citation: <b>"Source: ShouldISellYet Research."</b> The CSVs
 carry ShouldISellYet's derived indicators only — never upstream raw metrics,
 which belong to their publishers. Media/data questions:
 <a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
 
-<h2>Changelog</h2>
+<h2 id="changelog">Changelog</h2>
 <table><thead><tr><th>Version</th><th>Effective</th><th>Change</th></tr></thead>
 <tbody>{entries}</tbody></table>
 """
@@ -719,6 +721,10 @@ td.n{{text-align:right;font-variant-numeric:tabular-nums}}
 .bullets li{{margin:8px 0}}
 .dl{{display:inline-block;border:1.5px solid var(--navy);border-radius:8px;padding:9px 16px;margin:4px 8px 4px 0;font-size:.9rem;text-decoration:none;font-weight:600}}
 .note{{font-size:.85rem;color:var(--fainter);line-height:1.55}}
+.narrative{{margin:26px 0 0;max-width:74ch}}
+.narrative p{{margin:0 0 14px;line-height:1.68}}
+.narrative b{{font-weight:650}}
+.homeowner{{margin-top:18px;padding:11px 14px;border:1px solid var(--hairline);border-radius:8px;background:#fff}}
 .cols{{display:grid;grid-template-columns:1fr 1fr;gap:26px}}
 @media(max-width:700px){{.cols{{grid-template-columns:1fr}}}}
 footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;font-size:.85rem;color:var(--fainter);line-height:1.6}}
@@ -769,6 +775,86 @@ def headline_sentence(rec):
     return " — ".join([bits[0], ", ".join(bits[1:])]) + "." if len(bits) > 1 else bits[0] + "."
 
 
+def narrative(rep):
+    """Three paragraphs: what moved, how broadly, and what sits underneath.
+
+    Deliberately NOT a summary of the tables below — a reader who wanted the
+    tables can read them. This says the thing the tables cannot: which way the
+    month went, whether it was broad or local, and what did not follow the
+    headline.
+    """
+    rec = rep.get("records") or {}
+    wsi, prev = rec.get("wsi"), rec.get("prev_wsi")
+    run, direction = rec.get("run_length"), rec.get("run_direction")
+    basis, basis_since = rec.get("basis_months"), rec.get("basis_since")
+    moves = rep.get("state_moves") or []
+    nat = rep.get("national") or {}
+    scored = nat.get("scored")
+    flips = len(rep.get("flips_to_warning") or [])
+    if wsi is None or not moves or not scored:
+        return ""
+
+    fell = sum(1 for r in moves if (r.get("delta") or 0) < 0)
+    rose = sum(1 for r in moves if (r.get("delta") or 0) > 0)
+    verb = "fell" if direction == "down" else "rose"
+    ordinal = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth",
+               6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth"}.get(run, f"{run}th")
+
+    paras = []
+    p1 = (f"The share of scored U.S. ZIP markets showing at least one housing "
+          f"warning sign {verb} to <b>{wsi:.1f}%</b>")
+    if prev is not None:
+        p1 += f" from {prev:.1f}%"
+    if run and direction:
+        p1 += f", the {ordinal} consecutive month it has moved that way"
+    p1 += (f". The index has been published every month since {pretty(basis_since)}, "
+           f"a continuous run of {basis} months." if basis and basis_since else ".")
+    paras.append(p1)
+
+    worst = max(moves, key=lambda r: r.get("delta") or 0)
+    best = min(moves, key=lambda r: r.get("delta") or 0)
+    paras.append(
+        f"The move was broad rather than local: warning shares fell in <b>{fell}</b> "
+        f"of the {len(moves)} state-level rollups and rose in {rose}. "
+        f"{STATE_NAMES.get(best['key'], best['key'])} improved most "
+        f"({arrow(best['delta'])} pts, to {best['share']:.1f}%); "
+        f"{STATE_NAMES.get(worst['key'], worst['key'])} deteriorated most "
+        f"({arrow(worst['delta'])} pts, to {worst['share']:.1f}%). "
+        f"Metro league tables below are limited to areas with at least 15 scored "
+        f"ZIPs, so a handful of listings cannot top them.")
+
+    paras.append(
+        f"A national average is not a promise about any one street, and this month "
+        f"it hid a lot of movement: <b>{flips:,}</b> individual ZIP markets crossed "
+        f"from healthy into warning territory even as the national share {verb}. "
+        f"Every one of them is named in the free flip list below, alongside the "
+        f"{scored:,} markets scored this month.")
+
+    return ('<div class="narrative">'
+            + "".join(f"<p>{x}</p>" for x in paras) + "</div>")
+
+
+def streak_span(months, rep):
+    """(clamped months, whether it was clamped).
+
+    streaks.json advances across the WHOLE archive, including the reconstructed
+    tracker-v1 months before the seam, so it holds runs longer than the entire
+    continuous series — every one of the top 25 this month, the longest at 89
+    months against a 73-month basis. An 89-month run ending June 2026 starts in
+    February 2019, sixteen months the wrong side of a seam THIS PAGE DISCLOSES
+    two sections further down.
+
+    This is the citable page. A number here that the archive cannot support is
+    worse than the same number in a caption, so the span is clamped to the
+    continuous basis and phrased as a floor: "every month of" rather than a
+    count we cannot stand behind.
+    """
+    basis = ((rep.get("records") or {}).get("basis_months")) or 0
+    if basis and months > basis:
+        return basis, True
+    return months, False
+
+
 def three_bullets(rep):
     out = []
     sm = rep["state_moves"]
@@ -786,8 +872,11 @@ def three_bullets(rep):
     if ts:
         s = ts[0]
         place = f"{s['city']}, {s['state']}" if s["city"] else s["state"]
+        span, clamped = streak_span(s["months"], rep)
         out.append(f"Longest current warning streak: <b>{s['zip']}</b> ({esc(place)}) — "
-                   f"{s['months']} consecutive months at WATCH or ACT.")
+                   + (f"at WATCH or ACT in every one of the {span} months of the "
+                      f"continuous series." if clamped else
+                      f"{span} consecutive months at WATCH or ACT."))
     n = len(rep["flips_to_warning"])
     if n:
         out.append(f"<b>{n:,} ZIP markets crossed into warning territory</b> this month "
@@ -902,7 +991,9 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
         for r in flips[:40])
     streak_rows = "".join(
         f'<tr><td class="mono"><a href="/zip/{r["zip"]}/">{r["zip"]}</a></td>'
-        f'<td>{esc(r["city"])}, {r["state"]}</td><td class="n">{r["months"]}</td>'
+        f'<td>{esc(r["city"])}, {r["state"]}</td>'
+        f'<td class="n">{streak_span(r["months"], rep)[0]}'
+        f'{"+" if streak_span(r["months"], rep)[1] else ""}</td>'
         f'<td>{word(r["level"])}</td></tr>'
         for r in rep["top_streaks"][:15])
 
@@ -975,6 +1066,9 @@ at the current pace.</p>"""
 <h1>Warning-Sign Index: {rec['wsi']:.1f}%</h1>
 <p class="lede">{headline_sentence(rec)}</p>
 <ul class="bullets">{bullets}</ul>
+{narrative(rep)}
+<p class="note homeowner">Not a researcher? <a href="/">Check your own ZIP code
+instead</a> — one plain answer for your market, free.</p>
 <img class="chart" src="wsi-chart.png" alt="Warning-Sign Index time series through {esc(pretty(month))}" width="1200" height="675">
 <p class="note">{esc(series_text)}</p>
 <img class="chart" src="state-map.png" alt="Warning share by state, {esc(pretty(month))}" width="1200" height="675">
@@ -1072,6 +1166,9 @@ lines. Free to cite; the data is downloadable in every release.</p>
 <p><span class="big">{cur_v:.1f}%</span><br>
 <span class="note">of scored U.S. ZIP markets show warning signs · data through {esc(pretty(cur_m))}</span></p>
 <img class="chart" src="wsi-chart.png" alt="Warning-Sign Index, full history" width="1200" height="675">
+<p class="note homeowner">Not a researcher? <a href="/">Check your own ZIP code
+instead</a> — one plain answer for your own market, free.</p>
+
 <h2>Monthly releases</h2>
 <table><thead><tr><th>Release</th><th>WSI</th></tr></thead><tbody>{rel_list}</tbody></table>
 <h2>How it works</h2>

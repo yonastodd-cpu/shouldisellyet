@@ -52,10 +52,18 @@ WORD = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "STRONG"}
 TAGCLASS = {"green": "green", "yellow": "amber", "red": "red", "strong": "strong"}
 # The four public dials and the published line each is measured against. These
 # are the same numbers and the same thresholds every /zip/ page shows.
+# The last lambda is the value AS PRINTED, in the line's own units. Colour is
+# decided on that, not on the raw float — otherwise 0.354 and 0.349 both print
+# "35%" and only one of them is red, on the same page, under a note telling the
+# reader that red means past the published line. A reader who can see two
+# identical numbers in two different colours has been given a reason to
+# distrust every other number on the page.
 DIALS = [
-    ("mos", "Months of supply", 4.0, "gt", lambda v: f"{v:.1f}"),
-    ("spy", "Price vs. last yr", -0.02, "lt", lambda v: f"{v * 100:+.1f}%"),
-    ("pd", "Listings cutting price", 0.35, "gt", lambda v: f"{v * 100:.0f}%"),
+    ("mos", "Months of supply", 4.0, "gt", lambda v: f"{v:.1f}", lambda v: round(v, 1)),
+    ("spy", "Price vs. last yr", -0.02, "lt", lambda v: f"{v * 100:+.1f}%",
+     lambda v: round(v * 100, 1) / 100),
+    ("pd", "Listings cutting price", 0.35, "gt", lambda v: f"{v * 100:.0f}%",
+     lambda v: round(v * 100) / 100),
 ]
 
 
@@ -102,6 +110,29 @@ def load_entries(data_dir):
     return out
 
 
+def spark_caption(series):
+    """What the line IS, said plainly, because it is not the hero's measure.
+
+    The hero counts this page's own ratings. This line is our national
+    warning-sign index restricted to this metro: a different signal set and a
+    different scored list, which is why its level can differ from the figure
+    above. It is drawn without numbers precisely so it reads as a direction and
+    never as a second, competing percentage.
+
+    The honest options were to delete a real trend or to label it for what it
+    is. Leaving it captioned "warning-sign share" beside a hero computed a
+    different way was the third option, and the wrong one.
+    """
+    vals = [v for _, v in series if v is not None]
+    if len(vals) < 4:
+        return ""
+    move = ("rising" if vals[-1] - vals[0] > 0.5 else
+            "falling" if vals[0] - vals[-1] > 0.5 else "roughly flat")
+    return (f"The direction of our national warning-sign index for this metro over "
+            f"the last {len(vals)} months — {move}. That index uses a different "
+            f"signal set from the ratings above, so its level differs.")
+
+
 def spark(series, w=560, h=90):
     """Inline SVG, not a PNG: it stays crisp at any zoom, costs no Pillow call,
     and needs no separate file to deploy. Returns "" below four points — a line
@@ -116,7 +147,13 @@ def spark(series, w=560, h=90):
     d = " ".join(("M" if i == 0 else "L") + f"{x:.1f} {y:.1f}" for i, (x, y) in enumerate(xy))
     lx, ly = xy[-1]
     return (f'<svg class="spark" viewBox="0 0 {w} {h}" width="{w}" height="{h}" '
-            f'role="img" aria-label="Warning-sign share, last {len(pts)} months">'
+            # The alt text carries the same caveat the visible caption does. A
+            # screen reader hearing "warning-sign share" would get exactly the
+            # misreading the caption exists to prevent — that this line is the
+            # hero's measure over time. It is not.
+            f'role="img" aria-label="Direction of our national warning-sign index '
+            f'for this metro over the last {len(pts)} months. Different signal set '
+            f'from the ratings on this page.">'
             f'<path d="{d}" fill="none" stroke="#1f3a5f" stroke-width="3" '
             f'stroke-linejoin="round" stroke-linecap="round"/>'
             f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="5.5" fill="#1f3a5f"/></svg>')
@@ -139,7 +176,8 @@ def read_line(share, prev):
     """One plain sentence. No adjective does any work here — the direction and
     the number are the whole read."""
     if prev is None:
-        return f"{share:.0f}% of the ZIP codes we track here are showing at least one warning sign."
+        return (f"{share:.0f}% of the ZIP codes we track here are showing at least one "
+                f"warning sign today.")
     d = share - prev
     if abs(d) < 0.5:
         return (f"{share:.0f}% of the ZIP codes we track here are showing at least one "
@@ -153,12 +191,13 @@ def zip_row(z, e, places):
     lvl = e.get("l")
     m = e.get("m") or {}
     cells = []
-    for key, _label, line, op, fmt in DIALS:
+    for key, _label, line, op, fmt, shown in DIALS:
         v = m.get(key)
         if v is None:
             cells.append('<td class="num">—</td>')
             continue
-        past = (v > line) if op == "gt" else (v < line)
+        s = shown(v)
+        past = (s > line) if op == "gt" else (s < line)
         cells.append(f'<td class="num{" past" if past else ""}">{esc(fmt(v))}</td>')
     return (f'<tr><td class="mono"><a href="/zip/{esc(z)}/">{esc(z)}</a></td>'
             f'<td>{esc(city)}</td>'
@@ -169,10 +208,22 @@ def zip_row(z, e, places):
 def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     short = short_metro(name)
     series = metro_series(hist, cbsa)
-    share = series[-1][1] if series else None
-    prev = series[-2][1] if len(series) > 1 else None
     scored = len(zips)
     holds = sum(1 for z in zips if entries[z].get("l") in ("green", "strong"))
+    warn = scored - holds
+
+    # THE HERO IS COUNTED FROM THE ROWS BELOW IT, NOT FROM history.json.
+    # It used to read the research index, which is a different measure over a
+    # different universe: four signals rather than the site's five, and its own
+    # scored set. Across 915 metros the two disagreed by 13.4 points on average
+    # and by more than 2 points in 722 of them — Grand Rapids shipped "30% rate
+    # WATCH or ACT" directly above a table in which 28 of 76 rows were tagged
+    # WATCH or ACT. Both numbers were honestly computed; only one of them is
+    # about the thing the caption says, and only one can be checked by counting
+    # the page. So the hero is now that one, and holds + warn == scored by
+    # construction rather than by luck.
+    share = (100.0 * warn / scored) if scored else None
+    prev = None
     url = f"{SITE}/metro/{slugify(name)}/"
     title = f"{short} housing market: is it time to sell? ({period})"
     desc = (f"{share:.0f}% of the {scored} ZIP codes we track in {short} are showing a "
@@ -192,13 +243,21 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     det = (vel_row or {}).get("share_det")
     det_block, vel = "", ""
     if det is not None:
-        det_block = (f'<div class="mfig"><div class="mlabel">Where they are headed</div>'
-                     f'<div class="mhero">{det:.0f}%</div>'
-                     f'<div class="mcap">moving toward a danger line</div></div>')
-        vel = (f'<p class="note">A danger line is the level where sellers have '
-               f'historically started losing leverage. The two figures above measure '
-               f'the same ZIP codes two different ways — a market can rate HOLD today '
-               f'and still be drifting — so they overlap and do not sum.</p>')
+        # TWO BIG NUMBERS SIDE BY SIDE INVITE ADDING THEM, and these two cannot
+        # be added: they measure the same ZIPs two different ways and overlap.
+        # A footnote saying so was the tell that the layout was fighting the
+        # reader. The trajectory is now a sentence under the hero — subordinate
+        # in type, and phrased so the overlap is the point rather than an
+        # exception. Only 25 of 608 metros have this figure at all, so the page
+        # must read correctly without it, which a sentence does and an empty
+        # second column did not.
+        det_block = ""
+        vel = (f'<p class="trend">But look at where they are heading: '
+               f'<b>{det:.0f}% of these same ZIP codes are drifting toward a danger '
+               f'line</b> — the level where sellers have historically started losing '
+               f'leverage. That includes many that rate HOLD today, and some already '
+               f'past a line. It is the same ZIP codes counted a second way, so it '
+               f'does not add to the figure above.</p>')
 
     jsonld = json.dumps({
         "@context": "https://schema.org",
@@ -233,6 +292,16 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#faf8f4">
+<style>
+.trend{{margin:14px 0 0;font-size:.95rem;line-height:1.62;color:#5c6673;max-width:70ch}}
+.trend b{{color:#1c2430}}
+.receipt{{margin:18px 0 0;border:1px solid #e7e2d8;border-radius:10px;background:#fff}}
+.receipt summary{{cursor:pointer;padding:13px 16px;font-weight:600;font-size:.92rem}}
+.receipt summary::marker{{color:#8a7a55}}
+.receipt-body{{padding:0 16px 4px}}
+.receipt-body p{{margin:0 0 13px;font-size:.9rem;line-height:1.62;color:#5c6673}}
+.receipt-body b{{color:#1c2430}}
+</style>
 <style>
 .spark{{display:block;margin:10px 0 4px;max-width:100%;height:auto}}
 .mfigs{{display:flex;gap:34px;flex-wrap:wrap;margin:14px 0 0}}
@@ -290,22 +359,42 @@ table.zips td.past{{color:#a33;font-weight:600}}
     <div class="mfig">
       <div class="mlabel">Where they stand today</div>
       <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
-      <div class="mcap">rate WATCH or ACT</div>
+      <div class="mcap">of the {scored} ZIP codes we track here rate WATCH or ACT</div>
     </div>
     {det_block}
   </div>
   <p style="margin:10px 0 0">{esc(read_line(share, prev)) if share is not None else ""}</p>
-  {spark(series)}
-  <div class="msub">Warning-sign share, last {len(series)} months</div>
   {vel}
+  {spark(series)}
+  <div class="msub">{esc(spark_caption(series))}</div>
 
   <h2>Every ZIP code we track here</h2>
   <p class="note">{holds} of {scored} rate HOLD or better today. A value in red is
   past its published danger line. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
   <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
-  <th class="num">Supply</th><th class="num">Price y/y</th><th class="num">Cutting price</th>
+  <th class="num">Months of supply</th><th class="num">Price vs. last year</th>
+  <th class="num">Listings cutting price</th>
   </tr></thead><tbody>{rows}</tbody></table></div>
+
+  <details class="receipt">
+    <summary>Behind this number</summary>
+    <div class="receipt-body">
+      <p><b>What goes in.</b> Every ZIP code in this metro we can score — {scored}
+      of them this month. A ZIP is scored when it has enough recent sales to read;
+      the rest are left out rather than guessed at.</p>
+      <p><b>The maths.</b> {warn} of those {scored} ZIP codes show at least one
+      signal past its danger line, which is {share:.0f}%. You can count them in the
+      table above: every row tagged WATCH or ACT.</p>
+      <p><b>Why there is a line at all.</b> Each danger line is the level at which,
+      in past downturns, that signal began leading price declines rather than
+      following them. The lines are fixed, published, and identical for every ZIP
+      code in the country — we do not tune them per market.</p>
+      <p><b>Where it comes from.</b> Public housing data, refreshed when a new
+      release publishes; this page is data through {esc(period)}. Full derivation on
+      the <a href="/methodology">methodology page</a>.</p>
+    </div>
+  </details>
 
   <p class="note" style="margin-top:14px">Ratings and danger lines are defined on the
   <a href="/methodology">methodology page</a>. Data through {esc(period)}, refreshed
@@ -323,7 +412,14 @@ def redirect_page(dest, note):
             f'<meta name="robots" content="noindex,nofollow">'
             f'<title>ShouldISellYet</title>'
             f'<link rel="canonical" href="{dest}">'
-            f'<script>location.replace({json.dumps(dest)});</script>'
+            # THE FRAGMENT HAS TO SURVIVE. /methodology#backtest is only useful
+            # if the hash reaches the real page, and location.replace(dest)
+            # discards it — the anchors added to the methodology page in the
+            # same change would have been dead through this route, which is the
+            # route every receipt and social post uses. The meta refresh cannot
+            # carry a runtime value, so it stays as the no-JS fallback and
+            # lands on the top of the page; the script is what preserves it.
+            f'<script>location.replace({json.dumps(dest)} + location.hash);</script>'
             f'<meta http-equiv="refresh" content="0;url={dest}">'
             f'<style>body{{font-family:system-ui,-apple-system,sans-serif;'
             f'background:#faf8f4;color:#5c6673;padding:40px 20px;text-align:center}}'
