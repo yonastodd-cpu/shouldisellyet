@@ -33,7 +33,9 @@ def test_the_surveillance_answer_is_still_on_the_page():
     """Marked mandatory when step 4 was written: it answers the surveillance
     read of an alert product head-on. Step 4 was folded into step 3 in the
     simplification; the sentence came with it and is not optional."""
-    assert "We monitor the market, not you." in TEXT
+    # The 2026-08-12 brief repunctuates it with an em dash. The sentence is
+    # mandatory; its punctuation is not.
+    assert "We monitor the market — not you." in TEXT
 
 
 def test_the_danger_lines_are_still_disclosed_beside_the_readers_numbers():
@@ -70,9 +72,15 @@ def test_no_numeric_danger_thresholds_in_the_static_copy():
         assert line not in TEXT, f"{line!r} is back in the static copy"
 
 
-def test_the_honesty_band_still_points_at_the_methodology():
-    """The band's whole claim is 'nothing is hidden'. It has to link."""
-    assert "smoke detector, not a fortune teller" in TEXT
+def test_the_neutrality_section_makes_its_claim_and_links_the_proof():
+    """The smoke-detector line was retired by the 2026-08-12 brief and replaced
+    by "Neutral by design", which argues the same honesty instead of asserting
+    it. The load-bearing parts: that nobody can move a rating, that the misses
+    are published too, and a link to the page that proves both."""
+    for claim in ("Neutral by design",
+                  "No analyst changes the rating. No advertiser can move it.",
+                  "including the times a warning appeared and the market recovered"):
+        assert claim in TEXT, claim
     assert 'href="/methodology/"' in MARKUP
 
 
@@ -80,9 +88,9 @@ def test_the_hit_rate_date_is_rendered_and_never_typed():
     """It lives in web/data/validation.json, which the methodology page states
     it from. Typing it here lets the two disagree the first time it moves — in
     the one band on the page whose job is being trustworthy."""
-    assert re.search(r"\b20\d\d\b", TEXT.split("smoke detector")[1][:400]) is None, \
-        "a hard-coded year appeared in the honesty band"
-    assert 'id="hitrate"' in MARKUP
+    assert re.search(r"\b20\d\d\b", TEXT.split("Neutral by design")[1][:900]) is None, \
+        "a hard-coded year appeared in the neutrality section"
+    assert 'id="scorecard-line"' in MARKUP
     assert "data/validation.json" in HTML
 
 
@@ -98,7 +106,7 @@ def test_banned_attribution_constructions_never_appear():
         assert phrase not in TEXT.lower(), f"banned construction {phrase!r} in copy"
 
 
-@pytest.mark.parametrize("section", ["why", "how", "signals", "alerts", "pricing"])
+@pytest.mark.parametrize("section", ["why", "how", "signals", "pricing"])
 def test_the_page_still_has_its_sections_in_order(section):
     assert f'id="{section}"' in MARKUP
 
@@ -106,7 +114,10 @@ def test_the_page_still_has_its_sections_in_order(section):
 def test_sections_appear_in_the_simplified_order():
     """Claim, then how it works, then the honesty band, then the ask. Pricing
     must not climb back above the free check."""
-    order = [s for s in ("why", "how", "signals", "alerts", "pricing")]
+    # The alerts section was deleted by the 2026-08-12 brief (its illustration
+    # moved to the reading screen). Proof, then how it works, then neutrality,
+    # then — last — the ask.
+    order = [s for s in ("why", "how", "signals", "pricing")]
     positions = [MARKUP.index(f'id="{s}"') for s in order]
     assert positions == sorted(positions), f"sections out of order: {order}"
 

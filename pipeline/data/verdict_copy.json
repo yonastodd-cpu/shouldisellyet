@@ -8,7 +8,7 @@
   "ink": "#1e7a42",
   "band": "#e9f4ee",
   "edge": "#bcdcc9",
-  "qa": "Nothing in the current public data says the market in {city} is turning — the verdict is HOLD, with no warning signal past its danger line. Selling now is a life decision, not a market-timing one."
+  "qa": "Nothing in the current public data says the market in {city} is turning — the reading is HOLD, with no warning signal past its danger line. Selling now is a life decision, not a market-timing one."
  },
  "yellow": {
   "word": "WATCH",
@@ -18,7 +18,7 @@
   "ink": "#96650c",
   "band": "#faf1dd",
   "edge": "#e8d5a8",
-  "qa": "The data shows early warning signs in {city} — the verdict is WATCH, with at least one signal past its danger line. Not a crisis, but turns start this way months before prices move; if selling is on your mind, watch closely."
+  "qa": "The data shows early warning signs in {city} — the reading is WATCH, with at least one signal past its danger line. Not a crisis, but turns start this way months before prices move; if selling is on your mind, watch closely."
  },
  "red": {
   "word": "ACT",
@@ -28,7 +28,7 @@
   "ink": "#c02f2f",
   "band": "#fbe9e9",
   "edge": "#ecc3c3",
-  "qa": "Multiple signals in {city} are past the thresholds that preceded past downturns — the verdict is ACT, and sellers here are losing pricing power. If selling was already on your mind, make a plan now rather than next spring."
+  "qa": "Multiple signals in {city} are past the thresholds that preceded past downturns — the reading is ACT, and sellers here are losing pricing power. If selling was already on your mind, make a plan now rather than next spring."
  },
  "strong": {
   "word": "STRONG",
@@ -38,6 +38,6 @@
   "ink": "#1f3a5f",
   "band": "#e8eef7",
   "edge": "#c3d2e8",
-  "qa": "Buyers are competing for homes in {city} — the verdict is STRONG, a strong seller's market. If selling was already on your mind, current conditions favor you."
+  "qa": "Buyers are competing for homes in {city} — the reading is STRONG, a strong seller's market. If selling was already on your mind, current conditions favor you."
  }
 }

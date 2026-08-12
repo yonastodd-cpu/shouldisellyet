@@ -6,7 +6,7 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Should I Sell Yet? — Know before your home equity is at risk</title>
-<meta name="description" content="Enter your ZIP code. Get a plain-English verdict on whether your home equity is at risk — free, with email updates the moment it changes.">
+<meta name="description" content="Enter your ZIP code. Get a plain-English reading on whether your home equity is at risk — free, with email updates the moment it changes.">
 <meta property="og:title" content="Should I Sell Yet?">
 <meta property="og:description" content="The home equity early-warning system. Check your ZIP in 15 seconds — free, with email updates the moment it changes.">
 <meta property="og:type" content="website">
@@ -21,13 +21,13 @@
      near-duplicate URLs competing with the real one. -->
 <link rel="canonical" href="https://shouldisellyet.com/">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
-{"@type":"WebSite","@id":"https://shouldisellyet.com/#website","url":"https://shouldisellyet.com/","name":"ShouldISellYet","description":"A free HOLD/WATCH/ACT verdict on whether your local housing market is turning against you, for any U.S. ZIP code.","publisher":{"@id":"https://shouldisellyet.com/#org"},"inLanguage":"en-US"},
+{"@type":"WebSite","@id":"https://shouldisellyet.com/#website","url":"https://shouldisellyet.com/","name":"ShouldISellYet","description":"A free HOLD/WATCH/ACT reading on whether your local housing market is turning against you, for any U.S. ZIP code.","publisher":{"@id":"https://shouldisellyet.com/#org"},"inLanguage":"en-US"},
 {"@type":"Organization","@id":"https://shouldisellyet.com/#org","name":"ShouldISellYet","url":"https://shouldisellyet.com/","legalName":"Yayday LLC","description":"Housing-market early-warning reports for homeowners. Not a brokerage.","logo":{"@type":"ImageObject","url":"https://shouldisellyet.com/apple-touch-icon.png"}},
 {"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — Know before your home equity is at risk","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
 {"@type":"FAQPage","@id":"https://shouldisellyet.com/#faq","mainEntity":[
-{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check four public signals for your ZIP code: months of supply, the year-over-year price trend, how long homes take to sell, and the share of listings cutting price. Each has a danger line drawn from how markets behaved before past national downturns. ShouldISellYet computes all four for any U.S. ZIP and returns one plain-English verdict — HOLD, WATCH, or ACT — free and without an account."}},
-{"@type":"Question","name":"What does a HOLD, WATCH, or ACT verdict mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means multiple danger lines are crossed and sellers are losing pricing power. Most ZIP codes read HOLD — the verdict often says don't sell."}},
-{"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code verdict and all four market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
+{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check four public signals for your ZIP code: months of supply, the year-over-year price trend, how long homes take to sell, and the share of listings cutting price. Each has a danger line drawn from how markets behaved before past national downturns. ShouldISellYet computes all four for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account."}},
+{"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means multiple danger lines are crossed and sellers are losing pricing power. Most ZIP codes read HOLD — the reading often says don't sell."}},
+{"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all four market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
 {"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Public housing-market data, refreshed whenever new figures publish. Data provided by Redfin, a national real estate brokerage, with an independent cross-check from Realtor.com listings, the Federal Housing Finance Agency house price index, and Freddie Mac's mortgage rate survey. The danger thresholds are published, not proprietary."}}]}]}</script>
 
 <link rel="icon" href="/favicon.svg">
@@ -365,25 +365,16 @@ h1 em{font-style:italic;color:var(--navy)}
 }
 
 /* ————— Alerts in action ————— */
-.alerts-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:start}
-.mailcard{background:#fff;border:1px solid var(--hairline);border-radius:14px;
           padding:16px 18px;box-shadow:0 8px 26px rgba(28,36,48,.08)}
-.mail-from{display:flex;align-items:center;gap:10px;font-size:var(--fs-meta);margin-bottom:10px}
-.mail-avatar{width:30px;height:30px;border-radius:50%;background:var(--navy) url("/logo-mark-dark.svg") center/62% no-repeat;flex:none}
 .mail-from b{display:block;font-size:var(--fs-meta)}
-.mail-time{font-size:var(--fs-micro);color:var(--fainter);margin-left:6px}
-.mail-subj{font-weight:650;font-size:var(--fs-body-sm);display:flex;align-items:center;gap:7px;margin-bottom:6px}
 /* One subtle pulse on arrival, then steady — the brief's ceiling. */
-.mail-dot{animation:blink 1.8s ease 1}
-.mail-body{margin:0;font-size:var(--fs-meta);line-height:1.55;color:var(--muted)}
-.mail-cap{font-size:var(--fs-micro);color:var(--fainter);margin-top:8px}
 .ax-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--hairline2);
         font-size:var(--fs-meta);color:var(--ink)}
 .ax-row:last-of-type{border-bottom:0}
 .ax-col .btn{display:inline-block;margin-top:14px;text-decoration:none}
 @media (max-width:980px){ .alerts-wrap{grid-template-columns:1fr;gap:20px} }
 
-/* monitor signup (inside verdict) */
+
 .mform{display:none;flex-direction:column;gap:9px;border-top:1px dashed var(--hairline);padding-top:14px;margin-top:6px}
 .mform input[type=email],.mform input[type=text]{font-size:14px;padding:11px 13px;border:1.5px solid #d7d0c2;border-radius:7px;background:#fff;font-family:inherit}
 .mform label{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;cursor:pointer}
@@ -436,6 +427,22 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .story-h{margin:0 0 12px;max-width:24ch}
 .story-p{margin:0 0 18px;font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);max-width:62ch}
 .story-link{font-weight:600}
+.body-p{margin:0 0 16px;font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);max-width:68ch}
+.body-p b{color:var(--ink)}
+.scale-line{margin:6px 0 0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);max-width:52ch}
+.scale-line b{color:var(--ink)}
+/* HOLD / WATCH / ACT are product states, not prose — one pill component,
+   used everywhere they stand for the rating. */
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-family:'IBM Plex Mono',monospace;
+  font-size:.78em;font-weight:700;letter-spacing:.06em;vertical-align:baseline;white-space:nowrap}
+.pill-g{background:var(--green-soft);color:#1e7a42;border:1px solid var(--green-line)}
+.pill-a{background:#faf1dd;color:#96650c;border:1px solid #e8d5a8}
+.pill-r{background:#fbe9e9;color:#c02f2f;border:1px solid #ecc3c3}
+.boise{margin:24px 0;padding:0;border:1px solid var(--hairline);border-radius:10px;background:#fff;overflow:hidden}
+.boise img{display:block;width:100%;height:auto}
+.cites{margin:0 0 16px;font-size:var(--fs-meta);line-height:1.7;color:var(--fainter)}
+.cites a{color:var(--muted)}
+.price-line{margin:0 0 16px;font-size:var(--fs-body);color:var(--ink);font-weight:600}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
 .steps3{grid-template-columns:repeat(3,1fr)}
 .step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
@@ -445,12 +452,8 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .price-card{border:1px solid var(--hairline);border-radius:12px;background:#fff;padding:30px;display:flex;flex-direction:column;gap:14px;position:relative}
 .price-card.featured{border:1.5px solid var(--navy)}
 .price-badge{position:absolute;top:-11px;left:24px;background:var(--navy);color:#fff;font-size:var(--fs-micro);font-weight:600;letter-spacing:.1em;padding:4px 11px;border-radius:4px}
-.price{font-family:'Newsreader',serif;font-size:2.75rem;font-weight:500;line-height:1.1}
 .price small{font-size:var(--fs-meta);color:var(--muted);font-family:system-ui,sans-serif;font-weight:400}
 .price-feats{font-size:var(--fs-body-sm);line-height:1.7;color:var(--muted)}
-.price-cta{margin-top:auto;text-align:center;border-radius:7px;padding:15px;font-size:var(--fs-ui);font-weight:600;display:block;cursor:pointer;min-height:56px}
-.card-title{font-size:var(--fs-body-sm);font-weight:650}
-.price-note{font-size:var(--fs-meta);color:var(--muted);margin-top:-6px}
 .price-note.sm{font-size:.9375rem;color:var(--faint-ink);margin-top:-4px}
 .band-note{margin-top:20px;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .band-note.sm{margin-top:16px;font-size:var(--fs-meta)}
@@ -574,17 +577,20 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 <div class="hero" id="check">
   <div style="display:flex;flex-direction:column;gap:22px">
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
-    <h1>Know if your neighborhood's housing market is turning — <em>before the headlines do.</em></h1>
-    <p class="sub">Home prices are the <em>last</em> thing to fall. Homes sitting longer, inventory piling up, sellers cutting prices — those move first, and they are all public data. We watch them for your ZIP code and give you one plain answer: <b>hold, watch, or act.</b></p>
+    <h1>We monitor your local housing market for signs of change.</h1>
+    <p class="sub">Homes sitting longer. Inventory building. Sellers cutting prices. These signals can start moving before home prices do.</p>
+    <p class="sub">We track them for your ZIP code and turn the data into one simple reading: <span class="pill pill-g">HOLD</span>, <span class="pill pill-a">WATCH</span>, or <span class="pill pill-r">ACT</span>.</p>
     <!-- The one-line pitch for the full report, set at the existing meta scale
          so it reads as a coda to .sub, not a second subhead competing with it. -->
-    <p class="sub-tally">One clear verdict for your market. A complete report for your home. <b>And one email the moment anything changes.</b></p>
     <div id="from-ctx" hidden></div>
     <div class="zipform">
       <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
       <button class="btn" id="go">Check my ZIP — free</button>
     </div>
-    <div class="fineprint">Free · no account · try <span class="mono">20874</span> or <span class="mono">20906</span></div>
+    <div class="fineprint">Free · No account · About 10 seconds<br>Try <span class="mono">20874</span> or <span class="mono">20906</span></div>
+    <!-- Scale line. Doubles as the map's caption — the map below carries no
+         caption of its own, per the brief. Count is computed from meta.json. -->
+    <p class="scale-line"><b id="scale-count">33,000+ ZIP codes</b>, re-scored whenever new data is released. Yours is one of them.</p>
 
     <div class="card crunch hidden" id="crunch">
       <div class="crunch-head">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
@@ -675,7 +681,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 
 <div class="card waitcard" id="waitcard">
       <div class="t">We're not scoring <span id="wl-zip"></span> yet</div>
-      <p>Smaller markets report too few sales for a reliable verdict. Leave your email and we'll tell you the moment your ZIP goes live.</p>
+      <p>Smaller markets report too few sales for a reliable reading. Leave your email and we'll tell you the moment your ZIP goes live.</p>
       <form onsubmit="return joinWaitlist(event)">
         <input type="email" id="wl-email" placeholder="you@email.com" required>
         <!-- Honeypot: no human sees or fills this. Off-screen (not
@@ -717,7 +723,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       </div>
       <div class="mapfeed"><span id="feed">…</span></div>
     </div>
-    <div class="map-caption">Every dot is a metro we score against downturn thresholds. Verdicts refresh the moment new figures publish.</div>
   </div>
 </div>
 
@@ -734,132 +739,98 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
      stranger is no longer asked to read four thresholds before being told
      what the product does. The disclosure moved to where it means something;
      it did not leave. -->
+<!-- Beat 2 — the proof. One market, told once. The chart is generated by
+     pipeline/build_stories.py (stage 3 of the same renderer the story page
+     uses, from the same case JSON the methodology page computes from), so this
+     section and /stories/boise cannot disagree. It hides itself if the asset is
+     missing rather than shipping the section without it. -->
 <section class="band" id="why">
-  <p class="claim">Housing-market data has never been designed to keep <em>homeowners</em> aware of their own local market. Until now.</p>
-  <p class="claim-kicker">The housing market turns quietly. <em>Hear it early.</em></p>
-</section>
-
-<!-- The story teaser. Proof before explanation: a stranger who will not read
-     a methodology page will read one market's story. Every figure is filled
-     from web/data/stories.json (written by build_stories.py from the same case
-     file the methodology page computes from), so this section types no
-     numbers and cannot drift from the story it links to. Hidden until that
-     fetch succeeds — a teaser with blanks in it is worse than no teaser. -->
-<section class="band" id="story" hidden>
-  <div class="story-kicker">The data spoke first</div>
-  <h2 class="story-h" id="story-h"></h2>
-  <p class="story-p" id="story-p"></p>
-  <a class="story-link" id="story-link" href="/stories/boise/">Read the whole story →</a>
+  <h2>See changes before they become obvious.</h2>
+  <p class="body-p">Most homeowners don't have an easy way to see when their local housing market is weakening. The data is public, but it's scattered across reports built largely for real estate professionals, investors, and lenders.</p>
+  <p class="body-p">That matters because important changes can begin before falling prices make them obvious.</p>
+  <p class="body-p"><b>Boise, November 2021:</b> homes were taking longer to sell even as prices remained near record highs. The market still looked strong on the surface. Underneath, the warning signs were building.</p>
+  <figure class="boise" id="boise-fig">
+    <img src="/stories/boise-panel.svg" id="boise-chart" alt="Boise, Idaho: time to sell crosses its danger line in November 2021 while prices keep rising; prices fall twelve months later, a change of -17.9% from the peak. The twelve-month wait is shaded." onerror="document.getElementById('boise-fig').hidden=true">
+  </figure>
+  <p class="body-p">Prices held up for roughly another year. Then, by our Redfin-based measure, they fell 17.9% from the peak.</p>
+  <p class="body-p">The warning appeared in the data well before the price decline did.</p>
+  <p class="body-p">Boise had already been called overvalued. But overvalued only tells you a market is expensive. It doesn't tell you when conditions are actually changing.</p>
+  <p class="body-p"><b>That's the signal we're looking for.</b></p>
+  <!-- Coverage OF BOISE, not of us. Display text is masthead and date only, so
+       it can never read as press about ShouldISellYet. Their index figures are
+       never blended with our own -17.9%: see the Redfin-based wording above. -->
+  <p class="cites">As covered at the time:
+    <a href="https://fortune.com/2021/12/17/boise-idaho-most-overvalued-housing-market" target="_blank" rel="noopener nofollow">Fortune · Dec 2021</a><span aria-hidden="true"> · </span><a href="https://www.deseret.com/utah/2022/10/5/23367521/housing-market-bust-bubble-crash-boise-idaho-price-decline-zillow/" target="_blank" rel="noopener nofollow">Deseret News · Oct 2022</a><span aria-hidden="true"> · </span><a href="https://fortune.com/2023/08/04/boise-housing-market-looks-like-a-head-fake-home-price-decline-in-june" target="_blank" rel="noopener nofollow">Fortune · Aug 2023</a><span aria-hidden="true"> · </span><a href="https://www.forbes.com/sites/andrewdepietro/2023/10/23/will-the-boise-housing-market-crash/" target="_blank" rel="noopener nofollow">Forbes · Oct 2023</a>
+  </p>
+  <p><a class="story-link" href="/stories/boise/">Read the full Boise story →</a></p>
 </section>
 
 <section class="band" id="how">
+  <h2>We keep watch for you.</h2>
+  <p class="body-p">The same kind of visibility now runs automatically for your ZIP.</p>
   <div class="steps steps3">
-    <div class="step"><div class="num">1</div><div class="t">Tell us your ZIP.</div><p>We pull your local market's public data automatically, every time new figures publish.</p></div>
-    <div class="step"><div class="num">2</div><div class="t">We test it against history.</div><p>Decades of downturns leave fingerprints. We check whether your market's numbers look like the months <em>before</em> past declines.</p></div>
-    <!-- "We monitor the market, not you." is mandatory copy — it answers the
-         surveillance read of an alert product head-on. It moved here when the
-         fourth step was folded in; it did not become optional. Do not trim it. -->
-    <div class="step"><div class="num">3</div><div class="t">You get one answer — and we keep watch.</div><p>Hold, watch, or act, in plain English. If anything meaningful changes, one email. That's it. <b>We monitor the market, not you.</b></p></div>
+    <div class="step"><div class="num">1</div><div class="t">Enter your ZIP.</div><p>We pull the latest public housing-market data whenever new figures are released.</p></div>
+    <div class="step"><div class="num">2</div><div class="t">We compare it with history.</div><p>Past housing downturns leave patterns. We check whether your local numbers are beginning to resemble the conditions that appeared before previous declines.</p></div>
+    <div class="step"><div class="num">3</div><div class="t">You get a simple reading — and we keep watching.</div><p><span class="pill pill-g">HOLD</span>, <span class="pill pill-a">WATCH</span>, or <span class="pill pill-r">ACT</span>, with the numbers behind it. If something meaningful changes, we email you.</p></div>
   </div>
+  <!-- Mandatory copy since the alert product existed: it answers the
+       surveillance read head-on. Do not trim it. -->
+  <p class="body-p"><b>We monitor the market — not you.</b></p>
+  <p class="body-p">No dashboard to learn. No spreadsheet to study. No remembering to check back.</p>
+  <p><a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a></p>
 </section>
 
-<!-- The honesty band. Small and quiet on purpose: this is the differentiator
-     stated as policy, not a boast. Condensed from the methodology page's
-     "smoke detector" section, which stays there in full.
-     Keeps id="signals" so the nav link still lands somewhere true. -->
+<!-- Keeps id="signals" so the nav link still lands somewhere true. This
+     supersedes the smoke-detector band: the same honesty, argued rather than
+     asserted. -->
 <section class="band" id="signals">
-  <p class="honesty"><b>A smoke detector, not a fortune teller.</b> These signals flag conditions that came before past declines. Some markets cross a line and recover — our track record shows one that did, on purpose. We publish our thresholds, our sources and our backtest<span id="hitrate"></span>. Nothing is hidden. <a href="/methodology/">Methodology →</a></p>
+  <h2>Neutral by design.</h2>
+  <p class="body-p"><b>Every ZIP is measured the same way.</b></p>
+  <p class="body-p">Your latest market data is tested against fixed thresholds built from historical downturns and published in our methodology. The rules don't change based on where you live, who you are, or what anyone wants the answer to be.</p>
+  <p class="body-p">That matters in real estate, where many of the people involved in a decision also have a financial interest in it. An agent gets paid when a home sells. A lender gets paid when someone borrows. Their advice may be valuable — but their role is different from ours.</p>
+  <p class="body-p">ShouldISellYet doesn't decide whether you should sell. It gives you an independent reading of your market before you make that decision.</p>
+  <p class="body-p">No analyst changes the rating. No advertiser can move it. Every ZIP gets the same math.</p>
+  <p class="body-p">And the methodology is public. So are the thresholds and backtests — including the times a warning appeared and the market recovered.</p>
+  <!-- The month is rendered from web/data/validation.json, the same file the
+       methodology page states it from, so the two can never disagree. It
+       currently renders exactly "May 2027". -->
+  <p class="body-p" id="scorecard-line" hidden></p>
+  <p class="body-p">Nothing hidden. Which leaves one question:</p>
+  <p class="body-p"><b>Where does your ZIP stand today?</b> <a href="/methodology/">Methodology →</a></p>
 </section>
 
-<!-- Alerts in action — the alert product made visible before pricing.
-     The example card is an ILLUSTRATION and says so in a mandatory caption;
-     it deliberately says "Your ZIP" rather than any real ZIP, so it can
-     never contradict a live verdict. Trigger rows render from
-     ALERT_COPY.strip (alert-copy.js) — the single source for alert copy;
-     write no alert strings in this file. -->
-<section class="band" id="alerts">
-  <div style="display:flex;align-items:baseline;gap:20px;margin-bottom:22px;flex-wrap:wrap">
-    <h2>Tell me when it changes</h2>
-    <span class="section-lede">Set alerts on the numbers that matter to you — and hear from us only when a line is crossed. We monitor public market data; your details stay yours.</span>
-  </div>
-  <div class="alerts-wrap">
-    <div>
-      <div class="mailcard">
-        <div class="mail-from"><span class="mail-avatar" aria-hidden="true"></span>
-          <div><b>ShouldISellYet Alerts</b><span class="mail-time">now</span></div></div>
-        <div class="mail-subj"><span class="mail-dot" aria-hidden="true">🟡</span>Your ZIP just moved to WATCH</div>
-        <p class="mail-body">Months of supply crossed the 4.0 line (now 4.2). Days on market up 31% year over year. Your refreshed report is inside.</p>
-      </div>
-      <div class="mail-cap">Illustration — an example of the alert you'd receive.</div>
-    </div>
-    <div class="ax-col">
-      <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
-    </div>
-  </div>
-</section>
-
+<!-- The close. Nothing is sold above this point: the free check has to have
+     happened, or at least been offered, before a price appears. Subscribe
+     pricing appears exactly once on the page, here, after the free-check CTA.
+     Shutdown/refund language is deliberately NOT here — it lives on the
+     Refunds & Cancellation page and in pricing details, never beside a
+     purchase CTA. -->
 <section class="band" id="pricing">
-  <!-- Proof line — renders ONLY counters past their thresholds
-       (web/proof-config.js), hides entirely when none pass. Values are
-       computed: scored from meta.json, flips/checks from data/proof.json
-       (written by the digest each refresh). Nothing here is ever typed. -->
+  <!-- Renders only counters past their thresholds (web/proof-config.js) and
+       hides entirely when none pass. Every value is computed: scored from
+       meta.json, ratings-changed from data/proof.json. Nothing here is typed. -->
   <div class="proofline" id="proofline" hidden></div>
-  <!-- Honest urgency: the date is OUR next scheduled data check (Mon/Thu),
-       computed — never a fabricated claim about when Redfin publishes. -->
   <div class="proofline" id="freshline" hidden></div>
-  <h2>Check your ZIP code free.</h2>
-  <p class="lede" style="margin:10px 0 10px">You could come back and recheck every month. Or let the updates come to you — one email the moment your verdict changes, your report refreshed with every data release.</p>
-  <!-- Borrowed-weight line (one placement only, data grammar — never "powered
-       by", never beside our logo). See docs/ATTRIBUTION.md. -->
-  <p class="lede" style="margin:0 0 34px">Built on the same public data the industry's economists publish — Redfin, Realtor.com, FHFA — recomputed for your ZIP and your numbers.</p>
-  <div class="pricing">
-    <div class="price-card">
-      <div class="card-title">Free check</div>
-      <div class="price">$0 <small>forever</small></div>
-      <div class="price-feats">Any ZIP, anytime · full traffic-light verdict · all signal gauges · refreshed on every data release</div>
-      <a class="price-cta btn-outline" style="border:1.5px solid var(--navy);color:var(--navy)" href="#check">Check a ZIP</a>
-    </div>
-    <!-- Feature lines are the QUESTIONS the report answers (its actual
-         sections), not feature nouns — the preview stack above carries the
-         same framing, so pricing reads as "unlock those answers". The plan
-         name renders via [data-plan-name] from prices.js (rename pending
-         trademark screen — swap the constant only). -->
-    <div class="price-card">
-      <div class="card-title">Full report — one time</div>
-      <div class="price"><span data-price="report">$5.99</span> <small>once</small></div>
-      <div class="price-note">Just want one deep look, no subscription — <span data-price="report">$5.99</span> once.</div>
-      <!-- The upgrade credit applies to the ANNUAL plan regardless of which
-           price leads the featured card, so it names it explicitly. -->
-      <div class="price-note" style="margin-top:4px">Credited toward the annual plan (<span data-price="annual">$29</span>/yr) if you upgrade within 30 days</div>
-      <div class="price-feats">What would you actually walk away with? · What's your equity really worth? · What is your low rate worth? · What if prices fell 5%? · When do homes here sell fastest? · Should you sell it or rent it out? · Printable, regenerate anytime. <a href="report.html" style="text-decoration:underline">See a sample →</a></div>
-      <a class="price-cta btn-outline" id="cta-price-report" data-track="purchase_click_report" style="border:1.5px solid var(--navy);color:var(--navy)" href="subscribe.html?plan=report">Unlock the full report</a>
-    </div>
-    <div class="price-card featured">
-      <div class="price-badge">MOST POPULAR</div>
-      <div class="card-title"><span data-plan-name>MyMarketCheckup</span> — full report &amp; alerts on your numbers</div>
-      <!-- One price large, one alternative small, nothing else — the $2.42/mo
-           arithmetic and the $18.88 save line are gone on purpose. Which
-           price leads comes from PRICE_DISPLAY_MODE (prices.js); fallback
-           literals are the monthly_led defaults. -->
-      <div class="price"><span data-price="mode-lead">$3.99</span> <small data-price="mode-lead-unit">/mo</small></div>
-      <div class="price-note" data-price="mode-alt">or $29/yr — save 39%</div>
-      <div class="price-note" style="margin-top:4px">Cancel anytime</div>
-      <div class="price-feats">Every answer in the one-time report — kept current automatically, with alerts on the lines you set.</div>
-      <a class="price-cta btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts</a>
-    </div>
+
+  <h2 id="changed-stat" hidden></h2>
+  <p class="body-p">Markets don't stand still. Your free check takes about 10 seconds and includes your current reading and all four market gauges.</p>
+  <p class="body-p"><b>No account. No credit card.</b></p>
+
+  <div class="zipform">
+    <input id="zip2" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code" aria-label="ZIP code">
+    <button class="btn" id="go2">Check my ZIP — free</button>
   </div>
-  <div class="band-note sm" style="margin-bottom:6px">Try the free check first — upgrade only if your ZIP's story is worth following.</div>
-  <div class="band-note sm">Your information is never sold, and we never pass your details to anyone without you asking us to.</div>
+
+  <p class="body-p" style="margin-top:30px">Want to know when something changes? Monitoring re-checks your ZIP whenever new data is released and emails you when an important line is crossed.</p>
+  <p class="price-line"><span data-price="mode-lead">$3.99</span>/month or <span data-price="annual">$29</span>/year · Cancel anytime</p>
+  <p><a class="btn" id="cta-price-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Set up monitoring</a></p>
+
+  <p class="body-p">Prefer one deeper look? Get the full report for <span data-price="report">$5.99</span> once. If you upgrade to annual monitoring within 30 days, we'll credit the <span data-price="report">$5.99</span> toward your plan.</p>
+  <p><a class="story-link" id="cta-price-report" data-track="purchase_click_report" href="subscribe.html?plan=report">Get the full report →</a></p>
+
+  <p class="body-p" style="margin-top:26px"><b>Start with the free check.</b></p>
 </section>
 
-<!-- Sources strip. Text-only by rule: no logos, no wordmarks, no "powered by",
-     and never adjacent to our own logo or the hero. Lists ONLY sources wired
-     into the product today — see docs/ATTRIBUTION.md before editing. -->
-<section class="sources" aria-label="Data sources">
-  <div class="src-k">Built on public data used by economists</div>
-  <div class="src-list">Redfin Data Center · Realtor.com® Economic Research · Federal Housing Finance Agency (FHFA) ZIP-level house price index · Freddie Mac Primary Mortgage Market Survey · Place names from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames.org</a> (CC BY 4.0), with live ZIP lookups via Zippopotam.us</div>
-  <div class="src-note">We compute our verdicts from public market data. No source sponsors, endorses, or partners with this site.</div>
-</section>
 
 <footer>
   <!-- Footer navigation leads the block. These are destinations, so they are
@@ -888,7 +859,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <!-- No source citation here on purpose. The page carries exactly ONE, in
        the results stamp beside the data it credits (see citeHTML). A second
        copy down here would be the duplicate the attribution rule forbids. -->
-  <div class="disclaimer" id="attribution">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
+  <div class="disclaimer" id="attribution">Readings are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
   </div>
 </footer>
 </div>
@@ -972,13 +943,21 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
 }).then(m => {
   if (m) {
     META = m;
+    // "MARKET DATA THROUGH JUNE 2026" — the month spelled, not the period key.
+    const MN = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
+                "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+    const pm = String(m.period || "").split("-");
+    const label = (pm.length === 2 && MN[Number(pm[1]) - 1])
+      ? MN[Number(pm[1]) - 1] + " " + pm[0]
+      : String(m.period || "").toUpperCase();
     document.getElementById("eyebrow").textContent =
-      "FREE ZIP CHECK · MARKET DATA THROUGH " + (m.period || "").toUpperCase();
+      "FREE ZIP CHECK · MARKET DATA THROUGH " + label;
     // Same counted total as the ticker — one source, so the hero and the feed
     // can never quote different sizes of the same product.
     renderProofLine();
-    renderHitRate();
-    renderStory();
+    renderScale();
+    renderChangedStat();
+    renderScorecardLine();
     renderFreshLine();
     const n = scoredZips();
     if (n >= 1000) {
@@ -1311,7 +1290,7 @@ function renderPreview(d) {
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
-       : '<span>National verdict mix loads with the live data.</span>',
+       : '<span>National rating mix loads with the live data.</span>',
     { open: true });
 
   // 09 — velocity tease. veil() gets the REAL months-to-line phrase computed
@@ -1447,7 +1426,7 @@ function renderFreshLine() {
     const d = new Date(now); d.setDate(now.getDate() + i);
     if (d.getDay() === 1 || d.getDay() === 4) {
       el.textContent = "Next data check: " + days[d.getDay()] + ", " +
-        mons[d.getMonth()] + " " + d.getDate() + " — verdicts refresh the moment new figures land.";
+        mons[d.getMonth()] + " " + d.getDate() + " — readings refresh the moment new figures land.";
       el.hidden = false;
       return;
     }
@@ -1474,6 +1453,58 @@ async function renderHitRate() {
   } catch (e) { /* absent → the sentence stands without the clause */ }
 }
 
+// The scale line, the closing stat and the scorecard month — all computed, so
+// the page states no figure it cannot re-derive next month.
+function renderScale() {
+  const el = $("scale-count");
+  if (!el) return;
+  const n = scoredZips();
+  // Rounded DOWN to the nearest thousand so "33,000+" is always true.
+  if (n >= 1000) el.textContent = (Math.floor(n / 1000) * 1000).toLocaleString() + "+ ZIP codes";
+}
+
+async function renderChangedStat() {
+  // "1 in 3 ZIP codes changed rating with June's data." True today (11,272 of
+  // 33,426 = 33.7%) and not necessarily true next month, so the ratio is
+  // computed and the sentence follows it. Operator decision (2026-08-12):
+  // compute rather than hard-code, so a quiet month cannot leave a false
+  // claim on the page's closing line.
+  const el = $("changed-stat");
+  if (!el) return;
+  try {
+    const p = await fetch("data/proof.json").then(r => r.ok ? r.json() : null);
+    const scored = scoredZips();
+    if (!p || !p.flipped || !scored) return;
+    const oneIn = Math.round(scored / p.flipped);
+    if (oneIn < 2 || oneIn > 12) return;         // outside this, the framing stops meaning anything
+    const month = META && META.period
+      ? new Date(META.period + "-01T00:00:00Z").toLocaleDateString("en-US", {month: "long", timeZone: "UTC"})
+      : "";
+    el.textContent = `1 in ${oneIn} ZIP codes changed rating` + (month ? ` with ${month}'s data.` : ".");
+    el.hidden = false;
+  } catch (e) { /* absent → the heading stays hidden */ }
+}
+
+async function renderScorecardLine() {
+  const el = $("scorecard-line");
+  if (!el) return;
+  try {
+    const v = await fetch("data/validation.json").then(r => r.ok ? r.json() : null);
+    if (!v) return;
+    if (v.collecting && v.first_validation) {
+      const [y, m] = String(v.first_validation).split("-");
+      const MONTH = ["January", "February", "March", "April", "May", "June", "July",
+                     "August", "September", "October", "November", "December"];
+      const name = MONTH[Number(m) - 1];
+      if (!name || !y) return;
+      el.textContent = `Beginning in ${name} ${y}, we'll publish the performance of our live readings too.`;
+    } else if (v.v12) {
+      el.textContent = "We publish the performance of our live readings too.";
+    } else { return; }
+    el.hidden = false;
+  } catch (e) { /* absent → the line stays hidden */ }
+}
+
 async function renderStory() {
   const sec = $("story");
   if (!sec) return;
@@ -1498,16 +1529,13 @@ async function renderStory() {
 async function renderProofLine() {
   const el = $("proofline"), TH = window.PROOF_THRESHOLDS;
   if (!el || !TH) return;
+  // The hero's scale line carries the count now, so this band no longer
+  // repeats it. Kept as the mechanism for any FUTURE counter that earns a
+  // place here — it still hides itself entirely when nothing passes.
   const parts = [];
-  const scored = scoredZips();
-  if (scored >= TH.markets_scored) {
-    parts.push("Tracking " + scored.toLocaleString() + " ZIP codes");
-  }
   try {
     const p = await fetch("data/proof.json").then(r => r.ok ? r.json() : null);
     if (p) {
-      if (typeof p.flipped === "number" && p.flipped >= TH.markets_flipped)
-        parts.push(p.flipped.toLocaleString() + " markets changed rating this month");
       if (typeof p.zip_checks_month === "number" && p.zip_checks_month >= TH.zip_checks_month)
         parts.push(p.zip_checks_month.toLocaleString() + " ZIP codes checked this month");
     }
@@ -1629,7 +1657,7 @@ async function run() {
       ? "Limited sales data in " + zip
       : k.headline.replace("{zip}", zip);
     $("v-sub").textContent = insufficient
-      ? "Smaller markets report few transactions, so we hold the verdict at HOLD until signals are statistically reliable. Here's what we can see:"
+      ? "Smaller markets report few transactions, so we hold the rating at HOLD until signals are statistically reliable. Here's what we can see:"
       : k.sub.replace("{zip}", zip);
     $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
     renderPreview(d);   // same synchronous pass — fully rendered before reveal
@@ -1759,6 +1787,16 @@ $("share-btn").addEventListener("click", () => {
 });
 
 $("go").addEventListener("click", run);
+// The closing ZIP box is the same component as the hero's: it copies its value
+// into the canonical input and runs the one handler, so there is one code path
+// for a check no matter which box the reader used, and one place a bug can be.
+(function () {
+  const b = $("go2"), i = $("zip2");
+  if (!b || !i) return;
+  const go = () => { $("zip").value = i.value; run(); };
+  b.addEventListener("click", go);
+  i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+})();
 
 // Deep link from the generated /zip/{zip}/ pages: prefill and run immediately,
 // so "Check this ZIP live" lands on the answer rather than an empty form.
@@ -1843,7 +1881,7 @@ function feedLines() {
     "scoring " + scale + " ZIP markets · data through " + period,
     "signals: supply · price trend · time to sell · price cuts",
     "source: public housing-market data · refreshed on publication",
-    "verdicts recompute automatically when new figures publish",
+    "readings recompute automatically when new figures publish",
   ];
 }
 let feedIx = 0;

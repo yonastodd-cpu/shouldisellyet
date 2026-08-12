@@ -139,14 +139,42 @@ def test_no_banned_attribution_constructions():
         assert phrase not in page
 
 
-def test_the_homepage_teaser_types_no_numbers():
-    """It renders from web/data/stories.json for the same reason the story page
-    reads the case file: two places stating one number is one place too many."""
+def test_the_homepage_boise_section_agrees_with_the_case_file():
+    """The 2026-08-12 brief replaced the computed teaser with mandated prose,
+    so this section DOES carry typed figures — legitimately, because a
+    historical case is fixed in a way a monthly figure is not. What must hold
+    is that the typed numbers are the ones in the data, and that the chart
+    beside them is generated from that same file rather than pasted.
+
+    The Redfin attribution is load-bearing: the press pieces linked in the same
+    section quote index figures from other providers, and the brief forbids
+    blending those with our own -17.9% in one sentence.
+    """
     html = (REPO / "web" / "index.html").read_text()
-    section = re.search(r'<section class="band" id="story".*?</section>', html, re.S)
-    assert section, "the story teaser is gone from the homepage"
-    # Copy only — tag names carry digits of their own ("<h2>") and an element
-    # name is not a claim about the housing market.
-    copy = re.sub(r"<[^>]+>", " ", section.group(0))
-    assert not re.search(r"\d", copy), f"a figure was typed into the teaser copy: {copy!r}"
-    assert "data/stories.json" in html
+    section = re.search(r'<section class="band" id="why">.*?</section>', html, re.S)
+    assert section, "the Boise section is gone from the homepage"
+    body = section.group(0)
+
+    assert f"{abs(CASE['peak_to_trough']) * 100:.1f}%" in body, "the drop does not match the case file"
+    assert bs.pretty(CASE["first_signal"]).replace("November 2021", "November 2021") in body
+    assert "by our Redfin-based measure" in body, "the source attribution was dropped"
+
+    # The chart is generated, not pasted, and comes from the same renderer as
+    # the story page — so the two can never show different pictures.
+    assert '/stories/boise-panel.svg' in body
+    svg = REPO / "web" / "stories" / "boise-panel.svg"
+    if svg.exists():
+        s = svg.read_text()
+        assert f"{CASE['lead_months']} months of warning" in s
+        assert bs.pct(CASE["peak_to_trough"], 1) in s
+
+
+def test_the_boise_panel_is_exported_for_the_homepage():
+    """The section never ships without its chart. build_stories writes the panel
+    on every deploy; if it ever stops, the figure hides itself rather than
+    rendering a broken image, and this fails."""
+    src = (REPO / "pipeline" / "build_stories.py").read_text()
+    assert "-panel.svg" in src, "the homepage panel export was removed"
+    html = (REPO / "web" / "index.html").read_text()
+    assert "onerror=" in html.split('id="boise-fig"')[1][:400], \
+        "the figure no longer hides itself when the chart is missing"

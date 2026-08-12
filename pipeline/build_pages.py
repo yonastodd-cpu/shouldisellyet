@@ -53,7 +53,7 @@ STATE_NAMES = {
 }
 
 # THE BADGE WORD IS NOT TYPED HERE. It used to be, and "strong" was given the
-# tag "ACT" — so a page whose own answer sentence read "the verdict is STRONG"
+# tag "ACT" — so a page whose own answer sentence read "the reading is STRONG"
 # displayed an ACT badge directly beneath it, and its meta description (the
 # search snippet, for 1,360 ZIPs) read "ACT — Anchorage, AK" exactly like a
 # danger verdict. The colour differed; the word did not, which is all a screen
@@ -360,7 +360,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # page is guaranteed to have (eligibility requires mos+dom non-null).
     # Every number in it is the page's own live data; nothing is hardcoded.
     answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
-              f"{vc['short']} — the verdict is {vc['word']}, with homes selling in about "
+              f"{vc['short']} — the reading is {vc['word']}, with homes selling in about "
               f"{round(m['dom'])} days and {m['mos']:.1f} months of supply.")
     # The Q&A pair: question a person actually asks, two-sentence answer from
     # the canonical copy map (verdict_copy.json qa — never hand-written here,

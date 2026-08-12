@@ -458,6 +458,22 @@ def main():
                       "peak_to_trough": case.get("peak_to_trough"),
                       "url": f"/stories/{slug(case)}/"})
 
+    # THE HOMEPAGE'S BOISE CHART, as a standalone file.
+    #
+    # The brief called for "a static export from the methodology case renderer".
+    # That renderer is tools/backtest_cases.py — a Pillow PNG script that is not
+    # in the deploy workflow and streams ~1GB of Redfin export before it can
+    # draw, whose main() also prunes the directory it writes to. Operator
+    # decision (2026-08-12): emit stage 3 of THIS renderer instead. It is the
+    # same picture the brief describes — the tell crossing its danger line, the
+    # fall twelve months later, the shaded wait — from the same case JSON the
+    # methodology page computes from, already in the deploy path, and crisp at
+    # any zoom because it is not a raster.
+    lead = next((load(c) for c in PUBLISHED if load(c)), None)
+    if lead and lead.get("series"):
+        (out / f"{slug(lead)}-panel.svg").write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n' + panel(lead, 3))
+
     # The homepage teaser reads this, so the homepage types no numbers either.
     (ROOT / "web" / "data" / "stories.json").write_text(
         json.dumps({"stories": facts}, separators=(",", ":"), sort_keys=True))

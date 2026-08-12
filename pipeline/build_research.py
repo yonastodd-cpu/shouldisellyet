@@ -593,7 +593,7 @@ verdicts count in the denominator only.</p>
 
 <h2 id="danger-lines">The four signals</h2>
 <p>Identical thresholds to the site's published danger lines, evaluated by
-the same verdict engine — restated on a constant four-signal basis so every
+the same scoring engine — restated on a constant four-signal basis so every
 month of the series measures the same thing:</p>
 <table><thead><tr><th>Signal</th><th>Danger line</th></tr></thead><tbody>
 <tr><td>Months of supply</td><td class="mono">&gt; 4 (severe &gt; 6)</td></tr>
