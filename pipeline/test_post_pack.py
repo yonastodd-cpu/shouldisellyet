@@ -156,3 +156,35 @@ def test_contrarian_falls_back_when_history_is_missing():
     img = pp.card_contrarian({"render": {"wsi": 62.2, "period_pretty": "June 2026",
                                          "series": []}})
     assert img.size == (1080, 1350)
+
+
+def test_a_deploy_writes_redirects_for_every_period_not_just_the_current_one(tmp_path, monkeypatch):
+    """web/go/ is gitignored and rebuilt from scratch on every deploy, and the
+    period comes from web/data/meta.json. Writing only the current period meant
+    that the first deploy after a data refresh shipped web/ with LAST month's
+    redirects absent — and every link in every caption already posted that
+    month started 404ing.
+
+    Not hypothetical: the 2026-06 slate is scheduled to 2026-09-01, two data
+    refreshes past the month its links belong to. Today there is one manifest,
+    so only a synthetic second period exercises this.
+    """
+    mdir = tmp_path / "manifests"
+    mdir.mkdir()
+    web = tmp_path / "web"
+    (web / "data").mkdir(parents=True)
+    (web / "data" / "meta.json").write_text(json.dumps({"period": "2026-07"}))
+
+    for per, tok in (("2026-06", "mq-old-post"), ("2026-07", "mq-new-post")):
+        (mdir / f"pack-{per}.json").write_text(json.dumps({"period": per, "tasks": [{
+            "utm_campaign": tok, "type": "post", "asset_path": None,
+            "utm_url": f"https://shouldisellyet.com/research/{per}/?utm_campaign={tok}",
+            "render": {}}]}))
+
+    monkeypatch.setattr(pp, "MANIFEST_DIR", mdir)
+    monkeypatch.setattr(pp, "ROOT", tmp_path)
+    pp.main(["--render", "--period", "2026-07", "--out", str(tmp_path / "cards")])
+
+    assert (web / "go" / "mq-new-post" / "index.html").exists(), "current period missing"
+    assert (web / "go" / "mq-old-post" / "index.html").exists(), \
+        "the previous period's short links vanished — every posted link would 404"

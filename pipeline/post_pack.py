@@ -460,7 +460,26 @@ def main(argv=None):
         print("post-pack: no data period — nothing to render")
         return 0
     render(period, Path(args.out))
-    write_redirects(period, ROOT / "web")
+
+    # EVERY PERIOD, NOT JUST THIS ONE. web/go/ and web/assets/mkt/ are both
+    # gitignored and rebuilt from scratch on every deploy, and `period` here is
+    # whatever web/data/meta.json currently says. So rendering only the current
+    # period means that the first deploy after a data refresh rolls meta.json
+    # forward, web/ ships with the PREVIOUS month's redirects absent, and every
+    # link in every caption already posted that month starts 404ing.
+    #
+    # That is not hypothetical: the 2026-06 slate is scheduled out to
+    # 2026-09-01, which is two data refreshes past the month its links belong
+    # to. A short link somebody has already published has to keep working
+    # forever, so the manifests — not the calendar — decide what gets written.
+    total_cards = total_links = 0
+    for man in sorted(MANIFEST_DIR.glob("pack-*.json")):
+        per = man.stem.removeprefix("pack-")
+        drawn, _skipped = render(per, Path(args.out)) if per != period else (0, 0)
+        total_cards += drawn
+        total_links += write_redirects(per, ROOT / "web")
+    print(f"post-pack: {total_links} short link(s) live across "
+          f"{len(list(MANIFEST_DIR.glob('pack-*.json')))} period manifest(s)")
     return 0
 
 

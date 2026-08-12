@@ -692,3 +692,34 @@ When the manifest and the queue disagree about `utm_url`, the queue wins.
 **Standing check after any run that inserts rows:** every row with a `utm_url`
 has a manifest entry whose `utm_url` matches it exactly, and a `/go/` page whose
 `location.replace` target is that same string.
+
+
+## 2026-08-12 — verified live, and the period trap
+
+All 15 redirect pages are live on shouldisellyet.com, every one returning 200
+and redirecting to exactly the `utm_url` its row carries. All 13 distinct
+destinations resolve. The five thread replies correctly have **no** `/go/` page
+(404), because they carry no link.
+
+### The trap this check found
+
+`web/go/`, `web/assets/mkt/`, `web/zip/` and `web/metro/` are all gitignored and
+rebuilt from scratch on every deploy. `post_pack.py --render` took its period
+from `web/data/meta.json` and wrote **that period only**.
+
+So the first deploy after a data refresh — which rolls `meta.json` forward —
+would have shipped a `web/` with the previous month's redirects simply absent,
+and every link in every caption already posted that month would 404.
+
+Not hypothetical. The 2026-06 slate is scheduled to **2026-09-01**, two data
+refreshes past the month its links belong to, and refreshes run every Monday and
+Thursday.
+
+`--render` now walks every `pack-*.json` rather than the calendar. **A short
+link somebody has already published has to keep working forever, so the
+manifests decide what gets written, never the current period.**
+
+This is the same failure as the manifest rebuild one level up, and both share a
+root cause worth naming: *anything gitignored is rebuilt from scratch, so
+whatever is not regenerated on a given deploy silently disappears from the
+live site.*
