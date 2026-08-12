@@ -292,6 +292,12 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#faf8f4">
+<!-- Anonymous counting, same as every other page. Five of the fifteen posts in
+     the marketing queue land here, and without this their campaign token was
+     destroyed on arrival: the post could never be credited with the click it
+     caused, and the leaderboard read them as zero rather than as unmeasured.
+     track.js honours DNT/GPC and sets no cookie — see its header. -->
+<script src="/track.js" defer></script>
 <style>
 .trend{{margin:14px 0 0;font-size:.95rem;line-height:1.62;color:#5c6673;max-width:70ch}}
 .trend b{{color:#1c2430}}
@@ -412,14 +418,29 @@ def redirect_page(dest, note):
             f'<meta name="robots" content="noindex,nofollow">'
             f'<title>ShouldISellYet</title>'
             f'<link rel="canonical" href="{dest}">'
-            # THE FRAGMENT HAS TO SURVIVE. /methodology#backtest is only useful
-            # if the hash reaches the real page, and location.replace(dest)
-            # discards it — the anchors added to the methodology page in the
-            # same change would have been dead through this route, which is the
-            # route every receipt and social post uses. The meta refresh cannot
-            # carry a runtime value, so it stays as the no-JS fallback and
-            # lands on the top of the page; the script is what preserves it.
-            f'<script>location.replace({json.dumps(dest)} + location.hash);</script>'
+            # THE QUERY AND THE FRAGMENT BOTH HAVE TO SURVIVE.
+            #
+            # The fragment, because /methodology#backtest is only useful if the
+            # hash reaches the real page, and this is the route every receipt
+            # and social post uses.
+            #
+            # The query, because it carries the campaign. A /go/ link resolves
+            # to /methodology/?utm_source=fb&utm_campaign=... and this shim then
+            # threw the parameters away, so track.js on the destination saw a
+            # bare visit: the post could never be credited with the click it
+            # caused. That is a silent failure — the link works, the reader
+            # arrives, and only the leaderboard is wrong.
+            #
+            # Merged rather than concatenated so a destination that already has
+            # its own query cannot produce two "?" — /s/{zip} uses this same
+            # shim and may grow one.
+            f'<script>(function(d){{try{{var u=new URL(d);'
+            f'new URLSearchParams(location.search).forEach(function(v,k){{'
+            f'u.searchParams.set(k,v)}});u.hash=location.hash;'
+            f'location.replace(u.toString())}}catch(e){{location.replace(d)}}}})'
+            f'({json.dumps(dest)});</script>'
+            # No-JS fallback: cannot carry a runtime value, so it lands on the
+            # destination without the campaign. Correct page, uncredited visit.
             f'<meta http-equiv="refresh" content="0;url={dest}">'
             f'<style>body{{font-family:system-ui,-apple-system,sans-serif;'
             f'background:#faf8f4;color:#5c6673;padding:40px 20px;text-align:center}}'
@@ -441,6 +462,7 @@ def hub_page(index, names, period):
 <link rel="canonical" href="{SITE}/metro/">
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="/favicon.svg">
+<script src="/track.js" defer></script>
 <style>.hubgrid{{columns:3;column-gap:26px}}@media(max-width:700px){{.hubgrid{{columns:2}}}}
 .hubgrid li{{break-inside:avoid;list-style:none;padding:3px 0;font-size:.9375rem}}</style>
 </head><body>

@@ -381,6 +381,9 @@ def story_page(case, miss):
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- This page exists to be the cold-audience link, so it is the LAST page that
+     should arrive untracked. Anonymous counting only; honours DNT/GPC. -->
+<script src="/track.js" defer></script>
 <script type="application/ld+json">{json.dumps(ld, separators=(",", ":"))}</script>
 <style>{CSS}</style></head><body><div class="wrap">
 <nav><a href="/"><img src="/logo-mark.svg" alt="" width="36" height="36">
