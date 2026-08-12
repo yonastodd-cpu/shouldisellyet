@@ -52,6 +52,16 @@ STATE_NAMES = {
     "WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","PR":"Puerto Rico",
 }
 
+# THE BADGE WORD IS NOT TYPED HERE. It used to be, and "strong" was given the
+# tag "ACT" — so a page whose own answer sentence read "the verdict is STRONG"
+# displayed an ACT badge directly beneath it, and its meta description (the
+# search snippet, for 1,360 ZIPs) read "ACT — Anchorage, AK" exactly like a
+# danger verdict. The colour differed; the word did not, which is all a screen
+# reader, a search result or a shared link ever gets.
+#
+# verdict_copy.json is the canonical copy map — the same file the prose, the OG
+# card and the browser all read. The tag is now taken from it, so a fifth place
+# to change the word no longer exists.
 KINDS = {
     "green":  {"tag":"HOLD",  "hex":"#2e9e5b","soft":"#e9f4ee","line":"#bcdcc9",
                "head":"No warning signs in {zip}",
@@ -68,6 +78,11 @@ KINDS = {
 }
 
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
+
+# Derived, never typed: whatever verdict_copy.json says is the word. Placed
+# here rather than beside KINDS because the copy map is imported below it.
+for _lvl, _k in KINDS.items():
+    _k["tag"] = VCOPY[_lvl]["word"]
 
 esc = lambda s: html.escape(str(s), quote=True)
 clamp = lambda x: max(3, min(97, x))

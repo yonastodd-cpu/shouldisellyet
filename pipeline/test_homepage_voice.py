@@ -109,3 +109,59 @@ def test_sections_appear_in_the_simplified_order():
     order = [s for s in ("why", "how", "signals", "alerts", "pricing")]
     positions = [MARKUP.index(f'id="{s}"') for s in order]
     assert positions == sorted(positions), f"sections out of order: {order}"
+
+
+# ————— one word per verdict, everywhere —————
+
+def test_every_display_map_agrees_with_the_canonical_verdict_copy():
+    """There were SIX places defining the word shown for a verdict level, and
+    they disagreed. "strong" — 1,360 ZIPs — was tagged ACT on the /zip/ badge,
+    in the meta description, in alert emails and on the homepage badge, while
+    the prose beside every one of them said STRONG. The colour differed; the
+    word did not, and the word is all a screen reader, a search snippet or a
+    shared link ever gets.
+
+    verdict_copy.json is canonical. Every display site derives from it now, and
+    this test fails the moment a seventh map is typed by hand.
+    """
+    import sys
+    sys.path.insert(0, str(REPO / "pipeline"))
+    from verdict_copy import COPY as VCOPY
+    import build_pages, build_metro, build_research, growth_digest, notify_changes
+
+    canonical = {lvl: VCOPY[lvl]["word"] for lvl in ("green", "yellow", "red", "strong")}
+    assert canonical["strong"] == "STRONG", "the copy map itself changed"
+
+    maps = {
+        "build_pages.KINDS": {k: v["tag"] for k, v in build_pages.KINDS.items()},
+        "build_metro.WORD": build_metro.WORD,
+        "growth_digest.WORD": growth_digest.WORD,
+        "notify_changes.WORDS": notify_changes.WORDS,
+        "build_research.word()": {lvl: build_research.word(lvl) for lvl in canonical},
+    }
+    for name, m in maps.items():
+        for lvl, want in canonical.items():
+            assert m.get(lvl) == want, f"{name}[{lvl}] is {m.get(lvl)!r}, canonical is {want!r}"
+
+
+def test_the_homepage_badge_reads_the_copy_map_not_its_own_table():
+    """web/index.html carries its own KIND table for colours. The word must not
+    come from it — that table tagged strong as ACT."""
+    assert 'window.VERDICT_COPY || {})[d.l] || {}).word' in HTML.replace("(", ""), \
+        "the homepage badge stopped reading VERDICT_COPY"
+
+
+def test_the_engine_action_class_is_not_a_display_string():
+    """verdict.py maps strong -> ACT deliberately: it is the ACTION class (do
+    something now), documented as 'a seller's-market ACT, distinct from the
+    danger ACT'. That is fine while nothing renders it. If it ever reaches a
+    page, it becomes a seventh disagreeing map."""
+    import sys
+    sys.path.insert(0, str(REPO / "pipeline"))
+    import verdict
+    assert verdict.LEVELS["strong"] == "ACT", "engine action class changed unexpectedly"
+    for gen in ("build_pages.py", "build_metro.py", "build_research.py",
+                "notify_changes.py", "growth_digest.py"):
+        src = (REPO / "pipeline" / gen).read_text()
+        assert "verdict.LEVELS" not in src and "from verdict import LEVELS" not in src, \
+            f"{gen} renders the engine's action class instead of the copy map"

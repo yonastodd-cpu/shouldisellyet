@@ -26,7 +26,13 @@ import os
 import sys
 import urllib.request
 
-WORDS = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "ACT"}
+# Derived from verdict_copy.json, not typed. With "strong" mapped to ACT this
+# file sent a homeowner whose market had become a hot seller's market an email
+# reading "changed from HOLD → ACT" — the same words a danger alert uses, for
+# the opposite news. An alert that says the wrong thing is worse than no alert.
+from verdict_copy import COPY as _VCOPY
+
+WORDS = {lvl: _VCOPY[lvl]["word"] for lvl in ("green", "yellow", "red", "strong")}
 EMOJI = {"green": "🟢", "yellow": "🟡", "red": "🔴", "strong": "🔵"}
 # "strong" = seller's market, the good direction — below green on this scale
 SEVERITY = {"strong": -1, "green": 0, "yellow": 1, "red": 2}

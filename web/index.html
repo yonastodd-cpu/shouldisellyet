@@ -1058,7 +1058,11 @@ const KINDS = {
   red:    { key:"act",   tag:"ACT",   col:"var(--red)",   hex:"#d64545", ink:"#c02f2f", soft:"#fbe9e9", line:"#ecc3c3",
             headline:"Danger lines crossed in {zip}",
             sub:"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power. If selling was already on your mind, make a plan now — not next spring." },
-  strong: { key:"strong", tag:"ACT",  col:"var(--navy)",  hex:"#1f3a5f", ink:"#1f3a5f", soft:"#e8eef7", line:"#c3d2e8",
+  // tag is now only the FALLBACK for when verdict-copy.js fails to load; the
+  // badge and the share text both prefer VERDICT_COPY.word. It still has to be
+  // right, because a fallback that says ACT for a seller's market is the exact
+  // bug this table caused when it was the primary source.
+  strong: { key:"strong", tag:"STRONG",  col:"var(--navy)",  hex:"#1f3a5f", ink:"#1f3a5f", soft:"#e8eef7", line:"#c3d2e8",
             headline:"Strong seller's market",
             sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now." }
 };
@@ -1616,7 +1620,11 @@ async function run() {
     $("verdict").style.borderColor = k.line;
     $("v-dot").style.background = k.hex;
     $("v-dot").style.boxShadow = "0 0 0 4px " + k.soft + ",0 0 0 5px " + k.hex;
-    $("v-tag").textContent = k.tag; $("v-tag").style.color = k.ink;
+    // The word comes from VERDICT_COPY, the same map the prose and the share
+    // text use. KIND.tag is a fallback only: "strong" was tagged ACT here, so
+    // the badge said ACT while the sentence beside it said STRONG.
+    $("v-tag").textContent = ((window.VERDICT_COPY || {})[d.l] || {}).word || k.tag;
+    $("v-tag").style.color = k.ink;
     $("v-title").textContent = insufficient
       ? "Limited sales data in " + zip
       : k.headline.replace("{zip}", zip);
