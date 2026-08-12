@@ -646,3 +646,49 @@ place a reader can be handed two raw counts and trust the subtraction.
 level, not crossings into warning, on a different universe); metro month-over-
 month extremes (structurally small-n at the 15-ZIP floor); any per-ZIP velocity
 figure (the paid layer); `top_streaks` (the seam problem above).
+
+
+## 2026-08-12 — the queue is live, and two latent bugs the run exposed
+
+The 2026-06 slate is in production: **20 rows, 15 posts**, one of them the
+six-row recap thread (X, positions 0–5, Tue Aug 18 08:30 ET). Verified live —
+mix counts the thread once, `used` reads x 3 / fb 2 / ig 2 against a cap of 3,
+`thread_gaps` is empty, tasks come back in reading order, `one_thing` is a post
+and never a reply.
+
+### The manifest emptied itself on every re-run
+
+`write_pack_manifest` rebuilt `pack-{period}.json` from scratch. That is
+survivable only while the first run of a period is the only run — and it is
+not. The generator is idempotent, so **the second run of a month places nothing
+and wrote a manifest with zero tasks.**
+
+That is not lost card metadata. `web/go/` is **gitignored** and the `/go/`
+redirect pages are regenerated at deploy from the manifest alone, so an emptied
+manifest stops writing the redirect for every post already published: every
+link in every posted caption 404s while the queue still reads as healthy. CI
+runs the generator every Monday and Thursday, so this would have fired on the
+next scheduled run regardless of the thread work.
+
+The manifest now merges by token.
+
+### A thread was re-planned on every run
+
+Idempotency probes a candidate's key, but a thread is *stored* under its row
+keys: candidate `mq-2026-06-recap-us` becomes rows `…-0` through `…-5`. The
+candidate key never matched, so the thread was re-planned each run — taking a
+slot, displacing other candidates, then being silently dropped by
+`on_conflict`, leaving the printed schedule disagreeing with the database. The
+probe now uses the lead's key.
+
+### The database is authoritative for utm_url
+
+A row's channel is settled by the scheduler at insert and never re-planned, and
+`utm_source` is baked into the tracked link. A manifest entry written by an
+earlier run with different windows is therefore **stale**, and four entries had
+drifted — their `/go/` pages would have attributed clicks to the wrong channel.
+When the manifest and the queue disagree about `utm_url`, the queue wins.
+
+**Standing check after any run that inserts rows:** every row with a `utm_url`
+has a manifest entry whose `utm_url` matches it exactly, and a `/go/` page whose
+`location.replace` target is that same string.

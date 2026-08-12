@@ -887,3 +887,44 @@ def test_a_reply_is_linted_as_a_reply_not_as_a_broken_post():
     assert MT.lint_caption(text, "x", "", "shouldisellyet.com/go/x/", "/research/2026-06/", reply=True) == []
     as_post = MT.lint_caption(text, "x", "", "shouldisellyet.com/go/x/", "/research/2026-06/")
     assert any("link" in m for m in as_post) and any("attribution" in m for m in as_post)
+
+
+def test_the_pack_manifest_accumulates_rather_than_replacing(tmp_path, monkeypatch):
+    """web/go/ is gitignored and the /go/ redirect pages are rebuilt at deploy
+    from the manifest alone. The manifest used to be rebuilt from scratch each
+    run, and the generator is idempotent — so the SECOND run of a month wrote a
+    manifest containing only what was new, which on a fully-generated month is
+    nothing. Every link in every already-posted caption would 404 while the
+    queue still read as healthy."""
+    monkeypatch.setattr(MT, "PACK_DIR", tmp_path)
+    first = [{"dedupe_key": "mq-2026-06-a", "type": "post",
+              "utm_url": "https://shouldisellyet.com/research/2026-06/?utm_campaign=mq-2026-06-a"},
+             {"dedupe_key": "mq-2026-06-b", "type": "post",
+              "utm_url": "https://shouldisellyet.com/zip/20001/?utm_campaign=mq-2026-06-b"}]
+    MT.write_pack_manifest(first, {}, "2026-06")
+
+    # A later run of the same month places nothing new — the common case.
+    p = MT.write_pack_manifest([], {}, "2026-06")
+    tokens = {t["utm_campaign"] for t in json.loads(p.read_text())["tasks"]}
+    assert tokens == {"mq-2026-06-a", "mq-2026-06-b"}, \
+        "a re-run emptied the manifest and would have killed every posted link"
+
+    # And a run that adds one keeps the other two.
+    MT.write_pack_manifest([{"dedupe_key": "mq-2026-06-c", "type": "post",
+                             "utm_url": "https://shouldisellyet.com/methodology/"}], {}, "2026-06")
+    tokens = {t["utm_campaign"] for t in json.loads(p.read_text())["tasks"]}
+    assert tokens == {"mq-2026-06-a", "mq-2026-06-b", "mq-2026-06-c"}
+
+
+def test_a_thread_is_recognised_as_already_generated(tmp_path):
+    """Idempotency probes a candidate's key, but a thread is STORED under its
+    row keys — candidate mq-2026-06-recap-us becomes rows …-0 through …-5. The
+    candidate key therefore never matched, and the thread was re-planned every
+    run: it took a slot in the plan, displaced other candidates, and was then
+    silently dropped by on_conflict, leaving the generator's printed schedule
+    disagreeing with the database."""
+    src = (REPO / "pipeline" / "marketing_tasks.py").read_text()
+    block = src.split("# — idempotency:")[1][:1400]
+    assert 'f"{c[\'key\']}-0" if c.get("thread")' in block, \
+        "the existence probe went back to the bare candidate key"
+    assert "probe(c) not in seen" in block

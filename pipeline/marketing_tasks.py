@@ -1751,18 +1751,46 @@ def write_pack_manifest(rows, cands_by_key, period):
     post_pack.py --render: per task the token, the type, the asset path, and
     the PUBLIC scalars its card renders from. Committed by update.yml's
     snapshot step; deterministic bytes (sorted keys, no clock)."""
-    tasks = []
+    # THE MANIFEST ACCUMULATES A PERIOD; IT IS NOT A LOG OF ONE RUN. Rebuilding
+    # it from scratch was survivable only while the first run of a period was
+    # the only run. It is not: the generator is idempotent, so every later run
+    # of the same month skips the rows it already inserted and wrote a manifest
+    # containing only what was new — on the second Monday of a month, nothing.
+    #
+    # That is not merely lost card metadata. web/go/ is gitignored and the
+    # /go/ redirect pages are regenerated at deploy from this file alone, so an
+    # emptied manifest stops writing the redirect for every post already
+    # published: every link in every posted caption 404s while the queue still
+    # reads as healthy.
+    #
+    # Merging by token: this run replaces its namesakes, earlier runs of the
+    # same period survive. A token whose row is later deleted keeps a working
+    # redirect rather than a dead one — the right way round for a link somebody
+    # has already posted.
+    p = PACK_DIR / f"pack-{period}.json"
+    by_token = {}
+    if p.exists():
+        try:
+            for prior in (json.loads(p.read_text()).get("tasks") or []):
+                if prior.get("utm_campaign"):
+                    by_token[prior["utm_campaign"]] = prior
+        except Exception as exc:
+            # Must not take the run down, but must be loud: quietly starting
+            # fresh here is how the links die.
+            print(f"pack manifest unreadable ({exc}) — rebuilding from this run only")
+            by_token = {}
     for r in sorted(rows, key=lambda r: r["dedupe_key"]):
         c = cands_by_key.get(r["dedupe_key"], {})
         # utm_url rides along so post_pack can write the /go/ redirect from
         # the manifest alone — the renderer must stay pure, and rebuilding the
         # tracked URL there would duplicate the channel logic that lives here.
-        tasks.append({"utm_campaign": r["dedupe_key"], "type": r["type"],
-                      "asset_path": r.get("asset_path"),
-                      "utm_url": r.get("utm_url"),
-                      "render": c.get("render", {})})
+        by_token[r["dedupe_key"]] = {
+            "utm_campaign": r["dedupe_key"], "type": r["type"],
+            "asset_path": r.get("asset_path"),
+            "utm_url": r.get("utm_url"),
+            "render": c.get("render", {})}
+    tasks = [by_token[k] for k in sorted(by_token)]
     PACK_DIR.mkdir(parents=True, exist_ok=True)
-    p = PACK_DIR / f"pack-{period}.json"
     p.write_text(json.dumps({"period": period, "tasks": tasks},
                             separators=(",", ":"), sort_keys=True))
     return p
@@ -1930,10 +1958,17 @@ def main(argv=None):
     # schedule is owned by the first write plus the operator's Reschedule,
     # never by a re-run. on_conflict remains the backstop. —
     if not dry and kept:
-        seen = existing_keys(url, key, [c["key"] for c in kept])
-        for c in [c for c in kept if c["key"] in seen]:
+        # A THREAD IS STORED UNDER ITS ROW KEYS, NOT ITS CANDIDATE KEY. The
+        # candidate is mq-{period}-recap-us; the rows are that plus -0..-n. So
+        # probing the candidate key never matched, and the thread was re-planned
+        # on every run — taking a slot in the plan, displacing other candidates,
+        # and then being silently dropped by on_conflict, which meant the
+        # generator's printed schedule disagreed with the database's.
+        probe = lambda c: f"{c['key']}-0" if c.get("thread") else c["key"]
+        seen = existing_keys(url, key, [probe(c) for c in kept])
+        for c in [c for c in kept if probe(c) in seen]:
             print(f"exists {c['key']} — left untouched")
-        kept = [c for c in kept if c["key"] not in seen]
+        kept = [c for c in kept if probe(c) not in seen]
 
     ws0 = week_start(today)
     h_start = et_to_utc(ws0, "00:00")
