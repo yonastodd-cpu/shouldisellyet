@@ -315,6 +315,10 @@ jobs:
           # /metro/{slug} — the destination every metro post links to.
           # Must run BEFORE post_pack, which reads the slug map it writes.
           python3 pipeline/build_metro.py
+          # /stories/{slug} — the cold-audience landing page. Reads the
+          # committed case JSONs only; no Redfin fetch, unlike the PNG charts
+          # in tools/backtest_cases.py that the methodology page uses.
+          python3 pipeline/build_stories.py
           # Marketing cards, drawn from the committed pack manifest. Runs on
           # every deploy like the pages above, and for the same reason: the
           # output is gitignored, so a deploy that skipped it would upload a

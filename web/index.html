@@ -432,6 +432,10 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .claim-kicker{margin:18px 0 0;font-size:var(--fs-meta);letter-spacing:.04em;color:var(--fainter)}
 .honesty{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);max-width:78ch}
 .honesty a{white-space:nowrap}
+.story-kicker{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.story-h{margin:0 0 12px;max-width:24ch}
+.story-p{margin:0 0 18px;font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);max-width:62ch}
+.story-link{font-weight:600}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
 .steps3{grid-template-columns:repeat(3,1fr)}
 .step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
@@ -735,7 +739,18 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <p class="claim-kicker">The housing market turns quietly. <em>Hear it early.</em></p>
 </section>
 
-<!-- STORY MODULE GOES HERE (PR 2): "The data spoke first — Boise". -->
+<!-- The story teaser. Proof before explanation: a stranger who will not read
+     a methodology page will read one market's story. Every figure is filled
+     from web/data/stories.json (written by build_stories.py from the same case
+     file the methodology page computes from), so this section types no
+     numbers and cannot drift from the story it links to. Hidden until that
+     fetch succeeds — a teaser with blanks in it is worse than no teaser. -->
+<section class="band" id="story" hidden>
+  <div class="story-kicker">The data spoke first</div>
+  <h2 class="story-h" id="story-h"></h2>
+  <p class="story-p" id="story-p"></p>
+  <a class="story-link" id="story-link" href="/stories/boise/">Read the whole story →</a>
+</section>
 
 <section class="band" id="how">
   <div class="steps steps3">
@@ -963,6 +978,7 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
     // can never quote different sizes of the same product.
     renderProofLine();
     renderHitRate();
+    renderStory();
     renderFreshLine();
     const n = scoredZips();
     if (n >= 1000) {
@@ -1452,6 +1468,27 @@ async function renderHitRate() {
       el.textContent = ", and our measured hit rate";
     }
   } catch (e) { /* absent → the sentence stands without the clause */ }
+}
+
+async function renderStory() {
+  const sec = $("story");
+  if (!sec) return;
+  try {
+    const d = await fetch("data/stories.json").then(r => r.ok ? r.json() : null);
+    const st = d && d.stories && d.stories[0];
+    if (!st || !st.lead_months || st.peak_to_trough == null) return;
+    const drop = Math.abs(st.peak_to_trough * 100).toFixed(1);
+    const when = new Date(st.first_signal + "-01T00:00:00Z")
+      .toLocaleDateString("en-US", {month: "long", year: "numeric", timeZone: "UTC"});
+    $("story-h").textContent =
+      `${st.name} got ${st.lead_months} months of warning.`;
+    $("story-p").textContent =
+      `In ${when} it crossed a line that has come before past price declines — ` +
+      `while prices were still at record highs. They started falling ` +
+      `${st.lead_months} months later, and fell ${drop}% from the peak.`;
+    $("story-link").href = st.url;
+    sec.hidden = false;
+  } catch (e) { /* absent → the section stays hidden, as it should */ }
 }
 
 async function renderProofLine() {

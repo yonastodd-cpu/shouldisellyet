@@ -42,6 +42,10 @@ web/go/
 # Generated at deploy time by pipeline/build_metro.py — one page per metro
 # area, plus the hub and the /methodology short route.
 web/metro/
+
+# Generated at deploy time by pipeline/build_stories.py from the committed
+# case JSONs. Like web/metro/ and web/go/, absent from a fresh checkout.
+web/stories/
 web/methodology/
 
 # Per-ZIP velocity payloads — the PAID layer. Served only through
