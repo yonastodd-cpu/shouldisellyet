@@ -428,13 +428,12 @@ h1 em{font-style:italic;color:var(--navy)}
    band is the only divider. */
 section.band{padding:76px 56px;border-top:1px solid var(--hairline)}
 h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:0;line-height:1.15}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.sig{border:1px solid var(--hairline);border-radius:10px;background:#fff;padding:24px;display:flex;flex-direction:column;gap:12px}
-.sig .k{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.12em;color:var(--gold)}
-.sig .n{font-family:'Newsreader',serif;font-size:var(--fs-h3);font-weight:600;line-height:1.25}
-.sig p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
-.sig .line{margin-top:auto;padding-top:12px;border-top:1px dashed #eee8db;font-size:var(--fs-meta);color:var(--amber-ink);font-weight:600}
+.claim{margin:0;font-family:'Newsreader',serif;font-size:clamp(1.5rem,3.4vw,2.1rem);line-height:1.35;font-weight:500;max-width:34ch}
+.claim-kicker{margin:18px 0 0;font-size:var(--fs-meta);letter-spacing:.04em;color:var(--fainter)}
+.honesty{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);max-width:78ch}
+.honesty a{white-space:nowrap}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
+.steps3{grid-template-columns:repeat(3,1fr)}
 .step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
 .step .t{font-size:var(--fs-h3);font-weight:650;margin:12px 0}
 .step p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
@@ -500,10 +499,10 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .hero{grid-template-columns:1fr;padding:48px 24px}
   nav{padding:16px 24px}.navlinks a:not(.btn){display:none}
   section.band{padding:56px 24px}
-  .grid4{grid-template-columns:1fr 1fr}
   /* Four steps: 2×2 on tablets, single column on phones (below). Type sizes
      are untouched — the grid adapts, not the text. */
   .steps{grid-template-columns:1fr 1fr;gap:32px 28px}
+  .steps3{grid-template-columns:1fr 1fr}
   .pricing{grid-template-columns:1fr}
   .metric{grid-template-columns:1fr 92px;grid-template-areas:"name val" "track track";gap:6px 12px}
   .metric .name{grid-area:name}
@@ -518,8 +517,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .sources{padding:22px 20px 18px}
   .zipform{flex-direction:column}
   .zipform .btn{width:100%}
-  .grid4{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr;gap:30px}
+  .steps3{grid-template-columns:1fr}
   /* The unlock bar stacks with .v-ctas: side by side its two buttons resolved
      to 131px wide and 106px tall, wrapping "Unlock + alerts on your numbers"
      over four lines. Full width puts each label on one row beside its price,
@@ -537,7 +536,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   section.band{padding-top:36px;padding-bottom:36px}
   .price-card{padding:22px}
   .price{font-size:36px}
-  .sig{padding:18px}
   footer{padding:26px 20px 30px}
 }
 /* Footer row tightening. Both blocks must stay after the 560px block above so
@@ -564,7 +562,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </span>
   </div>
   <div class="navlinks">
-    <a href="#how">How it works</a><a href="#signals">The signals</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
+    <a href="#how">How it works</a><a href="#signals">What we watch</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
     <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a>
   </div>
 </nav>
@@ -572,8 +570,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 <div class="hero" id="check">
   <div style="display:flex;flex-direction:column;gap:22px">
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
-    <h1>The housing market turns quietly. <em>Hear it early.</em></h1>
-    <p class="sub">Prices are the last thing to fall. We crunch the newest inventory, price-cut and days-on-market data for your ZIP into one plain-English verdict — months before it shows up in headlines.</p>
+    <h1>Know if your neighborhood's housing market is turning — <em>before the headlines do.</em></h1>
+    <p class="sub">Home prices are the <em>last</em> thing to fall. Homes sitting longer, inventory piling up, sellers cutting prices — those move first, and they are all public data. We watch them for your ZIP code and give you one plain answer: <b>hold, watch, or act.</b></p>
     <!-- The one-line pitch for the full report, set at the existing meta scale
          so it reads as a coda to .sub, not a second subhead competing with it. -->
     <p class="sub-tally">One clear verdict for your market. A complete report for your home. <b>And one email the moment anything changes.</b></p>
@@ -582,7 +580,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
       <button class="btn" id="go">Check my ZIP — free</button>
     </div>
-    <div class="fineprint">Free · no account · refreshed whenever new data publishes · try <span class="mono">20874</span> or <span class="mono">20906</span></div>
+    <div class="fineprint">Free · no account · try <span class="mono">20874</span> or <span class="mono">20906</span></div>
 
     <div class="card crunch hidden" id="crunch">
       <div class="crunch-head">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
@@ -719,32 +717,43 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   </div>
 </div>
 
-<section class="band" id="signals">
-  <div style="display:flex;align-items:baseline;gap:20px;margin-bottom:34px;flex-wrap:wrap">
-    <h2>What we crunch</h2>
-    <!-- Methodology essentials only (2026-08-08): the masked preview now
-         carries the persuasion load, so each card is signal + one factual
-         sentence + its danger line. The danger lines and the both-directions
-         note are DISCLOSURES — condense around them, never out. -->
-    <span class="section-lede">Four signals that move months before prices do, tested against fixed danger lines — in both directions, so you hear it early whether your market is cracking or heating up.</span>
-  </div>
-  <div class="grid4">
-    <div class="sig"><div class="k">SIGNAL 01</div><div class="n">Months of supply</div><p>How long it would take to sell every home on the market at the current sales pace.</p><div class="line">Danger line: 4.0 mo</div></div>
-    <div class="sig"><div class="k">SIGNAL 02</div><div class="n">Price trend</div><p>The typical sale price versus a year ago, cross-checked against price per square foot.</p><div class="line">Danger line: −2% y/y</div></div>
-    <div class="sig"><div class="k">SIGNAL 03</div><div class="n">Time to sell</div><p>How long homes sit before selling, versus a year ago.</p><div class="line">Danger line: +40% y/y</div></div>
-    <div class="sig"><div class="k">SIGNAL 04</div><div class="n">Price cuts &amp; supply waves</div><p>The share of listings cutting asking price, and new inventory versus a year ago.</p><div class="line">Danger lines: 35% · +50% y/y</div></div>
+<!-- The category claim. This is the whole argument for the product in two
+     sentences, so it gets a band to itself and no CTA — the reader has just
+     been given one in the hero and will be given another after the steps.
+
+     WHAT USED TO BE HERE: four cards, one per signal, each ending in its
+     numeric danger line ("Danger line: 4.0 mo"). A 2026-08-08 note called
+     those lines DISCLOSURES and said to condense around them, never out.
+     They are still disclosed — buildMetricRows() prints all four next to the
+     reader's OWN numbers the moment a ZIP is checked, and the methodology
+     page publishes every one with its derivation. What changed is that a
+     stranger is no longer asked to read four thresholds before being told
+     what the product does. The disclosure moved to where it means something;
+     it did not leave. -->
+<section class="band" id="why">
+  <p class="claim">Housing-market data has never been designed to keep <em>homeowners</em> aware of their own local market. Until now.</p>
+  <p class="claim-kicker">The housing market turns quietly. <em>Hear it early.</em></p>
+</section>
+
+<!-- STORY MODULE GOES HERE (PR 2): "The data spoke first — Boise". -->
+
+<section class="band" id="how">
+  <div class="steps steps3">
+    <div class="step"><div class="num">1</div><div class="t">Tell us your ZIP.</div><p>We pull your local market's public data automatically, every time new figures publish.</p></div>
+    <div class="step"><div class="num">2</div><div class="t">We test it against history.</div><p>Decades of downturns leave fingerprints. We check whether your market's numbers look like the months <em>before</em> past declines.</p></div>
+    <!-- "We monitor the market, not you." is mandatory copy — it answers the
+         surveillance read of an alert product head-on. It moved here when the
+         fourth step was folded in; it did not become optional. Do not trim it. -->
+    <div class="step"><div class="num">3</div><div class="t">You get one answer — and we keep watch.</div><p>Hold, watch, or act, in plain English. If anything meaningful changes, one email. That's it. <b>We monitor the market, not you.</b></p></div>
   </div>
 </section>
 
-<section class="band" id="how">
-  <div class="steps">
-    <div class="step"><div class="num">1</div><div class="t">Tell us your home</div><p>Enter your address once. We track the market where your home is — inventory, price cuts, days on market, sales — pulled automatically from public data whenever new figures publish.</p></div>
-    <div class="step"><div class="num">2</div><div class="t">The thresholds get tested</div><p>Decades of housing downturns leave fingerprints. When your ZIP's numbers cross the danger lines, we know.</p></div>
-    <div class="step"><div class="num">3</div><div class="t">You get one answer</div><p>Hold, watch, or act — with the exact numbers behind it, in plain English. No spreadsheets, no jargon.</p></div>
-    <!-- The closing sentence is mandatory copy: it preempts the surveillance
-         read of an alert product head-on. Do not trim it. -->
-    <div class="step"><div class="num">4</div><div class="t">Updates come to you</div><p>No need to keep checking back. Whenever new market data publishes, your ZIP's numbers re-run automatically — and you get an email only when something meaningful changes. We monitor the market, not you.</p></div>
-  </div>
+<!-- The honesty band. Small and quiet on purpose: this is the differentiator
+     stated as policy, not a boast. Condensed from the methodology page's
+     "smoke detector" section, which stays there in full.
+     Keeps id="signals" so the nav link still lands somewhere true. -->
+<section class="band" id="signals">
+  <p class="honesty"><b>A smoke detector, not a fortune teller.</b> These signals flag conditions that came before past declines. Some markets cross a line and recover — our track record shows one that did, on purpose. We publish our thresholds, our sources and our backtest<span id="hitrate"></span>. Nothing is hidden. <a href="/methodology/">Methodology →</a></p>
 </section>
 
 <!-- Alerts in action — the alert product made visible before pricing.
@@ -769,7 +778,6 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <div class="mail-cap">Illustration — an example of the alert you'd receive.</div>
     </div>
     <div class="ax-col">
-      <div id="alert-examples"></div>
       <a class="btn" id="cta-strip-monitor" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts — <span data-price="mode-cta">$3.99/mo</span></a>
     </div>
   </div>
@@ -954,6 +962,7 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
     // Same counted total as the ticker — one source, so the hero and the feed
     // can never quote different sizes of the same product.
     renderProofLine();
+    renderHitRate();
     renderFreshLine();
     const n = scoredZips();
     if (n >= 1000) {
@@ -1425,21 +1434,41 @@ function renderFreshLine() {
   }
 }
 
+async function renderHitRate() {
+  const el = $("hitrate");
+  if (!el) return;
+  try {
+    const v = await fetch("data/validation.json").then(r => r.ok ? r.json() : null);
+    if (!v) return;
+    // Only the "collecting" state has a date to promise. Once v12 numbers
+    // exist the backtest link already leads to them and no promise is needed.
+    if (v.collecting && v.first_validation) {
+      const [y, m] = String(v.first_validation).split("-");
+      const MONTH = ["January", "February", "March", "April", "May", "June", "July",
+                     "August", "September", "October", "November", "December"];
+      const name = MONTH[Number(m) - 1];
+      if (name && y) el.textContent = `, and from ${name} ${y} our measured hit rate`;
+    } else if (v.v12) {
+      el.textContent = ", and our measured hit rate";
+    }
+  } catch (e) { /* absent → the sentence stands without the clause */ }
+}
+
 async function renderProofLine() {
   const el = $("proofline"), TH = window.PROOF_THRESHOLDS;
   if (!el || !TH) return;
   const parts = [];
   const scored = scoredZips();
   if (scored >= TH.markets_scored) {
-    parts.push("Scoring " + scored.toLocaleString() + " U.S. ZIP markets");
+    parts.push("Tracking " + scored.toLocaleString() + " ZIP codes");
   }
   try {
     const p = await fetch("data/proof.json").then(r => r.ok ? r.json() : null);
     if (p) {
       if (typeof p.flipped === "number" && p.flipped >= TH.markets_flipped)
-        parts.push(p.flipped.toLocaleString() + " flipped verdicts this month");
+        parts.push(p.flipped.toLocaleString() + " markets changed rating this month");
       if (typeof p.zip_checks_month === "number" && p.zip_checks_month >= TH.zip_checks_month)
-        parts.push(p.zip_checks_month.toLocaleString() + " ZIP checks this month");
+        parts.push(p.zip_checks_month.toLocaleString() + " ZIP codes checked this month");
     }
   } catch (e) { /* proof.json absent → whatever already passed still shows */ }
   if (parts.length) { el.textContent = parts.join(" · "); el.hidden = false; }
