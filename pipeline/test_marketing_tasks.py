@@ -676,13 +676,18 @@ def test_utm_url_refuses_a_malformed_target():
 
 
 def test_every_generated_post_has_a_deep_target():
-    """End to end on real data: no row leaves the generator pointing at '/'."""
+    """End to end on real data: no LINKED row leaves the generator pointing at '/'."""
     import json as _j
     root = Path(__file__).resolve().parents[1]
     pack = root / "pipeline" / "marketing" / "pack-2026-06.json"
     if not pack.exists():
         return                       # nothing generated in this checkout
     for t in _j.loads(pack.read_text())["tasks"]:
+        # Thread replies carry no link, so they carry no destination to check.
+        # They are covered instead by test_only_the_lead_carries_a_link, which
+        # asserts the absence rather than letting it pass silently here.
+        if not t.get("utm_url"):
+            continue
         path = t["utm_url"].split("shouldisellyet.com")[1].split("?")[0]
         assert path != "/", f"{t['utm_campaign']} still points at the homepage"
         assert path.startswith(("/metro/", "/zip/", "/research/")) or path == "/methodology/", path
@@ -776,3 +781,109 @@ def test_post_type_labels_cover_every_value_the_database_accepts():
                  (REPO / "web" / "admin.html").read_text()
                  .split("const MQ_POST_TYPE = {")[1].split("};")[0]))
     assert allowed <= labels, f"post types with no label: {sorted(allowed - labels)}"
+
+
+# ————— recap_thread —————
+
+def _recap_rows():
+    """The thread as row dicts, straight from the live research files."""
+    rep = json.loads((REPO / "pipeline" / "research" / "research-2026-06.json").read_text())
+    hist = json.loads((REPO / "pipeline" / "research" / "history.json").read_text())
+    from velocity import load_cbsa
+    _zc, names = load_cbsa()
+    cands = MT.cand_recap(rep, hist, names, "2026-06")
+    assert cands, "the recap rule produced nothing on real data"
+    when = datetime(2026, 8, 16, 23, 30, tzinfo=timezone.utc)
+    return MT.rows_from_placement(cands[0], when, "x", "2026-06")
+
+
+def test_a_thread_is_contiguous_and_led_by_position_zero():
+    """schema-v31's marketing_thread_guard refuses a reply whose lead is not
+    already in the table, so emission order is not cosmetic — the rows must
+    come out 0,1,2… or the insert loop writes an orphan and the database
+    rejects the whole thread."""
+    rows = _recap_rows()
+    assert [r["thread_position"] for r in rows] == list(range(len(rows)))
+    assert rows[0]["thread_position"] == 0
+    assert len({r["thread_key"] for r in rows}) == 1
+
+
+def test_every_thread_row_has_its_own_keys():
+    """dedupe_key and utm_campaign are both uniquely indexed — and the writer
+    uses on_conflict=dedupe_key with ignore-duplicates, so rows sharing a key
+    are silently DISCARDED with an HTTP 201. A truncated thread would look like
+    a successful run."""
+    rows = _recap_rows()
+    assert len({r["dedupe_key"] for r in rows}) == len(rows)
+    assert len({r["utm_campaign"] for r in rows}) == len(rows)
+
+
+def test_only_the_lead_carries_a_link():
+    """One link per thread, on the post that opens it. Five more would read as
+    five adverts rather than one argument."""
+    rows = _recap_rows()
+    assert rows[0]["caption"].count("shouldisellyet.com") == 1
+    for r in rows[1:]:
+        assert r["caption"].count("shouldisellyet.com") == 0, r["dedupe_key"]
+
+
+def test_every_thread_row_fits_x_without_premium():
+    """Threading is an X format and X is where this posts. A reply that has to
+    be hand-cut at posting time is a reply nobody checks the arithmetic of."""
+    rows = _recap_rows()
+    for r in rows:
+        assert len(r["caption_short"]) <= MC.CAPTION_MAX_SHORT, \
+            f"{r['dedupe_key']} is {len(r['caption_short'])} chars"
+
+
+def test_the_whole_thread_lints_clean():
+    rows = _recap_rows()
+    bad = [(r["dedupe_key"], r["lint"]) for r in rows if r.get("lint")]
+    assert not bad, bad
+
+
+def test_the_recap_reads_run_length_rather_than_counting_it():
+    """The card that recomputed a run once published "fifth month in a row"
+    against a truth of three. run_length has one home."""
+    src = (REPO / "pipeline" / "marketing_tasks.py").read_text()
+    body = src.split("def cand_recap")[1].split("\ndef ")[0]
+    assert 'rec.get("run_length")' in body
+    assert "series[i]" not in body, "the recap started counting its own run"
+
+
+def test_a_streak_claim_never_reaches_across_the_source_seam():
+    """streaks.json advances over the whole archive, including the
+    reconstructed tracker-v1 months, so it holds runs longer than the entire
+    continuous series. PR3 shipped three posts claiming 89, 86 and 74 months
+    against a 73-month record."""
+    streaks = json.loads((REPO / "pipeline" / "research" / "streaks.json").read_text())
+    hist = json.loads((REPO / "pipeline" / "research" / "history.json").read_text())
+    seam = hist["seam"]
+    basis = len([m for m in hist["national"] if m >= seam])
+    raw = max((streaks.get("warn") or {}).values())
+    assert raw > basis, "fixture no longer exercises the clamp"
+
+    pack = json.loads((REPO / "pipeline" / "marketing" / "pack-2026-06.json").read_text())
+    for task in pack["tasks"]:
+        months = (task.get("render") or {}).get("months")
+        if months is not None:
+            assert months <= basis, \
+                f"{task['utm_campaign']} claims a {months}-month streak against a {basis}-month record"
+
+
+def test_us_with_periods_is_not_treated_as_shouting():
+    """\\b terminates before the trailing period, so the match was "U.S" and
+    "U.S".strip(".") never equalled the allowed "US"."""
+    clean = MT.lint_caption(
+        "The U.S. housing market cooled in June 2026.\n\nSomething true.\n\n"
+        "shouldisellyet.com/go/x/\n\nShouldISellYet · June 2026", "ig", "", "shouldisellyet.com/go/x/")
+    assert not [m for m in clean if "caps" in m or "acronym" in m], clean
+
+
+def test_a_reply_is_linted_as_a_reply_not_as_a_broken_post():
+    """A reply legitimately has no link and no attribution; judged as a post it
+    fails both."""
+    text = "Falling is not the same as low.\n\nThe floor is far below this."
+    assert MT.lint_caption(text, "x", "", "shouldisellyet.com/go/x/", "/research/2026-06/", reply=True) == []
+    as_post = MT.lint_caption(text, "x", "", "shouldisellyet.com/go/x/", "/research/2026-06/")
+    assert any("link" in m for m in as_post) and any("attribution" in m for m in as_post)

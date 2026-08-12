@@ -1381,8 +1381,13 @@ function mqUnavailable(e) {
 // will post them again. Built from the month RPC's own rows so the export and
 // the calendar can never disagree.
 async function mqCsv() {
-  const head = ["scheduled_for", "channel", "type", "priority_score", "metro_cbsa",
-                "metro_name", "zip", "why_headline", "caption", "hashtags",
+  // post_type says what KIND of post it is; thread_key/thread_position are what
+  // make a six-row thread readable in a spreadsheet at all. Without them a
+  // thread exports as six rows sharing one timestamp, in an order the operator
+  // would have to reconstruct from the prose.
+  const head = ["scheduled_for", "channel", "type", "post_type", "priority_score",
+                "metro_cbsa", "metro_name", "zip", "thread_key", "thread_position",
+                "why_headline", "caption", "hashtags",
                 "utm_url", "asset_path", "status"];
   const csvq = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
   // The month is only in memory once the Calendar view has been opened.
@@ -1399,7 +1404,12 @@ async function mqCsv() {
     showErr(new Error("Nothing scheduled this month to export — the CSV would be a header row."));
     return false;
   }
-  rows.sort((a, b) => String(a.scheduled_for).localeCompare(String(b.scheduled_for)));
+  // Thread rows share a timestamp, so the sort has to fall through to position
+  // or the replies export in whatever order the month RPC returned them.
+  rows.sort((a, b) =>
+    String(a.scheduled_for).localeCompare(String(b.scheduled_for)) ||
+    String(a.thread_key || "").localeCompare(String(b.thread_key || "")) ||
+    ((a.thread_position ?? 0) - (b.thread_position ?? 0)));
   const csv = [head.join(",")]
     .concat(rows.map((r) => head.map((k) => csvq(r[k])).join(",")))
     .join("\n");

@@ -255,3 +255,20 @@ STEADY_MIN_ZIPS = 15
 # generalise from. The pair is the story, so both halves must be real moves.
 DIVERGENCE_MIN_ZIPS = 20
 DIVERGENCE_MIN_MOVE = 12.0    # points, each side, over the window
+
+
+# ————— recap_thread —————
+# The monthly recap is the one post that summarises rather than reports, so its
+# thresholds are about whether the month can be summarised HONESTLY, not about
+# whether it is interesting.
+
+# A recap leans on "the highest/lowest since we began", so there has to be a
+# meaningful "since". Below this the superlative is a statement about a short
+# window dressed up as history.
+RECAP_MIN_SERIES = 24
+
+# The count-stable metro (reply 4) hands the reader two raw counts and asks
+# them to subtract. That only works on a denominator big enough not to be
+# noise, and only when the move is large enough to be worth a row of a thread.
+RECAP_MIN_METRO_SCORED = 30
+RECAP_MIN_METRO_MOVE = 8

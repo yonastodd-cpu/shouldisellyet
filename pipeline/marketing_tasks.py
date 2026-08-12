@@ -785,11 +785,20 @@ NUMERAL_RE = re.compile(r"(?<![\d,.])\d[\d,]*(?:\.\d+)?%?")
 DATE_YEAR_RE = re.compile(rf"(?:{MONTHS_RE})\s+\d{{4}}")
 
 
-def lint_caption(text, channel, hashtags, short_url="", target=None):
+def lint_caption(text, channel, hashtags, short_url="", target=None,
+                 reply=False):
     """Everything wrong with this caption, as plain sentences. [] means clean.
 
     short_url MUST be the real link. Linting against a stand-in shorter than
     the live one is how a 299-character post passes a 280-character check.
+
+    reply=True lints a thread REPLY, which is held to a different contract for
+    two rules and the same one for every other. A reply carries no link and no
+    attribution line: the lead two inches above it already said who is speaking
+    and where to click, and repeating either five times is how a thread reads as
+    five adverts instead of one argument. Everything else — length, hashtags,
+    the number budget, shouting, banned constructions — applies unchanged,
+    because a reply is published copy like any other.
     """
     out = []
     if not text:
@@ -805,12 +814,15 @@ def lint_caption(text, channel, hashtags, short_url="", target=None):
         if n > hi:
             out.append(f"{n} characters — over the {hi} target")
     links = body.count("shouldisellyet.com")
-    if links != 1:
+    if reply:
+        if links:
+            out.append(f"{links} links in a reply — the link belongs on the lead")
+    elif links != 1:
         out.append(f"{links} links — a post gets exactly one")
     # A homepage destination is a wasted click, so it is a lint failure and not
     # a style note. Checked on the RESOLVED target, because the visible link is
     # a /go/ redirect and reveals nothing about where it lands.
-    if target is not None and target in ("/", "", None):
+    if target is not None and target in ("/", "", None) and not reply:
         out.append("link lands on the homepage — a post must open the page it is about")
     tags = body.count("#")
     if tags > MC.MAX_HASHTAGS:
@@ -825,7 +837,7 @@ def lint_caption(text, channel, hashtags, short_url="", target=None):
     if len(nums) > MC.MAX_NUMBERS_LONG:
         out.append(f"{len(nums)} numbers ({', '.join(nums[:5])}…) — at most "
                    f"{MC.MAX_NUMBERS_LONG}, one of them the hero")
-    if "ShouldISellYet" not in body:
+    if "ShouldISellYet" not in body and not reply:
         out.append("attribution line missing")
     low = body.lower()
     # ACRONYMS NEVER LEAD. An index name in the hook asks a stranger to care
@@ -835,12 +847,12 @@ def lint_caption(text, channel, hashtags, short_url="", target=None):
     # shouting is not tone.
     hook = re.split(r"(?<=[.!?])\s", body.strip())[0] if body.strip() else ""
     shouted = [w for w in re.findall(r"\b[A-Z][A-Z.]{1,}\b", hook)
-               if w.upper().strip(".") not in MC.CAPS_ALLOWED]
+               if w.upper().replace(".", "") not in MC.CAPS_ALLOWED]
     if shouted:
         out.append(f"acronym or all-caps in the hook ({', '.join(sorted(set(shouted)))}) "
                    f"— lead with what it means")
     body_caps = [w for w in re.findall(r"\b[A-Z][A-Z.]{2,}\b", body)
-                 if w.upper().strip(".") not in MC.CAPS_ALLOWED]
+                 if w.upper().replace(".", "") not in MC.CAPS_ALLOWED]
     if body_caps:
         out.append(f"all-caps word(s) ({', '.join(sorted(set(body_caps)))})")
 
@@ -967,7 +979,7 @@ def _metro_share_series(hist, cbsa, n=6):
 
 
 def cand_spotlight(hist, streaks, entries, places, zip_cbsa, cbsa_names,
-                   covered, period, want=4):
+                   covered, period, want=4, basis_months=None):
     """zip_spotlight (tier 4): one ZIP as a micro-profile.
 
     PREFERS ZIPs INSIDE METROS ALREADY COVERED THIS MONTH, per the brief: a
@@ -1001,15 +1013,32 @@ def cand_spotlight(hist, streaks, entries, places, zip_cbsa, cbsa_names,
         cbsa = cb
         used_metros.add(cb)
         where = label_zip(z, places)
+        # THE STREAK IS CLAMPED TO THE CONTINUOUS RECORD. streaks.json advances
+        # across the whole archive including the reconstructed tracker-v1 months
+        # before the seam, so it holds runs of 89 months against a continuous
+        # series that is only 73 long — an 89-month run ending June 2026 starts
+        # in February 2019, sixteen months on the far side of the seam.
+        # research.py's own contract says streak-facing claims never reach
+        # across it, and PR3 shipped three posts (11354, 33139, 15222) that did.
+        # Claiming the shorter, provable span costs nothing: it is still the
+        # longest run we can stand behind.
+        capped = bool(basis_months) and months > basis_months
+        months = min(months, basis_months) if basis_months else months
         yrs = months // 12
         span = (f"{yrs} year{'s' if yrs != 1 else ''}" if months % 12 == 0 and yrs
                 else f"{months} months")
+        if capped:
+            span = f"every one of the {months} months we have measured"
         tok = token("geo", period=period, zip=z)          # same shape, one namespace
         tok = tok.replace("-geo-", "-spot-")
         hook = (f"{where} has shown at least one housing warning sign for "
-                f"{span} straight.")
+                f"{span} straight." if not capped else
+                f"{where} has shown at least one housing warning sign in "
+                f"{span}.")
         short_hook = (f"{z} ({places[z][0]}) has shown a housing warning sign for "
-                      f"{span} straight.")
+                      f"{span} straight." if not capped else
+                      f"{z} ({places[z][0]}): a housing warning sign in all "
+                      f"{months} months we have measured.")
         contrast = (f"Its months of supply sit at {m['mos']:.1f} against a danger line "
                     f"of 4.0 — the level where sellers have historically started "
                     f"losing leverage."
@@ -1140,6 +1169,157 @@ def cand_divergence(hist, cbsa_names, period):
                    "period_pretty": pretty_month(period)},
     }
 
+
+
+def pct1(v):
+    """62.233 -> "62.2%". One place, always the sign — the published figure and
+    the caption figure must be the same string."""
+    return f"{v:.1f}%"
+
+
+def _count_stable_metro(hist, cbsa_names, period):
+    """The metro that scored the SAME number of ZIPs in both months, with the
+    largest change in how many showed a warning sign.
+
+    Why insist the denominator match: the national scored set grew by 685 ZIPs
+    this month, so nearly every cross-month COUNT comparison is confounded by
+    which places were measurable, not by what happened to them. A metro whose
+    denominator is identical in both months is the one place a reader can be
+    handed two raw counts and trust the difference — no share, no percentage,
+    no arithmetic to argue with. Returns None when no metro qualifies.
+    """
+    prev = prev_period(period)
+    best = None
+    for cb, months in ((hist or {}).get("metros") or {}).items():
+        a, b = months.get(prev), months.get(period)
+        if not a or not b:
+            continue
+        # [green, yellow, red, strong]
+        scored_a, scored_b = sum(a), sum(b)
+        if scored_a != scored_b or scored_a < MC.RECAP_MIN_METRO_SCORED:
+            continue
+        warn_a, warn_b = a[1] + a[2], b[1] + b[2]
+        move = abs(warn_b - warn_a)
+        if move < MC.RECAP_MIN_METRO_MOVE:
+            continue
+        name = (cbsa_names or {}).get(cb)
+        if not name:
+            continue
+        cand = (move, cb, name, scored_a, warn_a, warn_b)
+        if best is None or cand[0] > best[0] or (cand[0] == best[0] and cand[1] < best[1]):
+            best = cand
+    return best
+
+
+def cand_recap(rep, hist, cbsa_names, period):
+    """recap_thread (tier 3): the month as one X thread — lead, four replies, closer.
+
+    WHY A THREAD AND NOT A LONG POST. The month has five separate things worth
+    saying and they argue with each other: the index fell, but it fell from a
+    record high; it fell almost everywhere, but two thousand ZIPs still crossed
+    the wrong way. Compressed into one caption that becomes mush or spin. Given
+    a row each, it reads as an argument that survives its own counter-evidence,
+    which is the only reason a stranger trusts a monthly number at all.
+
+    X ONLY. Threading is native there; on Instagram and Facebook a six-part
+    thread is six posts nobody scrolls back through.
+
+    EVERY FIGURE IS READ, NEVER RECOMPUTED. run_length in particular has one
+    home in research.detect_records() — the card that recomputed it once told
+    the world "fifth month in a row" against a truth of three.
+
+    Returns [] rather than a partial thread whenever a figure is missing: a
+    recap that silently drops its counter-evidence row is exactly the spin this
+    format exists to avoid.
+    """
+    rec = (rep or {}).get("records") or {}
+    wsi, run, direction = rec.get("wsi"), rec.get("run_length"), rec.get("run_direction")
+    basis_since, basis_months = rec.get("basis_since"), rec.get("basis_months")
+    if wsi is None or not run or not direction or not basis_since:
+        print("recap: no records block — rule sits out")
+        return []
+
+    series = _wsi_series(n=10_000)
+    if len(series) < MC.RECAP_MIN_SERIES:
+        print(f"recap: continuous series is only {len(series)} months — rule sits out")
+        return []
+    peak_m, peak_v = max(series, key=lambda t: t[1])
+    floor_m, floor_v = min(series, key=lambda t: t[1])
+
+    moves = (rep or {}).get("state_moves") or []
+    fell = sum(1 for r in moves if (r.get("delta") or 0) < 0)
+    rose = sum(1 for r in moves if (r.get("delta") or 0) > 0)
+    flips = len((rep or {}).get("flips_to_warning") or [])
+    scored = (((rep or {}).get("national") or {}).get("scored")) or 0
+    stable = _count_stable_metro(hist, cbsa_names, period)
+    if not (moves and flips and scored and stable):
+        print("recap: missing breadth, flip, scored or count-stable metro — rule sits out")
+        return []
+    _move, _cb, metro_name, m_scored, m_warn_a, m_warn_b = stable
+
+    verb = "fell" if direction == "down" else "rose"
+    opposite = "falling" if direction == "down" else "rising"
+    pm, prev_pm = pretty_month(period), pretty_month(prev_period(period))
+    # "third month running" — read from run_length, never counted here.
+    ordinal = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth",
+               6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth"}.get(run, f"{run}th")
+
+    # The peak line is only worth making when the peak is not this month, and
+    # only honest as a comparison when it sits ABOVE where we are now.
+    peak_line = (f"Down from {pct1(peak_v)} in {pretty_month(peak_m)}, the highest "
+                 f"since we began measuring in {pretty_month(basis_since)}."
+                 if direction == "down" and peak_v > wsi and peak_m != period else
+                 f"We have published this number every month since "
+                 f"{pretty_month(basis_since)}.")
+
+    parts = [
+        # 0 — the lead. The only row that carries the link and the attribution.
+        (f"{pm}: the share of US ZIP markets showing a housing warning sign "
+         f"{verb} for the {ordinal} month running, to {pct1(wsi)}.",
+         peak_line),
+        # 1 — the counter-evidence, immediately. Falling is not the same as low.
+        (f"{opposite.capitalize()} is not the same as low.",
+         f"The lowest this measure has read since {pretty_month(basis_since)} is "
+         f"{pct1(floor_v)}, back in {pretty_month(floor_m)}. Today it is more than "
+         f"double that. A few good months off a high base is still a high base."),
+        # 2 — breadth, so nobody reads a national average as one hot market.
+        ("The move is broad, not local.",
+         f"Warning shares {verb} in {fell} of the {len(moves)} state-level rollups "
+         f"we publish this month, and went the other way in {rose}. Most of the map "
+         f"moved together."),
+        # 3 — the part that did not get better.
+        ("It did not get better everywhere.",
+         f"{flips:,} individual ZIP markets crossed from healthy into warning "
+         f"territory this month. Every one of them is named in the flip list that "
+         f"ships free with the release. A national average is not a promise about "
+         f"any one street."),
+        # 4 — the same-denominator metro: two raw counts, nothing to argue with.
+        ("One market shows the shift with no arithmetic to argue about.",
+         f"In {metro_name} we scored the same {m_scored} ZIP markets in {prev_pm} "
+         f"and in {pm}. In {prev_pm}, {m_warn_a} of them showed a warning sign. "
+         f"In {pm}, {m_warn_b} did. Same places, same checks, one month apart."),
+        # 5 — the closer: the method, and the promise that makes it worth reading.
+        (f"We run the same four checks on about {round(scored, -3):,} ZIP markets "
+         f"every month, and publish the answer whichever way it points.",
+         f"The record is {basis_months} months long, and the state, metro and ZIP "
+         f"files are free to cite. This month the news was better. We would have "
+         f"published it either way."),
+    ]
+
+    tok = f"mq-{period}-recap-us"
+    return [{
+        "key": tok, "type": "post", "post_type": "recap_thread", "tier": 3,
+        "channel": "x",
+        "why_headline": f"{pm} recap thread — {len(parts)} posts",
+        "why_detail": (f"The month's five separate stories, in the order they argue: "
+                       f"the index {verb} to {pct1(wsi)} for the {ordinal} month, off a "
+                       f"{pct1(peak_v)} peak; the floor is {pct1(floor_v)}; {fell} of "
+                       f"{len(moves)} states moved with it; {flips:,} ZIPs still crossed "
+                       f"the wrong way; {metro_name} moved {m_warn_a}→{m_warn_b} on an "
+                       f"unchanged denominator of {m_scored}."),
+        "fixed_target": f"/research/{period}/",
+        "thread": parts,
+    }]
 
 def cand_explainer(period, ws):
     """explainer (tier 5): one concept, evergreen, recycled quarterly.
@@ -1460,7 +1640,55 @@ POST_TYPE_DEFAULT = {"press_pitch": "press_pitch", "burst": "burst",
                      "receipt_quote": "receipt"}
 
 
-def row_from_placement(c, when, channel, period):
+def rows_from_placement(c, when, channel, period):
+    """A placement becomes one row, or — for a thread — many.
+
+    THE THREAD IS THE UNIT EVERYWHERE ELSE. It was planned as one candidate,
+    consumed one slot, and spent one post of the weekly cap; only here does it
+    become six rows, because six is what the operator has to paste. Keeping the
+    expansion at the very last step is what stops a thread being counted six
+    times by the scheduler, the cap, the mix meter and the calendar.
+
+    ORDER MATTERS AND IS NOT INCIDENTAL. Position 0 is emitted first because
+    schema-v31's marketing_thread_guard refuses a reply whose lead is not yet
+    in the table. The caller inserts this list in order.
+
+    Each row carries its OWN dedupe_key and utm_campaign: both are uniquely
+    indexed, and — worse than a refusal — the generator writes with
+    on_conflict=dedupe_key + ignore-duplicates, so rows sharing a key would be
+    silently DISCARDED with an HTTP 201 and the thread would arrive truncated
+    with every sign of success.
+    """
+    parts = c.get("thread")
+    if not parts:
+        return [row_from_placement(c, when, channel, period)]
+
+    out = []
+    for i, (hook, body) in enumerate(parts):
+        # Only the lead carries the link, the call to action and the
+        # attribution; see lint_caption(reply=True) for why.
+        if i == 0:
+            # A BARE LINK, NO CTA PROSE AND NO HASHTAGS. The lead's whole job is
+            # to make someone read the next five posts; "See where your ZIP
+            # stands (free):" spends 34 of 280 characters asking for a click
+            # the thread has not earned yet, and hashtags on a thread lead read
+            # as an advert. The link still resolves to the same /go/ redirect,
+            # so attribution is unchanged.
+            text = "\n\n".join([hook, body, "{short_url}",
+                                 f"ShouldISellYet · {pretty_month(period)}"])
+        else:
+            text = f"{hook}\n\n{body}"
+        sub = dict(c, key=f"{c['key']}-{i}", caption=text, caption_short=text,
+                   why_headline=(c["why_headline"] if i == 0
+                                 else f"{c['why_headline']} — reply {i}"))
+        row = row_from_placement(sub, when, channel, period, reply=(i > 0))
+        row["thread_key"] = c["key"]
+        row["thread_position"] = i
+        out.append(row)
+    return out
+
+
+def row_from_placement(c, when, channel, period, reply=False):
     """One insert-ready dict. status defaults to 'suggested' in the DB; the
     caption's {utm_url} placeholder resolves only now, because the link's
     utm_source is the channel the scheduler just assigned."""
@@ -1489,7 +1717,8 @@ def row_from_placement(c, when, channel, period):
     cap_short = fill(c.get("caption_short"))
     # X without premium posts the short one, so that is what gets linted for X.
     lint = lint_caption(c.get("caption_short") if (channel == "x" and not MC.X_PREMIUM)
-                        else c.get("caption"), channel, tags, short_link, target)
+                        else c.get("caption"), channel, tags, short_link,
+                        None if reply else target, reply=reply)
     return {
         "type": c["type"],
         "post_type": c.get("post_type") or POST_TYPE_DEFAULT.get(c["type"]), "channel": channel,
@@ -1501,11 +1730,17 @@ def row_from_placement(c, when, channel, period):
         "asset_path": c.get("asset_path"),
         "caption": cap_long or None,
         "caption_short": cap_short or None,
-        "short_path": short_path,
-        "link_target": target,
+        # A REPLY HAS NO LINK, SO IT HAS NO REDIRECT AND NO TRACKED URL.
+        # write_redirects() writes a /go/ page for every manifest task that
+        # carries a destination; leaving these set would ship five real pages
+        # nothing ever links to, and would put five campaign tokens into the
+        # perf loop that can never register a click — measured-zero noise in a
+        # leaderboard that is careful to distinguish that from unmeasured.
+        "short_path": None if reply else short_path,
+        "link_target": None if reply else target,
         "lint": lint,
         "hashtags": tags,
-        "utm_campaign": c["key"], "utm_url": url,
+        "utm_campaign": c["key"], "utm_url": None if reply else url,
         "period": period, "source_id": c.get("source_id"),
         "dedupe_key": c["key"],
     }
@@ -1677,7 +1912,9 @@ def main(argv=None):
             cands.append(d)
         cands += cand_steady(hist, cbsa_names, period)
         cands += cand_spotlight(hist, load_streaks(), entries, places, zip_cbsa,
-                                cbsa_names, covered, period)
+                                cbsa_names, covered, period,
+                                basis_months=((rep or {}).get("records") or {}).get("basis_months"))
+    cands += cand_recap(rep, hist, cbsa_names, period)
     cands.append(cand_explainer(period, week_start(et_date(now_utc))))
     apply_demotions(cands, demotions)
 
@@ -1709,8 +1946,8 @@ def main(argv=None):
     for c, reason in plan.refused:
         print(f"REFUSED {c['key']} {reason}")
 
-    rows = [row_from_placement(c, when, ch, period)
-            for c, when, ch in plan.placed]
+    rows = [r for c, when, ch in plan.placed
+            for r in rows_from_placement(c, when, ch, period)]
     inserted = 0
     for row in rows:
         label_line = (f"{row['dedupe_key']} · {row['type']} "
