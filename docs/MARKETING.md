@@ -538,3 +538,32 @@ request precisely so a refused row cannot roll back its siblings, so a parent
 id would have to dangle until the lead lands. An order needs nothing to exist
 first and cannot point at a row that was never written. `(thread_key,
 thread_position)` is unique, so a re-run cannot double a reply.
+
+
+## 2026-08-11 — Post taxonomy (PR3)
+
+Twelve post types, enumerated in the schema-v28 CHECK on
+`marketing_tasks.post_type`. `admin_marketing_mix()` reports the month's
+balance; the Marketing tab shows it under the operating-rules strip.
+
+**Two types ship correct and generate nothing.** This is the intended state,
+not an unfinished feature:
+
+| type | why nothing | what would change it |
+|---|---|---|
+| `steady_market` | no metro is both calm (<=40% of ZIPs warning) and steady (<=8pt range over the window). The calmest, Reading PA at 21%, swings 25 points. | a genuinely flat metro appearing in the data |
+| `threshold_event` | there is no stored history of the median dials to detect a crossing in | storing a monthly median series |
+
+`recap_thread` has its columns (`thread_key`, `thread_position`) but no
+generator. The track-record evergreen is deliberately **unclassified** — it
+predates the taxonomy and has no type in it.
+
+**The mix meter has no target column on purpose.** The monthly quota lives in
+`pipeline/marketing_config.MONTHLY_QUOTA`. Mirroring it into SQL would add
+another pair of numbers that has to change in two places at once, which is
+the failure this queue has already hit three times (the weekly cap, the
+window list, the dedupe index). The generator enforces; the meter reports.
+
+**The meter reads the DATA period, not the calendar month.** `period` on a
+task is the month the data describes — June 2026 rows are scheduled through
+August. Passing today's month reported an empty mix on a full queue.
