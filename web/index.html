@@ -672,14 +672,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   .navlinks .btn{font-size:14px;padding:10px 13px;white-space:nowrap}
   .logo{--lockup:30px}
   .logo-word{font-size:15px}
-}
-/* Below 420px the wordmark and a one-line CTA cannot both fit: measured at
-   375px they need 334px of a 327px row, and smaller phones are worse. The
-   mark carries the identity here — it links home, and the H1 two lines down
-   says the name in full. The CTA is what a phone reader came for, so the
-   wordmark is what yields. */
-@media (max-width:420px){
-  .logo-word{display:none}
+
   /* The hero sketch is scenery drawn for a wide right margin; xMax slicing
      puts its busiest region directly behind the text at phone widths. The
      gradient stays — calm is cheap. */
@@ -718,6 +711,16 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 }
 @media (max-width:400px){
   .cc-head{flex-wrap:wrap}
+}
+
+/* Below 420px the wordmark and a one-line CTA cannot both fit: measured at
+   375px they need 334px of a 327px row, and smaller phones are worse. The
+   mark carries the identity — it links home, and the H1 two lines down says
+   the name in full. The CTA is what a phone reader came for, so the wordmark
+   is what yields. This is the ONLY rule that belongs to this narrower
+   breakpoint; everything else is layout for any phone or tablet. */
+@media (max-width:420px){
+  .logo-word{display:none}
 }
 </style>
 </head>
