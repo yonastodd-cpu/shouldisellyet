@@ -531,6 +531,26 @@ h2{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(
 @media (max-width:820px){
   /* Editorial grids collapse; the chart card moves ABOVE the prose — on a
      narrow screen the evidence leads and the argument follows. */
+  /* Less on the phone, not different: .m-hide copy stays in the markup and on
+     desktop; a phone reader gets the concrete beats and a link to the rest. */
+  .m-hide{display:none}
+  /* The wordmark broke to two lines beside the nav CTA. One line, slightly
+     smaller, and the mono tagline yields — the tab already says who we are. */
+  .logo-word{font-size:16px;white-space:nowrap}
+  .logo-tag{display:none}
+  /* The hero sketch is scenery drawn for a wide right margin; xMax slicing
+     puts its busiest region directly behind the text at phone widths. The
+     gradient stays — calm is cheap. */
+  .hero-art{display:none}
+  /* The ticker duplicates the scale line's computed count two lines below it
+     on a stacked layout, and the chips repeat the hero's colored words. */
+  .ticker{display:none}
+  /* The check card becomes the hero's single object: full-width stacked
+     controls, thumb-sized button. */
+  .checkcard{max-width:none}
+  .checkcard .zipform{flex-direction:column}
+  .checkcard .zipform input{width:100%;flex:none}
+  .checkcard .zipform .btn{width:100%;min-height:52px}
   .grid56{grid-template-columns:1fr;gap:28px}
   .grid56 .chartcard{order:-1}
   .steps.steps3{grid-template-columns:1fr;gap:30px}
@@ -696,7 +716,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <div style="display:flex;flex-direction:column;gap:22px">
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
     <h1>We monitor your local housing market for signs of change.</h1>
-    <p class="sub">Homes sitting longer. Inventory building. Sellers cutting prices. These signals can start moving before home prices do.</p>
+    <p class="sub m-hide">Homes sitting longer. Inventory building. Sellers cutting prices. These signals can start moving before home prices do.</p>
     <p class="sub">We track them for your ZIP code and turn the data into one simple reading: <b class="rate rate-g">HOLD</b>, <b class="rate rate-a">WATCH</b>, or <b class="rate rate-r">ACT</b>.</p>
     <!-- The one-line pitch for the full report, set at the existing meta scale
          so it reads as a coda to .sub, not a second subhead competing with it. -->
@@ -840,12 +860,12 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <h2 class="h2-cap">See changes before they become obvious.</h2>
   <div class="grid56">
     <div>
-      <p class="body-p">Most homeowners don't have an easy way to see when their local housing market is weakening. The data is public, but it's scattered across reports built largely for real estate professionals, investors, and lenders.</p>
-      <p class="body-p">That matters because important changes can begin before falling prices make them obvious.</p>
+      <p class="body-p m-hide">Most homeowners don't have an easy way to see when their local housing market is weakening. The data is public, but it's scattered across reports built largely for real estate professionals, investors, and lenders.</p>
+      <p class="body-p m-hide">That matters because important changes can begin before falling prices make them obvious.</p>
       <p class="body-p"><b>Boise, November 2021:</b> homes were taking longer to sell even as prices remained near record highs. The market still looked strong on the surface. Underneath, the warning signs were building.</p>
       <p class="body-p">Prices held up for roughly another year. Then, by our Redfin-based measure, they fell 17.9% from the peak.</p>
       <p class="body-p">The warning appeared in the data well before the price decline did.</p>
-      <p class="body-p">Boise had already been called overvalued. But overvalued only tells you a market is expensive. It doesn't tell you when conditions are actually changing.</p>
+      <p class="body-p m-hide">Boise had already been called overvalued. But overvalued only tells you a market is expensive. It doesn't tell you when conditions are actually changing.</p>
       <p class="body-p"><b>That's the signal we're looking for.</b></p>
       <p><a class="story-link" href="/stories/boise/">Read the full Boise story →</a></p>
     </div>
@@ -895,8 +915,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
     <div>
   <p class="body-p">Your latest market data is tested against fixed thresholds built from historical downturns and published in our methodology. The rules don't change based on where you live, who you are, or what anyone wants the answer to be.</p>
-  <p class="body-p">That matters in real estate, where many of the people involved in a decision also have a financial interest in it. An agent gets paid when a home sells. A lender gets paid when someone borrows. Their advice may be valuable — but their role is different from ours.</p>
-  <p class="body-p">ShouldISellYet doesn't decide whether you should sell. It gives you an independent reading of your market before you make that decision.</p>
+  <p class="body-p m-hide">That matters in real estate, where many of the people involved in a decision also have a financial interest in it. An agent gets paid when a home sells. A lender gets paid when someone borrows. Their advice may be valuable — but their role is different from ours.</p>
+  <p class="body-p m-hide">ShouldISellYet doesn't decide whether you should sell. It gives you an independent reading of your market before you make that decision.</p>
   <p class="body-p">No analyst changes the rating. No advertiser can move it. Every ZIP gets the same math.</p>
   <p class="body-p">And the methodology is public. So are the thresholds and backtests — including the times a warning appeared and the market recovered.</p>
   <!-- The month is rendered from web/data/validation.json, the same file the
