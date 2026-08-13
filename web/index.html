@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co https://api.zippopotam.us https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co https://api.zippopotam.us https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Should I Sell Yet? — Know before your home equity is at risk</title>
@@ -34,8 +34,11 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Self-hosted (2026-08-12 design brief): two families, six files, 107KB,
+     no third-party request on page load. Newsreader / Source Serif / Archivo
+     are gone — the design system is Public Sans + IBM Plex Mono only. -->
+<link rel="preload" href="/fonts/public-sans-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/plex-mono-400.woff2" as="font" type="font/woff2" crossorigin>
 <script src="prices.js"></script>
 <script src="alert-copy.js"></script>
 <script src="proof-config.js"></script>
@@ -45,20 +48,50 @@
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
 <style>
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/public-sans-400.woff2) format('woff2')}
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/public-sans-700.woff2) format('woff2')}
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:800;font-display:swap;src:url(/fonts/public-sans-800.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/plex-mono-400.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/plex-mono-500.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/plex-mono-600.woff2) format('woff2')}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
 :root{
-  --bg:#faf8f4; --ink:#1c2430; --muted:#5c6673; --faint:#8a8578; --fainter:#a49d8d;
-  --hairline:#e7e2d8; --hairline2:#f0ebe0; --navy:#1f3a5f; --navy-dark:#172d4b;
-  --gold:#8a7a55; --track:#efe9dc;
-  --green:#2e9e5b; --amber:#c8891f; --red:#d64545;
-  --green-soft:#e9f4ee; --amber-soft:#faf1dd; --red-soft:#fbe9e9;
-  --green-line:#bcdcc9; --amber-line:#e8d5a8; --red-line:#ecc3c3;
+  /* ————— 2026-08-12 design system ————— */
+  --paper:#faf9f6; --paper-tint:#f3f1ea; --card:#ffffff;
+  --ink:#1d1c19; --ink-secondary:#4c4a44; --ink-muted:#6b6861; --ink-faint:#8a867c;
+  /* --ink-faint measures 3.45:1 on paper — decorative only. Text at eyebrow
+     and microcopy sizes uses this darker cut, which clears 4.5:1. */
+  --ink-faint-text:#76736a;
+  --line:#e7e4dd; --line-strong:#c9c5ba;
+  --accent:#35527c; --accent-dark:#2a4265;
+  /* Rating inks are darkened from the brief's values until they clear AA
+     (4.5:1) on BOTH their chip background and white — the brief's own hexes
+     measured 4.27 / 3.09 / 4.36 on their chip tints, and its acceptance list
+     demands AA including chips. Computed, not eyeballed; same hues. */
+  --hold:#2c774b;  --hold-bg:#e3efe7;
+  --watch:#8d640d; --watch-bg:#f5ecd8;
+  --act:#bc382a;   --act-bg:#f6e2de;
+  --band-ink:#faf9f6; --band-eyebrow:#a8a396; --band-body:#c9c5ba;
+
+  /* Legacy names, re-pointed at the system above. Retire with each section
+     rebuilt; do not introduce new uses. */
+  --bg:var(--paper); --muted:var(--ink-secondary); --faint:var(--ink-faint-text);
+  --fainter:var(--ink-faint);
+  --hairline:var(--line); --hairline2:#f0efe9; --navy:var(--accent);
+  --navy-dark:var(--accent-dark);
+  --gold:var(--ink-faint-text); --track:#eceae3;
+  --green:#2e7d4f; --amber:#b07d10; --red:#c0392b;
+  --green-soft:var(--hold-bg); --amber-soft:var(--watch-bg); --red-soft:var(--act-bg);
+  --green-line:#c8ddd0; --amber-line:#e7d5ac; --red-line:#ecc7c0;
 
   /* Text-safe status colours. The vivid --green/--amber/--red above stay for
      dots and gauge fills (non-text, no contrast minimum); as *text* on their
      own soft backgrounds they measure 3.05 / 2.66 / 3.74:1, so amber failed
      AA outright and green and red only cleared the large-text bar. These
      darkened variants clear 4.5:1 on both the soft backgrounds and white. */
-  --green-ink:#1e7a42; --amber-ink:#96650c; --red-ink:#c02f2f;
+  --green-ink:var(--hold); --amber-ink:var(--watch); --red-ink:var(--act);
   /* --fainter is 2.7:1 on the page background — decorative only. This is the
      lightest tone allowed to carry words. */
   --faint-ink:#6b6558;
@@ -82,18 +115,19 @@
   --lh-body:1.6;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Public Sans',system-ui,-apple-system,sans-serif;
      font-size:var(--fs-body);line-height:var(--lh-body)}
 a{color:var(--navy);text-decoration:none}a:hover{color:var(--navy-dark)}
 .mono{font-family:'IBM Plex Mono',monospace}
-.serif{font-family:'Newsreader',serif}
+.serif{font-family:'Public Sans',system-ui,sans-serif}  /* legacy hook; serif is gone */
 input::placeholder{opacity:.38;color:inherit}
 input:focus{outline:none;border-color:var(--navy)!important}
 @keyframes shimmer{0%{background-position:-360px 0}100%{background-position:360px 0}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .wrap{max-width:1240px;margin:0 auto}
-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 56px;border-bottom:1px solid var(--hairline)}
+nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  height:64px;padding:0 56px;background:var(--paper);border-bottom:1px solid var(--line)}
 /* ——— Brand lockup ———
    Mark + two-line wordmark, matching the supplied logo-lockup.svg but set as
    live text rather than an image: the SVG's type would fall back to Helvetica
@@ -122,9 +156,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
 .logo{--lockup:44px;display:flex;align-items:center;gap:calc(var(--lockup)*.2333)}
 .logo img{width:var(--lockup);height:var(--lockup)}
 .logo-text{display:flex;flex-direction:column;justify-content:center;gap:2px}
-.logo-word{font-family:'Source Serif 4',Georgia,serif;font-weight:600;
-           font-size:calc(var(--lockup)*.5333);letter-spacing:-.0094em;
-           line-height:1;color:#1E2B36;white-space:nowrap}
+.logo-word{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.1;color:var(--ink)}
 .logo-tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;
           font-size:calc(var(--lockup)*.1583);letter-spacing:.28em;
           line-height:1;color:#7E7A70;white-space:nowrap}
@@ -158,14 +190,14 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 5
 }
 .navlinks{display:flex;align-items:center;gap:26px;font-size:var(--fs-meta)}
 .navlinks a{color:var(--muted)}
-.btn{display:inline-block;background:var(--navy);color:#faf8f4!important;padding:12px 22px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:var(--fs-ui);font-family:inherit;line-height:1.25}
-.btn:hover{background:var(--navy-dark)}
-.btn-outline{background:none;border:1.5px solid var(--navy);color:var(--navy)!important}
+.btn{display:inline-block;background:var(--ink);color:var(--band-ink)!important;padding:12px 22px;border-radius:8px;font-weight:700;border:none;cursor:pointer;font-size:var(--fs-ui);font-family:inherit;line-height:1.25;transition:background .12s ease}
+.btn:hover{background:var(--accent)}
+.btn-outline{background:none;border:1.5px solid var(--ink);color:var(--ink)!important}
 .btn-outline:hover{background:#f1eee6}
 .hero{display:grid;grid-template-columns:1.02fr 1fr;gap:52px;padding:72px 56px 64px}
 .hero>div{min-width:0}
-.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.14em;color:var(--gold)}
-h1{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h1);line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.14em;color:var(--ink-faint-text)}
+h1{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(--fs-h1);line-height:1.06;margin:0;letter-spacing:-.025em;text-wrap:balance}
 h1 em{font-style:italic;color:var(--navy)}
 .sub{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--muted);margin:0;max-width:52ch}
 /* Hero coda under .sub — existing meta scale, no new sizes. The bold half is
@@ -183,7 +215,9 @@ h1 em{font-style:italic;color:var(--navy)}
 #from-ctx button{margin-left:auto;background:none;border:none;font-size:20px;line-height:1;
   color:var(--muted);cursor:pointer;padding:0 2px;flex:none}
 .zipform{display:flex;gap:10px;max-width:540px}
-.zipform input{flex:1;font-size:var(--fs-input);font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;padding:14px 18px;border:1.5px solid #d7d0c2;border-radius:8px;background:#fff;color:var(--ink)}
+.zipform input{flex:1 1 180px;padding:13px 16px;border:1px solid var(--line-strong);border-radius:8px;
+  font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:17px;background:var(--card);color:var(--ink)}
+.zipform input:focus{outline:1.5px solid var(--accent);outline-offset:0;border-color:var(--accent)}
 .zipform .btn{min-height:56px;padding-left:26px;padding-right:26px;white-space:nowrap}
 .fineprint{font-size:var(--fs-meta);line-height:1.55;color:var(--muted)}
 .card{border:1px solid var(--hairline);border-radius:10px;background:#fff}
@@ -205,7 +239,7 @@ h1 em{font-style:italic;color:var(--navy)}
 /* The verdict word is the payoff of the whole product — the largest thing on
    the page after the hero headline, and the largest in this block by far. */
 .verdict-tag{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-verdict);font-weight:700;letter-spacing:.1em;line-height:1}
-.verdict-title{font-family:'Newsreader',serif;font-size:var(--fs-h3);font-weight:600;line-height:1.3}
+.verdict-title{font-family:'Public Sans',system-ui,sans-serif;font-size:var(--fs-h3);font-weight:700;line-height:1.3}
 .verdict-body{padding:20px 26px 26px;display:flex;flex-direction:column;gap:18px}
 .verdict-body p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .metric{display:grid;grid-template-columns:210px 92px 1fr 140px;gap:14px;align-items:center}
@@ -263,7 +297,7 @@ h1 em{font-style:italic;color:var(--navy)}
 .pv-row:first-child{border-top:0}
 .pv-row:hover{background:#f5f1e9}
 .pv-row:focus-visible{outline:2px solid var(--navy);outline-offset:-2px;border-radius:6px}
-.pv-num{font-family:'Newsreader',serif;font-size:1.9rem;line-height:.9;font-weight:500;
+.pv-num{font-family:'Public Sans',system-ui,sans-serif;font-size:1.9rem;line-height:.9;font-weight:700;
         color:var(--gold);opacity:.26;font-variant-numeric:tabular-nums;flex:0 0 44px}
 .pv-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
 .pv-title{font-size:var(--fs-body-sm);font-weight:600;color:var(--ink);line-height:1.35}
@@ -385,7 +419,7 @@ h1 em{font-style:italic;color:var(--navy)}
 
 /* waitlist */
 .waitcard{display:none;padding:24px 26px;animation:fadeUp .3s ease}
-.waitcard .t{font-family:'Newsreader',serif;font-size:var(--fs-h3);font-weight:600;margin-bottom:6px}
+.waitcard .t{font-family:'Public Sans',system-ui,sans-serif;font-size:var(--fs-h3);font-weight:700;margin-bottom:6px}
 .waitcard p{font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);margin:0 0 14px}
 .waitcard form{display:flex;gap:10px;flex-wrap:wrap}
 .waitcard input{flex:1;min-width:220px;font-size:var(--fs-input);padding:13px 15px;border:1.5px solid #d7d0c2;border-radius:7px;font-family:inherit}
@@ -418,8 +452,8 @@ h1 em{font-style:italic;color:var(--navy)}
 /* Sections are separated by space, not extra rules — the one hairline per
    band is the only divider. */
 section.band{padding:76px 56px;border-top:1px solid var(--hairline)}
-h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:0;line-height:1.15}
-.claim{margin:0;font-family:'Newsreader',serif;font-size:clamp(1.5rem,3.4vw,2.1rem);line-height:1.35;font-weight:500;max-width:34ch}
+h2{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(--fs-h2);margin:0;line-height:1.12;letter-spacing:-.02em}
+.claim{margin:0;font-family:'Public Sans',system-ui,sans-serif;font-size:clamp(1.4rem,3.2vw,1.9rem);line-height:1.4;font-weight:700;max-width:38ch}
 .claim-kicker{margin:18px 0 0;font-size:var(--fs-meta);letter-spacing:.04em;color:var(--fainter)}
 .honesty{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted);max-width:78ch}
 .honesty a{white-space:nowrap}
@@ -433,11 +467,11 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .scale-line b{color:var(--ink)}
 /* HOLD / WATCH / ACT are product states, not prose — one pill component,
    used everywhere they stand for the rating. */
-.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-family:'IBM Plex Mono',monospace;
-  font-size:.78em;font-weight:700;letter-spacing:.06em;vertical-align:baseline;white-space:nowrap}
-.pill-g{background:var(--green-soft);color:#1e7a42;border:1px solid var(--green-line)}
-.pill-a{background:#faf1dd;color:#96650c;border:1px solid #e8d5a8}
-.pill-r{background:#fbe9e9;color:#c02f2f;border:1px solid #ecc3c3}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:baseline;white-space:nowrap}
+.pill-g{background:var(--hold-bg);color:var(--hold)}
+.pill-a{background:var(--watch-bg);color:var(--watch)}
+.pill-r{background:var(--act-bg);color:var(--act)}
 .boise{margin:24px 0;padding:0;border:1px solid var(--hairline);border-radius:10px;background:#fff;overflow:hidden}
 .boise img{display:block;width:100%;height:auto}
 .cites{margin:0 0 16px;font-size:var(--fs-meta);line-height:1.7;color:var(--fainter)}
@@ -445,7 +479,7 @@ h2{font-family:'Newsreader',serif;font-weight:500;font-size:var(--fs-h2);margin:
 .price-line{margin:0 0 16px;font-size:var(--fs-body);color:var(--ink);font-weight:600}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
 .steps3{grid-template-columns:repeat(3,1fr)}
-.step .num{font-family:'Newsreader',serif;font-style:italic;font-size:3.5rem;color:#d7d0c2;line-height:1}
+.step .num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.08em}
 .step .t{font-size:var(--fs-h3);font-weight:650;margin:12px 0}
 .step p{margin:0;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--muted)}
 .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1080px}
@@ -569,7 +603,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </span>
   </div>
   <div class="navlinks">
-    <a href="#how">How it works</a><a href="#signals">What we watch</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
+    <a href="#how">How it works</a><a href="#signals">Why it's neutral</a><a href="#pricing">Pricing</a><a href="report.html">Sample report</a>
     <a class="btn" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a>
   </div>
 </nav>
