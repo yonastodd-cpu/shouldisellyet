@@ -192,7 +192,16 @@ nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-con
 .btn:hover{background:var(--accent)}
 .btn-outline{background:none;border:1.5px solid var(--ink);color:var(--ink)!important}
 .btn-outline:hover{background:#f1eee6}
-.hero{display:block;max-width:720px;padding:64px 56px 56px}
+.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--paper-tint) 0%,var(--paper) 78%);
+  margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);
+  padding:96px max(56px,calc(50vw - 520px)) 80px}
+.hero-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero-in{position:relative;max-width:720px}
+.checkcard{background:var(--card);border:1px solid #e2ded4;border-radius:14px;padding:26px 28px;
+  box-shadow:0 10px 30px rgba(29,28,25,.10),0 2px 6px rgba(29,28,25,.05);max-width:620px}
+.check-kicker{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;
+  letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin-bottom:14px}
+.checkcard .fineprint{margin-top:14px}
 .hero>div{min-width:0}
 .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:var(--fs-micro);letter-spacing:.14em;color:var(--ink-faint-text)}
 h1{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(--fs-h1);line-height:1.06;margin:0;letter-spacing:-.025em;text-wrap:balance}
@@ -503,15 +512,15 @@ h2{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(
   font-size:var(--fs-body);line-height:1.6}
 .callout b{color:var(--ink)}
 .callout span{color:var(--ink-muted);margin-left:6px}
-.band-dark{background:var(--ink);color:var(--band-ink);
+.band-dark{background:var(--ink);color:var(--band-ink);text-align:center;
   margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);
-  padding:88px max(56px,calc(50vw - 520px))}
+  padding:72px max(56px,calc(50vw - 520px)) 80px}
 .band-dark h2{color:var(--band-ink);font-size:clamp(1.9rem,4vw,2.5rem)}
 .band-eyebrow{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;
   letter-spacing:.18em;text-transform:uppercase;color:var(--band-eyebrow);margin-bottom:16px}
-.band-p{margin:16px 0 0;font-size:var(--fs-body);line-height:var(--lh-body);color:var(--band-body);max-width:60ch}
+.band-p{margin:16px auto 0;font-size:17px;line-height:1.6;color:var(--band-body);max-width:560px}
 .band-p b{color:var(--band-ink)}
-.band-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px}
+.band-ctas{display:flex;gap:16px;flex-wrap:wrap;margin-top:36px;justify-content:center}
 .btn-light{background:var(--band-ink);color:var(--ink)!important}
 .btn-light:hover{background:#fff}
 .btn-ghost-dark{display:inline-block;padding:12px 22px;border-radius:8px;border:1.5px solid var(--band-body);
@@ -529,7 +538,8 @@ h2{font-family:'Public Sans',system-ui,sans-serif;font-weight:800;font-size:var(
   .band-ctas .btn,.band-ctas .btn-ghost-dark{text-align:center}
   .ticker{gap:10px}
   .tick-chips{margin-left:0}
-  .hero{padding:44px 0 40px}
+  .hero{padding:44px 24px 40px}
+  .checkcard{padding:20px 18px}
 }
 @media (max-width:400px){
   .cc-head{flex-wrap:wrap}
@@ -666,6 +676,23 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </nav>
 
 <div class="hero" id="check">
+  <svg class="hero-art" viewBox="0 0 1440 720" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+    <g stroke="#e2ded4" stroke-width="1">
+      <line x1="0" y1="120" x2="1440" y2="120"/><line x1="0" y1="240" x2="1440" y2="240"/>
+      <line x1="0" y1="360" x2="1440" y2="360"/><line x1="0" y1="480" x2="1440" y2="480"/>
+      <line x1="0" y1="600" x2="1440" y2="600"/>
+    </g>
+    <path d="M 760 560 C 880 540, 940 480, 1020 430 C 1100 380, 1150 370, 1230 310 C 1310 250, 1360 200, 1440 170" fill="none" stroke="#c9c5ba" stroke-width="2.5"/>
+    <path d="M 760 600 C 880 590, 960 560, 1050 540 C 1140 520, 1220 460, 1290 380 C 1350 310, 1400 290, 1440 280" fill="none" stroke="#b07d10" stroke-width="2.5" opacity="0.55"/>
+    <circle cx="1020" cy="430" r="5" fill="#2e7d4f"/><circle cx="1230" cy="310" r="5" fill="#b07d10"/><circle cx="1400" cy="185" r="5" fill="#c0392b"/>
+    <rect x="0" y="0" width="1440" height="720" fill="url(#heroFade)"/>
+    <defs><linearGradient id="heroFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f6f4ee" stop-opacity="0.9"/>
+      <stop offset="0.52" stop-color="#f6f4ee" stop-opacity="0.9"/>
+      <stop offset="0.72" stop-color="#f6f4ee" stop-opacity="0"/>
+    </linearGradient></defs>
+  </svg>
+  <div class="hero-in">
   <div style="display:flex;flex-direction:column;gap:22px">
     <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
     <h1>We monitor your local housing market for signs of change.</h1>
@@ -674,11 +701,14 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <!-- The one-line pitch for the full report, set at the existing meta scale
          so it reads as a coda to .sub, not a second subhead competing with it. -->
     <div id="from-ctx" hidden></div>
-    <div class="zipform">
-      <input id="zip" placeholder="ZIP code" inputmode="numeric" maxlength="5" autocomplete="postal-code">
-      <button class="btn" id="go">Check my ZIP — free</button>
+    <div class="checkcard">
+      <div class="check-kicker">Get your ZIP's current reading</div>
+      <div class="zipform">
+        <input id="zip" placeholder="Try 20874 or 20906" inputmode="numeric" maxlength="5" autocomplete="postal-code" aria-label="ZIP code">
+        <button class="btn" id="go">Check my ZIP — free</button>
+      </div>
+      <div class="fineprint">Free · No account · About 10 seconds</div>
     </div>
-    <div class="fineprint">Free · No account · About 10 seconds<br>Try <span class="mono">20874</span> or <span class="mono">20906</span></div>
     <!-- Scale line. Doubles as the map's caption — the map below carries no
          caption of its own, per the brief. Count is computed from meta.json. -->
     <p class="scale-line"><b id="scale-count">33,000+ ZIP codes</b>, re-scored whenever new data is released. Yours is one of them.</p>
@@ -788,6 +818,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     </div>
   </div>
 
+</div>
 </div>
 
 <!-- Ticker band: the one living part of the old map card — a computed count
