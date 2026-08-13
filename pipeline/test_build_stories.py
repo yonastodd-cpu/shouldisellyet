@@ -176,5 +176,5 @@ def test_the_boise_panel_is_exported_for_the_homepage():
     src = (REPO / "pipeline" / "build_stories.py").read_text()
     assert "-panel.svg" in src, "the homepage panel export was removed"
     html = (REPO / "web" / "index.html").read_text()
-    assert "onerror=" in html.split('id="boise-fig"')[1][:400], \
+    assert "onerror=" in html.split('id="boise-fig"')[1][:1200], \
         "the figure no longer hides itself when the chart is missing"

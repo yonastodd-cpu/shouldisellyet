@@ -122,8 +122,25 @@ def _tell_y(v, lo, hi):
     return TELL_TOP + TELL_H - (TELL_H * (v - lo) / span)
 
 
-def panel(case, stage):
-    """Inline SVG for one beat. stage is 1, 2 or 3."""
+# The homepage chart card's palette (2026-08-12 design brief): white card
+# ground, ink price line, amber flag and shaded wait, AA-safe label inks. The
+# story pages keep the module defaults — passing colors=None must render
+# byte-identical output, so the two consumers cannot drift apart by accident.
+CARD_COLORS = {"paper": "#ffffff", "price": "#1d1c19", "flag": "#b07d10",
+               "shade": "#b07d10", "tell": "#8d640d", "danger": "#c0392b",
+               "dot": "#c0392b", "label": "#6b6861", "gap": "#8d640d",
+               "money": "#6b6861"}
+
+
+def panel(case, stage, colors=None, chrome=True):
+    """Inline SVG for one beat. stage is 1, 2 or 3.
+
+    colors overrides the module palette per key; chrome=False drops the in-SVG
+    price title (a card header carries it) and adds the "warning appears"
+    annotation at the flag line, per the homepage card spec."""
+    C = dict(paper=PAPER, price=NAVY, flag=GOLD, shade=AMBER, tell=AMBER,
+             danger=RED, dot=RED, label=FAINT, gap=AMBER, money=FAINT)
+    C.update(colors or {})
     s = case["series"]
     n = len(s)
     months = [r["month"] for r in s]
@@ -142,7 +159,7 @@ def panel(case, stage):
 
     out = [f'<svg viewBox="0 0 {W} {H}" role="img" xmlns="http://www.w3.org/2000/svg" '
            f'aria-label="{esc(_alt(case, stage))}">']
-    out.append(f'<rect width="{W}" height="{H}" fill="{PAPER}"/>')
+    out.append(f'<rect width="{W}" height="{H}" fill="{C["paper"]}"/>')
 
     # How far along the timeline this stage draws. Full series only at the end.
     cross_persist = (case.get("crossings", {}).get("dom_stretch") or {}).get("persisted") or 0
@@ -154,20 +171,21 @@ def panel(case, stage):
     if stage >= 3 and sig_i is not None and neg_i is not None:
         x0, x1 = _x(sig_i, n), _x(neg_i, n)
         out.append(f'<rect x="{x0:.1f}" y="{PAD_T}" width="{max(1, x1 - x0):.1f}" '
-                   f'height="{PRICE_H + 30 + TELL_H}" fill="{AMBER}" opacity="0.09"/>')
+                   f'height="{PRICE_H + 30 + TELL_H}" fill="{C["shade"]}" opacity="0.09"/>')
         gap = case.get("lead_months")
         if gap:
             out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{PAD_T - 10}" text-anchor="middle" '
-                       f'font-size="12" font-weight="700" fill="{AMBER}">'
+                       f'font-size="12" font-weight="700" fill="{C["gap"]}">'
                        f'{gap} months of warning</text>')
 
     # Price line — same geometry in every stage, drawn as far as `last_price`.
     pts = " ".join(f"{_x(i, n):.1f},{_price_y(v, p_lo, p_hi):.1f}"
                    for i, v in enumerate(prices) if i <= last_price)
-    out.append(f'<polyline points="{pts}" fill="none" stroke="{NAVY}" stroke-width="2.4" '
+    out.append(f'<polyline points="{pts}" fill="none" stroke="{C["price"]}" stroke-width="2.4" '
                f'stroke-linejoin="round" stroke-linecap="round"/>')
-    out.append(f'<text x="{PAD_L}" y="{PAD_T - 10}" font-size="11" font-weight="700" '
-               f'fill="{NAVY}">Typical sale price</text>')
+    if chrome:
+        out.append(f'<text x="{PAD_L}" y="{PAD_T - 10}" font-size="11" font-weight="700" '
+                   f'fill="{C["price"]}">Typical sale price</text>')
 
     # Price axis: the start, and the last value the line has actually reached.
     # NOT the series maximum in the early stages — printing $515K above a line
@@ -178,7 +196,7 @@ def panel(case, stage):
     for v in {p_lo, prices[last_price]} if stage < 3 else {p_lo, p_hi}:
         y = _price_y(v, p_lo, p_hi)
         out.append(f'<text x="{PAD_L - 8}" y="{y + 4:.1f}" text-anchor="end" font-size="10" '
-                   f'fill="{FAINT}">{money(v)}</text>')
+                   f'fill="{C["money"]}">{money(v)}</text>')
 
     # Stage 1 marks the month the signal fired, with prices still climbing —
     # the whole point of the first beat is that nothing looks wrong yet.
@@ -186,9 +204,12 @@ def panel(case, stage):
         x = _x(sig_i, n)
         rule_bottom = (TELL_TOP + TELL_H) if stage >= 2 else (PAD_T + PRICE_H)
         out.append(f'<line x1="{x:.1f}" y1="{PAD_T}" x2="{x:.1f}" y2="{rule_bottom}" '
-                   f'stroke="{GOLD}" stroke-width="1.2" stroke-dasharray="3 3"/>')
+                   f'stroke="{C["flag"]}" stroke-width="1.2" stroke-dasharray="3 3"/>')
         out.append(f'<circle cx="{x:.1f}" cy="{_price_y(prices[sig_i], p_lo, p_hi):.1f}" r="4" '
-                   f'fill="{PAPER}" stroke="{GOLD}" stroke-width="2.4"/>')
+                   f'fill="{C["paper"]}" stroke="{C["flag"]}" stroke-width="2.4"/>')
+        if not chrome:
+            out.append(f'<text x="{min(x + 6, W - 110):.1f}" y="{PAD_T + 12}" font-size="11" '
+                       f'font-weight="600" fill="{C["flag"]}">warning appears</text>')
 
     # Stage 2 adds the tell.
     if stage >= 2 and known:
@@ -197,28 +218,28 @@ def panel(case, stage):
         if line is not None:
             ly = _tell_y(line, t_lo, t_hi)
             out.append(f'<line x1="{PAD_L}" y1="{ly:.1f}" x2="{W - PAD_R}" y2="{ly:.1f}" '
-                       f'stroke="{RED}" stroke-width="1.2" stroke-dasharray="5 4"/>')
+                       f'stroke="{C["danger"]}" stroke-width="1.2" stroke-dasharray="5 4"/>')
             out.append(f'<text x="{W - PAD_R}" y="{ly - 6:.1f}" text-anchor="end" font-size="10" '
-                       f'fill="{RED}">danger line — {pct(line)} vs a year ago</text>')
-        out.append(f'<polyline points="{tp}" fill="none" stroke="{AMBER}" stroke-width="2.2" '
+                       f'fill="{C["danger"]}">danger line — {pct(line)} vs a year ago</text>')
+        out.append(f'<polyline points="{tp}" fill="none" stroke="{C["tell"]}" stroke-width="2.2" '
                    f'stroke-linejoin="round" stroke-linecap="round"/>')
         out.append(f'<text x="{PAD_L}" y="{TELL_TOP - 8}" font-size="11" font-weight="700" '
-                   f'fill="{AMBER}">How much longer homes sat than a year earlier</text>')
+                   f'fill="{C["tell"]}">How much longer homes sat than a year earlier</text>')
         if sig_i is not None and tells[sig_i] is not None:
             out.append(f'<circle cx="{_x(sig_i, n):.1f}" cy="{_tell_y(tells[sig_i], t_lo, t_hi):.1f}" '
-                       f'r="4.5" fill="{RED}"/>')
+                       f'r="4.5" fill="{C["dot"]}"/>')
 
     # Stage 3 marks the fall itself.
     if stage >= 3 and peak_i is not None and trough_i is not None:
         for i, lab in ((peak_i, money(prices[peak_i])), (trough_i, money(prices[trough_i]))):
             out.append(f'<circle cx="{_x(i, n):.1f}" cy="{_price_y(prices[i], p_lo, p_hi):.1f}" '
-                       f'r="4" fill="{NAVY}"/>')
+                       f'r="4" fill="{C["price"]}"/>')
         ptt = case.get("peak_to_trough")
         if ptt is not None:
             xm = (_x(peak_i, n) + _x(trough_i, n)) / 2
             ym = _price_y((prices[peak_i] + prices[trough_i]) / 2, p_lo, p_hi)
             out.append(f'<text x="{xm:.1f}" y="{ym - 12:.1f}" text-anchor="middle" font-size="13" '
-                       f'font-weight="700" fill="{NAVY}">{pct(ptt, 1)}</text>')
+                       f'font-weight="700" fill="{C["price"]}">{pct(ptt, 1)}</text>')
 
     # Time axis: first, the signal, and last. Enough to orient, no more.
     last_drawn = max(last_price, last_tell if stage >= 2 else 0)
@@ -228,7 +249,7 @@ def panel(case, stage):
     for i, lab in sorted(ticks.items()):
         anchor = "start" if i == 0 else ("end" if i == last_drawn else "middle")
         out.append(f'<text x="{_x(i, n):.1f}" y="{H - 10}" text-anchor="{anchor}" font-size="10" '
-                   f'fill="{FAINT}">{lab}</text>')
+                   f'fill="{C["label"]}">{lab}</text>')
 
     out.append("</svg>")
     return "".join(out)
@@ -472,7 +493,8 @@ def main():
     lead = next((load(c) for c in PUBLISHED if load(c)), None)
     if lead and lead.get("series"):
         (out / f"{slug(lead)}-panel.svg").write_text(
-            '<?xml version="1.0" encoding="UTF-8"?>\n' + panel(lead, 3))
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            + panel(lead, 3, colors=CARD_COLORS, chrome=False))
 
     # The homepage teaser reads this, so the homepage types no numbers either.
     (ROOT / "web" / "data" / "stories.json").write_text(
