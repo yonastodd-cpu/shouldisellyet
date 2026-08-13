@@ -176,3 +176,31 @@ def test_the_engine_action_class_is_not_a_display_string():
         src = (REPO / "pipeline" / gen).read_text()
         assert "verdict.LEVELS" not in src and "from verdict import LEVELS" not in src, \
             f"{gen} renders the engine's action class instead of the copy map"
+
+
+def test_no_prices_in_the_homepage_static_markup():
+    """Design decision 1 (2026-08-12): the homepage sells nothing before the
+    free check — prices live on /pricing. Scoped to the STATIC page: the
+    post-check reading state keeps its conversion surface by the ratified
+    scope ruling, so the containers that only render after a check
+    (#verdict, #sticky-unlock) are exempt."""
+    static = re.sub(r'<div class="verdict hidden" id="verdict".*?<div id="sticky-unlock".*?</div>',
+                    '', MARKUP, flags=re.S)
+    static = re.sub(r"<style.*?</style>", " ", static, flags=re.S)
+    static = re.sub(r"<!--.*?-->", " ", static, flags=re.S)
+    text = re.sub(r"<[^>]+>", " ", static)
+    hits = re.findall(r"\$\s?\d+(?:\.\d{2})?", text)
+    assert not hits, f"price text in the static homepage: {hits}"
+
+
+def test_the_pricing_page_exists_and_carries_the_relocated_copy():
+    page = (REPO / "web" / "pricing" / "index.html").read_text()
+    for s in ("Want to know when something changes?",
+              "Prefer one deeper look?",
+              "Start with the free check.",
+              'data-price="mode-lead"', 'data-price="report"',
+              "/subscribe.html?plan=monitor", "/subscribe.html?plan=report"):
+        assert s in page, s
+    # The shutdown-refund line belongs HERE, never on the homepage.
+    assert "If we ever shut down" in page
+    assert "If we ever shut down" not in HTML

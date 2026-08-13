@@ -66,6 +66,7 @@ const PRICE_TEXT = {
   "report": usd(PRICES.REPORT),
   "report-once": usd(PRICES.REPORT) + " once",
   "upgrade": usd(PRICES.UPGRADE),
+  "upgrade-window": String(PRICES.UPGRADE_WINDOW_DAYS),
 };
 
 // Mode-aware tokens — the ONLY way a surface should render the lead price.

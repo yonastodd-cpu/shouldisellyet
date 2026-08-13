@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pricing — ShouldISellYet</title>
+<meta name="description" content="The free ZIP check is the product. Monitoring re-checks your ZIP whenever new data is released — $3.99/month or $29/year. One full report, $5.99 once.">
+<link rel="canonical" href="https://shouldisellyet.com/pricing/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/prices.js" defer></script>
+<script src="/track.js" defer></script>
+<style>
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/public-sans-400.woff2) format('woff2')}
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/public-sans-700.woff2) format('woff2')}
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:800;font-display:swap;src:url(/fonts/public-sans-800.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/plex-mono-500.woff2) format('woff2')}
+:root{
+  --paper:#faf9f6;--paper-tint:#f3f1ea;--card:#fff;--ink:#1d1c19;--ink-secondary:#4c4a44;
+  --ink-muted:#6b6861;--ink-faint-text:#76736a;--line:#e7e4dd;--line-strong:#c9c5ba;
+  --accent:#35527c;--band-ink:#faf9f6;
+}
+*{box-sizing:border-box}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Public Sans',system-ui,sans-serif;font-size:16.5px;line-height:1.65}
+.wrap{max-width:760px;margin:0 auto;padding:0 32px 88px}
+nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  height:64px;background:var(--paper);border-bottom:1px solid var(--line);margin:0 -32px;padding:0 32px}
+nav a{text-decoration:none;color:var(--ink)}
+.wordmark{font-weight:800;font-size:18px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+.eyebrow{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint-text);margin:64px 0 14px}
+h1{font-size:clamp(2rem,5vw,2.8rem);font-weight:800;letter-spacing:-.025em;line-height:1.08;margin:0 0 14px}
+.lede{font-size:19px;line-height:1.6;color:var(--ink-secondary);margin:0 0 8px;max-width:56ch}
+.card{margin:36px 0 0;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  box-shadow:0 1px 3px rgba(29,28,25,.05);padding:28px}
+.card h2{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.card p{margin:0 0 14px;color:var(--ink-secondary)}
+.price{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px}
+.price small{font-size:15px;font-weight:400;color:var(--ink-muted)}
+.note{font-size:14px;color:var(--ink-muted)}
+.btn{display:inline-block;background:var(--ink);color:var(--band-ink)!important;padding:12px 22px;
+  border-radius:8px;font-weight:700;border:none;cursor:pointer;font-size:15.5px;text-decoration:none;
+  transition:background .12s ease}
+.btn:hover{background:var(--accent)}
+.btn-outline{display:inline-block;background:none;border:1.5px solid var(--ink);color:var(--ink)!important;
+  padding:12px 22px;border-radius:8px;font-weight:700;font-size:15.5px;text-decoration:none}
+.free{margin:36px 0 0;padding:18px 22px;background:var(--paper-tint);border-radius:8px}
+.free b{display:block;margin-bottom:4px}
+.fine{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);font-size:13.5px;
+  line-height:1.7;color:var(--ink-faint-text)}
+.fine a{color:var(--ink-muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body><div class="wrap">
+<nav>
+  <a class="wordmark" href="/"><img src="/logo-mark.svg" alt="" width="34" height="34">Should I sell yet?</a>
+  <a class="btn" href="/#check">Check my ZIP — free</a>
+</nav>
+
+<div class="eyebrow">Pricing</div>
+<h1>Start with the free check.</h1>
+<p class="lede">The ZIP check is free, takes about 10 seconds, and includes your current reading and all four market gauges. No account. No credit card. Everything below is optional.</p>
+
+<!-- The copy relocated from the homepage close (2026-08-12 design brief,
+     decision 1): the homepage sells nothing before the free check, so the
+     monitoring and report offers live here. Prices are stamped by /prices.js
+     from data-price tokens — the one source of truth; nothing here is typed
+     except structure. -->
+<div class="card">
+  <h2>Monitoring</h2>
+  <p>Want to know when something changes? Monitoring re-checks your ZIP whenever new data is released and emails you when an important line is crossed.</p>
+  <div class="price"><span data-price="mode-lead">$3.99</span><small>/month</small> <small>or</small> <span data-price="annual">$29</span><small>/year</small></div>
+  <p class="note">Cancel anytime. You keep access through the period you've paid for.</p>
+  <a class="btn" data-track="purchase_click_monitor" href="/subscribe.html?plan=monitor">Set up monitoring</a>
+</div>
+
+<div class="card">
+  <h2>One full report</h2>
+  <p>Prefer one deeper look? Get the full report once — your reading, all four gauges with their danger lines, and what each one means for your market.</p>
+  <div class="price"><span data-price="report">$5.99</span><small> once</small></div>
+  <p class="note">If you upgrade to annual monitoring within <span data-price="upgrade-window">30</span> days, we'll credit the <span data-price="report">$5.99</span> toward your plan.</p>
+  <a class="btn-outline" data-track="purchase_click_report" href="/subscribe.html?plan=report">Get the full report</a>
+</div>
+
+<div class="free">
+  <b>Not sure? Don't buy anything.</b>
+  The free check is the product. Come back whenever you like — readings refresh every time new data publishes.
+  <p style="margin:14px 0 0"><a class="btn" href="/#check">Check my ZIP — free</a></p>
+</div>
+
+<!-- The plain-English cancellation companion. This is the page the ToS
+     drafting notes place it on — deliberately OFF the homepage, never beside
+     a purchase CTA there. -->
+<div class="fine">
+  Cancel anytime — you keep access through the period you've paid for; we don't refund partial
+  months just for cancelling. If we ever shut down or gut the product, you get the unused part
+  of what you prepaid back. Our data comes from public sources we don't control; if a source
+  changes or disappears, we substitute and disclose it in the
+  <a href="/methodology/">methodology changelog</a>.
+  See <a href="/refunds.html">Refunds &amp; cancellation</a> and the
+  <a href="/terms.html">Terms</a> for the full version.
+  Readings are general information from public market data — not financial, legal, or
+  real-estate advice.
+</div>
+</div></body></html>
