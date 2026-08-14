@@ -41,7 +41,14 @@ PAUSED = True
 # When ingestion actually stopped, recorded because "when did you stop using
 # it" is the first question anyone asks later. Kept here rather than in a doc
 # so it cannot drift from the behaviour it describes.
-INGESTION_STOPPED_UTC = "2026-08-13T02:00:00Z"
+# CORRECTED. The first value here was the moment the decision was made, which
+# was wrong: a scheduled refresh completed at 2026-08-13T14:27:12Z — AFTER that
+# timestamp and BEFORE this gate reached main — and committed a full 2026-07
+# Redfin snapshot (commit 5d79b43). Ingestion actually stopped when the gate
+# landed, and this records that instead. A stop time that flatters the record
+# is worse than none: it is the one field somebody will rely on later.
+INGESTION_STOPPED_UTC = "2026-08-14T13:53:43Z"
+LAST_INGESTED_PERIOD = "2026-07"   # committed by 5d79b43, before the gate
 PAUSED_SOURCE = "redfin"
 
 # Reader-facing. Says what is true — the reading is being rebuilt on a new data

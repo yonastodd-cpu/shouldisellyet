@@ -1,8 +1,16 @@
 # Redfin sunset — Phase 0 record
 
-**Ingestion stopped: 2026-08-13T02:00:00Z.** That timestamp is the answer to
+**Ingestion stopped when the gate reached main** — see `INGESTION_STOPPED_UTC`. That timestamp is the answer to
 "when did you stop using it," and it lives in `pipeline/data_pause.py`
 (`INGESTION_STOPPED_UTC`) so it cannot drift from the behaviour it describes.
+
+**A refresh beat the gate.** A scheduled run completed at 2026-08-13T14:27:12Z
+and committed a full 2026-07 Redfin snapshot (commit `5d79b43`) — after the
+decision to stop, before the gate shipped. That data is in the repo, is tagged
+`source='redfin'` like the rest, and is paused along with everything else. The
+stop timestamp was corrected to the moment the gate actually landed rather than
+the moment the decision was made; a stop time that flatters the record is worse
+than none, because it is the one field somebody relies on later.
 
 Phase 0 of the Redfin→RentCast migration. No page was deleted, no URL was
 retired, nothing 404s or redirects, and the site stayed up throughout.
