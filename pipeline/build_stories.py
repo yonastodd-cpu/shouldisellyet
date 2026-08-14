@@ -30,6 +30,10 @@ surface here. Run: python3 pipeline/build_stories.py
 
 import html
 import json
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).parent))
+import data_pause as PAUSE
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -390,6 +394,7 @@ def story_page(case, miss):
 
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{PAUSE.robots_meta()}
 <title>{esc(title)} — ShouldISellYet</title>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{esc(url)}">

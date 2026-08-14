@@ -78,6 +78,7 @@ KINDS = {
 }
 
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
+import data_pause as PAUSE
 
 # Derived, never typed: whatever verdict_copy.json says is the word. Placed
 # here rather than beside KINDS because the copy map is imported below it.
@@ -368,6 +369,27 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     faq_q = f"Is it a good time to sell a home in {city}?"
     faq_a = vc["qa"].format(city=city)
 
+    # ————— REDFIN SUNSET, PHASE 0 —————
+    # The body banner is the least of it: the verdict word and the metric
+    # values are also in the title, the description, both social-card blocks,
+    # the OG image itself and the JSON-LD. A crawler, a social unfurl and a
+    # shared link read those, not the banner. So they are ALL neutralised here,
+    # in one block, and the per-ZIP OG card falls back to the brand image.
+    if not PAUSE.shows_data(z):
+        where = f"{city}, {st} ({z})"
+        title = og_title = PAUSE.title_for(where)
+        desc = og_desc = PAUSE.NOTICE_DESC
+        og_alt = PAUSE.NOTICE_TITLE
+        og_img = f"{SITE}/og/default.png"
+        answer = f"{PAUSE.NOTICE_TITLE} for {where}. {PAUSE.NOTICE_BODY}"
+        stat = ""
+        rows = ""
+        faq_q = f"Why is the reading for {z} unavailable?"
+        faq_a = PAUSE.NOTICE_BODY
+        share_text = f"{PAUSE.NOTICE_TITLE} for {where} on ShouldISellYet."
+        k = dict(k, tag="", hex="#6b6861", soft="#f3f1ea", line="#e7e4dd",
+                 head=PAUSE.NOTICE_TITLE, sub=PAUSE.NOTICE_BODY)
+
     ld = json.dumps({
         "@context": "https://schema.org",
         "@graph": [
@@ -393,6 +415,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
+{PAUSE.robots_meta()}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -530,6 +553,7 @@ def share_stub(z, e, place, meta, has_card):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
+{PAUSE.robots_meta()}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -571,8 +595,14 @@ def state_hub(st, entries, meta):
             f'<span style="color:{hexc}">{tag}</span></span></li>'
             for z, city, tag, hexc in sorted(groups[g], key=lambda t: (t[1], t[0])))
         body.append(f'<h2>{esc(label)}</h2><ul class="hubgrid">{items}</ul>')
-    title = f"Housing market verdicts for every {name} ZIP code — ShouldISellYet"
-    desc = f"Free HOLD / WATCH / ACT verdicts for {len(entries)} {name} ZIP codes, computed from public market data and updated {updated}."
+    # REDFIN SUNSET, PHASE 0: a state hub is a list of ratings, so its title
+    # and description carry the rating vocabulary and the count. Both go.
+    if PAUSE.shows_data():
+        title = f"Housing market verdicts for every {name} ZIP code — ShouldISellYet"
+        desc = f"Free HOLD / WATCH / ACT verdicts for {len(entries)} {name} ZIP codes, computed from public market data and updated {updated}."
+    else:
+        title = PAUSE.title_for(name)
+        desc = PAUSE.NOTICE_DESC
     url = f"{SITE}/zip/{st}/"
     ld = json.dumps({"@context":"https://schema.org","@graph":[
         {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,
@@ -584,6 +614,7 @@ def state_hub(st, entries, meta):
             {"@type":"ListItem","position":3,"name":name,"item":url}]}]}, separators=(",",":"))
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
+{PAUSE.robots_meta()}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -622,6 +653,7 @@ def markets_index(states, meta):
             {"@type":"ListItem","position":2,"name":"Markets by state","item":url}]}]}, separators=(",",":"))
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
+{PAUSE.robots_meta()}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -872,10 +904,21 @@ def main():
     research_months = sorted(p.stem.replace("research-", "") for p in
                              (Path(__file__).parent / "research").glob("research-*.json"))
     if research_months:
-        urls += [f"{SITE}/research/", f"{SITE}/research/methodology.html"]
-        urls += [f"{SITE}/research/{m}/" for m in research_months]
-    urls += [f"{SITE}/zip/{st}/" for st in sorted(by_state)]
-    urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
+        # Paused: these restate the index and the ratings and now carry
+        # noindex, and submitting a noindexed URL tells a crawler two opposite
+        # things at once.
+        if PAUSE.shows_data():
+            urls += [f"{SITE}/research/", f"{SITE}/research/methodology.html"]
+            urls += [f"{SITE}/research/{m}/" for m in research_months]
+    # Paused pages stay live and crawlable — that is how the noindex gets
+    # read — but leave the submitted sitemap so Phase 4 can re-add them in
+    # tranches. State hubs go too: each lists a rating per ZIP.
+    if PAUSE.shows_data():
+        urls += [f"{SITE}/zip/{st}/" for st in sorted(by_state)]
+        urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
+    else:
+        print(f"redfin sunset: {len(eligible) + len(by_state)} ZIP/state URLs "
+              f"held out of the sitemap (pages stay live and noindexed)")
     chunks = write_sitemaps(web, urls, lastmod)
     # scored = every verdict-carrying ZIP in the data (the homepage's basis);
     # pages = the subset with standing pages. Both live so llms.txt can't

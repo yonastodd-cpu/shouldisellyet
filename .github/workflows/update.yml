@@ -42,6 +42,27 @@ jobs:
             echo "deploy=true"  >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # ————— REDFIN SUNSET, PHASE 0 (see pipeline/data_pause.py) —————
+          # Ingestion is stopped. changed=false skips every step that fetches
+          # from or computes on Redfin data; deploy=true keeps the site
+          # rebuilding and shipping, because every generated directory is
+          # gitignored and re-rendered each deploy — skipping the build would
+          # DELETE live URLs, which this migration forbids.
+          #
+          # The ETag probe below is left in place but unreachable: it is the
+          # only remaining Redfin network call in CI, and deleting it would
+          # lose the record of how the gate worked. Restore by removing this
+          # block, not by rewriting what follows.
+          #
+          # KNOWN SIDE EFFECT: eleven downstream steps are gated on `changed`
+          # and do NOT touch Redfin — subscriber alert emails, the Supabase
+          # velocity upsert, the marketing queue generator. They stop too.
+          # That is correct for now: every one of them would publish or notify
+          # on numbers Phase 0 just took down.
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "deploy=true"  >> "$GITHUB_OUTPUT"
+          exit 0
+
           ETAG=$(curl -sI "$DATA_URL" | tr -d '\r' | awk -F'"' 'tolower($0) ~ /^etag:/ {print $2}')
           KNOWN=$(cat .redfin-etag 2>/dev/null || echo "none")
           echo "remote=$ETAG known=$KNOWN"

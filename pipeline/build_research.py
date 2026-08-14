@@ -24,6 +24,7 @@ import argparse
 import csv
 import html as _html
 import json
+import data_pause as PAUSE
 import shutil
 import sys
 from pathlib import Path
@@ -668,6 +669,7 @@ def page(title, desc, canonical, body, og_image="", jsonld=""):
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="/track.js" defer></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{PAUSE.robots_meta()}
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{canonical}">

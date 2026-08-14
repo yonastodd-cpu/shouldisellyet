@@ -66,6 +66,11 @@ def _f(v):
 
 
 def fetch_to_cache(url, cache_dir):
+    import sys as _s, pathlib as _pl
+    _s.path.insert(0, str(_pl.Path(__file__).resolve().parents[1] / "pipeline"))
+    from data_pause import guard_fetch
+    guard_fetch("the Redfin hub exports for case backtests")
+
     """Download once, reuse forever. The raw sources are ~1GB combined, and
     this tool must be re-runnable cheaply: the acceptance test tweaks a
     threshold and re-runs to prove the outputs move, and miss metros need a

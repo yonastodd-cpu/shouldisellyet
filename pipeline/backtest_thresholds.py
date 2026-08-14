@@ -116,11 +116,19 @@ def finish(b):
 
 
 def main():
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--redfin", required=True, help="Redfin ZIP tracker tsv(.gz) path or URL")
+    # REDFIN SUNSET, PHASE 0 — see pipeline/data_pause.py. A local archive
+    # path still works; pulling from the vendor does not.
     ap.add_argument("--fhfa-full", required=True, help="zip,year,chg csv from fetch_fhfa.py --full-out")
     ap.add_argument("--out", default=str(HERE / "backtest_results.json"))
     args = ap.parse_args()
+    if str(getattr(args, "redfin", "")).startswith("http"):
+        import sys as _s, pathlib as _pl
+        _s.path.insert(0, str(_pl.Path(__file__).parent))
+        from data_pause import guard_fetch
+        guard_fetch("a remote Redfin export for a threshold backtest")
 
     print("loading FHFA outcomes…")
     outcomes = load_fhfa_full(args.fhfa_full)

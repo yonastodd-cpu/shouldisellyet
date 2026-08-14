@@ -1,0 +1,306 @@
+{
+ "captured_utc": "2026-08-13T02:00:00Z",
+ "caveat": "public.events is first-party anonymous counting only. It honours DNT/GPC (those visits are never recorded), holds a short window, and carries no organic-search signal. It is NOT a substitute for Search Console and must not be used alone to rank reindex tranches.",
+ "top_zip_paths": [
+  {
+   "path": "/zip/20874/",
+   "sessions": 3,
+   "views": 27
+  },
+  {
+   "path": "/zip/55707/",
+   "sessions": 4,
+   "views": 4
+  },
+  {
+   "path": "/zip/38367/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/76108/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/64474/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/25508/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/64158/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/76035/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/65052/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/56345/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/56150/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/76116/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/06106/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/55430/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/26416/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/56750/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/31513/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/73529/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/23921/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/02814/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/39305/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/55076/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/76903/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/42166/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/55811/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/84523/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/65013/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/56580/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/04555/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/43019/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/87505/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/24935/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/23345/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/37726/",
+   "sessions": 3,
+   "views": 3
+  },
+  {
+   "path": "/zip/56088/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/56653/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/03071/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/56576/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/68846/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/06109/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/56304/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55025/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/15717/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55920/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/56320/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55113/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55971/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/28781/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/60064/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/13730/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/66012/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/47520/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/71834/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55964/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55385/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/55949/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/58072/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/70809/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/62692/",
+   "sessions": 2,
+   "views": 2
+  },
+  {
+   "path": "/zip/16347/",
+   "sessions": 2,
+   "views": 2
+  }
+ ]
+}

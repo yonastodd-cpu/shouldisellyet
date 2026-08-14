@@ -1080,6 +1080,16 @@ let PV_WSI = null, PV_RESEARCH = false;
 // row 08's expansion. Shipped ON by operator decision (2026-08-09) after
 // reviewing the computed cards; ?case=1 forces it for preview regardless.
 const SHOW_CASE_ROW = true;   // flipped on 2026-08-09 by operator decision
+
+// ————— REDFIN SUNSET, PHASE 0 —————
+// Mirrors pipeline/data_pause.PAUSED. This page is committed, not generated,
+// so it carries its own copy of the flag; pipeline/test_data_pause.py asserts
+// the two agree — a homepage still handing out readings after the generators
+// stopped would be the worst of both worlds.
+const DATA_PAUSED = true;
+const PAUSE_NOTICE_TITLE = "This reading is being refreshed";
+const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine. " +
+  "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
 let PV_CASE = null;
 if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
   fetch("data/cases/index.json").then(r => r.ok ? r.json() : null).then(j => {
@@ -1816,6 +1826,23 @@ async function run() {
     // The word comes from VERDICT_COPY, the same map the prose and the share
     // text use. KIND.tag is a fallback only: "strong" was tagged ACT here, so
     // the badge said ACT while the sentence beside it said STRONG.
+    if (DATA_PAUSED) {
+      // Emptied, not covered: the badge, the gauges, the masked preview and
+      // the unlock bar each carry a Redfin-derived value of their own, and a
+      // banner laid over them would leave every one of them in the DOM.
+      $("v-tag").textContent = "";
+      $("v-title").textContent = PAUSE_NOTICE_TITLE;
+      $("v-sub").textContent = PAUSE_NOTICE_BODY;
+      $("v-metrics").innerHTML = "";
+      $("v-stamp").innerHTML = "";
+      $("v-head").style.background = "#f3f1ea";
+      const pv = $("preview"); if (pv) pv.hidden = true;
+      const su = $("sticky-unlock"); if (su) su.style.display = "none";
+      setLocationLine(zip, d.st || "", cachedCity(zip));
+      show($("verdict"), true);
+      $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     $("v-tag").textContent = ((window.VERDICT_COPY || {})[d.l] || {}).word || k.tag;
     $("v-tag").style.color = k.ink;
     $("v-title").textContent = insufficient

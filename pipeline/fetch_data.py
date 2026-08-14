@@ -86,6 +86,12 @@ def _open_stream(source: str):
     MAGIC BYTES, not filename — the legacy tracker is gzipped, the new hub
     CSVs are plain, and a URL tells you nothing either way."""
     if source.startswith("http"):
+        # REDFIN SUNSET, PHASE 0: the stop is on the NETWORK FETCH, not on the
+        # command. Local --input still works — that is how the tests run and
+        # how a re-run against a new vendor's export will run.
+        if "redfin" in source.lower():
+            from data_pause import guard_fetch
+            guard_fetch(f"a remote Redfin export ({source[:60]}…)")
         req = urllib.request.Request(source, headers={"User-Agent": "shouldisellyet-pipeline"})
         raw = urllib.request.urlopen(req, timeout=600, context=_ssl_context())
     else:
@@ -588,6 +594,7 @@ def fetch_mortgage_rates():
 
 
 def main():
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", default=REDFIN_ZIP_TRACKER,
                     help="Local CSV/TSV(.gz) path or URL (default: Redfin ZIP file, "

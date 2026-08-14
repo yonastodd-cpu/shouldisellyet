@@ -34,6 +34,7 @@ import argparse
 import csv
 import html
 import json
+import data_pause as PAUSE
 import re
 import sys
 from pathlib import Path
@@ -279,6 +280,7 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{PAUSE.robots_meta()}
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{url}">
@@ -457,6 +459,7 @@ def hub_page(index, names, period):
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{PAUSE.robots_meta()}
 <title>Housing market by metro area — ShouldISellYet</title>
 <meta name="description" content="Per-ZIP housing ratings for {len(index)} U.S. metro areas, updated monthly.">
 <link rel="canonical" href="{SITE}/metro/">
