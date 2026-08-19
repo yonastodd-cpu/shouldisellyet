@@ -1,0 +1,156 @@
+name: Market data acquisition (manual, metered)
+
+# WHY THIS IS A SEPARATE WORKFLOW, AND NOT A STEP IN update.yml.
+#
+# update.yml runs on a Mon/Thu cron AND on every push touching web/** or
+# pipeline/**. A metered, paid API runner does not belong on either trigger:
+# a doc typo pushed on a Tuesday would spend money, and the twice-weekly cron
+# would re-buy a monthly dataset eight times a month. Phase 5 of the migration
+# picks a refresh cadence (docs/migration/PHASE1-PLUS.md); until it does,
+# there is deliberately no schedule here at all.
+#
+# The other reason is mechanical: archive/ is gitignored, so a fresh runner
+# has no archive. A loader step inside update.yml would find an empty
+# directory every single time and silently do nothing — worse than absent,
+# because the log would read like it worked.
+#
+# WHERE THE DATA ACTUALLY PERSISTS. The disk archive is a working copy that
+# lives for one run, plus 90 days as an artifact for audit. The durable copy
+# is market_stats.raw_json in Supabase — which is precisely why schema-v35
+# makes that column NOT NULL. Re-parsing "for free" after a formula change
+# therefore reads from the database in CI, not from disk; locally the archive
+# persists and --parse-only works directly against it.
+#
+# IDEMPOTENCY ACROSS RUNS comes from pipeline/rentcast_jobs.csv, which IS
+# committed. A ZIP marked done or no_data is never re-called, so a second run
+# picks up where the first stopped even though the archive did not survive.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "Tiers from tier_interim.csv, comma-separated (A, or A,B)"
+        required: true
+        default: "A"
+      ceiling:
+        description: "Hard stop after this many requests. Retries count. NO DEFAULT — set it to your included quota."
+        required: true
+      dry_run:
+        description: "Size the job without spending anything"
+        type: boolean
+        default: true
+      source:
+        description: "Provenance label written to market_stats.source"
+        required: true
+        default: "rentcast"
+
+# Two concurrent runs would race the same quota and the same ledger, and the
+# ledger would lose. Queue rather than cancel: a cancelled run has already
+# spent its requests and would leave the ledger describing fewer than were
+# billed.
+concurrency:
+  group: market-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # A fat-fingered ceiling is the one input error that costs real money,
+      # and it costs it silently. 25,000 is the largest plan's included quota
+      # — above that every request is overage, which is never something to
+      # discover from an invoice.
+      - name: Validate the ceiling
+        run: |
+          CEIL="${{ inputs.ceiling }}"
+          case "$CEIL" in
+            ''|*[!0-9]*) echo "::error::ceiling must be a positive integer, got '$CEIL'"; exit 1 ;;
+          esac
+          if [ "$CEIL" -lt 1 ]; then
+            echo "::error::ceiling must be at least 1"; exit 1
+          fi
+          if [ "$CEIL" -gt 25000 ]; then
+            echo "::error::ceiling $CEIL exceeds 25,000 — the largest plan's \
+          included quota. Everything above it is overage. If that is genuinely \
+          intended, raise this guard in the workflow in its own commit, so the \
+          decision is reviewable."
+            exit 1
+          fi
+          echo "ceiling: $CEIL requests"
+
+      # Always, including on live runs. It costs nothing, and it puts the size
+      # of the job in the log immediately above the spend that follows.
+      - name: Size the job
+        run: |
+          python3 pipeline/fetch_rentcast.py \
+            --tier "${{ inputs.tier }}" --dry-run
+
+      - name: Fetch (LIVE — spends requests)
+        if: ${{ inputs.dry_run == false }}
+        env:
+          RENTCAST_API_KEY: ${{ secrets.RENTCAST_API_KEY }}
+        run: |
+          python3 pipeline/fetch_rentcast.py \
+            --tier "${{ inputs.tier }}" \
+            --ceiling "${{ inputs.ceiling }}"
+
+      # Free and idempotent. Runs even if the fetch hit its ceiling partway:
+      # whatever landed on disk should reach the durable store before the
+      # runner is torn down and the archive goes with it.
+      - name: Load into Supabase
+        if: ${{ inputs.dry_run == false && always() }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 pipeline/load_market_stats.py --source "${{ inputs.source }}"
+
+      # 90 days is GitHub's hard cap for public repos (see update.yml's note).
+      # This is the audit copy; Supabase holds the permanent one.
+      # always(): a fetch that died at ZIP 400 still bought 400 payloads.
+      # They exist on disk and must reach the artifact before teardown.
+      - name: Upload the raw archive
+        if: ${{ inputs.dry_run == false && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rentcast-${{ inputs.tier }}-${{ github.run_id }}
+          path: archive/rentcast
+          retention-days: 90
+          compression-level: 6
+          if-no-files-found: warn
+
+      # The ledger is the checkpoint that makes the NEXT run skip what this
+      # one bought. If this commit is lost, the next run re-buys Tier A.
+      #
+      # always() is load-bearing, not defensive. The runner checkpoints after
+      # every single ZIP, so a fetch that failed at ZIP 400 leaves a ledger
+      # recording 399 purchases. Skipping this step on failure would discard
+      # the record of money already spent — the exact double-buy this step
+      # exists to prevent, triggered by the failure most likely to cause it.
+      - name: Commit the ledger
+        if: ${{ inputs.dry_run == false && always() }}
+        run: |
+          git config user.name "sisy-bot"
+          git config user.email "bot@users.noreply.github.com"
+          # archive/ is gitignored — artifacts and Supabase only.
+          git add pipeline/rentcast_jobs.csv pipeline/rentcast_stats.csv || true
+          git diff --cached --quiet && { echo "no ledger change"; exit 0; }
+          git commit -m "Market acquisition: tier ${{ inputs.tier }} [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; exit 0; fi
+            echo "push rejected — rebasing onto latest main (attempt $i)"
+            git pull --rebase --autostash origin main || true
+            sleep $((RANDOM % 5 + 2))
+          done
+          # Not a warning. A lost ledger means the next run pays again.
+          echo "::error::could not push the ledger after 5 attempts — do NOT \
+          re-run acquisition until it is committed, or Tier A gets bought twice."
+          exit 1
