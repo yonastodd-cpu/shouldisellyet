@@ -31,7 +31,7 @@ jobs:
     outputs:
       deploy: ${{ steps.check.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Decide rebuild vs deploy-only
         id: check
@@ -76,7 +76,7 @@ jobs:
             echo "No new data — skipping rebuild."
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.check.outputs.deploy == 'true'
         with:
           python-version: "3.12"
@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload raw-source archive (90-day retention)
         if: steps.check.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: raw-sources-${{ steps.archive.outputs.month }}
           path: ${{ steps.archive.outputs.dir }}
@@ -348,7 +348,7 @@ jobs:
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: web
 
@@ -361,4 +361,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
