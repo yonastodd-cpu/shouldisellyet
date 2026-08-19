@@ -205,10 +205,24 @@ What this means in practice:
 - **Confirm the property first.** If it is live with pre-pause history, Lever 1
   works as written and this correction shrinks to a footnote. If not,
   everything below applies.
-- **The interim ranking is mandatory, not a fallback.** Rank Tier A by
-  housing units x FHFA-covered x RDC not `quality_flagged` — a "this ZIP has
-  enough market to say something about" ordering rather than a demand
-  ordering. Say so on the page that explains why those 1,000 were chosen.
+- **The interim ranking is mandatory, not a fallback.** Built:
+  `pipeline/rank_interim.py` writes `pipeline/tier_interim.csv` from
+  committed data alone, no network and no quota. **10,633 ZIPs clear the
+  gates** — standing page, ACS housing units >= 500, FHFA-covered, a
+  Realtor.com row that is not `quality_flag`ged — so the 5,000-ZIP paid tier
+  can be filled with quality ZIPs and still leaves 5,633 for Tier C.
+  Ordering is owner-occupied units descending, the closest free proxy to
+  "how many people here could plausibly ask whether to sell."
+
+  **Its curve is flat where the plan assumed steep.** Tier A's 1,000 ZIPs
+  carry 24.4% of eligible owner-occupied stock and the full 5,000 carry
+  76.5%. Housing supply is far more evenly spread than search demand, so
+  this cannot reproduce the "a few thousand ZIPs carry the large majority of
+  impressions" concentration Lever 1's cost argument leans on. Tiering by
+  this proxy buys less focus than an impressions split would — which is an
+  argument for reading the $449 Scale option in correction 2 as live rather
+  than settled. Say which ordering was used on the page that explains why
+  those 1,000 were chosen.
 - **Verify and connect regardless**, today. Even with zero ZIP impressions it
   earns the coverage and indexing diagnostics that Phase 4 needs to watch
   deindex-to-reindex, plus query data on the four still-indexed URLs, and it
