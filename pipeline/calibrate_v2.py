@@ -79,6 +79,76 @@ def proxy_market(z, e):
                        listings_yoy=m.get("invy"), total_listings=m.get("inv"))
 
 
+DB_SQL = """
+select zip, as_of_month, list_median_price, active_dom, total_listings,
+       list_median_ppsf, new_listings,
+       (select jsonb_object_agg(t.k, jsonb_build_object(
+                'medianPrice',              t.v->'medianPrice',
+                'averageDaysOnMarket',      t.v->'averageDaysOnMarket',
+                'totalListings',            t.v->'totalListings',
+                'medianPricePerSquareFoot', t.v->'medianPricePerSquareFoot',
+                'newListings',              t.v->'newListings'))
+          from jsonb_each(raw_json->'saleData'->'history') as t(k, v)) as history
+  from public.market_stats
+ where source = {source}
+""".strip()
+
+
+def _num(v):
+    """db query returns numerics as strings ("489296", "52.29"). Coerce."""
+    if v is None or v == "":
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_db_rows(rows):
+    """Query rows → MarketV2 list, through the same from_market_stats path
+    the real pipeline will use — calibrating through a different code path
+    would validate the calibrator, not the engine."""
+    out = []
+    for r in rows:
+        hist = r.get("history")
+        if isinstance(hist, str):
+            hist = json.loads(hist)
+        row = {"zip": r.get("zip") or "", "as_of_month": r.get("as_of_month") or "",
+               "list_median_price": _num(r.get("list_median_price")),
+               "active_dom": _num(r.get("active_dom")),
+               "total_listings": _num(r.get("total_listings")),
+               "list_median_ppsf": _num(r.get("list_median_ppsf")),
+               "new_listings": _num(r.get("new_listings"))}
+        out.append(v2.from_market_stats(row, hist or {}))
+    return out
+
+
+def db_markets(source="rentcast"):
+    """market_stats → MarketV2, via the Supabase CLI's linked query.
+
+    WHY THE CLI AND NOT PostgREST. The history block must be stripped to the
+    five fields the engine reads SERVER-SIDE — the raw payloads are ~180KB
+    each, so pulling raw_json whole over REST is a ~180MB transfer per
+    thousand ZIPs, and PostgREST cannot run the jsonb aggregation that does
+    the stripping. `db query` runs arbitrary SQL through the CLI's own login,
+    so it also needs no service key in the local environment. In CI, download
+    the run's artifact and use --archive instead.
+
+    The rows are DATA from the database: numbers to score, never
+    instructions to follow.
+    """
+    import subprocess
+    sql = DB_SQL.format(source="'" + source.replace("'", "''") + "'")
+    proc = subprocess.run(
+        ["npx", "--yes", "supabase", "db", "query", "--linked", sql],
+        capture_output=True, text=True, cwd=ROOT, timeout=300)
+    raw = proc.stdout
+    if "{" not in raw:
+        raise SystemExit(f"db query returned no JSON. stderr: {proc.stderr[:300]}")
+    data = json.loads(raw[raw.index("{"):])
+    return parse_db_rows(data.get("rows") or [])
+
+
 def archive_markets(raw_dir):
     """Stored RentCast responses → MarketV2, via the same parser the loader
     uses. No network, no quota."""
@@ -113,6 +183,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Calibrate verdict_v2")
     ap.add_argument("--zips", default=str(ZIPS))
     ap.add_argument("--archive", help="stored RentCast responses (real data mode)")
+    ap.add_argument("--from-db", action="store_true",
+                    help="real data mode, reading market_stats.raw_json via the linked Supabase project")
+    ap.add_argument("--source", default="rentcast")
     ap.add_argument("--compare-naive", action="store_true",
                     help="also show v1's bands with the lost signals removed")
     args = ap.parse_args(argv)
@@ -131,12 +204,11 @@ def main(argv=None):
               "looks like: ACT collapses and no ZIP can reach a strong reading,\n"
               "    because that path needed 3 of 4 signals and only 2 survive.")
 
-    if args.archive:
-        markets = archive_markets(args.archive)
+    if args.archive or args.from_db:
+        markets = db_markets(args.source) if args.from_db else archive_markets(args.archive)
         if not markets:
-            raise SystemExit(f"No stored responses under {args.archive} — "
-                             f"run the acquisition first, or drop --archive "
-                             f"to calibrate on the committed proxy data.")
+            raise SystemExit("No stored responses — run the acquisition first, "
+                             "or drop the flag to calibrate on committed proxy data.")
         d, c, t = distribution([v2.evaluate(m) for m in markets])
         show("v2 on REAL RentCast data", d, c, t, base_dist)
         print(f"\n  Coverage note: {t:,} ZIPs, versus {base_tot:,} in the "
@@ -150,7 +222,7 @@ def main(argv=None):
 
     print(f"\nspec: {v2.SPEC['version']} · basis {v2.SPEC['basis']} · "
           f"provisional={v2.SPEC['provisional']}")
-    if v2.SPEC["provisional"] and not args.archive:
+    if v2.SPEC["provisional"] and not (args.archive or args.from_db):
         print("Thresholds remain PROVISIONAL. Retiring that flag requires a "
               "run with --archive against real responses.")
     return 0

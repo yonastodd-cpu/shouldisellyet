@@ -85,6 +85,32 @@ less evidence, so it should call fewer ACTs; adjusting thresholds until the
 old distribution reappeared would manufacture confidence the data no longer
 supports. The comparison is a smoke alarm, not a target.
 
+## First real-data calibration — Tier A, 2026-08-19
+
+`calibrate_v2.py --from-db` against the 1,000 acquired Tier A ZIPs, decomposed
+so sample bias, the engine port, and the data change are not read as one
+number:
+
+| step | isolates | HOLD | ACT | strong |
+|---|---|---|---|---|
+| v1 national (Jun) | — | 46.4% | 28.3% | 4.1% |
+| v1, Tier A only (Jun) | sample composition | 49.9% | 13.2% | 6.3% |
+| v2 proxy, Tier A (Jun) | the engine port | 60.5% | 13.5% | 1.6% |
+| v2 real RentCast (Aug) | vendor + two months | 68.8% | 9.3% | 2.7% |
+
+**The port itself holds ACT flat on identical inputs (13.2% → 13.5%)** — the
+plan's "most of the country flips" test, passed on a like-for-like sample.
+The large headline drift is composition: Tier A is the 1,000 largest
+owner-occupied ZIPs, which are simply healthier markets than the national
+tail. The v1→v2 shift that does exist is WATCH→HOLD (fewer 1–2 point
+combinations available) and a tightened strong path, both by design.
+
+The final step — proxy-June to real-August — mixes vendor behaviour with two
+months of genuine market movement and cannot be separated with one vendor's
+12-month history. It is the remaining reason the thresholds stay provisional:
+resolving it needs either Tier B's broader sample or a second month of
+RentCast data to compare against its own prior.
+
 ## Why the numbers are provisional
 
 They were fitted in **proxy mode** — v2's logic fed the three surviving
