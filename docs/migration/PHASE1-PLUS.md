@@ -156,39 +156,65 @@ Each verified against the code before being written down.
 
 | Plan said | Actually |
 |---|---|
-| Rank ZIPs by 90-day GSC impressions | **There is no Search Console.** It was never connected; Phase 0 flagged connecting it as on the critical path and it still is not done. |
+| Rank ZIPs by 90-day GSC impressions | Phase 0 said Search Console was never connected. **A `google-site-verification` TXT record is live on the domain**, so a property was verified at some point — but even if it is still active, every ZIP page is `noindex` and accrues no impressions. The ranking cannot exist before the reindex it is meant to order. |
 | 38k ZIP universe; full sweep costs $644 on Scale | The site has **22,874** ZIP pages. 22,874 is inside Scale's 25,000 included quota, so a full national sweep is **$449 flat**, not $644. |
 | Design v2 on RentCast fields alone; homes-sold is a nice-to-have supplement | Months of supply is `inventory ÷ homes_sold` and is the **highest-weighted signal in the engine**. RentCast has no `homes_sold`. RentCast-alone deletes the top danger check and one of four strength checks. |
 | Realtor.com is a future free supplement pending clearance | `load_rdc()` in `fetch_data.py` already pulls the Realtor.com ZIP file **every monthly run, in production, today**. The licence question is live now, not in Phase 3. |
 | Build Tier C on FHFA + Census | FHFA is **already built** (`fetch_fhfa.py`, `fhfa_zip.csv`, 19,023 ZIPs) — and it is annual and lagged, which its own module docstring calls "a benchmark and backtest source, never an early-warning signal." It cannot carry a timely reading alone. |
 | — (not mentioned) | Re-enabling data un-gates `notify_changes.py` and `check_watches.py`. The first post-cutover run will email subscribers about verdict changes that are a **source change, not a market change**. |
 
-## 1. No Search Console — this blocks Day 0
+## 1. The impression ranking cannot exist before the reindex it orders
 
 Lever 1's ranking step, the Tier A/B split, Phase 4's tranche order and Phase
-5's promote/demote review all take 90-day GSC impressions as an input. That
-input does not exist. `docs/migration/phase0-traffic-snapshot.json` carries its
-own refusal in a `caveat` field: first-party anonymous counting that honours
-DNT/GPC, an 8-day window, 2,021 distinct ZIP paths of 22,874, a maximum of 27
-views on any page, 17 Google referrals total, no organic-search signal — "NOT a
-substitute for Search Console and must not be used alone to rank reindex
-tranches."
+5's promote/demote review all take 90-day GSC impressions as an input.
 
-This is a lead-time problem, not a task. Search Console accrues forward from
-verification; there is no backfill for a property that was never verified. A
-90-day impression ranking cannot exist 90 days before verification, whatever is
-spent on RentCast in the meantime.
+Phase 0 recorded that Search Console was never connected. That is not quite
+right: `shouldisellyet.com` carries a live
+`google-site-verification=Pl42pMKLLqaISlVPLHJAv5_5hMMjLCt10ZkR-pnNpO0` TXT
+record (DNS at Cloudflare, hosting on GitHub Pages), which is the Domain-
+property verification method. Either a property is verified right now under
+some Google account, or one was verified and later removed and the record
+outlived it. **Checking which is the highest-value open item in this
+document** — a live property may hold up to 16 months of history, which is the
+only way a pre-pause impression ranking can exist at all.
 
-Options, in order of preference:
-- **Verify the property now**, then run Tier A against a defensible interim
-  ranking (see below) and let GSC take over the Tier B/C ordering and the
-  Phase 5 review once it has data.
-- Rank the interim tier by **housing units × FHFA-covered × RDC not
-  quality-flagged** — a "this ZIP has enough market to say something about"
-  ordering rather than a demand ordering. It is not traffic, and the plan
-  should say so where it says why these 1,000 were chosen.
-- Do not defer the whole migration 90 days waiting for impressions. Do not
-  rank by the events table.
+But verifying today does not solve Lever 1, because of a circular dependency
+the plan does not name:
+
+- Impressions accrue only for URLs that appear in search results.
+- Every one of the 22,874 ZIP pages serves `noindex,follow` (verified live),
+  so none of them can appear, so none of them can accrue impressions.
+- The live submitted sitemap is **four URLs** — `/`, `/report.html`,
+  `/press.html`, `/zip/`. Phase 0 holds every ZIP, state hub and research URL
+  out of it by design.
+- Phase 4 removes `noindex` in tranches **ordered by those impressions**.
+
+So the ranking that decides which pages to un-noindex can only be produced
+after they are un-noindexed. Verifying Search Console starts the clock; it
+does not turn it back.
+
+`docs/migration/phase0-traffic-snapshot.json` cannot substitute — it carries
+its own refusal in a `caveat` field: first-party anonymous counting that
+honours DNT/GPC, an 8-day window, 2,021 distinct ZIP paths of 22,874, a
+maximum of 27 views on any page, 17 Google referrals total, no organic-search
+signal, "NOT a substitute for Search Console and must not be used alone to
+rank reindex tranches."
+
+What this means in practice:
+
+- **Confirm the property first.** If it is live with pre-pause history, Lever 1
+  works as written and this correction shrinks to a footnote. If not,
+  everything below applies.
+- **The interim ranking is mandatory, not a fallback.** Rank Tier A by
+  housing units x FHFA-covered x RDC not `quality_flagged` — a "this ZIP has
+  enough market to say something about" ordering rather than a demand
+  ordering. Say so on the page that explains why those 1,000 were chosen.
+- **Verify and connect regardless**, today. Even with zero ZIP impressions it
+  earns the coverage and indexing diagnostics that Phase 4 needs to watch
+  deindex-to-reindex, plus query data on the four still-indexed URLs, and it
+  starts accruing the moment Tranche 1 lifts `noindex` on Tier A.
+- Do not defer the migration 90 days waiting for impressions that cannot
+  arrive. Do not rank by the events table.
 
 ## 2. The universe is 22,874 and that changes the cost tradeoff
 
