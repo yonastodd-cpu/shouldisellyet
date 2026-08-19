@@ -1,8 +1,13 @@
 # reading-methodology-v2 — the frozen spec
 
-Status: **provisional.** The logic is frozen; the numbers are not. Retiring
-`SPEC["provisional"]` requires `calibrate_v2.py --archive` against real
-RentCast responses, and a commit that says so.
+Status: **calibrated.** Retired from provisional 2026-08-19 after a
+`--from-db` calibration against 5,000 real Tier A+B responses. Two volume
+thresholds were percentile-matched to the active-listing basis — the ported
+numbers left them functionally dead (dom_stretching firing 0.8% vs an
+intended 13.2%) — and the price thresholds ported unchanged, firing within a
+point of the sale basis. Full record: `TIER-B-GATE.md`. Current numbers live
+in `verdict_v2.SPEC` and are pinned by test; changing one requires re-running
+the calibration.
 
 Implemented in `pipeline/verdict_v2.py`. Not yet wired into the site — Phase
 4 switches the pipeline over, per tranche.

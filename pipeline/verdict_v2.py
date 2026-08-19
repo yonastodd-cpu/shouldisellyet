@@ -53,12 +53,22 @@ from typing import Optional
 SPEC = {
     "version": "reading-methodology-v2",
     "basis": "active listings",
-    # See the module docstring: True until calibrated on real RentCast data.
-    "provisional": True,
-    "price_fast": -0.05,      # median list price YoY below this → 3 points
+    # Calibrated against real Tier A+B responses, 2026-08-19 (5,000 ZIPs).
+    # See docs/migration/TIER-B-GATE.md for the refit that retired this.
+    "provisional": False,
+    "price_fast": -0.05,      # median list price YoY below this → 3 points.
+                              # v1's number, unchanged: list-price YoY fired
+                              # within 1pt of sale-price YoY on real data.
     "price_slow": -0.02,      # → 2 points
-    "dom_stretch": 0.40,      # active DOM YoY above this → 1 point
-    "inventory_surge": 0.50,  # total listings YoY above this → 1 point
+    # The two volume thresholds are PERCENTILE-MATCHED to the new basis, not
+    # ported. Active-listing pools are anchored by stale inventory, so their
+    # YoY swings are damped: at v1's +0.40, dom_stretching fired on 0.8% of
+    # real ZIPs versus the 13.2% the same markets showed on the sale basis —
+    # a functionally dead signal. The refit holds SENSITIVITY constant (the
+    # share of markets flagged) instead of the number: matched values were
+    # +0.085 and +0.277, rounded to defensible figures below.
+    "dom_stretch": 0.10,      # active DOM YoY above this → 1 point
+    "inventory_surge": 0.30,  # total listings YoY above this → 1 point
     "red": 3,                 # v1 used 4; the only band that moved
     "yellow": 1,
     # Seller's-market signals. v1 needed 3 of 4; two of those four died with
@@ -66,8 +76,10 @@ SPEC = {
     # is left. A "strong" reading renders as ACT — it tells somebody to sell
     # into a hot market — so the conservative error is the right one.
     "price_surge": 0.05,
-    "dom_shrink": -0.15,
-    "inventory_drop": -0.15,
+    "dom_shrink": -0.20,      # tightened: -0.15 OVER-fired on the damped
+                              # basis (29.7% vs the intended 19.2%); matched
+                              # value -0.202.
+    "inventory_drop": -0.15,  # matched almost exactly (-0.144); unchanged.
     "strong_min": 3,
     "min_known": 2,           # below this, no reading is offered at all
 }

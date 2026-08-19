@@ -166,12 +166,14 @@ def test_every_reading_records_its_basis():
     assert v2.to_compact(v, m(list_price_yoy=-0.08))["b"] == "active listings"
 
 
-def test_spec_is_marked_provisional_until_calibrated_on_real_data():
-    """Retiring this flag is a deliberate act that requires a
-    calibrate_v2.py --archive run against real RentCast responses."""
-    assert SPEC["provisional"] is True, (
-        "If this was retired deliberately after an --archive calibration, "
-        "update this test in the same commit and say so in the message.")
+def test_spec_was_calibrated_before_the_flag_was_retired():
+    """provisional was retired 2026-08-19 after a --from-db calibration on
+    5,000 real Tier A+B responses (docs/migration/TIER-B-GATE.md). The two
+    volume thresholds are percentile-matched to the active-listing basis;
+    changing any threshold again requires re-running that calibration."""
+    assert SPEC["provisional"] is False
+    assert SPEC["dom_stretch"] == 0.10 and SPEC["inventory_surge"] == 0.30
+    assert SPEC["dom_shrink"] == -0.20 and SPEC["inventory_drop"] == -0.15
 
 
 # ————— building from stored payloads —————
