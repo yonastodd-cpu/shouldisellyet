@@ -60,21 +60,46 @@ def preheader(text):
 
 
 def load_dir(path):
-    """{zip: level} from a directory of {STATE}.json files."""
+    """{zip: (level, basis)} from a directory of {STATE}.json files.
+
+    The basis rides along because a level alone cannot tell a market change
+    from a source change. Legacy readings carry no `b` field at all, and that
+    absence is how they are recognised.
+    """
     out = {}
     for f in glob.glob(os.path.join(path, "*.json")):
         try:
             for z, d in json.load(open(f)).items():
-                out[z] = d["l"]
+                out[z] = (d["l"], d.get("b", ""))
         except (json.JSONDecodeError, KeyError):
             continue
     return out
 
 
 def diff_verdicts(old, new):
-    """ZIPs whose level changed: {zip: (old_level, new_level)}."""
-    return {z: (old[z], lvl) for z, lvl in new.items()
-            if z in old and old[z] != lvl}
+    """ZIPs whose level changed: {zip: (old_level, new_level)}.
+
+    SUPPRESSES ZIPs whose basis changed between the two snapshots. The
+    migration re-scores every released ZIP on active-listing data, and some
+    of them will land on a different level for that reason alone. Mailing a
+    homeowner "your market moved to ACT" when what actually moved was our
+    data vendor is the single worst email this site could send, and it would
+    go out in a burst on the day of each tranche.
+
+    This is per-ZIP and automatic, so there is no global switch to remember
+    to turn back on afterwards: once a ZIP's second run compares
+    active-listing to active-listing, its alerts resume by themselves.
+    """
+    out = {}
+    for z, (lvl, basis) in new.items():
+        if z not in old:
+            continue
+        old_lvl, old_basis = old[z]
+        if old_basis != basis:
+            continue                  # source change, not a market change
+        if old_lvl != lvl:
+            out[z] = (old_lvl, lvl)
+    return out
 
 
 def render_email(zip_code, old_level, new_level, address="", token="", upsell=False):

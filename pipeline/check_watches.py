@@ -212,9 +212,33 @@ def process_subscriber(sub, data_dir, market_rate):
     entry = load_zip_data(data_dir, sub.get("zip", ""))
     current_median = latest_price(entry) if entry else None
 
+    # The reading's basis. Legacy entries carry no `b` at all, so an existing
+    # watch (no `basis` key) matches a legacy entry and nothing changes today.
+    entry_basis = (entry or {}).get("b", "")
+
     updated, emails = [], []
     vel_state = sub.get("_vel_state")   # attached by main() from zip_velocity
     for w in watches:
+        # ——— the migration guard ———
+        # A watch scales the subscriber's own baseline by the current median.
+        # When that median stops being a closed-sale figure and becomes a
+        # list-price figure it steps UP for reasons that have nothing to do
+        # with this market, and every threshold above it would cross at once.
+        # So the first run on a new basis re-baselines silently and sends
+        # nothing — exactly what the velocity branch below already does for a
+        # first real read. Per-watch and automatic: once a watch has been
+        # re-baselined its alerts resume by themselves, with no global switch
+        # left switched off.
+        if w.get("basis", "") != entry_basis:
+            if w.get("metric") == "velocity":
+                fresh = vel_state if vel_state in VEL_RANK else w.get("baseline", "unknown")
+                updated.append({**w, "basis": entry_basis, "baseline": fresh})
+            else:
+                v = compute_metric(w["metric"], inputs, current_median, market_rate)
+                c = is_crossed(v, w["direction"], w["threshold"])
+                updated.append({**w, "basis": entry_basis,
+                                "crossed": bool(c) if c is not None else bool(w.get("crossed"))})
+            continue
         if w.get("metric") == "velocity":
             base = w.get("baseline", "unknown")
             cur = vel_state

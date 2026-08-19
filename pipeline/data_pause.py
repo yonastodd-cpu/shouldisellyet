@@ -35,6 +35,9 @@ WHAT PAUSING DOES NOT DO
     this migration forbids.
 """
 
+import json
+from pathlib import Path
+
 # ————— the switch —————
 PAUSED = True
 
@@ -68,20 +71,87 @@ NOTICE_DESC = ("This market reading is being rebuilt on a new data engine and "
                "market data.")
 
 
-def shows_data(zip_code=None):
+# ————— Phase 4: the tranche allowlist —————
+#
+# Phase 0 was all-or-nothing. Phase 4 releases ZIPs in tranches, and the unit
+# of release is this file: pipeline/tranches.json, one entry per tranche with
+# the ZIPs it covers and when it went out. Absent or empty means nothing is
+# released, which is the safe default — a missing file pauses everything
+# rather than publishing everything.
+#
+# THE TRAP THIS AVOIDS. An allowlist that only asks "is this ZIP released?"
+# would republish the numbers Phase 0 withdrew, because the entries in
+# web/data/zips are still Redfin-derived. Releasing a ZIP is therefore TWO
+# conditions: it is in a released tranche, AND the reading being rendered
+# carries the new basis. A ZIP promoted before its v2 data lands stays dark
+# instead of quietly resurrecting the old vendor's figures.
+TRANCHES = Path(__file__).parent / "tranches.json"
+
+# The only basis that may publish while PAUSED. Matches verdict_v2.SPEC and
+# the `b` field its to_compact() writes onto every reading.
+RELEASED_BASIS = "active listings"
+
+# Legacy readings carry no basis at all, which is exactly how they are
+# recognised: absence is the marker.
+LEGACY_BASIS = ""
+
+_allowlist = None
+
+
+def released_zips(path=None):
+    """The union of every released tranche. Cached; pass a path to reload."""
+    global _allowlist
+    if _allowlist is not None and path is None:
+        return _allowlist
+    out = set()
+    try:
+        data = json.loads(Path(path or TRANCHES).read_text())
+        for t in data.get("tranches", []):
+            if t.get("released_utc"):
+                out.update(str(z) for z in t.get("zips", []))
+    except (OSError, ValueError):
+        out = set()          # unreadable == nothing released, never everything
+    if path is None:
+        _allowlist = out
+    return out
+
+
+def shows_data(zip_code=None, basis=None):
     """Whether a surface may display a reading or a market figure.
 
-    Takes a ZIP so Phase 4 can re-enable in tranches by allowlist without
-    touching any caller again.
+    While paused, a ZIP shows data only if it is in a released tranche AND
+    the reading offered carries RELEASED_BASIS. Callers that pass no basis
+    get the allowlist check alone — fine for surfaces deciding layout, but
+    anything rendering an actual number should pass it, because that second
+    condition is the whole guard against republishing withdrawn data.
     """
-    return not PAUSED
+    if not PAUSED:
+        return True
+    if zip_code is None or zip_code not in released_zips():
+        return False
+    return basis is None or basis == RELEASED_BASIS
 
 
-def robots_meta():
-    """The one meta tag that deindexes. Empty string when live, so callers can
-    interpolate it unconditionally."""
-    return ('<meta name="robots" content="noindex,follow">'
-            if PAUSED else "")
+def wrongly_promoted(zip_code, basis):
+    """True for a ZIP that is released but whose reading is still legacy.
+
+    Not an error state to crash on — a build must not take the site down —
+    but it is a release that did not happen, and build_pages counts and
+    reports these rather than letting them pass as ordinary paused pages.
+    """
+    return (PAUSED and zip_code in released_zips()
+            and basis != RELEASED_BASIS)
+
+
+def robots_meta(zip_code=None):
+    """The one meta tag that deindexes. Empty when the page may be indexed.
+
+    Per-ZIP now: a released ZIP drops the noindex, everything else keeps it.
+    Callers passing nothing keep the global behaviour, which is correct for
+    the metro, story and research pages — none of which are released per-ZIP.
+    """
+    live = not PAUSED or (zip_code is not None and zip_code in released_zips())
+    return "" if live else '<meta name="robots" content="noindex,follow">'
 
 
 def notice_html(css_class="pause-notice"):

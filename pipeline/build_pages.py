@@ -375,7 +375,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # the OG image itself and the JSON-LD. A crawler, a social unfurl and a
     # shared link read those, not the banner. So they are ALL neutralised here,
     # in one block, and the per-ZIP OG card falls back to the brand image.
-    if not PAUSE.shows_data(z):
+    if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
         where = f"{city}, {st} ({z})"
         title = og_title = PAUSE.title_for(where)
         desc = og_desc = PAUSE.NOTICE_DESC
@@ -415,7 +415,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-{PAUSE.robots_meta()}
+{PAUSE.robots_meta(z)}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -917,8 +917,26 @@ def main():
         urls += [f"{SITE}/zip/{st}/" for st in sorted(by_state)]
         urls += [f"{SITE}/zip/{z}/" for z, _ in eligible]
     else:
-        print(f"redfin sunset: {len(eligible) + len(by_state)} ZIP/state URLs "
-              f"held out of the sitemap (pages stay live and noindexed)")
+        # Phase 4: a released ZIP re-enters the submitted sitemap; everything
+        # else stays out. State hubs stay out until the pause lifts entirely —
+        # each lists a rating per ZIP, so a hub for a part-released state
+        # would publish withheld readings beside released ones.
+        live = [z for z, _ in eligible if PAUSE.shows_data(z)]
+        urls += [f"{SITE}/zip/{z}/" for z in live]
+        held = len(eligible) - len(live) + len(by_state)
+        print(f"redfin sunset: {held:,} ZIP/state URLs held out of the "
+              f"sitemap (pages stay live and noindexed)")
+        if live:
+            print(f"phase 4: {len(live):,} released ZIP URLs re-added to the sitemap")
+        # A ZIP released before its v2 reading landed renders legacy numbers.
+        # shows_data() already refuses to show them; this reports the mistake
+        # rather than letting it pass as an ordinary paused page.
+        wrong = [z for z, e in eligible
+                 if PAUSE.wrongly_promoted(z, e.get("b", PAUSE.LEGACY_BASIS))]
+        if wrong:
+            print(f"::warning::phase 4: {len(wrong):,} released ZIP(s) still "
+                  f"carry a legacy reading and stay dark — {', '.join(wrong[:5])}"
+                  f"{' …' if len(wrong) > 5 else ''}")
     chunks = write_sitemaps(web, urls, lastmod)
     # scored = every verdict-carrying ZIP in the data (the homepage's basis);
     # pages = the subset with standing pages. Both live so llms.txt can't

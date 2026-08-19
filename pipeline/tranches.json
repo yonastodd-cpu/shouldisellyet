@@ -1,0 +1,5 @@
+{
+  "_comment": "Phase 4 release ledger. A tranche publishes only once released_utc is set; entries without it are staged, not live. pipeline/promote_tranche.py writes this file and refuses to stage a ZIP with no v2 reading behind it. See docs/migration/PHASE1-PLUS.md Phase 4.",
+  "basis": "active listings",
+  "tranches": []
+}
