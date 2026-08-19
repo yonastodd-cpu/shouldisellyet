@@ -54,9 +54,23 @@ Enable the **Google Search Console API** on the project first, and add the
 site's Google account as a **test user** on the OAuth consent screen (or
 publish the app — see the caveat below).
 
-To mint the refresh token, complete the consent flow once in a browser and
-exchange the resulting code. Any standard OAuth desktop flow works; the
-puller itself only ever uses the refresh token.
+To mint the refresh token:
+
+```
+python3 pipeline/mint_gsc_token.py --client-id <id>
+```
+
+It opens the consent screen, catches the redirect on loopback, exchanges the
+code, and then calls the API with the new token to list which properties
+that account can actually see — flagging whether
+`sc-domain:shouldisellyet.com` is among them. That check is the point: the
+DNS TXT record proves ownership to whichever account used it, so a perfectly
+valid token can still be attached to the wrong account, and the alternative
+way to learn that is a 403 inside a scheduled run.
+
+The client secret is never passed as an argument — it comes from
+`GSC_CLIENT_SECRET` or an unechoed prompt, because argv is visible to `ps`
+and lands in shell history. The token is printed once and written nowhere.
 
 **Caveat that bites later:** while the consent screen is in *Testing*, Google
 expires refresh tokens after **7 days**. A puller that worked all week and
