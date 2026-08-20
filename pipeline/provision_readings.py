@@ -66,7 +66,7 @@ def readings_for(zips, source="rentcast"):
     if not zips:
         return {}
     try:
-        rows = db_rows(source)
+        rows = db_rows(source, zips)
     except SystemExit as e:
         print(f"provision: store unavailable ({e}) — every page falls back to "
               f"the notice, no page is lost")

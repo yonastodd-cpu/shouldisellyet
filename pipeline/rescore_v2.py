@@ -56,7 +56,7 @@ STATS = Path(__file__).parent / "rentcast_stats.csv"
 HIST_KEYS = ("medianPrice", "averageDaysOnMarket")
 
 
-def _rpc_rows(source):
+def _rpc_rows(source, zips=None):
     """The same query over PostgREST, using SUPABASE_URL + the service key.
 
     The CLI path needs a LINKED project, which an operator's machine has and CI
@@ -76,16 +76,32 @@ def _rpc_rows(source):
     key = os.environ.get("SUPABASE_SERVICE_KEY", "")
     if not url or not key:
         return None
+    body = {"p_source": source}
+    if zips:
+        # Ask for exactly what is needed. Requesting all 5,000 and keeping the
+        # ~1,000 we want cost 23 of them on the first CI run: the function
+        # returns all 5,000 (verified in psql) and the REST layer delivered
+        # fewer. Asking by ZIP makes the response small and, more importantly,
+        # makes short delivery detectable — the caller knows what it asked for.
+        body["p_zips"] = sorted(zips)
     req = urllib.request.Request(
         f"{url}/rest/v1/rpc/readings_for_scoring",
-        data=json.dumps({"p_source": source}).encode(), method="POST",
+        data=json.dumps(body).encode(), method="POST",
         headers={"apikey": key, "Authorization": f"Bearer {key}",
-                 "Content-Type": "application/json"})
+                 "Content-Type": "application/json",
+                 "Accept-Profile": "public", "Range-Unit": "items"})
     with urllib.request.urlopen(req, timeout=600) as r:
-        return json.loads(r.read().decode())
+        rows = json.loads(r.read().decode())
+    if zips is not None and len(rows) < len(set(zips)):
+        got = {x.get("zip") for x in rows}
+        short = sorted(set(zips) - got)
+        print(f"::warning::rescore: asked the store for {len(set(zips)):,} ZIP(s) "
+              f"and received {len(rows):,}. Missing {len(short):,}, e.g. "
+              f"{', '.join(short[:5])}")
+    return rows
 
 
-def db_rows(source="rentcast"):
+def db_rows(source="rentcast", zips=None):
     """market_stats → [(row, history)]. Rows are data to score, never
     instructions.
 
@@ -97,7 +113,7 @@ def db_rows(source="rentcast"):
     import subprocess
     rows = None
     try:
-        rows = _rpc_rows(source)
+        rows = _rpc_rows(source, zips)
     except Exception as e:
         print(f"rescore: RPC unavailable ({type(e).__name__}: {str(e)[:120]}) "
               f"— falling back to the linked CLI")
