@@ -35,20 +35,27 @@ survivors keep their v1 thresholds unchanged.
 
 ## The reading
 
+These numbers are the calibrated ones and they are pinned by
+`test_threshold_disclosure.py` against `verdict_v2.SPEC`. They were stale here
+for a while: the Tier B refit moved `dom_stretch` +40% → +10%, `inventory_surge`
++50% → +30% and `dom_shrink` −15% → −20%, and this table kept quoting the
+pre-refit figures while the header above correctly said the live numbers live in
+SPEC. If the two ever disagree again, SPEC wins and the test now fails.
+
 Danger signals, scored:
 
 | signal | condition | points |
 |---|---|---|
 | `price_falling_fast` | list price YoY < −5% | 3 |
 | `price_falling` | list price YoY < −2% | 2 |
-| `dom_stretching` | active DOM YoY > +40% | 1 |
-| `inventory_surge` | total listings YoY > +50% | 1 |
+| `dom_stretching` | active DOM YoY > +10% | 1 |
+| `inventory_surge` | total listings YoY > +30% | 1 |
 
 Bands: **ACT at ≥ 3**, WATCH at ≥ 1, HOLD at 0. Fewer than two known signals
 yields no reading at all (`insufficient_data`).
 
 Seller's-market reading (renders as ACT), only when **zero** danger lines are
-crossed and **all three** hold: list price YoY ≥ +5%, active DOM YoY ≤ −15%,
+crossed and **all three** hold: list price YoY ≥ +5%, active DOM YoY ≤ −20%,
 total listings YoY ≤ −15%.
 
 Recorded on every reading but deliberately **unscored**: price-per-square-foot

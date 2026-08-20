@@ -122,3 +122,33 @@ def test_no_generator_offers_a_retired_signal_to_a_reader():
     src = (ROOT / "pipeline" / "build_research.py").read_text()
     assert "four gauges" not in src
     assert "three gauges" in src
+
+
+def test_the_frozen_spec_doc_states_the_calibrated_lines():
+    """The doc a future reader opens to learn what the engine does.
+
+    Its scoring table kept the pre-refit +40% / +50% / −15% long after the Tier
+    B calibration moved them, while its own header correctly said the live
+    numbers live in SPEC. That split — prose pointing at the code, a table
+    quoting the code from memory — is exactly how a spec document rots without
+    anyone noticing, and it is the same drift this file already guards on five
+    other surfaces.
+    """
+    doc = (ROOT / "docs" / "migration" / "reading-methodology-v2.md").read_text()
+    # Slice from the table itself, NOT from the "## The reading" heading. The
+    # explanatory note under that heading quotes the retired figures on purpose
+    # ("+40% → +10%"), and including it both muddied the stale-figure checks and
+    # swallowed the mutation that proves this test works: reverting the table to
+    # +40% left the note's own "+10%" satisfying the assertion.
+    table = doc[doc.index("Danger signals, scored:"):doc.index("Recorded on every reading")]
+
+    assert f"> {D['dom_stretch']}" in table, "the doc's DOM line is not the spec's"
+    assert f"> {D['inventory_surge']}" in table, "the doc's inventory line is not the spec's"
+    assert f"active DOM YoY ≤ {D['dom_shrink']}" in table, \
+        "the doc's seller's-market DOM line is not the spec's"
+    assert f"total listings YoY ≤ {D['inventory_drop']}" in table
+
+    # The pre-refit figures, which are correct ABOVE this section as v1 history
+    # and wrong inside it as current lines.
+    for stale in ("> +40%", "> +50%"):
+        assert stale not in table, f"the scoring table still states {stale!r}"
