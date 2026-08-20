@@ -41,7 +41,7 @@ SURFACES = [
     ("purge manifest files", "artifact", "test_artifact_leaks.py::test_purge_manifest_lists_every_moved_file"),
     ("reading endpoint",     "artifact", "test_market_reading_fn.py::test_every_selected_field_is_one_we_intend_to_publish"),
     ("zip page stamp/credit", "page",    "test_pause_leaks.py::test_paused_zip_page_credits_no_vendor"),
-    ("markets index /zip/",  "page",     "test_data_pause.py::test_paused_urls_are_out_of_the_sitemap"),
+    ("markets index /zip/",  "page",     "test_data_pause.py::test_only_released_zips_are_submitted_for_indexing"),
     ("zip lookup renders",   "runtime",  "scripts/smoke-browser.mjs"),
     # The two committed static pages. No generator writes them, so no pipeline
     # change ever reached them and the pause never applied: while every ZIP

@@ -177,6 +177,30 @@ def test_staging_a_legacy_only_tier_stages_nothing_and_says_why(tmp_path, monkey
     assert "republish the numbers Phase 0 withdrew" in capsys.readouterr().out
 
 
-def test_shipped_tranches_file_releases_nothing_yet():
-    """Nothing is live until a real tranche is staged and released."""
-    assert PAUSE.released_zips(PAUSE.TRANCHES) == set()
+def test_the_shipped_tranches_file_is_internally_coherent():
+    """Was: the shipped file releases nothing.
+
+    True until 2026-08-20 and worth having until then; it asserts a moment,
+    not a rule, so it expired the moment tranche-1 was released. What is worth
+    guarding permanently is that the file cannot say two things at once — a
+    released tranche must carry a stamp, a basis, and ZIPs that look like ZIPs,
+    and released_zips() must agree with the entries it was derived from.
+    """
+    import json
+    doc = json.loads(Path(PAUSE.TRANCHES).read_text())
+    assert doc.get("basis") == PAUSE.RELEASED_BASIS
+
+    expected = set()
+    for t in doc.get("tranches", []):
+        assert t.get("name"), "a tranche with no name cannot be released by name"
+        assert t.get("zips"), f"{t.get('name')}: staged with no ZIPs"
+        assert all(str(z).isdigit() and len(str(z)) == 5 for z in t["zips"]), \
+            f"{t['name']}: a ZIP that is not five digits"
+        assert len(set(t["zips"])) == len(t["zips"]), f"{t['name']}: duplicate ZIPs"
+        if t.get("released_utc"):
+            assert t.get("basis") == PAUSE.RELEASED_BASIS, \
+                f"{t['name']}: released on a basis the site does not publish"
+            expected |= {str(z) for z in t["zips"]}
+
+    assert PAUSE.released_zips(PAUSE.TRANCHES) == expected, \
+        "released_zips() disagrees with the stamped entries it reads"

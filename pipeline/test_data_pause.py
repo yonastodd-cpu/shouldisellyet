@@ -83,13 +83,29 @@ def test_paused_pages_stay_crawlable_and_return_200():
 
 
 @pytest.mark.skipif(not PAUSE.PAUSED, reason="only meaningful while paused")
-def test_paused_urls_are_out_of_the_sitemap():
+def test_only_released_zips_are_submitted_for_indexing():
+    """Was: no /zip/ URL may be in the sitemap at all.
+
+    That held while nothing was released and stopped meaning anything the
+    moment tranche-1 went live — 1,000 ZIP pages legitimately re-enter the
+    sitemap when they regain a reading. The invariant that survives is the one
+    that mattered all along: a page in the sitemap must be a page that shows
+    something. Submitting a noindexed page tells a crawler two opposite
+    things.
+    """
+    import re
     sm = sorted((REPO / "web" / "sitemaps").glob("*.xml"))
     if not sm:
         pytest.skip("no sitemap built in this checkout")
     urls = "".join(p.read_text() for p in sm)
-    assert "/zip/2" not in urls and "/metro/" not in urls, \
-        "paused pages are still being submitted for indexing"
+    submitted = set(re.findall(r"/zip/(\d{5})/", urls))
+    released = PAUSE.released_zips()
+    leaked = submitted - released
+    assert not leaked, (
+        f"{len(leaked)} paused ZIP page(s) submitted for indexing, e.g. "
+        f"{sorted(leaked)[:5]} — they carry noindex")
+    if not released:
+        assert "/metro/" not in urls, "metro pages submitted while fully paused"
 
 
 def test_ingestion_is_actually_stopped_not_just_documented():

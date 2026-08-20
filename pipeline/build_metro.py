@@ -42,6 +42,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 ROOT = Path(__file__).resolve().parents[1]
+# A metro needs this many ZIPs with a current reading before its warning
+# share is published. Same number as the --min-zips page floor: below it,
+# the figure describes the release order, not the market.
+MIN_SCORED_FOR_SHARE = 8
+
 SITE = "https://shouldisellyet.com"
 UTM = "utm_source=metropage&utm_medium=organic&utm_campaign=metro_seo"
 MIN_ZIPS = 8          # the velocity gathering floor: any metro a post can name has a page
@@ -261,15 +266,30 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     # about the thing the caption says, and only one can be checked by counting
     # the page. So the hero is now that one, and holds + warn == scored by
     # construction rather than by luck.
-    share = (100.0 * warn / scored) if scored else None
+    # A SHARE NEEDS ENOUGH ROWS TO BE A SHARE. The guard above covers a fully
+    # paused metro (scored == 0). It does not cover a PARTLY released one,
+    # which is what a first tranche produces and what nothing had exercised
+    # until 2026-08-20: Ann Arbor rendered "100%" in 3.6rem type off two
+    # readings, above a table of twelve rows where ten were dashes, and Albany
+    # rendered "0%" off one reading among a hundred and two. 108 of the 608
+    # pages published an absolute 0% or 100% from fewer than eight readings.
+    # The caption said "of the 2" honestly enough, and nobody reads a caption
+    # under a number that size. A metro needs MIN_SCORED_FOR_SHARE readings
+    # before its warning share is a fact about the metro rather than about
+    # which ZIPs happened to be released first — the same floor the page
+    # already uses to decide it is worth publishing at all.
+    share = (100.0 * warn / scored) if scored >= MIN_SCORED_FOR_SHARE else None
     prev = None
     url = f"{SITE}/metro/{slugify(name)}/"
     title = f"{short} housing market: is it time to sell? ({period})"
     desc = (f"{share:.0f}% of the {scored} ZIP codes we track in {short} are showing a "
             f"housing warning sign as of {period}. Free per-ZIP ratings, updated monthly."
             if share is not None else
-            f"Per-ZIP housing ratings for {short} — {total} ZIP codes tracked. "
-            f"{PAUSE.NOTICE_TITLE}.")
+            (f"Per-ZIP housing ratings for {short} — {scored} of {total} ZIP codes "
+             f"rated so far, the rest being refreshed."
+             if scored else
+             f"Per-ZIP housing ratings for {short} — {total} ZIP codes tracked. "
+             f"{PAUSE.NOTICE_TITLE}."))
 
     rows = "".join(zip_row(z, entries[z], places)
                    for z in sorted(zips, key=lambda z: (entries[z].get("l") != "red",
@@ -406,7 +426,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
     <div class="mfig">
       <div class="mlabel">Where they stand today</div>
       <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
-      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if scored else f"ratings for the {total} ZIP codes we track here are being refreshed"}</div>
+      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if share is not None else (f"of the {total} ZIP codes we track here, {scored} {'has' if scored == 1 else 'have'} a current rating — too few to give the metro a share yet" if scored else f"ratings for the {total} ZIP codes we track here are being refreshed")}</div>
     </div>
     {det_block}
   </div>
@@ -416,7 +436,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <div class="msub">{esc(spark_caption(series))}</div>
 
   <h2>Every ZIP code we track here</h2>
-  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if scored else PAUSE.NOTICE_BODY} A value in red is
+  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if share is not None else (f"{holds} of the {scored} ZIP codes rated so far rate HOLD or better; the rest are still being refreshed." if scored else PAUSE.NOTICE_BODY)} A value in red is
   past its published danger line. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
   <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
@@ -430,7 +450,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
       <p><b>What goes in.</b> Every ZIP code in this metro we can score — {total}
       of them this month. A ZIP is scored when it has enough recent sales to read;
       the rest are left out rather than guessed at.</p>
-      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT." if scored else PAUSE.NOTICE_BODY}</p>
+      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT." if share is not None else (f"{scored} of the {total} ZIP codes here have a current rating, of which {warn} show at least one signal past its danger line. That is too few to state a share for the metro — the rest are still being refreshed." if scored else PAUSE.NOTICE_BODY)}</p>
       <p><b>Why there is a line at all.</b> Each danger line is the level at which,
       in past downturns, that signal began leading price declines rather than
       following them. The lines are fixed, published, and identical for every ZIP

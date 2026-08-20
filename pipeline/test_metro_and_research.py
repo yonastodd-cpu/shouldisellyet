@@ -9,6 +9,7 @@ Run: python3 -m pytest pipeline/test_metro_and_research.py -q
 
 import json
 import re
+import build_metro as BM
 import sys
 from pathlib import Path
 
@@ -38,18 +39,34 @@ def test_the_metro_hero_agrees_with_the_table_beneath_it():
     "30% rate WATCH or ACT" above a table with 28 of 76 rows so tagged.
 
     The hero is now counted from those rows, so this is checkable by counting
-    the page — which is the entire point."""
+    the page — which is the entire point.
+
+    THE DENOMINATOR IS THE RATED ROWS, NOT ALL ROWS. This originally divided by
+    every row in the table, which was right while a metro was all-or-nothing.
+    A partial release breaks that: after tranche-1, Albany had one rated ZIP
+    among 102 rows, so "0% of all rows" and "0% of the rated ones" are
+    different claims and the page makes the second. A dash is not a HOLD.
+    """
     bad = []
     for f in _pages():
         h = f.read_text()
         hero = re.search(r'<div class="mhero">(\d+)%</div>', h)
-        cap = re.search(r'<div class="mcap">of the (\d+) ZIP codes', h)
+        cap = re.search(r'<div class="mcap">of the (\d+) ZIP codes we track here rate', h)
         tags = re.findall(r'<span class="tag [^"]*">(WATCH|ACT|HOLD|STRONG|—)</span>', h)
-        if not hero or not tags:
+        if not tags:
             continue
-        counted = round(100 * sum(1 for t in tags if t in ("WATCH", "ACT")) / len(tags))
-        if int(hero.group(1)) != counted or (cap and int(cap.group(1)) != len(tags)):
-            bad.append((f.parent.name, hero.group(1), counted, len(tags)))
+        rated = [t for t in tags if t != "—"]
+        if not hero:
+            # No share published — only legitimate below the publication floor.
+            if len(rated) >= BM.MIN_SCORED_FOR_SHARE:
+                bad.append((f.parent.name, "no hero", len(rated), len(tags)))
+            continue
+        assert len(rated) >= BM.MIN_SCORED_FOR_SHARE, (
+            f"{f.parent.name} publishes a {hero.group(1)}% share off "
+            f"{len(rated)} rated ZIP(s) — below the floor")
+        counted = round(100 * sum(1 for t in rated if t in ("WATCH", "ACT")) / len(rated))
+        if int(hero.group(1)) != counted or (cap and int(cap.group(1)) != len(rated)):
+            bad.append((f.parent.name, hero.group(1), counted, len(rated)))
     assert not bad, f"hero disagrees with its own table on {len(bad)} page(s): {bad[:3]}"
 
 
