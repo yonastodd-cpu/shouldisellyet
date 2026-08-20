@@ -87,8 +87,23 @@ def test_release_state_is_never_taken_from_the_request():
     assert params == ["zip"], f"the only accepted parameter is zip, got {params}"
 
 
-def test_the_endpoint_is_rate_limited():
-    assert "rateAllowed" in SRC, "a 22,874-key endpoint must be rate limited"
+def test_the_endpoint_is_rate_limited_with_a_window():
+    """rateAllowed(req, scope, max, windowSeconds) — the window is required.
+    Calling it with three arguments passes undefined into the limiter's
+    arithmetic, which is how this was first written."""
+    assert "rateAllowed" in BODY, "a 22,874-key endpoint must be rate limited"
+    call = re.search(r"rateAllowed\(([^)]*)\)", BODY).group(1)
+    args = [a.strip() for a in call.split(",")]
+    assert len(args) >= 4, f"rateAllowed needs a window; got {args}"
+    assert args[3].isdigit(), f"windowSeconds must be a literal, got {args[3]!r}"
+
+
+def test_the_limit_is_not_copied_from_the_payment_path():
+    """verify-access uses 10/hour, which is right for a payment token and
+    wrong for the homepage's main interaction."""
+    call = re.search(r"rateAllowed\(([^)]*)\)", BODY).group(1)
+    max_calls = int([a.strip() for a in call.split(",")][2])
+    assert max_calls >= 60, f"{max_calls}/window would throttle normal use"
 
 
 def test_errors_do_not_echo_the_upstream_failure():

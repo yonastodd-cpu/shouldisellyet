@@ -52,6 +52,34 @@ has to be deliberate.
 An unreleased ZIP and an unknown ZIP return the same shape on purpose.
 Distinguishing them would let a caller map the release plan before it ships.
 
+## A blocker for Tranche 1 that is not in this endpoint
+
+`web/index.html:1089` holds `const DATA_PAUSED = true`, and the render branch
+at 1832 keys off it. It is a **page-level boolean**, and
+`pipeline/test_data_pause.py` pins it to `data_pause.PAUSED` so the two cannot
+drift.
+
+That means the homepage cannot honour a tranche. Release Tranche 1 and the
+homepage still tells those 1,000 ZIPs their reading is being refreshed,
+because the flag knows nothing about which ZIP was asked for. The only
+available lever is flipping it globally — which republishes readings for the
+~21,900 ZIPs that are **not** released.
+
+So the per-ZIP switch is not merely an efficiency change. Until the homepage
+takes its pause state from `dataStatus` per ZIP rather than from a constant,
+Phase 4 has no working front door. Two consequences to plan for:
+
+- The `test_data_pause.py` assertion has to move with the flag, or removing
+  the constant fails the build.
+- `insufficient_data` should route to the existing limited-data copy
+  (`index.html:1851`), not the pause notice. Different situations deserve
+  different sentences.
+
+Also worth measuring before the switch: a repopulated `CA.json` is roughly
+500–650 KB for a visitor checking one ZIP, and the share-arrival path
+(`index.html:2019`) downloads a **second** whole state to render one sentence
+about the sharer's ZIP.
+
 ## The admin surfaces are a known exception
 
 `admin.html` scans shards for its ops queue and genuinely wants many ZIPs at

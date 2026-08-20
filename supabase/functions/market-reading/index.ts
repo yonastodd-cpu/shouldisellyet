@@ -79,7 +79,13 @@ Deno.serve(async (req) => {
   // Same layer-2 limiter every other public function uses. A per-ZIP endpoint
   // is enumerable by nature — 22,874 keys — so this is what stops the whole
   // dataset being walked one request at a time.
-  if (!(await rateAllowed(req, "market-reading", 120))) {
+  // (req, scope, max, windowSeconds) — the window is REQUIRED; omitting it
+  // passes undefined straight into the limiter's arithmetic.
+  //
+  // 120/hour rather than verify-access's 10/hour: this is the homepage's
+  // primary interaction, not a payment-token check. A visitor comparing a few
+  // ZIPs must not be throttled, while 22,874 keys still cannot be walked.
+  if (!(await rateAllowed(req, "market-reading", 120, 3600))) {
     return json({ error: "slow down" }, 429);
   }
 
