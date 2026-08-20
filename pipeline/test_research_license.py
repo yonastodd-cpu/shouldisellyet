@@ -27,14 +27,31 @@ Two ways that narrowing silently fails, both of which happened here:
    the_csvs_actually_contain reads the real CSV headers and fails if a class of
    content ships that the licence does not name.
 
+THE FIRST VERSION OF THIS FILE WAS BROKEN AND CI CAUGHT IT. Three tests read
+web/research/ — which is gitignored and generated — so they passed locally only
+because a build had just run. CI runs pytest BEFORE build_research.py, so the
+tree was empty: two tests failed outright, and the third "passed" because its
+glob returned nothing and the loop body never executed. A test that cannot fail
+is worse than no test.
+
+So nothing here reads the built tree. The licence and CSV assertions build
+their own output from the committed pipeline/research/*.json via write_csvs()
+(offline, no PIL, no network), and everything else asserts against generator
+source. Both are the durable artifact anyway: web/research/ is rebuilt from
+scratch on every deploy, so the generator is what actually ships.
+
 Run: python3 -m pytest pipeline/test_research_license.py -q
 """
 
 import csv
+import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
+import build_research as BR
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -52,9 +69,38 @@ WITHDRAWN = (
     "are free to reuse",
 )
 
-# The two restrictions that ARE the narrowing. Losing either one gives the
-# grant back without anyone editing the word "commercially".
-RESTRICTIONS = ("dataset", "competing")
+# THE RESTRICTION, VERBATIM — not keywords. An earlier version of this file
+# asserted merely that the words "dataset" and "competing" appeared somewhere
+# in the licence, and a mutation test proved it would happily accept
+# "...or use of them to build a competing data product or service, is fine by
+# us." Presence of a word is not presence of a restriction, so these match the
+# whole clause, whitespace-normalised so re-wrapping a line is not a failure.
+LICENCE_RESTRICTION = ("Redistribution of these files as a dataset, or use of "
+                       "them to build a competing data product or service, is "
+                       "not permitted.")
+
+# The same limit as each generated surface words it. Every one is load-bearing:
+# drop any single entry and that surface silently reverts to an open grant.
+SURFACE_RESTRICTIONS = {
+    "build_research.py": [
+        LICENCE_RESTRICTION,                                    # LICENSE.txt
+        ("Redistributing the files as a dataset, or using them to build a "
+         "competing data product or service, is not permitted"),  # methodology
+        ("Redistributing them as a dataset, or using them to build a competing "
+         "data product or service, is not permitted"),            # download note
+        "Not for dataset redistribution or competing products",   # page footer
+    ],
+    "build_pages.py": [
+        ("redistributing them as a dataset, or using them to build a competing "
+         "data product or service, is not permitted"),            # llms.txt cite
+        "use with attribution; no dataset redistribution",         # llms.txt pages
+    ],
+}
+
+
+def _flat(s):
+    """Whitespace-normalised, so a re-wrapped line is not a false failure."""
+    return " ".join(s.split())
 
 GENERATORS = (
     ROOT / "pipeline" / "build_research.py",
@@ -62,6 +108,26 @@ GENERATORS = (
     ROOT / "pipeline" / "growth_digest.py",
 )
 HAND_MAINTAINED = (WEB / "press.html", WEB / "admin.html")
+
+
+@pytest.fixture(scope="module")
+def built(tmp_path_factory):
+    """Real release output, built here from committed data.
+
+    write_csvs() writes the four CSVs AND LICENSE.txt, and needs neither
+    Pillow nor the network — so this runs identically on a laptop and on a
+    cold CI checkout, which is the whole point.
+    """
+    out = tmp_path_factory.mktemp("research")
+    series = BR.national_series(BR.load_history())
+    reports = sorted(BR.RESEARCH_DIR.glob("research-*.json"))
+    assert reports, "no committed research reports to build from"
+    for rp in reports:
+        rep = json.loads(rp.read_text(encoding="utf-8"))
+        d = out / rep["month"]
+        d.mkdir()
+        BR.write_csvs(rep, [(m, v) for m, v in series if m <= rep["month"]], d)
+    return out
 
 
 def _texts(paths):
@@ -95,48 +161,39 @@ def test_outbound_pitches_do_not_grant_more_than_the_licence():
             "the recipient is told they are free to use with citation.")
 
 
-def _license_files():
-    files = sorted(RESEARCH.glob("*/LICENSE.txt"))
-    assert files, ("no release LICENSE.txt found — run pipeline/build_research.py "
-                   "first; web/research/ is generated and gitignored")
+def _license_files(built):
+    files = sorted(built.glob("*/LICENSE.txt"))
+    assert files, "write_csvs() stopped writing LICENSE.txt"
     return files
 
 
-def test_every_shipped_licence_withholds_dataset_and_competing_use():
-    for path in _license_files():
+def test_every_shipped_licence_withholds_dataset_and_competing_use(built):
+    for path in _license_files(built):
         text = path.read_text(encoding="utf-8")
         for phrase in WITHDRAWN:
-            assert phrase not in text, f"{path} still grants {phrase!r}"
-        for word in RESTRICTIONS:
-            assert word in text, (
-                f"{path} no longer withholds {word!r} use — that restriction "
-                "IS the narrowing")
+            assert phrase not in text, f"{path.name} still grants {phrase!r}"
+        assert _flat(LICENCE_RESTRICTION) in _flat(text), (
+            f"{path.name} no longer withholds dataset redistribution and "
+            "competing products in full — that clause IS the narrowing, and "
+            "weakening its wording gives the grant back")
         assert "no third-party vendor data" in text
         assert "shouldisellyet.com" in text
 
 
-def test_every_research_page_states_the_same_terms():
-    pages = sorted(RESEARCH.rglob("index.html")) + [RESEARCH / "methodology.html"]
-    for path in pages:
-        if not path.exists():
-            continue
-        text = path.read_text(encoding="utf-8")
-        for phrase in WITHDRAWN:
-            assert phrase not in text, (
-                f"{path.relative_to(WEB)} still shows the withdrawn grant "
-                f"({phrase!r}) while LICENSE.txt says something narrower")
+def test_every_generated_surface_states_the_restriction_in_full():
+    """Absence of the old wording is not presence of the new.
 
-
-def test_llms_txt_does_not_hand_answer_engines_the_old_grant():
-    # robots.txt Allows GPTBot/ClaudeBot/PerplexityBot/CCBot, so this file is
-    # read by the machines most able to act on a redistribution grant.
-    path = WEB / "llms.txt"
-    if not path.exists():
-        return  # generated by build_pages.py; the generator test covers source
-    text = path.read_text(encoding="utf-8")
-    for phrase in WITHDRAWN:
-        assert phrase not in text, f"llms.txt still states {phrase!r}"
-    assert "not permitted" in text
+    The footer, the methodology section, the download note and both llms.txt
+    passages are generator string literals, so scanning source is what makes
+    this run on a cold checkout — and matching the whole clause is what makes
+    it able to fail.
+    """
+    for name, clauses in SURFACE_RESTRICTIONS.items():
+        text = _flat((ROOT / "pipeline" / name).read_text(encoding="utf-8"))
+        for clause in clauses:
+            assert _flat(clause) in text, (
+                f"{name} no longer states: {clause!r} — that surface has "
+                "reverted to granting reuse without limit")
 
 
 # The columns the narrowed licence enumerates, and the column classes it does
@@ -151,9 +208,9 @@ VENDOR = {"median_price", "price", "dom", "days_on_market", "inventory",
           "price_cut_share", "ppsf", "price_per_sqft", "months_supply"}
 
 
-def test_licence_describes_what_the_csvs_actually_contain():
-    csvs = sorted(RESEARCH.glob("*/*.csv"))
-    assert csvs, "no release CSVs found — run pipeline/build_research.py first"
+def test_licence_describes_what_the_csvs_actually_contain(built):
+    csvs = sorted(built.glob("*/*.csv"))
+    assert csvs, "write_csvs() stopped writing release CSVs"
     ships_per_zip_levels = False
     for path in csvs:
         with path.open(encoding="utf-8") as f:
@@ -170,7 +227,7 @@ def test_licence_describes_what_the_csvs_actually_contain():
             if col in PER_ZIP_LEVEL:
                 ships_per_zip_levels = True
 
-    for path in _license_files():
+    for path in _license_files(built):
         text = path.read_text(encoding="utf-8")
         if ships_per_zip_levels:
             assert "individual ZIP markets whose" in text, (
