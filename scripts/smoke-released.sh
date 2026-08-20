@@ -62,6 +62,11 @@ JSON
 cp "$TMP/tranches.json" pipeline/tranches.json
 python3 pipeline/provision_readings.py --fixture "$TMP/fixture.json" >/dev/null
 python3 pipeline/build_pages.py --only "$OK_ZIP,$THIN_ZIP,20603" >/dev/null
+# The homepage fetches research/wsi.json. Without it the page still works —
+# the fetch is guarded — but it logs a 404, and a smoke test that tolerates
+# unexplained 404s is one that will tolerate the next one too. Build the
+# research output so this is a complete site, not a partial one.
+python3 pipeline/build_research.py >/dev/null
 
 python3 -m http.server 5178 --directory web >/dev/null 2>&1 &
 SRV=$!

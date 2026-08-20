@@ -88,9 +88,13 @@ page.on("console", (m) => {
   const text = m.text();
   // "Failed to load resource" and CORS rejections both. The analytics beacon
   // pins CORS to the site origin, so every local run produces one.
+  const where = m.location()?.url || "";
   if (/Failed to load resource|blocked by CORS|Access-Control-Allow-Origin/i.test(text) &&
-      (THIRD_PARTY.test(text) || THIRD_PARTY.test(m.location()?.url || ""))) return;
-  consoleErrors.push(text);
+      (THIRD_PARTY.test(text) || THIRD_PARTY.test(where))) return;
+  // Say WHICH resource. "Failed to load resource: 404" with no URL is an
+  // error message that cannot be acted on — it cost a CI round-trip to learn
+  // that the answer was knowable all along.
+  consoleErrors.push(where ? `${text} [${where}]` : text);
 });
 page.on("pageerror", (e) => pageErrors.push(String(e)));
 
