@@ -20,10 +20,17 @@ sys.path.insert(0, str(REPO / "pipeline"))
 
 import build_stories as bs
 
-# Moved out of web/ on 2026-08-19 — the per-case files carry a vendor's
-# monthly measurements and were being served publicly.
-CASE = json.loads((REPO / "pipeline" / "cases" / "boise-2021.json").read_text())
-MISS = json.loads((REPO / "pipeline" / "cases" / "miss-39500.json").read_text())
+# Moved to private storage on 2026-08-19. The per-case files carry a vendor's
+# monthly measurements, the story page plotted them as charts, and the page is
+# now paused — so the data is not in the repo at all and these tests, which
+# exercise the UNPAUSED story renderer, have nothing to run against here.
+_CASES = REPO / "pipeline" / "cases"
+if not (_CASES / "boise-2021.json").exists():
+    pytest.skip("case data held in private storage; the story renderer is "
+                "paused and its input is not in the repo",
+                allow_module_level=True)
+CASE = json.loads((_CASES / "boise-2021.json").read_text())
+MISS = json.loads((_CASES / "miss-39500.json").read_text())
 
 
 def test_the_headline_facts_match_the_case_file():

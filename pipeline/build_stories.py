@@ -451,7 +451,58 @@ def slug(case):
     return str(case["id"]).rsplit("-", 1)[0]
 
 
+def paused_page(cid):
+    """The story URL, with the story withheld.
+
+    /stories/{slug}/ told its case by plotting the vendor's monthly series as
+    three SVG charts, beside the peak and trough medians in prose. It was
+    never pause-gated, so it published all of that for the whole withdrawal —
+    the eighth surface found. It cannot be blanked in place the way a ZIP page
+    can, because the chart IS the page.
+
+    So while paused the URL survives and the story does not. That keeps the
+    one thing this migration protects — no URL is ever lost — without
+    publishing a measurement, and it means the case files no longer need to be
+    in the repo at all for a deploy to succeed.
+    """
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="robots" content="noindex,follow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(PAUSE.NOTICE_TITLE)} — ShouldISellYet</title>
+<meta name="description" content="{esc(PAUSE.NOTICE_DESC)}">
+<style>body{{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+color:#1d1c19;background:#f3f1ea;margin:0;padding:64px 20px}}
+main{{max-width:34rem;margin:0 auto}}h1{{font-size:1.5rem;margin:0 0 .6em}}
+a{{color:#35527c}}</style>
+</head><body><main>
+<h1>{esc(PAUSE.NOTICE_TITLE)}</h1>
+<p>{esc(PAUSE.NOTICE_BODY)}</p>
+<p><a href="/">Check a ZIP code</a> · <a href="/research/">Monthly research</a></p>
+</main>
+<script src="/track.js" defer></script>
+</body></html>
+"""
+
+
 def main():
+    # Paused: emit the URL, withhold the story. Deliberately BEFORE the
+    # CASES.exists() check, so a deploy succeeds with no case data present at
+    # all — which is the state the repo is in once the case files move to
+    # private storage.
+    if PAUSE.PAUSED:
+        out = ROOT / "web" / "stories"
+        out.mkdir(parents=True, exist_ok=True)
+        for cid in PUBLISHED:
+            d = out / cid.rsplit("-", 1)[0]
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "index.html").write_text(paused_page(cid), encoding="utf-8")
+        (ROOT / "web" / "data" / "stories.json").write_text(
+            json.dumps({"stories": []}), encoding="utf-8")
+        print(f"build-stories: paused — {len(PUBLISHED)} story URL(s) kept, "
+              f"no case data read")
+        return 0
+
     if not CASES.exists():
         print("build-stories: no case data — nothing to build")
         return 0

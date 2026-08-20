@@ -36,7 +36,7 @@ must be scrubbed.
 | `pipeline/rentcast_stats.csv` | RentCast | 4,001 rows of current-month statistics | pushed by the acquisition workflow |
 | `pipeline/snapshots/verdicts-*.json` (3) | Redfin | ~28k rows × 3 months of raw metrics | not just readings |
 | `pipeline/tier_interim.csv` | Realtor.com | one derived count column | regenerate without it |
-| `pipeline/cases/*` (8) | Redfin | moved out of the artifact 2026-08-19, still in the repo and its history | |
+| `pipeline/cases/*` (8) | Redfin | moved to PRIVATE STORAGE 2026-08-19; gone from the working tree, still in history under both `web/data/cases/` and `pipeline/cases/` | |
 
 ## Seventh leaking surface, found 2026-08-19
 
@@ -47,6 +47,15 @@ derived from the withdrawn readings: "0 of 83 rate HOLD or better today" above
 a table of dashes, and a hero claiming a 100% warning share. Not 0 and not
 100 — unknown. Rows, counts and captions now follow the same pause check as
 every other surface.
+
+## Eighth leaking surface, found 2026-08-19
+
+`/stories/boise/` told its case by plotting the vendor's monthly series as
+three SVG charts, beside the peak and trough medians in prose ($369k, $464k,
+-17.9%). Never pause-gated. It could not be blanked in place the way a ZIP
+page can, because the chart IS the page — so while paused the URL survives and
+the story does not. That also removed the last build-time dependency on the
+case files, which is what allowed them to leave the repo.
 
 ## Borderline, named rather than silently kept
 
