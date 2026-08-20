@@ -160,9 +160,19 @@ def main(argv=None):
               f"the store was not contacted")
     else:
         readings = {} if args.no_readings else readings_for(live, args.source)
-    if live and not readings:
-        print(f"provision: {len(live):,} ZIP(s) released but no readings "
-              f"retrieved — they will render the notice")
+    missing = len(live) - len(readings)
+    if live and missing:
+        # A release that publishes nothing is a release that did not happen,
+        # and it used to be a one-line note in a green build. On 2026-08-20 the
+        # store was unreachable from CI, all 1,000 released ZIPs fell back to
+        # the notice, and the deploy reported success. Nothing was wrong with
+        # the pages after indexable() learned to read the record — but the
+        # release silently did not land, which is worth a warning annotation
+        # rather than a line in a log nobody opens.
+        print(f"::warning::provision: {missing:,} of {len(live):,} released "
+              f"ZIP(s) have no reading — they render the notice and stay "
+              f"noindexed. The tranche is stamped but not published. Check "
+              f"the store connection, then re-run the build.")
 
     by_state = build(manifest, readings)
     written = write(by_state, args.out)

@@ -511,7 +511,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-{PAUSE.robots_meta(z, thin)}
+{PAUSE.robots_meta(z, thin, e.get("b", PAUSE.LEGACY_BASIS))}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1131,7 +1131,11 @@ def main():
         # else stays out. State hubs stay out until the pause lifts entirely —
         # each lists a rating per ZIP, so a hub for a part-released state
         # would publish withheld readings beside released ones.
-        live = [z for z, _ in eligible if PAUSE.shows_data(z)]
+        # WITH the basis. Passing only the ZIP asks the tranche file, not the
+        # record, and submits a page that carries noindex — the third place
+        # the same split showed up on 2026-08-20, after the head and the body.
+        live = [z for z, e in eligible
+                if PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))]
         urls += [f"{SITE}/zip/{z}/" for z in live]
         held = len(eligible) - len(live) + len(by_state)
         print(f"redfin sunset: {held:,} ZIP/state URLs held out of the "

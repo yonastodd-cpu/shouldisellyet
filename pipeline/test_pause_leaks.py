@@ -274,3 +274,36 @@ def test_the_sample_report_is_not_offered_for_indexing():
     block = block[:block.index("]") + 1]
     assert "report.html" not in block or "PAUSE" in block, \
         "a noindexed page is still submitted in the sitemap"
+
+
+def test_a_page_is_indexable_only_when_it_may_show_its_reading():
+    """The head and the body must answer the same question.
+
+    robots_meta() asked only whether the ZIP was in a released tranche, while
+    the body asked shows_data(zip, basis) — released AND the record actually
+    carrying a v2 reading. The two disagreed on 2026-08-20: the store was
+    unreachable from CI, every record fell back to {"st": "XX"}, and the 1,000
+    released pages shipped "this reading is being refreshed" in the body with
+    no noindex in the head. A thousand pages offered to crawlers with nothing
+    on them — strictly worse than paused, which at least told the truth twice.
+    """
+    released, unreleased = "20601", "99999"
+    PAUSE._allowlist = None
+    try:
+        PAUSE._allowlist = {released}
+        # released, but the record carries no v2 reading yet
+        assert not PAUSE.indexable(released, basis=PAUSE.LEGACY_BASIS), \
+            "a released ZIP with no reading is offered for indexing"
+        assert "noindex" in PAUSE.robots_meta(released, False, PAUSE.LEGACY_BASIS)
+        # released AND the reading is there
+        assert PAUSE.indexable(released, basis=PAUSE.RELEASED_BASIS)
+        assert PAUSE.robots_meta(released, False, PAUSE.RELEASED_BASIS) == ""
+        # never released
+        assert not PAUSE.indexable(unreleased, basis=PAUSE.RELEASED_BASIS)
+        # and the head agrees with the body, for every combination
+        for z in (released, unreleased):
+            for b in (PAUSE.LEGACY_BASIS, PAUSE.RELEASED_BASIS):
+                assert PAUSE.indexable(z, False, b) == PAUSE.shows_data(z, b), \
+                    f"head and body disagree for {z} on basis {b!r}"
+    finally:
+        PAUSE._allowlist = None
