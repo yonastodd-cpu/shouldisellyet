@@ -294,8 +294,13 @@ jobs:
         continue-on-error: true
         run: python3 pipeline/indexnow.py --old /tmp/old_zips --new web/data/zips
 
+      # Gated on `changed` until 2026-08-19, which meant the suite had not run
+      # in CI since Phase 0 began — Phase 0 forces changed=false. The absence
+      # tests that exist to stop withdrawn figures reaching production were
+      # therefore never executed by a deploy. Now runs whenever we deploy at
+      # all, which is the only condition under which a page can reach a reader.
       - name: Run tests
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.deploy == 'true'
         run: |
           pip install pytest
           pytest pipeline/ -q
