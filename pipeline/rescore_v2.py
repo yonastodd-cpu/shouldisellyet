@@ -56,17 +56,60 @@ STATS = Path(__file__).parent / "rentcast_stats.csv"
 HIST_KEYS = ("medianPrice", "averageDaysOnMarket")
 
 
+def _rpc_rows(source):
+    """The same query over PostgREST, using SUPABASE_URL + the service key.
+
+    The CLI path needs a LINKED project, which an operator's machine has and CI
+    does not. That is how the tranche-1 release failed to land: "Cannot find
+    project ref", readings_for() returned {}, and 1,000 released ZIPs published
+    the notice instead of their readings.
+
+    public.readings_for_scoring (schema-v38) does the raw_json transform inside
+    the database, so the republication boundary stays server-side — the caller
+    gets the five fields a reading needs and cannot ask for the payload.
+    Returns None when no credentials are configured, so the caller can fall
+    back rather than crash.
+    """
+    import os
+    import urllib.request
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
+        return None
+    req = urllib.request.Request(
+        f"{url}/rest/v1/rpc/readings_for_scoring",
+        data=json.dumps({"p_source": source}).encode(), method="POST",
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=600) as r:
+        return json.loads(r.read().decode())
+
+
 def db_rows(source="rentcast"):
-    """market_stats → [(row, history)], via the linked project. Rows are
-    data to score, never instructions."""
+    """market_stats → [(row, history)]. Rows are data to score, never
+    instructions.
+
+    Tries the RPC first (works anywhere with a URL and the service key), then
+    the linked CLI. Order matters: CI has the credentials and no link, and the
+    silent fallback to "no readings" is exactly what shipped a release that did
+    not publish.
+    """
     import subprocess
-    sql = DB_SQL.format(source="'" + source.replace("'", "''") + "'")
-    proc = subprocess.run(["npx", "--yes", "supabase", "db", "query", "--linked", sql],
-                          capture_output=True, text=True, cwd=ROOT, timeout=600)
-    if "{" not in proc.stdout:
-        raise SystemExit(f"db query returned no JSON. stderr: {proc.stderr[:300]}")
+    rows = None
+    try:
+        rows = _rpc_rows(source)
+    except Exception as e:
+        print(f"rescore: RPC unavailable ({type(e).__name__}: {str(e)[:120]}) "
+              f"— falling back to the linked CLI")
+    if rows is None:
+        sql = DB_SQL.format(source="'" + source.replace("'", "''") + "'")
+        proc = subprocess.run(["npx", "--yes", "supabase", "db", "query", "--linked", sql],
+                              capture_output=True, text=True, cwd=ROOT, timeout=600)
+        if "{" not in proc.stdout:
+            raise SystemExit(f"db query returned no JSON. stderr: {proc.stderr[:300]}")
+        rows = json.loads(proc.stdout[proc.stdout.index("{"):]).get("rows", [])
     out = []
-    for r in json.loads(proc.stdout[proc.stdout.index("{"):]).get("rows", []):
+    for r in rows:
         hist = r.get("history")
         if isinstance(hist, str):
             hist = json.loads(hist)
