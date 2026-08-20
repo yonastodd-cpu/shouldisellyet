@@ -183,3 +183,94 @@ def test_a_released_zip_still_renders_its_figures(monkeypatch, tmp_path):
     text = visible_text(BP.zip_page("20601", v2, PLACE, META, []))
     assert PAUSE.NOTICE_TITLE not in text
     assert "days to sell" in text
+
+
+# ————— the two committed static pages —————
+#
+# Everything above tests GENERATED output. These two are committed files that
+# ship in web/ exactly as written, so no pipeline change ever reached them and
+# the pause never applied. On 2026-08-20, ten other surfaces closed, both were
+# still live and both were in the submitted sitemap — two of its three URLs:
+#
+#   /report.html  a WATCH for ZIP 20906 ("Early signals moving in 20906") with
+#                 the full withdrawn dial set — 2.6 months of supply, 243 homes
+#                 sold, −5.7% prices, 43 days, 32% price cuts — plus a
+#                 Realtor.com cross-check strip, the national verdict counts
+#                 "15,471 ZIPs read HOLD · 7,110 WATCH · 9,485 ACT", and a
+#                 Redfin credit. llms.txt advertised it as showing "a real ZIP".
+#   /press.html   "HOLD 59% · WATCH 23% · ACT 11% · Verdict mix across all
+#                 24,619 scored ZIP codes · data through May 2026".
+#
+# They are static, so these read the committed files directly rather than
+# building anything. That is the point: a generator test could never have
+# caught either one.
+
+STATIC_PAGES = {
+    "report.html": "the sample report",
+    "press.html": "the press kit",
+}
+
+# A rating for a named market, the thing the pause exists to withhold.
+RATING = re.compile(r"\b(HOLD|WATCH|ACT|STRONG)\b")
+
+# Figures that only the withdrawn vendor data can produce.
+WITHDRAWN_FIGURE = (
+    re.compile(r"\b\d+\.\d+\s*mo\b"),                 # months of supply
+    re.compile(r"\b\d{2,4}\s+homes\b"),               # listing / sold counts
+    re.compile(r"\b\d+\s+days?\b"),                   # days on market
+    re.compile(r"[\d,]{5,}\s+ZIPs?\s+read"),          # national verdict counts
+    re.compile(r"fall the next year [\d.]+% of the time"),   # backtest ladder
+    re.compile(r"[\d,]+\s+ZIP-years"),                # backtest population
+    re.compile(r"\b24,619\b"),                        # the scored-ZIP count
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _static(name):
+    return (ROOT / "web" / name).read_text(encoding="utf-8", errors="replace")
+
+
+def test_the_sample_report_publishes_no_reading():
+    """It served a WATCH for a named ZIP through the whole of the pause."""
+    text = visible_text(_static("report.html"))
+    found = RATING.findall(text)
+    assert not found, f"the sample report still states a rating: {set(found)}"
+    assert "20906" not in text, \
+        "the sample report still names the real ZIP whose reading it published"
+    for pat in WITHDRAWN_FIGURE:
+        assert not pat.search(text), \
+            f"the sample report still publishes {pat.search(text).group()!r}"
+
+
+def test_the_press_kit_publishes_no_withdrawn_figure():
+    """It served the national verdict mix and the v1 backtest ladder."""
+    text = visible_text(_static("press.html"))
+    for pat in WITHDRAWN_FIGURE:
+        m = pat.search(text)
+        assert not m, f"the press kit still publishes {m.group()!r}"
+    assert not re.search(r"(HOLD|WATCH|ACT)\s+\d+%", text), \
+        "the press kit still charts the verdict mix"
+
+
+def test_neither_static_page_credits_the_withdrawn_vendor():
+    """data_pause's copy rule: a paused surface must not name the vendor whose
+    data it is no longer showing. Guarded on ZIP pages since 2026-08-19; these
+    two were never brought under it."""
+    for name, label in STATIC_PAGES.items():
+        src = _static(name)
+        assert PAUSE.PAUSED_SOURCE not in src.lower(), \
+            f"{label} still credits {PAUSE.PAUSED_SOURCE} while paused"
+
+
+def test_the_sample_report_is_not_offered_for_indexing():
+    """It is a data-display page with no data to display while paused, and it
+    was one of three URLs in the submitted sitemap."""
+    assert 'content="noindex' in _static("report.html"), \
+        "the sample report is indexable while showing no reading"
+    src = (ROOT / "pipeline" / "build_pages.py").read_text()
+    block = src[src.index("urls = [f\"{SITE}/\""):]
+    block = block[:block.index("]") + 1]
+    assert "report.html" not in block or "PAUSE" in block, \
+        "a noindexed page is still submitted in the sitemap"

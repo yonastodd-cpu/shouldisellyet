@@ -174,6 +174,43 @@ check("paused zip page publishes no figure", !FIGURE.test(stripDisclosed(zipPage
 check("paused zip page is noindexed", zipPage.robots.includes("noindex"), zipPage.robots);
 check("paused zip page title carries no rating", !RATINGS.test(zipPage.title), zipPage.title);
 
+// ————— 3b. the two committed static pages, EXECUTED —————
+//
+// These are not generated, so no pipeline change ever reached them and the
+// pause never applied. On 2026-08-20 /report.html was still serving a WATCH
+// for ZIP 20906 with the full withdrawn dial set, and /press.html the national
+// verdict mix — both in the submitted sitemap, both invisible to every test
+// here because this file had never opened either one. Executing them matters
+// on report.html specifically: a script re-renders that card from live data,
+// so a static scan of the file cannot prove what a visitor is shown.
+for (const [path, label] of [["/report.html", "sample report"],
+                             ["/press.html", "press kit"]]) {
+  await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+  const p2 = await page.evaluate(() => ({
+    body: document.body.innerText.replace(/\s+/g, " "),
+    robots: (document.querySelector('meta[name="robots"]') || {}).content || "",
+  }));
+  const stripped = stripDisclosed(p2.body);
+  // A rating WORD is not a reading. The press kit explains the vocabulary on
+  // purpose — "HOLD — no lines crossed" is the legend, the same disclosure the
+  // ZIP-page explainer carries. What must not appear is a rating attached to a
+  // market: a reading for a named ZIP, or a share/count of ZIPs per rating.
+  const readingForAMarket = path === "/report.html"
+    ? RATINGS                                   // any rating here IS a reading
+    : /(HOLD|WATCH|ACT|STRONG)\s+[\d.]+%|[\d,]{4,}\s+ZIPs?\s+read/;
+  check(`${label} states no reading`, !readingForAMarket.test(p2.body),
+    (p2.body.match(readingForAMarket) || [])[0] || "");
+  check(`${label} publishes no figure`, !FIGURE.test(stripped),
+    (stripped.match(FIGURE) || [])[0] || "");
+  check(`${label} credits no withdrawn vendor`, !/redfin/i.test(p2.body),
+    (p2.body.match(/redfin/i) || [])[0] || "");
+  // Inside the loop, against THIS page's own meta — evaluating after the loop
+  // would read whichever page it happened to end on.
+  if (path === "/report.html") {
+    check("sample report is noindexed", p2.robots.includes("noindex"), p2.robots);
+  }
+}
+
 // ————— 4. purged files are not reachable —————
 //
 // Skipped while a release is staged: a released ZIP legitimately regains its

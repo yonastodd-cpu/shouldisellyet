@@ -43,4 +43,14 @@ SURFACES = [
     ("zip page stamp/credit", "page",    "test_pause_leaks.py::test_paused_zip_page_credits_no_vendor"),
     ("markets index /zip/",  "page",     "test_data_pause.py::test_paused_urls_are_out_of_the_sitemap"),
     ("zip lookup renders",   "runtime",  "scripts/smoke-browser.mjs"),
+    # The two committed static pages. No generator writes them, so no pipeline
+    # change ever reached them and the pause never applied: while every ZIP
+    # page said its reading was being refreshed, /report.html served a WATCH
+    # for a named ZIP with the full withdrawn dial set, and /press.html served
+    # the national verdict mix. Both were in the submitted sitemap — two of its
+    # three URLs — and report.html was advertised in llms.txt as showing "a
+    # real ZIP". Found on 2026-08-20, after ten other surfaces had been closed.
+    ("sample report page",   "page",     "test_pause_leaks.py::test_the_sample_report_publishes_no_reading"),
+    ("press kit page",       "page",     "test_pause_leaks.py::test_the_press_kit_publishes_no_withdrawn_figure"),
+    ("sample report runtime", "runtime", "scripts/smoke-browser.mjs"),
 ]

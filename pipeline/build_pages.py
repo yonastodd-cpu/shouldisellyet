@@ -873,8 +873,9 @@ market with unusual buyer competition reads as a strong seller's market.
   dataset redistribution).
 - [Markets by state](https://shouldisellyet.com/zip/): standing verdict pages
   for {pages:,} ZIP markets, each with its signal gauges and danger lines.
-- [Sample report](https://shouldisellyet.com/report.html): what the paid
-  full report looks like for a real ZIP.
+- [Sample report](https://shouldisellyet.com/report.html): the shape of the
+  paid full report. Its market figures are being rebuilt on a new data engine
+  and are not shown right now.
 - [Press](https://shouldisellyet.com/press.html): coverage facts and contact.
 
 ## Citing this site
@@ -1088,9 +1089,16 @@ def main():
     # a crawler two opposite things at once — the same reasoning that holds the
     # research pages out below. It was the one paused-tree URL still in the
     # submitted sitemap.
-    urls = [f"{SITE}/", f"{SITE}/report.html", f"{SITE}/press.html"]
+    urls = [f"{SITE}/", f"{SITE}/press.html"]
     if PAUSE.shows_data():
         urls.append(f"{SITE}/zip/")
+        # The sample report exists to show a real reading. While paused it
+        # shows the notice instead and carries noindex, so submitting it says
+        # two opposite things — the same rule already applied to /zip/ and the
+        # research tree. It was one of only three URLs in this list, and the
+        # WATCH it published for ZIP 20906 was submitted for indexing for the
+        # whole of the pause.
+        urls.append(f"{SITE}/report.html")
     # Research releases: indexable by design — the citation flywheel needs
     # crawlers to find them. URLs derive from the committed research JSONs,
     # same discipline as the rest of this explicit list.
