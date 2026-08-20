@@ -66,6 +66,7 @@ def test_every_selected_field_is_one_we_intend_to_publish():
         "zip", "basis", "released_at", "as_of_month", "retrieved_at",
         "list_median_price", "list_median_ppsf", "active_dom",
         "total_listings", "new_listings", "history_months",
+        "median_list_price",   # market_history's column name for the same idea
     }
     for s in SELECTS:
         for field in s.split(","):
@@ -157,3 +158,14 @@ def test_the_release_tool_writes_both_sides():
     assert "def sync_release" in src
     # and a failure to write it must be loud, not silent
     assert "::warning::" in src or "WARNING" in src
+
+
+def test_the_series_comes_from_a_normalised_table_not_the_payload():
+    """The endpoint promised up to twelve price points and returned one,
+    because market_stats holds a single row per month. The fix could have been
+    to read raw_json->saleData->history here; it deliberately was not. The
+    series is normalised into market_history at load time so this function
+    still selects named columns only."""
+    assert "market_history" in BODY, "the series must come from the normalised table"
+    assert "raw_json" not in BODY, "the payload must never be read here"
+    assert "saleData" not in BODY and "history'" not in BODY.replace("market_history", "")

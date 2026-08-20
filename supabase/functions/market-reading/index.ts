@@ -121,10 +121,17 @@ Deno.serve(async (req) => {
     }
     const s = rows[0];
 
-    // 3. Price history, already trimmed to what a sparkline needs. Twelve
-    //    points of a median, not a series of measurements.
+    // 3. Price history. From market_history (schema-v37), which the loader
+    //    normalises out of the vendor payload at load time — NOT from
+    //    raw_json. Reaching into the payload here would put it back inside the
+    //    one place built to keep it out, and "only a slice" is how that stops
+    //    meaning anything.
+    //
+    //    This returned exactly ONE point before v37, because market_stats
+    //    holds one row per month and only the current month had been loaded.
+    //    The contract promised twelve; the sparkline would have been a dot.
     const hist = await rest(
-      `market_stats?zip=eq.${zip}&select=as_of_month,list_median_price` +
+      `market_history?zip=eq.${zip}&select=as_of_month,median_list_price` +
         `&order=as_of_month.asc&limit=12`,
     );
 
@@ -143,7 +150,7 @@ Deno.serve(async (req) => {
       },
       priceHistory: hist.map((h: Record<string, unknown>) => ({
         month: h.as_of_month,
-        medianListPrice: h.list_median_price,
+        medianListPrice: h.median_list_price,
       })),
       dataStatus: "ok",
     }, 200, true);

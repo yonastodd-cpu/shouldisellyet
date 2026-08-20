@@ -111,6 +111,44 @@ def stat_rows(raw_dir=RAW, ledger=None, source=SOURCE, month=None):
     return rows, skipped
 
 
+HISTORY_KEYS = (("median_list_price", "medianPrice"),
+                ("active_dom", "averageDaysOnMarket"),
+                ("total_listings", "totalListings"))
+
+
+def history_rows(raw_dir=RAW, source=SOURCE, months=12):
+    """The monthly series, one row per zip/month, from the stored payloads.
+
+    The vendor sends twelve months inside a single response, so this is not
+    extra data — it is the same data, normalised so the reading endpoint can
+    serve a sparkline without reading raw_json. That matters: the endpoint is
+    the republication boundary, and it holds only while every field it returns
+    is a named column.
+
+    A month with no median price is dropped rather than stored as null: a gap
+    in a sparkline is honest, a zero is not.
+    """
+    out = []
+    for f in sorted(Path(raw_dir).glob("*.json")):
+        try:
+            payload = json.loads(f.read_text())
+        except (ValueError, OSError):
+            continue
+        hist = ((payload or {}).get("saleData") or {}).get("history") or {}
+        zip_code = (payload or {}).get("zipCode") or f.stem
+        for month in sorted(hist)[-months:]:
+            rec = hist.get(month) or {}
+            price = rec.get("medianPrice")
+            if not isinstance(price, (int, float)):
+                continue
+            row = {"zip": zip_code, "source": source, "as_of_month": month}
+            for col, key in HISTORY_KEYS:
+                v = rec.get(key)
+                row[col] = v if isinstance(v, (int, float)) else None
+            out.append(row)
+    return out
+
+
 def load_tiers(path=TIERS):
     """{zip: tier} — which tier a ZIP was in when it was bought. Phase 5's
     review needs this and tier_interim.csv is regenerated, so it is copied
@@ -210,6 +248,9 @@ def main(argv=None):
     for why, n in sorted(skipped.items()):
         print(f"  skipped {why}: {n:,}")
     print(f"market_jobs: {len(jobs):,} row(s) from {args.ledger}")
+    hist_preview = history_rows(args.raw, args.source) if not args.jobs_only else []
+    print(f"market_history: {len(hist_preview):,} monthly point(s) "
+          f"across {len({h['zip'] for h in hist_preview}):,} ZIP(s)")
     if stats:
         nbatch = sum(1 for _ in batches(stats))
         mb = sum(len(json.dumps(r)) for r in stats) / 1e6
@@ -230,6 +271,12 @@ def main(argv=None):
         n, f = send(url, key, "market_stats", "zip,as_of_month,source", stats)
         print(f"market_stats: upserted {n:,}")
         failed += f
+    if not args.jobs_only:
+        hist = history_rows(args.raw, args.source)
+        if hist:
+            n, f = send(url, key, "market_history", "zip,source,as_of_month", hist)
+            print(f"market_history: upserted {n:,} monthly point(s)")
+            failed += f
     if not args.stats_only and jobs:
         n, f = send(url, key, "market_jobs", "zip,source", jobs)
         print(f"market_jobs: upserted {n:,}")

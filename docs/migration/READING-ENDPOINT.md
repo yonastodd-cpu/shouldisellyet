@@ -52,6 +52,44 @@ has to be deliberate.
 An unreleased ZIP and an unknown ZIP return the same shape on purpose.
 Distinguishing them would let a caller map the release plan before it ships.
 
+## Deployed 2026-08-19, and what testing it found
+
+`schema-v36` (the allowlist) and `schema-v37` (the monthly series) are applied;
+the function is deployed with JWT verification off, matching `verify-access`.
+
+Verified against production:
+
+| case | result |
+|---|---|
+| unreleased ZIP | `pending_migration`, no reading, no metrics |
+| **77494 — Tier A data bought, not released** | **`pending_migration`, metrics `{}`** |
+| malformed zip | `400 bad zip` |
+| injection-shaped input | `403`, blocked upstream |
+| released ZIP | `ok`, five named metrics, **12 history points**, no raw payload |
+
+The third row is the one that matters: 77494 has real vendor data in
+`market_stats` and the endpoint refuses to serve it, because the release check
+reads `zip_release` server-side rather than trusting the caller.
+
+**Testing the released path found a real gap.** The contract promises up to
+twelve price points; it returned exactly **one**, because `market_stats` holds
+a single row per ZIP-month and only the current month was loaded. The twelve
+months live inside `raw_json`. The sparkline would have been a single dot on
+tranche day, and nothing would have caught it — that path had never been
+exercised.
+
+The fix is deliberately not "read `raw_json` here". This function is the
+republication boundary; reaching into the payload for a slice is how a
+boundary stops meaning anything. `schema-v37` adds `market_history`, the
+loader normalises the series into named columns at load time, and the existing
+5,000 ZIPs were backfilled **inside the database** — 60,000 points, exactly 12
+months each, Sept 2025 to Aug 2026 — so the payload never left it.
+
+Exercising the released path required one temporary row in `zip_release`
+(tranche `__smoke-test`), removed immediately; the table is back to 0 rows.
+Nothing user-visible was affected — no client calls this endpoint yet, and
+pages build from `tranches.json`, not this table.
+
 ## A blocker for Tranche 1 that is not in this endpoint
 
 `web/index.html:1089` holds `const DATA_PAUSED = true`, and the render branch
