@@ -61,7 +61,11 @@ ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.rentcast.io/v1/markets"
 RAW = ROOT / "archive" / "rentcast"          # gitignored, permanent on disk
 LEDGER = Path(__file__).parent / "rentcast_jobs.csv"
-TIERS = Path(__file__).parent / "tier_interim.csv"
+# The rebuilt ranking (rank_v2.py). tier_interim.csv gated on Realtor.com
+# coverage and is kept only as the record of what the first 5,000 were
+# bought against. pending() skips ZIPs the ledger marks done, so pointing
+# here spends nothing on what is already held.
+TIERS = Path(__file__).parent / "tier_v2.csv"
 STATS = Path(__file__).parent / "rentcast_stats.csv"
 HISTORY_RANGE = 12                            # months; the documented maximum
 MAX_ATTEMPTS = 3

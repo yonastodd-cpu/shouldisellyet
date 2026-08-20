@@ -41,7 +41,9 @@ import data_pause as PAUSE
 ROOT = Path(__file__).resolve().parents[1]
 # (the per-state layout is gone; the basis now comes from the store —
 #  see readings(). Kept out of the module so nothing re-defaults to it.)
-TIERS = Path(__file__).parent / "tier_interim.csv"
+# The rebuilt ranking (rank_v2.py). Already-staged ZIPs are excluded by
+# partition(), so re-pointing does not restage tranches 1 and 2.
+TIERS = Path(__file__).parent / "tier_v2.csv"
 GSC = Path(__file__).parent / "gsc_zip.csv"
 
 

@@ -149,10 +149,17 @@ def history_rows(raw_dir=RAW, source=SOURCE, months=12):
     return out
 
 
-def load_tiers(path=TIERS):
-    """{zip: tier} — which tier a ZIP was in when it was bought. Phase 5's
-    review needs this and tier_interim.csv is regenerated, so it is copied
-    into the row rather than joined later."""
+# WHAT WAS PAID FOR, NOT WHAT IS CURRENT. job_rows() rebuilds every row from
+# the ledger on each run, so whatever this points at relabels the whole
+# acquisition history. The first 5,000 ZIPs were bought against
+# tier_interim.csv; rank_v2 reorders 18,953 of them, and letting that reach
+# market_jobs.tier would rewrite what the column exists to remember. A future
+# acquisition round should record its own file here alongside this one.
+ACQUIRED_TIERS = Path(__file__).parent / "tier_interim.csv"
+
+
+def load_tiers(path=ACQUIRED_TIERS):
+    """{zip: tier} — which tier a ZIP was in WHEN IT WAS BOUGHT."""
     p = Path(path)
     if not p.exists():
         return {}
