@@ -145,3 +145,24 @@ def test_manifest_records_both_populations():
     assert len(rows) > pages, "the scored set must be wider than the page set"
     assert pages > 20000, f"only {pages} standing pages in the manifest"
     assert len(rows) > 25000, f"only {len(rows)} scored ZIPs in the manifest"
+
+
+def test_the_pillow_guard_probes_pillow_itself():
+    """build_pages promises to degrade to the brand card when Pillow is
+    missing. It guarded `from og_card import render_card`, which always
+    succeeds — og_card imports PIL lazily INSIDE render_card — so the guard
+    never fired and the build crashed at the first render instead. A CI job
+    that did not install Pillow is how this surfaced."""
+    src = (ROOT / "pipeline" / "build_pages.py").read_text()
+    block = src[src.index("if not args.no_cards:"):src.index("card_set = set()")]
+    assert "import PIL" in block, "the guard must probe PIL, not og_card"
+
+
+def test_stale_cards_are_cleared_even_without_pillow():
+    """The rmtree sat inside the else-branch, so a build without Pillow or
+    with --no-cards left a previous build's per-ZIP cards in the artifact —
+    the exact class of file that nobody links and everybody forgets."""
+    src = (ROOT / "pipeline" / "build_pages.py").read_text()
+    clear = src.index("if og_dir.exists():")
+    guard = src.index("if not args.no_cards:")
+    assert clear < guard, "stale cards must be cleared before the Pillow guard"

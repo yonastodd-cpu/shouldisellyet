@@ -443,6 +443,8 @@ jobs:
           python-version: "3.12"
       - name: Browser smoke — released paths
         run: |
+          # Pillow, same as the build job — this job renders real pages.
+          pip install --quiet Pillow
           npm install --no-save playwright@1
           npx playwright install --with-deps chromium
           python3 pipeline/provision_readings.py --no-readings

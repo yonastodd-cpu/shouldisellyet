@@ -985,15 +985,27 @@ def main():
     period = meta.get("period", "")
     og_dir = web / "og"
     cards_made = 0
+    # Stale cards are cleared FIRST, unconditionally. This used to sit inside
+    # the else-branch below, so a build without Pillow — or with --no-cards —
+    # left a previous build's per-ZIP cards in place, and they shipped in the
+    # artifact. Clearing is not the part that needs Pillow.
+    if og_dir.exists():
+        shutil.rmtree(og_dir)
+    og_dir.mkdir(parents=True, exist_ok=True)
+
     if not args.no_cards:
         try:
+            # Probe PIL ITSELF. og_card imports it lazily inside render_card,
+            # so importing og_card always succeeds and this guard never fired:
+            # a machine without Pillow crashed the build at the first render
+            # instead of degrading to the brand card as the message promises.
+            # Found when a new CI job did not install it.
+            import PIL  # noqa: F401
             from og_card import render_card
         except ImportError as exc:
             print(f"WARNING: Pillow missing ({exc}) — skipping cards, pages fall back to the brand card")
             card_set = set()
         else:
-            if og_dir.exists():
-                shutil.rmtree(og_dir)      # drop stale data-month dirs
             (og_dir / period).mkdir(parents=True, exist_ok=True)
             render_card("", "", "", "green", "Is your ZIP's market turning?", " ",
                         og_dir / "default.png")     # generic brand card
