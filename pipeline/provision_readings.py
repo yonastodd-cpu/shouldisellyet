@@ -32,6 +32,7 @@ import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
+import realtor_crosscheck as RDC
 
 sys.path.insert(0, str(Path(__file__).parent))
 import verdict_v2 as v2
@@ -86,7 +87,10 @@ def build(manifest, readings):
         record = {"st": state}
         reading = readings.get(zip_code)
         if reading:
-            record = {**reading, "st": state}
+            # {**reading} copies every key through unfiltered, so a cross-check
+            # block that reached a reading would ship without anyone deciding
+            # to publish it. The switch is enforced where data leaves.
+            record = RDC.strip({**reading, "st": state})
         by_state[state][zip_code] = record
     return by_state
 

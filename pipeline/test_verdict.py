@@ -175,7 +175,7 @@ def test_pipeline_end_to_end(tmp_path):
     # run pipeline against fixture, writing into a temp copy of the repo layout
     repo = tmp_path / "repo"
     (repo / "pipeline").mkdir(parents=True)
-    for name in ("fetch_data.py", "verdict.py"):
+    for name in ("fetch_data.py", "verdict.py", "realtor_crosscheck.py"):
         (repo / "pipeline" / name).write_text((HERE / name).read_text())
 
     subprocess.run(
@@ -269,7 +269,7 @@ def test_rdc_never_touches_verdict(tmp_path):
     def run(rdc_arg, outdir):
         repo = tmp_path / outdir
         (repo / "pipeline").mkdir(parents=True)
-        for name in ("fetch_data.py", "verdict.py"):
+        for name in ("fetch_data.py", "verdict.py", "realtor_crosscheck.py"):
             (repo / "pipeline" / name).write_text((HERE / name).read_text())
         subprocess.run(
             [sys.executable, str(repo / "pipeline" / "fetch_data.py"),

@@ -26,6 +26,7 @@ import csv
 import html as _html
 import json
 import data_pause as PAUSE
+import realtor_crosscheck as RDC
 import shutil
 import sys
 from pathlib import Path
@@ -51,7 +52,8 @@ GREEN = (46, 158, 91)
 AMBER = (200, 137, 31)
 RED = (214, 69, 69)
 
-CITE = ('Data provided by <a href="https://www.redfin.com" target="_blank" '
+CITE = RDC.credit(
+        'Data provided by <a href="https://www.redfin.com" target="_blank" '
         'rel="noopener">Redfin</a>, a national real estate brokerage · '
         'Listing data from Realtor.com&reg; Economic Research · Place names '
         'from <a href="https://www.geonames.org" target="_blank" '

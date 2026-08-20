@@ -76,9 +76,34 @@ def load_acs(path=ACS):
 
 
 def load_entries(zips=ZIPS):
-    """{zip: entry} across the committed per-state files."""
+    """{zip: entry} across the committed per-state files.
+
+    THESE INPUTS NO LONGER EXIST. This script ranks on the Redfin-era record
+    shape — it needs `mos` and the Realtor.com `x` block, and it read them from
+    web/data/zips/{STATE}.json. That directory was removed on 2026-08-20 when
+    provisioning moved to one file per ZIP, and the records themselves were
+    blanked long before that: a per-ZIP file today is {"st": "MD"} with no
+    metrics and no cross-check. So there is nothing here to rank.
+
+    A missing directory used to be silent. Path.glob on a path that does not
+    exist yields nothing rather than raising, so load_entries returned {},
+    build returned zero rows, and main() then wrote that empty result over
+    tier_interim.csv — the frozen 10,633-row ordering that decides which ZIPs
+    are worth paying RentCast for. One accidental run would have destroyed it
+    with no error at all.
+    """
+    d = Path(zips)
+    if not d.is_dir():
+        raise SystemExit(
+            f"rank_interim: input directory {d} does not exist.\n"
+            "This script ranks on the withdrawn Redfin record shape (months of "
+            "supply + the Realtor.com cross-check block); those records were "
+            "blanked and the per-state files removed. Re-ranking on the "
+            "active-listing basis is Phase 5 work.\n"
+            "REFUSING TO RUN: continuing would overwrite pipeline/"
+            "tier_interim.csv, the frozen ordering that decides paid API spend.")
     out = {}
-    for f in sorted(Path(zips).glob("*.json")):
+    for f in sorted(d.glob("*.json")):
         out.update(json.loads(f.read_text()))
     return out
 
@@ -196,6 +221,14 @@ def main(argv=None):
                           load_places(), args.floor)
     assign_tiers(rows, args.tier_a, args.tier_b)
     report(rows, dropped, args.tier_a, args.tier_b)
+    # Belt and braces. The guard in load_entries covers the way this actually
+    # broke, but any future path that yields nothing must not be able to write
+    # an empty ranking over the real one.
+    if not rows:
+        raise SystemExit(
+            f"rank_interim: ranked 0 ZIPs — refusing to write {args.out}. "
+            "An empty ranking would erase the ordering that targets paid API "
+            "calls. Check the input directory before re-running.")
     write(args.out, rows)
     print(f"wrote {args.out} ({len(rows):,} rows)")
     return 0

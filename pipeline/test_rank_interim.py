@@ -183,3 +183,39 @@ def test_real_data_ranking_is_sane():
     assert len(rows) + sum(dropped.values()) == len(entries)
     assert all(r["owner"] >= rows[i + 1]["owner"] for i, r in enumerate(rows[:-1]))
     assert len({r["zip"] for r in rows}) == len(rows)
+
+
+def test_it_refuses_to_run_when_its_inputs_are_gone(tmp_path):
+    """It would have silently destroyed the ordering that spends money.
+
+    rank_interim reads the Redfin-era record shape from web/data/zips/. That
+    directory was removed on 2026-08-20 when provisioning moved to one file per
+    ZIP. Path.glob on a missing directory yields nothing rather than raising,
+    so load_entries returned {}, build returned zero rows, and main() then
+    wrote that empty result over pipeline/tier_interim.csv — the frozen
+    10,633-row ordering that decides which ZIPs are worth paying RentCast for.
+    No exception, no warning, no way to tell afterwards what had been there.
+    """
+    import pytest
+    import rank_interim as R
+    missing = tmp_path / "not-here"
+    with pytest.raises(SystemExit) as e:
+        R.load_entries(missing)
+    assert "REFUSING TO RUN" in str(e.value)
+    assert "tier_interim.csv" in str(e.value), \
+        "the error should name the file it is protecting"
+
+
+def test_it_refuses_to_write_an_empty_ranking(tmp_path):
+    """Second guard, for any future path that yields nothing."""
+    import pytest
+    import rank_interim as R
+    empty = tmp_path / "zips"
+    empty.mkdir()
+    out = tmp_path / "tier.csv"
+    out.write_text("rank,tier,zip\n1,A,20601\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        R.main(["--zips", str(empty), "--out", str(out)])
+    assert "refusing to write" in str(e.value).lower()
+    assert out.read_text(encoding="utf-8") == "rank,tier,zip\n1,A,20601\n", \
+        "the existing ranking was modified despite the refusal"

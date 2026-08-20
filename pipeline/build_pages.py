@@ -83,6 +83,7 @@ KINDS = {
 
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
 import data_pause as PAUSE
+import realtor_crosscheck as RDC
 from build_manifest import read_manifest
 from verdict_v2 import SPEC as V2, disclosure, methodology_sentence
 
@@ -850,6 +851,11 @@ def write_llms_txt(web, meta, scored, pages):
     ~80-line comfort zone."""
     period = meta.get("period", "")
     pretty = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
+    # The Realtor.com clause disappears with the kill switch. This file is read
+    # by GPTBot, ClaudeBot, PerplexityBot and CCBot (robots.txt allows all
+    # four), so a credit left here outlives one on any rendered page.
+    rdc = (" · Listing data from Realtor.com® Economic Research"
+           if RDC.shows_crosscheck() else "")
     (web / "llms.txt").write_text(f"""# ShouldISellYet
 
 > ShouldISellYet.com computes a free plain-English housing-market verdict —
@@ -888,8 +894,7 @@ each release as LICENSE.txt.
 
 ## Data attribution
 
-Market data: Data provided by Redfin, a national real estate brokerage ·
-Listing data from Realtor.com® Economic Research · FHFA ZIP-level house price
+Market data: Data provided by Redfin, a national real estate brokerage{rdc} · FHFA ZIP-level house price
 index (benchmark) · Freddie Mac PMMS 30-yr weekly average (mortgage rate).
 Place names from GeoNames.org (CC BY 4.0). No source sponsors, endorses, or
 partners with this site.

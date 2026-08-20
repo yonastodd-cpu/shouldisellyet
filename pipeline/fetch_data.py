@@ -37,6 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from verdict import ZipMetrics, evaluate, to_compact
+import realtor_crosscheck as RDC
 
 # Redfin rebuilt the Data Center as a "Download Hub" in mid-2026. The old
 # redfin_market_tracker/*.tsv000.gz files froze on 2026-06-02 (every file's
@@ -621,7 +622,9 @@ def main():
     # v2 feeds price drops from its own file (the legacy column shipped empty).
     pd_map = load_price_drops(args.price_drops) if args.price_drops else {}
 
-    rdc = load_rdc(args.rdc) if args.rdc else {}
+    # Off means not fetched, not merely not shown: the switch gates the
+    # network call itself, so no Realtor.com request leaves this machine.
+    rdc = load_rdc(args.rdc) if (args.rdc and RDC.shows_crosscheck()) else {}
     fhfa = load_fhfa_compact()
 
     by_state = defaultdict(dict)
@@ -656,9 +659,9 @@ def main():
             entry["h"] = h
         # Independent listing-feed cross-check — display only, post-verdict,
         # so adding/refreshing this source can never flip a verdict.
-        x = rdc.get(zip_code)
+        x = rdc.get(zip_code) if RDC.shows_crosscheck() else None
         if x:
-            entry["x"] = x
+            entry[RDC.FIELD] = x
         # FHFA official annual index — benchmark, not a signal
         fb = fhfa.get(zip_code)
         if fb:
@@ -690,7 +693,8 @@ def main():
         # text on purpose — render sites add the redfin.com link (see
         # docs/ATTRIBUTION.md before changing a single word of this).
         "attribution": "Data provided by Redfin, a national real estate brokerage"
-                       + (" · Listing data from Realtor.com® Economic Research" if rdc else ""),
+                       + (" · Listing data from Realtor.com® Economic Research"
+                          if (rdc and RDC.shows_crosscheck()) else ""),
         "national": {"spy_deciles": deciles, "counts": counts0,
                      **({"mortgage": mortgage} if mortgage else {}),
                      **({"backtest": backtest} if backtest else {})},

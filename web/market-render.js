@@ -153,7 +153,18 @@ const MARKET = (function () {
   // universe) that comparing exact levels across feeds would mislead.
   function renderCrossCheck(d){
     const x = d.x, m = d.m || {}, el = $("xcheck");
-    if (!x){ el.style.display = "none"; return; }
+    // The kill switch is enforced server-side: when it is off, no cross-check
+    // block is fetched, written, or shipped, so the client simply finds no
+    // data. It used to answer that by vanishing the strip, which reads as a
+    // rendering bug and quietly changes the page's shape. One quiet line
+    // instead — vendor-neutral on purpose, because a surface that has stopped
+    // showing a source should not still be naming it.
+    if (!x){
+      if (el) { el.style.display = ""; el.innerHTML =
+        '<div class="xk">INDEPENDENT CROSS-CHECK</div>' +
+        '<div>Independent cross-check temporarily unavailable.</div>'; }
+      return;
+    }
     const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const label = x.p ? MON[+x.p.slice(5,7)-1] + " " + x.p.slice(0,4) : "";
     const newer = x.p && META && META.period && x.p > META.period;
