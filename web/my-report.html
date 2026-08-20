@@ -963,14 +963,16 @@ fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
 
 async function lookup(zip){
   if (INDEX){
-    const st = INDEX[zip.slice(0,3)];
-    if (!st) return null;
-    if (!stateCache[st]){
-      const r = await fetch("data/zips/"+st+".json");
-      if (!r.ok) return null;
-      stateCache[st] = await r.json();
-    }
-    return stateCache[st][zip] || null;
+    // One file per ZIP — see index.html's lookup(). This fetched a whole
+    // state's records to read one.
+    if (stateCache[zip] !== undefined) return stateCache[zip];
+    let rec = null;
+    try {
+      const r = await fetch("data/z/" + zip + ".json");
+      if (r.ok) rec = await r.json();
+    } catch (e) {}
+    stateCache[zip] = rec;
+    return rec;
   }
   return DEMO[zip] || null;
 }

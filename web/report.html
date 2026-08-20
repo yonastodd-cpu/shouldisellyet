@@ -550,11 +550,11 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
   let meta = null, d = null;
   try {
     const [mr, zr] = await Promise.all([
-      fetch("data/meta.json"), fetch("data/zips/" + SAMPLE.state + ".json")
+      fetch("data/meta.json"), fetch("data/z/" + SAMPLE.zip + ".json")
     ]);
     if (!mr.ok || !zr.ok) return;
     meta = await mr.json();
-    d = (await zr.json())[SAMPLE.zip];
+    d = await zr.json();   // per-ZIP file: the record itself, not a state map
   } catch (e) { return; }
   if (!meta || !d || !d.m) return;
 

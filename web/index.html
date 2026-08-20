@@ -1064,7 +1064,9 @@ const DEMO = {
   "20874": {l:"green", st:"MD", s:0, m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
   "20906": {l:"yellow", st:"MD", s:3, m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
 };
-let INDEX = null, META = null, live = false;   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
+let INDEX = null, META = null, live = false;
+// Per-ZIP memo. Replaces stateCache, which held whole-state blobs.
+const zipCache = {};   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
 const stateCache = {};
 
 // Warning-Sign Index for the preview's macro row — FEATURE-DETECTED, never
@@ -1152,15 +1154,28 @@ async function lookup(zip) {
   // 1.6s floor absorbs the wait invisibly; on fetch failure this resolves
   // immediately and the DEMO fallback below still applies.
   await DATA_READY.catch(() => {});
-  if (live && INDEX) {
-    const st = INDEX[zip.slice(0, 3)];
-    if (!st) return null;
-    if (!stateCache[st]) {
-      const r = await fetch("data/zips/" + st + ".json");
-      if (!r.ok) return null;
-      stateCache[st] = await r.json();
-    }
-    return stateCache[st][zip] || null;
+  if (live) {
+    // ONE FILE PER ZIP. This used to fetch data/zips/{ST}.json — every record
+    // in the state — to display one: 382 for Maryland, 1,475 for California.
+    // Harmless while every record is {"st":"MD"}, and not harmless at all once
+    // Phase 4 provisions readings back in, when showing one ZIP would hand
+    // several hundred others to anyone watching the network tab.
+    //
+    // Deliberately a static file rather than the reading API: the front door
+    // then has no runtime dependency to be down, rate-limited, or CORS-pinned
+    // to one origin. The release gate still applies — the file only contains a
+    // reading when the ZIP is in a released tranche.
+    //
+    // A 404 means a ZIP we do not cover, which is what the waitlist branch
+    // downstream needs, so the prefix map is no longer consulted here.
+    if (zipCache[zip] !== undefined) return zipCache[zip];
+    let rec = null;
+    try {
+      const r = await fetch("data/z/" + zip + ".json");
+      if (r.ok) rec = await r.json();
+    } catch (e) { /* network failure reads as "not covered" — see below */ }
+    zipCache[zip] = rec;
+    return rec;
   }
   return DEMO[zip] || null;
 }

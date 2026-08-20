@@ -189,13 +189,21 @@ for (const path of stagedRelease ? [] : [
   check(`purged file is gone: ${path}`, r.status() === 404, `HTTP ${r.status()}`);
 }
 
-// The bulk record file may exist, but must carry no measurement.
-const bulk = stagedRelease ? null : await page.request.get(`${BASE}/data/zips/MD.json`);
-if (bulk && bulk.ok()) {
-  const recs = await bulk.json();
-  const keys = new Set(Object.values(recs).flatMap((v) => Object.keys(v)));
-  check("bulk records carry only a state code",
-    [...keys].every((k) => k === "st"), [...keys].join(","));
+// THE BULK FILE MUST NOT EXIST. Records are one file per ZIP now, so a state
+// blob coming back means the switch regressed and the browser is downloading
+// hundreds of readings to show one again.
+const bulk = await page.request.get(`${BASE}/data/zips/MD.json`);
+check("no bulk state file is served", bulk.status() === 404, `HTTP ${bulk.status()}`);
+
+// And the per-ZIP file carries only what an unreleased ZIP should.
+if (!stagedRelease) {
+  const one = await page.request.get(`${BASE}/data/z/${ZIP}.json`);
+  check("per-ZIP record is served", one.ok(), `HTTP ${one.status()}`);
+  if (one.ok()) {
+    const rec = await one.json();
+    check("unreleased record carries only a state code",
+      Object.keys(rec).every((k) => k === "st"), Object.keys(rec).join(","));
+  }
 }
 
 // ————— 5. the released paths —————

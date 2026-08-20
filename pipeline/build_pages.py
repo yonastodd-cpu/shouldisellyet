@@ -928,9 +928,15 @@ def main():
         raise SystemExit("page_manifest.csv is missing or empty — refusing to "
                          "build, because emitting zero pages deletes every "
                          "live ZIP URL.")
+    # Per-ZIP files now (see provision_readings.write). Only the manifest's
+    # ZIPs are read, so this is 22,874 small opens rather than a glob of
+    # everything that happens to be in the directory.
     entries = {}
-    for f in sorted((data / "zips").glob("*.json")):
-        entries.update(json.loads(f.read_text()))
+    zdir = data / "z"
+    for zip_code, _st in manifest:
+        f = zdir / f"{zip_code}.json"
+        if f.exists():
+            entries[zip_code] = json.loads(f.read_text())
 
     eligible, skipped = [], defaultdict(int)
     for z, st in manifest:

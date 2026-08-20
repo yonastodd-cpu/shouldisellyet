@@ -28,6 +28,7 @@ the same size of mistake.
 
 import argparse
 import json
+import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -38,7 +39,7 @@ from build_manifest import read_manifest
 from rescore_v2 import compact, db_rows
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "web" / "data" / "zips"
+OUT = ROOT / "web" / "data" / "z"     # one file per ZIP; see write()
 TRANCHES = Path(__file__).parent / "tranches.json"
 
 
@@ -91,12 +92,35 @@ def build(manifest, readings):
 
 
 def write(by_state, out=OUT):
+    """ONE FILE PER ZIP, not one per state.
+
+    A state file made the browser download every record in the state to
+    display one — 382 for Maryland, 1,475 for California. While every record
+    is {"st":"MD"} that is merely wasteful; the moment Phase 4 provisions
+    readings back in, showing one ZIP republishes several hundred others to
+    anyone watching the network tab, and /data/zips/CA.json becomes a
+    bulk-download endpoint again.
+
+    Per-ZIP files fix that with no runtime dependency: the front door keeps
+    being served by the same CDN as the page, with no API to rate-limit, no
+    CORS origin to pin, and nothing to be down. The release gate still applies
+    — build() only puts a reading in a file when the ZIP is in a released
+    tranche — it just runs at build time rather than per request.
+
+    A missing file is a ZIP we do not cover, which is exactly what the client
+    needs to know, so the prefix lookup disappears with the state files.
+    """
     out = Path(out)
+    if out.exists():
+        shutil.rmtree(out)      # stale state shards must not survive the switch
     out.mkdir(parents=True, exist_ok=True)
-    for state, records in by_state.items():
-        (out / f"{state}.json").write_text(
-            json.dumps(records, separators=(",", ":")), encoding="utf-8")
-    return sum(len(v) for v in by_state.values())
+    n = 0
+    for records in by_state.values():
+        for zip_code, record in records.items():
+            (out / f"{zip_code}.json").write_text(
+                json.dumps(record, separators=(",", ":")), encoding="utf-8")
+            n += 1
+    return n
 
 
 def main(argv=None):

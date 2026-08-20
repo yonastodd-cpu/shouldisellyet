@@ -17,6 +17,28 @@ from surfaces import SURFACES
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_records_are_written_one_file_per_zip():
+    """A state file made the browser download every record in the state to
+    show one — 1,475 for California. Per-ZIP files end that, and a 404 is how
+    the client learns a ZIP is not covered."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        PR.write(PR.build([("20814", "MD"), ("90210", "CA")], {}), d)
+        names = sorted(p.name for p in Path(d).iterdir())
+        assert names == ["20814.json", "90210.json"], names
+        assert json.loads((Path(d) / "20814.json").read_text()) == {"st": "MD"}
+
+
+def test_switching_shapes_clears_the_old_state_files():
+    """The state shards were a public bulk endpoint. Leaving one behind after
+    the switch would keep serving it."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "MD.json").write_text('{"20814":{"st":"MD","l":"red"}}')
+        PR.write(PR.build([("20814", "MD")], {}), d)
+        assert not (Path(d) / "MD.json").exists(), "a stale state shard survived"
+
+
 def test_unreleased_records_carry_only_a_state():
     """The bulk file at /data/zips/{ST}.json ships in the artifact and is
     fetched by the browser, so it is a published surface whether or not any

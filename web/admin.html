@@ -659,8 +659,9 @@ function route() {
 window.addEventListener("hashchange", route);
 
 // ————— verdict join: the site's own published data, fetched client-side —————
-// /data/index.json maps 3-digit ZIP prefixes to states; /data/zips/{ST}.json
-// holds each ZIP's verdict level. Shards cache for the session.
+// /data/z/{zip}.json holds one ZIP's record. This used to pull a whole state
+// shard to read a single level; both admin call sites were per-ZIP in effect,
+// so nothing here ever needed the bulk file.
 let _prefix = null;
 const _shards = {};
 async function verdictFor(zip) {
@@ -668,9 +669,12 @@ async function verdictFor(zip) {
     if (!_prefix) _prefix = await (await fetch("/data/index.json")).json();
     const st = _prefix[zip.slice(0, 3)];
     if (!st) return null;
-    if (!_shards[st]) _shards[st] = (await fetch("/data/zips/" + st + ".json")).json();
-    const shard = await _shards[st];
-    return { st, level: (shard[zip] || {}).l || null };
+    if (_shards[zip] === undefined) {
+      const r = await fetch("/data/z/" + zip + ".json");
+      _shards[zip] = r.ok ? await r.json() : null;
+    }
+    const rec = _shards[zip];
+    return { st: (rec && rec.st) || st, level: (rec || {}).l || null };
   } catch (e) { return null; }
 }
 const VTAG = {
@@ -1925,13 +1929,14 @@ RENDER.health = async function () {
     fetch("/data/meta.json").then((r) => r.json()),
     rpc("admin_events_health"),
     // Realtor.com's vintage lives per-ZIP (x.p) — sample one covered ZIP.
-    fetch("/data/zips/MD.json").then((r) => r.json()).catch(() => null),
+    // Fetches that ZIP directly now instead of all 382 Maryland records.
+    fetch("/data/z/20906.json").then((r) => r.json()).catch(() => null),
   ]);
   const today = new Date();
   const daysSince = (iso) => iso ? Math.floor((today - new Date(iso)) / 86400000) : null;
   // A month period like "2026-06" is stale relative to its month END.
   const monthEnd = (p) => p ? new Date(+p.slice(0, 4), +p.slice(5, 7), 0).toISOString().slice(0, 10) : null;
-  const rdcP = mdShard && mdShard["20906"] && mdShard["20906"].x ? mdShard["20906"].x.p : null;
+  const rdcP = mdShard && mdShard.x ? mdShard.x.p : null;   // the record itself now
 
   const rows = [
     // [name, latest, staleDays, warnAt, detail]

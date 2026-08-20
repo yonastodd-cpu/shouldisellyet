@@ -27,7 +27,7 @@ _private_data_export/
 # 28,000+ ZIPs — and because the whole of web/ is the deployed artifact, it
 # was also a public bulk-download endpoint at /data/zips/{ST}.json regardless
 # of whether any page linked it.
-web/data/zips/
+web/data/z/
 
 # Generated at deploy time by pipeline/build_pages.py from committed web/data.
 # ~18.6k pages / 147MB — never committed (9.8MB gzipped in the Pages artifact).

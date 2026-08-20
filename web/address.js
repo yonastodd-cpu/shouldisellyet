@@ -138,13 +138,17 @@ const ADDRESS = (function () {
     return _index;
   }
 
-  async function shard(st) {
-    if (_shards[st]) return _shards[st];
+  // One file per ZIP — see the note in index.html's lookup(). Was a whole
+  // state's records to read one.
+  async function record(zip) {
+    if (_shards[zip] !== undefined) return _shards[zip];
+    let rec = null;
     try {
-      const r = await fetch("data/zips/" + st + ".json");
-      if (r.ok) _shards[st] = await r.json();
+      const r = await fetch("data/z/" + zip + ".json");
+      if (r.ok) rec = await r.json();
     } catch (e) {}
-    return _shards[st] || null;
+    _shards[zip] = rec;
+    return rec;
   }
 
   function cityCache(zip) {
@@ -184,13 +188,15 @@ const ADDRESS = (function () {
     if (!st) { out.checked = true; out.city = await cityFor(z); return out; }
 
     out.state = st;
-    const s = await shard(st);
-    if (s) {
+    // The per-ZIP file answers both questions at once now: whether we cover
+    // this ZIP (it exists) and which state it is in (the record says so). The
+    // prefix map above stays as the cheap typo check it always was.
+    const row = await record(z);
+    {
       out.checked = true;
-      const row = s[z];
       if (row) {
         out.known = true;
-        if (row.st) out.state = row.st;  // shard is authoritative over the prefix map
+        if (row.st) out.state = row.st;  // the record is authoritative over the prefix map
       }
     }
     out.city = await cityFor(z);
