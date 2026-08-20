@@ -144,6 +144,17 @@ risk.
 ## Attorney batch
 1. Redfin data — retention vs deletion now that use has stopped.
 2. RentCast ToU — confirm derived-reading display is permitted.
+   **SHARPENED 2026-08-19 by the re-scoring step.** The question is no longer
+   only about display. `web/data/zips/*.json` is committed to a PUBLIC repo,
+   and after re-scoring it carries 5,000 ZIPs' current RentCast medians plus
+   **60,000 monthly median-price history points**. That is the closest thing
+   in this system to redistributing vendor data rather than displaying a
+   derived reading, and it is the usual prohibited use. Note the posture is
+   not new — the same field published 36 months of Redfin history per ZIP for
+   as long as the site has existed — but the vendor is new and its terms are
+   unreviewed. If counsel objects, the fix is small and local: the sparkline
+   can read from Supabase at request time instead of shipping in the page
+   data, or `h` can be truncated. Worth asking before Tranche 1, not after.
 3. Realtor.com Data Library and Zillow Research — commercial display terms.
 4. Updated SISY ToS/methodology disclosures naming the new sources and the
    per-tier refresh cadence.

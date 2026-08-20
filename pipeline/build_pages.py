@@ -122,9 +122,12 @@ def metric_rows(m, strong):
         rows.append(("LISTINGS W/ PRICE CUTS", f"{round(v*100)}%", t, clamp(v/0.7*100), 28.6 if strong else 50,
                      "strong line: 20%" if strong else ("line: 35%" if t == "g" else "past the line")))
     if m.get("invy") is not None:
-        v = m["invy"]; t = "a" if v > .5 else "g"
-        rows.append(("NEW SUPPLY VS. LAST YR", pct(v).replace(".0", ""), t, clamp((v*100+20)/120*100), 58.3,
-                     "line: +50% y/y" if t == "g" else "surging"))
+        # +30% is the calibrated active-listing line (TIER-B-GATE.md). Only
+        # v2 entries are ever displayed — every legacy entry is paused — so
+        # the dial and the engine agree on everything a reader can see.
+        v = m["invy"]; t = "a" if v > .30 else "g"
+        rows.append(("NEW SUPPLY VS. LAST YR", pct(v).replace(".0", ""), t, clamp((v*100+20)/120*100), 41.7,
+                     "line: +30% y/y" if t == "g" else "surging"))
     return rows[:4]
 
 
@@ -360,9 +363,15 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # lift whole — entity, date, verdict, and the two stats every standing
     # page is guaranteed to have (eligibility requires mos+dom non-null).
     # Every number in it is the page's own live data; nothing is hardcoded.
+    # The second stat differs by basis: months of supply needs a closed-sale
+    # count no active-listing feed has, so a v2 page states its listing count
+    # instead. Guarded rather than assumed — an unguarded m['mos'] here would
+    # KeyError on every re-scored ZIP.
+    second = (f"{m['mos']:.1f} months of supply" if m.get("mos") is not None
+              else f"{int(m['inv']):,} homes on the market")
     answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
               f"{vc['short']} — the reading is {vc['word']}, with homes selling in about "
-              f"{round(m['dom'])} days and {m['mos']:.1f} months of supply.")
+              f"{round(m['dom'])} days and {second}.")
     # The Q&A pair: question a person actually asks, two-sentence answer from
     # the canonical copy map (verdict_copy.json qa — never hand-written here,
     # so the FAQ can't drift from the card and the share text).
@@ -822,7 +831,12 @@ def main():
             m = e.get("m", {})
             if any(r[0] == "insufficient_data" for r in e.get("r", [])):
                 skipped["insufficient_verdict"] += 1; continue
-            if any(m.get(k) is None for k in ("mos", "spy", "dom", "domy")):
+            # Basis-aware: a v2 reading has no months-of-supply (RentCast
+            # cannot see closings), so demanding `mos` would strike every
+            # re-scored ZIP off the site at the moment it became publishable.
+            need = (("spy", "dom", "domy", "invy") if e.get("b")
+                    else ("mos", "spy", "dom", "domy"))
+            if any(m.get(k) is None for k in need):
                 skipped["incomplete_dials"] += 1; continue
             if z not in places:
                 skipped["no_city_name"] += 1; continue
@@ -856,7 +870,11 @@ def main():
     # The set: every DMV ZIP (our home market) + the top N by homes sold, which
     # concentrates cards where real selling activity — and so real sharing — is.
     dmv = {z for z, e in eligible if places[z][1] in ("DC", "MD", "VA")}
-    top = {z for z, _ in sorted(eligible, key=lambda t: -(t[1].get("m", {}).get("sold") or 0))[:args.top_cards]}
+    # Rank by market size. v1 entries have `sold`; v2 entries do not, so they
+    # fall back to the active listing count — without it every re-scored ZIP
+    # would sort as zero and quietly lose its share card.
+    top = {z for z, _ in sorted(eligible, key=lambda t: -((t[1].get("m", {}).get("sold")
+                                or t[1].get("m", {}).get("inv") or 0)))[:args.top_cards]}
     card_set = dmv | top
     period = meta.get("period", "")
     og_dir = web / "og"

@@ -32,7 +32,7 @@ const MARKET = (function () {
     let met = 0;
     if (m.mos != null && m.mos < 2.5) met++;
     if (m.spy != null && m.spy >= 0.05) met++;
-    if (m.dom != null && m.domy != null){ const prior = m.dom - m.domy; if (prior > 0 && m.domy/prior <= -0.15) met++; }
+    if (m.dom != null && m.domy != null){ const prior = m.dom - m.domy; if (prior > 0 && m.domy/prior <= -0.20) met++; }
     if (m.pd != null && m.pd < 0.20) met++;
     return met;
   }
@@ -78,7 +78,7 @@ const MARKET = (function () {
     if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
       const t = strong ? (p<=-0.15?"s":"g") : (p>0.4?"a":"g");
       rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
-        note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −15% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
+        note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −20% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
         how:{what:"How many days the typical home sits on the market before a buyer commits.",
              goesin:(m.sold!=null) ? "days from listing to contract for the "+m.sold.toLocaleString()+" homes sold in the latest month, and for last year's sales"
                    : "days from listing to contract for every home sold in the latest month, and for last year's sales",
@@ -94,8 +94,8 @@ const MARKET = (function () {
              math:"listings with a price cut ÷ all active listings", bt:"cuts",
              why:strong?"Under 20%, few sellers are having to negotiate down — pricing power sits with sellers.":"Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.",
              yours:"Yours: "+Math.round(m.pd*100)+"%"}}); }
-    if (m.invy != null){ const t=m.invy>0.5?"a":"g";
-      rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +50% y/y":"surging",
+    if (m.invy != null){ const t=m.invy>0.30?"a":"g";
+      rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +30% y/y":"surging",
         how:{what:"How many homes are coming up for sale, compared with a year ago.",
              goesin:(m.inv!=null) ? m.inv.toLocaleString()+" homes for sale now vs. about "+Math.round(m.inv/(1+m.invy)).toLocaleString()+" a year ago"
                    : "the count of homes for sale now, against the same month last year",

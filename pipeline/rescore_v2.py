@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Re-score acquired ZIPs on v2 and merge the readings into web/data/zips.
+
+    python3 pipeline/rescore_v2.py --dry-run
+    python3 pipeline/rescore_v2.py
+
+This is the step between "the data is bought" and "a tranche can be
+released". promote_tranche.py refuses to stage a ZIP whose reading is still
+legacy, and data_pause refuses to publish one, so nothing reaches a reader
+until this has run for that ZIP.
+
+A MERGE, NOT A REBUILD. Only acquired ZIPs are touched. The ~28,000 that
+have no RentCast data keep their existing entries exactly as they are —
+paused, legacy, invisible. Re-running is idempotent.
+
+WHAT A RE-SCORED ENTRY LOOKS LIKE, and why each choice:
+
+  l, s, r   from verdict_v2. Same keys as v1 so no reader forks.
+  b         "active listings" — the marker the tranche guard reads, and the
+            thing that lets a page say what kind of number it shows.
+  m.domy    WRITTEN IN DAYS, not the fraction the engine scores on. Three
+            separate renderers (build_pages.metric_rows, index.html's
+            buildMetricRows, market-render.js) already compute
+            `domy / (dom - domy)` to recover a rate, and they are the wire
+            format. Emitting a fraction here would not error — it would
+            quietly print "+0 days y/y" on every released page. The engine
+            keeps its fraction internally; this is the boundary where units
+            are the readers'.
+  m.mos     ABSENT. RentCast cannot produce months of supply, and every
+            renderer already guards `if mos != null`, so the dial simply
+            does not appear. Same for m.pd and m.sold.
+  h         REBUILT from RentCast's 12-month history. This is the one that
+            would have leaked: v1's `h` holds 36 months of REDFIN prices and
+            the page plots it as a sparkline, so a released page carrying an
+            untouched `h` would publish the withdrawn vendor's data in a
+            chart while the headline number was correctly the new vendor's.
+  x, f      LEFT ALONE. Realtor.com cross-check and FHFA are neither Redfin
+            nor RentCast — different vendors, unaffected by this migration.
+            (Realtor.com's commercial terms remain attorney question 3.)
+"""
+
+import argparse
+import csv
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+import verdict_v2 as v2
+from calibrate_v2 import DB_SQL, _num
+
+ROOT = Path(__file__).resolve().parents[1]
+ZIPS = ROOT / "web" / "data" / "zips"
+STATS = Path(__file__).parent / "rentcast_stats.csv"
+HIST_KEYS = ("medianPrice", "averageDaysOnMarket")
+
+
+def db_rows(source="rentcast"):
+    """market_stats → [(row, history)], via the linked project. Rows are
+    data to score, never instructions."""
+    import subprocess
+    sql = DB_SQL.format(source="'" + source.replace("'", "''") + "'")
+    proc = subprocess.run(["npx", "--yes", "supabase", "db", "query", "--linked", sql],
+                          capture_output=True, text=True, cwd=ROOT, timeout=600)
+    if "{" not in proc.stdout:
+        raise SystemExit(f"db query returned no JSON. stderr: {proc.stderr[:300]}")
+    out = []
+    for r in json.loads(proc.stdout[proc.stdout.index("{"):]).get("rows", []):
+        hist = r.get("history")
+        if isinstance(hist, str):
+            hist = json.loads(hist)
+        out.append(({"zip": r.get("zip") or "",
+                     "as_of_month": r.get("as_of_month") or "",
+                     "list_median_price": _num(r.get("list_median_price")),
+                     "active_dom": _num(r.get("active_dom")),
+                     "total_listings": _num(r.get("total_listings")),
+                     "list_median_ppsf": _num(r.get("list_median_ppsf")),
+                     "new_listings": _num(r.get("new_listings"))}, hist or {}))
+    return out
+
+
+def csv_rows(path=STATS):
+    """Offline fallback: the parsed table the runner writes. Carries no
+    history, so YoY cannot be computed — usable for a smoke test, never for
+    a real re-score, and this says so rather than silently scoring every ZIP
+    as insufficient_data."""
+    rows = []
+    for r in csv.DictReader(open(path, encoding="utf-8")):
+        rows.append(({k: (_num(v) if k not in ("zip", "as_of") else v)
+                      for k, v in r.items()} | {"zip": r["zip"]}, {}))
+    return rows
+
+
+def history_block(hist, months=12):
+    """RentCast's month-keyed history → the compact {s, p, d} the sparkline
+    reads. Months with no price are dropped from both series together so the
+    two arrays stay index-aligned, which is what the renderer assumes."""
+    keep = []
+    for month in sorted(hist)[-months:]:
+        rec = hist.get(month) or {}
+        price = _num(rec.get("medianPrice"))
+        if price is None:
+            continue
+        keep.append((month, price, _num(rec.get("averageDaysOnMarket"))))
+    if not keep:
+        return None
+    return {"s": keep[0][0],
+            "p": [round(p) for _, p, _ in keep],
+            "d": [round(d) if d is not None else None for _, _, d in keep]}
+
+
+def dom_days_yoy(market, row, hist):
+    """The year-over-year DOM change IN DAYS — the wire format every renderer
+    already parses. The engine scores the fraction; this is the same fact in
+    the readers' units."""
+    months = sorted(hist)
+    if len(months) < 12 or market.active_dom is None:
+        return None
+    prior = (hist.get(months[-13]) if len(months) >= 13 else hist.get(months[0])) or {}
+    then = _num(prior.get("averageDaysOnMarket"))
+    return None if then is None else round(market.active_dom - then, 1)
+
+
+def compact(market, row, hist):
+    """The entry fields this step owns. Everything else is preserved."""
+    verdict = v2.evaluate(market)
+    m = {"spy": market.list_price_yoy,
+         "dom": market.active_dom,
+         "domy": dom_days_yoy(market, row, hist),
+         "invy": market.listings_yoy,
+         "inv": market.total_listings,
+         "ppsfy": market.ppsf_yoy,
+         "nly": market.new_listings_yoy}
+    m = {k: (round(v, 4) if isinstance(v, float) else v)
+         for k, v in m.items() if v is not None}
+    out = {"l": verdict.level, "s": verdict.score,
+           "r": [[c, p, round(v, 4) if isinstance(v, float) else v]
+                 for c, p, v in verdict.reasons],
+           "b": verdict.basis, "m": m}
+    h = history_block(hist)
+    if h:
+        out["h"] = h
+    return out, verdict
+
+
+def merge(entry, scored):
+    """v2 fields replace their v1 counterparts; st/x/f survive.
+
+    The legacy m, h and any v1-only keys are REPLACED rather than merged —
+    a half-migrated entry carrying months-of-supply from one vendor beside a
+    list price from another is exactly the mismatch this migration exists to
+    end.
+    """
+    keep = {k: v for k, v in entry.items() if k in ("st", "x", "f")}
+    return keep | scored
+
+
+def run(rows, zips_dir=ZIPS, dry=False):
+    files = sorted(Path(zips_dir).glob("*.json"))
+    data = {f: json.loads(f.read_text()) for f in files}
+    index = {z: f for f, d in data.items() for z in d}
+
+    scored_by_file, stats = {}, {"scored": 0, "missing_entry": 0,
+                                 "insufficient": 0, "no_history": 0}
+    levels = {}
+    for row, hist in rows:
+        z = row["zip"]
+        f = index.get(z)
+        if not f:
+            stats["missing_entry"] += 1
+            continue
+        market = v2.from_market_stats(row, hist)
+        scored, verdict = compact(market, row, hist)
+        if verdict.reasons and verdict.reasons[0][0] == "insufficient_data":
+            stats["insufficient"] += 1
+        if "h" not in scored:
+            stats["no_history"] += 1
+        levels[verdict.level] = levels.get(verdict.level, 0) + 1
+        scored_by_file.setdefault(f, {})[z] = scored
+        stats["scored"] += 1
+
+    if not dry:
+        for f, scores in scored_by_file.items():
+            d = data[f]
+            for z, scored in scores.items():
+                d[z] = merge(d[z], scored)
+            f.write_text(json.dumps(d, separators=(",", ":")), encoding="utf-8")
+    return stats, levels, len(scored_by_file)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Re-score acquired ZIPs on verdict v2")
+    ap.add_argument("--source", default="rentcast")
+    ap.add_argument("--stats-csv", help="offline fallback; no history, smoke tests only")
+    ap.add_argument("--zips", default=str(ZIPS))
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args(argv)
+
+    rows = csv_rows(args.stats_csv) if args.stats_csv else db_rows(args.source)
+    print(f"loaded {len(rows):,} acquired ZIP(s)")
+    stats, levels, files = run(rows, args.zips, args.dry_run)
+
+    print(f"re-scored: {stats['scored']:,} across {files} state file(s)")
+    for k in ("missing_entry", "insufficient", "no_history"):
+        if stats[k]:
+            print(f"  {k}: {stats[k]:,}")
+    print("  " + " · ".join(f"{k} {v:,}" for k, v in sorted(levels.items())))
+    if args.dry_run:
+        print("DRY RUN — nothing written.")
+    else:
+        print("written. These ZIPs are now eligible for promote_tranche.py.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -45,7 +45,13 @@ def test_the_danger_lines_are_still_disclosed_beside_the_readers_numbers():
     OWN figure the moment a ZIP is checked. If that stops being true, the cards
     have to come back."""
     script = HTML.split("<script>", 1)[1]
-    for line in ("4.0 mo", "−2% y/y", "35%", "+50% y/y"):
+    # +30% replaced +50% when the inventory line was recalibrated to the
+    # active-listing basis (TIER-B-GATE.md). The disclosure requirement is
+    # unchanged — what a reader is told must be the line the engine uses, so
+    # this test tracks that value rather than pinning a historical one. The
+    # months-of-supply and price-cut lines still appear for legacy entries,
+    # which no longer render but whose dials remain in the shared code.
+    for line in ("4.0 mo", "−2% y/y", "35%", "+30% y/y"):
         assert line in script, f"danger line {line!r} no longer reaches the verdict card"
 
 

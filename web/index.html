@@ -1230,7 +1230,7 @@ function strongSignals(m) {
   if (m.spy != null && m.spy >= 0.05) met++;
   if (m.dom != null && m.domy != null) {
     const prior = m.dom - m.domy;
-    if (prior > 0 && m.domy / prior <= -0.15) met++;
+    if (prior > 0 && m.domy / prior <= -0.20) met++;
   }
   if (m.pd != null && m.pd < 0.20) met++;
   return met;
@@ -1269,7 +1269,7 @@ function buildMetricRows(d, strong) {
     const t = strong ? (p <= -0.15 ? "s" : "g") : (p > 0.4 ? "a" : "g");
     rows.push({ name:"TIME TO SELL", val:Math.round(m.dom)+" days", t,
       fill:clampPct((p*100+50)/150*100), th: strong ? 23.3 : 60,
-      note: strong ? (t==="s" ? Math.round(-m.domy)+" days faster y/y" : "strong line: −15% y/y")
+      note: strong ? (t==="s" ? Math.round(-m.domy)+" days faster y/y" : "strong line: −20% y/y")
                    : (m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "as fast as last yr") });
   }
   if (m.pd != null) {
@@ -1280,9 +1280,9 @@ function buildMetricRows(d, strong) {
                    : (t==="g" ? "line: 35%" : "past the line") });
   }
   if (m.invy != null) {
-    const t = m.invy > 0.5 ? "a" : "g";
+    const t = m.invy > 0.30 ? "a" : "g";
     rows.push({ name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t,
-      fill:clampPct((m.invy*100+20)/120*100), th:58.3, note: t==="g" ? "line: +50% y/y" : "surging" });
+      fill:clampPct((m.invy*100+20)/120*100), th:58.3, note: t==="g" ? "line: +30% y/y" : "surging" });
   }
   return rows.slice(0, 4);
 }

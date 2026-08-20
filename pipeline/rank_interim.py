@@ -91,7 +91,9 @@ def has_standing_page(entry, zip_code, places):
     m = entry.get("m") or {}
     if any(r and r[0] == "insufficient_data" for r in entry.get("r") or []):
         return False
-    if any(m.get(k) is None for k in ("mos", "spy", "dom", "domy")):
+    need = (("spy", "dom", "domy", "invy") if entry.get("b")
+            else ("mos", "spy", "dom", "domy"))
+    if any(m.get(k) is None for k in need):
         return False
     return zip_code in places
 
