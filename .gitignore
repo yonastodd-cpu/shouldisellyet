@@ -56,3 +56,7 @@ pipeline/velocity/zip-velocity-latest.json
 # Raw Redfin sources cached by tools/backtest_cases.py (~1GB). The COMPUTED
 # case JSONs in web/data/cases/ are committed; their inputs are not.
 .cache/
+
+# Read-only exposure audit — names every sensitive path and commit in one
+# place. Kept local; publishing it would publish the map.
+AUDIT_REPORT.md

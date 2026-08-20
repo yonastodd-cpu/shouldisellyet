@@ -387,6 +387,14 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         faq_q = f"Why is the reading for {z} unavailable?"
         faq_a = PAUSE.NOTICE_BODY
         share_text = f"{PAUSE.NOTICE_TITLE} for {where} on ShouldISellYet."
+        # The prose facts list. It is built from the same withdrawn metrics as
+        # the dials and it renders in the page BODY, so leaving it out of this
+        # block published sentences like "the typical home here sold for +0.2%
+        # compared with a year ago" underneath a header saying the reading was
+        # being refreshed. Verified live on /zip/20601/ before this line
+        # existed. A blanking that covers the metadata and forgets the prose is
+        # not a blanking.
+        facts_html = ""
         k = dict(k, tag="", hex="#6b6861", soft="#f3f1ea", line="#e7e4dd",
                  head=PAUSE.NOTICE_TITLE, sub=PAUSE.NOTICE_BODY)
 
@@ -538,16 +546,33 @@ def share_stub(z, e, place, meta, has_card):
     vc = vcopy(e["l"])
     stat = card_stat(e.get("m", {}))
     period = meta.get("period", "")
-    og_img = f"{SITE}/og/{period}/{z}.png" if has_card else f"{SITE}/og/default.png"
+    live = PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))
+    # A share stub is pure metadata — its whole job is to be read by a scraper
+    # rather than a person, which is exactly why it must honour the pause. It
+    # had no pause check at all, so every /s/{zip} was serving the verdict word
+    # in <title> and a metric in og:description while the page it points at
+    # showed the refresh notice (verified live on /s/20601/). The per-ZIP OG
+    # image goes with it: the card has the numbers painted into the pixels.
+    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and live
+              else f"{SITE}/og/default.png")
 
     def _title(p_, label="housing market check", show_zip=True):
         return f"{p_} {label}: {vc['word']} — {vc['short']}" + (f" ({z})" if show_zip else "")
-    for cand in (_title(f"{city}, {st}"), _title(city), _title(city, "market check"),
-                 _title(city, "market check", False)):
-        og_title = cand
-        if len(cand) <= 70:
-            break
-    og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+    if not live:
+        og_title = PAUSE.title_for(f"{city}, {st} ({z})")
+        og_desc = PAUSE.NOTICE_DESC
+        # og:image:alt was interpolated inline in the template below, so the
+        # branch that blanked the title and description never reached it and
+        # it kept serving the verdict word AND a metric to every scraper.
+        og_alt = PAUSE.NOTICE_TITLE
+    else:
+        for cand in (_title(f"{city}, {st}"), _title(city), _title(city, "market check"),
+                     _title(city, "market check", False)):
+            og_title = cand
+            if len(cand) <= 70:
+                break
+        og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+        og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
     dest = f"/?from={z}&amp;utm_source=share"
     dest_js = f"/?from={z}&utm_source=share"
 
@@ -566,7 +591,7 @@ def share_stub(z, e, place, meta, has_card):
 <meta property="og:site_name" content="ShouldISellYet">
 <meta property="og:image" content="{og_img}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="{esc(city)}, {esc(st)} {z}: {vc['word']} — {esc(vc['translation'])}. {esc(stat)}">
+<meta property="og:image:alt" content="{esc(og_alt)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(og_title)}">
 <meta name="twitter:description" content="{esc(og_desc)}">
@@ -869,7 +894,15 @@ def main():
         (d / "index.html").write_text(page, encoding="utf-8")
         b = len(page.encode()); total_bytes += b; biggest = max(biggest, b)
         k = KINDS[e["l"]]
-        by_state[st].append((z, city, county, k["tag"], k["hex"]))
+        # The hub lists every ZIP in the state with its verdict word beside it.
+        # zip_page() blanks the word for a paused ZIP, but that happens inside
+        # zip_page — the hub builds its own row here and was publishing the
+        # readings the pages themselves refuse to show (verified live on
+        # /zip/MD/: 137 HOLD, 127 ACT, 108 WATCH). Released ZIPs keep theirs.
+        if PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
+            by_state[st].append((z, city, county, k["tag"], k["hex"]))
+        else:
+            by_state[st].append((z, city, county, "", "#6b6861"))
 
     # Share stubs live outside the staged /zip tree, at /s/{zip}.
     s_stage = web / ".s-build"
