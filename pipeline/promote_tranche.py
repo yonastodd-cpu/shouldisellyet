@@ -29,7 +29,9 @@ import argparse
 import csv
 import glob
 import json
+import os
 import sys
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -108,6 +110,53 @@ def staged_zips(data):
     return out
 
 
+def sync_release(tranche, dry=False):
+    """Mirror a released tranche into public.zip_release (schema-v36).
+
+    The build reads tranches.json; the market-reading Edge Function reads this
+    table, because a function cannot read the repo. They are written together
+    on purpose — a ZIP released in one and not the other is a page rendering a
+    reading the API will not serve, or the reverse.
+
+    Returns the row count written, or None if it could not be done. Never
+    raises: the JSON stamp has already landed by the time this runs, and
+    crashing here would leave the operator unsure which of the two is true.
+    """
+    if dry:
+        print(f"  --no-db: skipped writing {len(tranche.get('zips', [])):,} "
+              f"rows to public.zip_release")
+        return 0
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
+        print("  Supabase not configured — zip_release not updated")
+        return None
+    rows = [{"zip": z, "tranche": tranche["name"],
+             "basis": tranche.get("basis") or PAUSE.RELEASED_BASIS,
+             "released_at": tranche["released_utc"]}
+            for z in tranche.get("zips", [])]
+    sent = 0
+    for i in range(0, len(rows), 500):
+        batch = rows[i:i + 500]
+        req = urllib.request.Request(
+            f"{url}/rest/v1/zip_release?on_conflict=zip",
+            data=json.dumps(batch).encode(), method="POST",
+            headers={"apikey": key, "Authorization": f"Bearer {key}",
+                     "Content-Type": "application/json",
+                     "Prefer": "resolution=merge-duplicates,return=minimal"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                if r.status not in (200, 201, 204):
+                    print(f"  zip_release batch {i // 500}: HTTP {r.status}")
+                    return None
+        except Exception as e:
+            print(f"  zip_release batch {i // 500} failed: {str(e)[:120]}")
+            return None
+        sent += len(batch)
+    print(f"  zip_release: {sent:,} row(s) written — the API will now serve them")
+    return sent
+
+
 def now_utc():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -131,6 +180,8 @@ def main(argv=None):
                     help="order by gsc_zip.csv impressions instead of tier")
     ap.add_argument("--count", type=int)
     ap.add_argument("--release", action="store_true", help="stamp released_utc")
+    ap.add_argument("--no-db", action="store_true",
+                    help="stamp the file only; do not write public.zip_release")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--file", default=str(PAUSE.TRANCHES))
     ap.add_argument("--zips", default=str(ZIPS))
@@ -159,6 +210,12 @@ def main(argv=None):
                 save_file(data, args.file)
                 print(f"RELEASED {args.name}: {len(t['zips']):,} ZIPs now live "
                       f"at {t['released_utc']}")
+                pushed = sync_release(t, dry=args.no_db)
+                if pushed is None:
+                    print("::warning::tranches.json is stamped but public."
+                          "zip_release was NOT updated. The pages will publish "
+                          "readings the API refuses to serve. Re-run with the "
+                          "database reachable before deploying.")
                 print("Deploy to take effect. The pages drop noindex and "
                       "re-enter the sitemap on the next build.")
                 return 0
