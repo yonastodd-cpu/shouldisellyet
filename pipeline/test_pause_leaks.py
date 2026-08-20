@@ -87,11 +87,48 @@ def test_paused_zip_page_shows_the_notice_instead():
 
 
 def test_paused_zip_page_metadata_carries_no_verdict():
+    """A HEAD is meta tags and a title — attribute values, not text nodes.
+
+    This asserted `f">{word}<" not in head`, which requires an element whose
+    entire text is "HOLD". A head never contains that, so the assertion could
+    not fail on any page, released or paused: it read as coverage while testing
+    nothing. Verified dead before rewriting it.
+
+    The head is where the leak actually mattered — a crawler, a social unfurl
+    and a shared link read it rather than the body — so it is now checked field
+    by field."""
     html = BP.zip_page("20601", ENTRY, PLACE, META, [])
     head = html.split("</head>", 1)[0]
-    for word in VERDICT_WORDS:
-        assert f">{word}<" not in head
+
+    title = re.search(r"<title>(.*?)</title>", head, re.S).group(1)
+    metas = dict(re.findall(r'<meta[^>]+(?:name|property)="([^"]+)"[^>]*content="([^"]*)"', head))
+    ld = " ".join(re.findall(r'<script type="application/ld\+json">(.*?)</script>', head, re.S))
+
+    fields = {"<title>": title, **{k: v for k, v in metas.items()
+              if k in ("description", "og:title", "og:description", "og:image",
+                       "og:image:alt", "twitter:title", "twitter:description")},
+              "json-ld": ld}
+    for name, value in fields.items():
+        for word in VERDICT_WORDS:
+            assert not re.search(rf"\b{word}\b", value), f"{name} carries {word}: {value[:70]}"
+        for figure in FIGURES:
+            assert figure not in value, f"{name} carries the figure {figure}: {value[:70]}"
+
     assert "og/default.png" in head, "per-ZIP card must fall back to the brand image"
+    assert PAUSE.NOTICE_TITLE.split()[0].lower() in title.lower() or "refresh" in title.lower()
+
+
+def test_paused_zip_page_credits_no_vendor():
+    """The stamp published "Data through June 2026 · Data provided by Redfin,
+    a national real estate brokerage" directly beneath the rebuilding banner,
+    on all 22,874 pages. Attribution is required on a page that DISPLAYS a
+    vendor's data; a paused page displays none, so the credit told a reader —
+    and a crawler — that the page rests on data it is not showing, naming the
+    one vendor data_pause's copy rule says the notice must never name."""
+    text = visible_text(BP.zip_page("20601", ENTRY, PLACE, META, []))
+    assert "Redfin" not in text, "a paused page credits the withdrawn vendor"
+    assert not re.search(r"Data through \w+ \d{4}", text), \
+        "a paused page asserts a data vintage it is not showing"
 
 
 # ————— the state hub —————

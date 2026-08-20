@@ -40,5 +40,7 @@ SURFACES = [
     ("bulk /data/zips",      "artifact", "test_provisioning.py::test_unreleased_records_carry_only_a_state"),
     ("purge manifest files", "artifact", "test_artifact_leaks.py::test_purge_manifest_lists_every_moved_file"),
     ("reading endpoint",     "artifact", "test_market_reading_fn.py::test_every_selected_field_is_one_we_intend_to_publish"),
+    ("zip page stamp/credit", "page",    "test_pause_leaks.py::test_paused_zip_page_credits_no_vendor"),
+    ("markets index /zip/",  "page",     "test_data_pause.py::test_paused_urls_are_out_of_the_sitemap"),
     ("zip lookup renders",   "runtime",  "scripts/smoke-browser.mjs"),
 ]

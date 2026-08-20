@@ -32,6 +32,46 @@ artifact surfaces are enumerated and checked separately from page surfaces.
 tests passed, the page-count gate passed, `curl` returned 200 on every URL —
 none of them execute JavaScript.
 
+## A tenth surface, and a test that was hollow
+
+Found by an adversarial coverage pass run *after* the matrix below was written
+— which is the point of running one.
+
+**10. The stamp.** Every paused ZIP page published "Data through June 2026 ·
+updated 2026-08-10 · **Data provided by Redfin, a national real estate
+brokerage**", directly beneath the banner saying the reading was being rebuilt.
+On all 22,874 pages, for the whole withdrawal. Attribution is required on a
+page that *displays* a vendor's data; a paused page displays none, so the
+credit was not merely unnecessary — it told a reader and a crawler that the
+page rests on data it is not showing, naming the one vendor `data_pause`'s own
+copy rule says the notice must never name.
+
+**The markets index `/zip/`** had no pause branch while the state hubs it links
+to did — the same "covered the page, forgot the index above it" pattern that
+produced surface 2, one level up. It promised "HOLD / WATCH / ACT verdicts for
+22,874 U.S. ZIP codes" in the present tense, dated to a vintage the pages below
+no longer show. It was also the one paused-tree URL still in the submitted
+sitemap while carrying `noindex` — telling a crawler two opposite things at
+once, which is the reasoning that already holds the research pages out. Now
+paused, and the sitemap is 3 URLs rather than 4.
+
+**And one of my own tests was hollow.**
+`test_paused_zip_page_metadata_carries_no_verdict` asserted
+`f">{word}<" not in head`, which requires an element whose entire text is
+"HOLD". A `<head>` is meta tags and a title — attribute values, not text nodes
+— so that assertion could not fail on any page, released or paused. It read as
+coverage while testing nothing. It now checks `<title>`, `description`, the
+four OG fields, both Twitter fields and the JSON-LD block individually, for
+both ratings and figures.
+
+Both new assertions were proven against the real bugs rather than assumed:
+reintroducing the stamp leak fails `test_paused_zip_page_credits_no_vendor`
+with "a paused page credits the withdrawn vendor".
+
+**The lesson worth keeping:** a test that names a surface is not the same as a
+test that would fail if that surface leaked. Nine were found by looking; the
+tenth was found by asking what the tests could not see.
+
 ## The matrix
 
 `pipeline/surfaces.py` holds the list. `test_provisioning.py` asserts every

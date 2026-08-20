@@ -390,6 +390,10 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # so the FAQ can't drift from the card and the share text).
     faq_q = f"Is it a good time to sell a home in {city}?"
     faq_a = vc["qa"].format(city=city)
+    # Credit rides with the data: shown when a reading is, blanked when it is
+    # not. Overwritten by the pause branch below.
+    stamp_html = (f"Data through {esc(pretty_period)} · updated {esc(updated)} · "
+                  f"{CITE} · {PLACES_CITE}")
 
     # ————— REDFIN SUNSET, PHASE 0 —————
     # The body banner is the least of it: the verdict word and the metric
@@ -417,6 +421,18 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         # existed. A blanking that covers the metadata and forgets the prose is
         # not a blanking.
         facts_html = ""
+        # THE STAMP. It credited the withdrawn vendor by name and asserted a
+        # data vintage — "Data through June 2026 · Data provided by Redfin, a
+        # national real estate brokerage" — directly beneath a banner saying
+        # the reading was being rebuilt. On all 22,874 pages, for the whole
+        # withdrawal.
+        #
+        # Attribution is required on a page that DISPLAYS a vendor's data
+        # (docs/ATTRIBUTION.md). A paused page displays none, so the credit is
+        # not merely unnecessary: it tells a reader and a crawler the page is
+        # built on data it is not showing, and it names the one vendor
+        # data_pause's own copy rule says the notice must never name.
+        stamp_html = ""
         k = dict(k, tag="", hex="#6b6861", soft="#f3f1ea", line="#e7e4dd",
                  head=PAUSE.NOTICE_TITLE, sub=PAUSE.NOTICE_BODY)
 
@@ -486,7 +502,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     {rows}
     <ul class="facts">{facts_html}</ul>
   </div>
-  <div class="stamp">Data through {esc(pretty_period)} · updated {esc(updated)} · {CITE} · {PLACES_CITE}</div>
+  <div class="stamp">{stamp_html}</div>
 </div>
 <div class="ctas">
   <button class="btn btn-outline" id="share-btn" type="button" data-zip="{z}" data-track="share_click" data-track-zip="{z}" data-text="{esc(share_text)}">Share this checkup</button>
@@ -689,8 +705,18 @@ def markets_index(states, meta):
     total = sum(n for _, n in states)
     items = "".join(f'<li><a href="/zip/{st}/">{esc(STATE_NAMES.get(st, st))}</a> <span class="z">{n}</span></li>'
                     for st, n in sorted(states, key=lambda t: STATE_NAMES.get(t[0], t[0])))
-    title = "Browse housing market verdicts by state — ShouldISellYet"
-    desc = f"HOLD / WATCH / ACT verdicts for {total:,} U.S. ZIP codes, computed from public market data and updated {updated}."
+    # The markets index had no pause branch, while the state hubs it links to
+    # did — the same "covered the page, forgot the index above it" pattern that
+    # produced the state-hub leak, one level up. It is not a per-ZIP reading,
+    # but it promised readings in the present tense and dated them to a vintage
+    # the pages below no longer show.
+    live = PAUSE.shows_data()
+    title = ("Browse housing markets by state — ShouldISellYet" if not live
+             else "Browse housing market verdicts by state — ShouldISellYet")
+    desc = (f"Per-ZIP housing market pages for {total:,} U.S. ZIP codes. "
+            f"{PAUSE.NOTICE_TITLE}." if not live else
+            f"HOLD / WATCH / ACT verdicts for {total:,} U.S. ZIP codes, "
+            f"computed from public market data and updated {updated}.")
     url = f"{SITE}/zip/"
     ld = json.dumps({"@context":"https://schema.org","@graph":[
         {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,"inLanguage":"en-US","dateModified":updated,
@@ -992,7 +1018,13 @@ def main():
     stage.rename(final)
 
     lastmod = meta.get("generated", date.today().isoformat())
-    urls = [f"{SITE}/", f"{SITE}/report.html", f"{SITE}/press.html", f"{SITE}/zip/"]
+    # /zip/ carries noindex while paused, and submitting a noindexed URL tells
+    # a crawler two opposite things at once — the same reasoning that holds the
+    # research pages out below. It was the one paused-tree URL still in the
+    # submitted sitemap.
+    urls = [f"{SITE}/", f"{SITE}/report.html", f"{SITE}/press.html"]
+    if PAUSE.shows_data():
+        urls.append(f"{SITE}/zip/")
     # Research releases: indexable by design — the citation flywheel needs
     # crawlers to find them. URLs derive from the committed research JSONs,
     # same discipline as the rest of this explicit list.
