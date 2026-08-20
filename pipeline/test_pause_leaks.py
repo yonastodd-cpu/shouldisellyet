@@ -380,3 +380,15 @@ def test_the_homepage_withholds_the_withdrawn_national_counts():
     js = (ROOT / "web" / "index.html").read_text()
     assert 'd.b === "active listings"' in js, \
         "the homepage still shows Redfin national counts beside a v2 reading"
+
+
+def test_the_client_rendered_stamp_also_follows_the_record():
+    """The ZIP pages are server-rendered; the homepage card and the paid report
+    are drawn in the browser and kept their own copy of the same bug. Fixing
+    build_pages left "Data through 2026-06 · Data provided by Redfin" under a
+    live RentCast reading on the front door — found by opening the site, not by
+    any gate."""
+    for name in ("index.html", "my-report.html"):
+        js = (ROOT / "web" / name).read_text(encoding="utf-8")
+        assert 'active listings' in js and "RentCast" in js, \
+            f"{name} still stamps every reading with the v1 attribution"

@@ -1574,7 +1574,8 @@ async function generate(noScroll){
   $("nextstep-generic").style.display = AGENT_INTRO_ENABLED ? "none" : "block";
 
   $("stamp").innerHTML = "MyMarketCheckup · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
-    " · " + (META ? citeHTML(META.attribution) : "public market data") +
+    " · " + (d && d.b === "active listings" ? "Market statistics from RentCast"
+             : (META ? citeHTML(META.attribution) : "public market data")) +
     "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
   // deep-dive sections (render only when history/context data exists)

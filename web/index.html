@@ -1899,9 +1899,16 @@ async function run() {
       : k.sub.replace("{zip}", zip);
     $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
     renderPreview(d);   // same synchronous pass — fully rendered before reveal
-    // The ZIP and state now lead the block, so the stamp carries only the
-    // data vintage and the required Redfin attribution.
-    $("v-stamp").innerHTML = META ? "Data through " + META.period + " · " + citeHTML(META.attribution) : "";
+    // THE STAMP FOLLOWS THE RECORD, NOT META. meta.json is frozen at the last
+    // v1 run, so a v2 reading rendered here carried "Data through 2026-06 ·
+    // Data provided by Redfin" — two months stale and crediting the vendor
+    // whose data was withdrawn. The ZIP pages were fixed server-side; this
+    // card renders client-side and kept its own copy of the bug.
+    const v2 = d && d.b === "active listings";
+    const when = (v2 && d.p) ? d.p : (META ? META.period : "");
+    const who = v2 ? "Market statistics from RentCast"
+                   : (META ? citeHTML(META.attribution) : "");
+    $("v-stamp").innerHTML = when ? "Data through " + when + " · " + who : who;
     // Every paid CTA on the page carries the ZIP once we know it — the two in
     // the verdict card and the two down in the pricing table. Each one ships a
     // working plain href in the markup; this only adds the ZIP, so a JS failure
