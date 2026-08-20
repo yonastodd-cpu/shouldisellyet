@@ -391,7 +391,7 @@ def mtl_prose(v):
 # ————— The explainer and the track record —————
 # THE SMOKE DETECTOR is the site's one-paragraph answer to "does this
 # actually work?" — markets slow before they fall, three visible behaviours,
-# four gauges with lines drawn from past downturns, velocity as drift
+# three gauges with published lines, velocity as drift
 # detection, and the honest framing: not a prediction, a smoke detector.
 #
 # THE TRACK RECORD renders ONLY from web/data/cases/*.json, which
@@ -419,11 +419,14 @@ paying it. What changes first is behaviour, and behaviour is visible.</p>
 fine: <b>homes take longer to sell</b>, <b>unsold homes pile up</b>, and
 <b>sellers start cutting asking prices</b>. Each is measurable monthly from
 public data, per ZIP code.</p>
-<p>So we watch four gauges — months of supply, the year-over-year price
-trend, time to sell, and the share of listings cutting price — each with a
-<b>danger line drawn from what happened in past downturns</b>, published on
-this page and never moved to fit a story. A market past enough of them
-reads WATCH or ACT.</p>
+<p>So we watch three gauges — the year-over-year price trend, how long homes
+take to sell, and how the pool of homes for sale is changing — each with a
+<b>published danger line</b>. The price line is drawn from what happened in
+past downturns; the two volume lines were recalibrated when the underlying
+statistics changed from closed sales to active listings, because the old
+values fired on well under one per cent of markets on the new basis. Every
+line is published on this page and never moved to fit a story. A market past
+enough of them reads WATCH or ACT.</p>
 <p>We also watch the <b>speed of approach</b>: a market can sit well inside
 every line and still be closing on one fast. That drift is usually visible
 months before the crossing itself.</p>

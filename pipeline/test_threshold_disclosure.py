@@ -99,3 +99,26 @@ def test_the_browser_smoke_allowlist_covers_every_disclosed_line():
                 "price_surge", "dom_shrink", "inventory_drop"):
         assert f'"{D[key]}"' in block, \
             f"the smoke allowlist is missing {key} ({D[key]}) and will report it as a leak"
+
+
+def test_an_act_page_does_not_promise_multiple_signals():
+    """With red at 3, price_falling_fast alone reaches ACT — under v1 no single
+    check could. Copy promising a reader that "multiple signals" are past the
+    line is false on every price-only ACT, and it shipped in the verdict card
+    AND the FAQPage JSON-LD."""
+    import verdict_v2 as v2
+    single = v2.evaluate(v2.MarketV2(zip_code="x", list_price_yoy=-0.08, listings_yoy=0.0))
+    assert single.word == "ACT" and len(single.reasons) == 1, \
+        "the premise changed; re-check the copy"
+    for path in ("pipeline/build_pages.py", "pipeline/data/verdict_copy.json"):
+        src = (ROOT / path).read_text()
+        assert "Multiple signals" not in src, \
+            f"{path} promises multiple signals on a reading one can trigger"
+
+
+def test_no_generator_offers_a_retired_signal_to_a_reader():
+    """Months of supply and price-cut share are not part of a current reading.
+    The research EXPLAINER named both, live on /research/methodology.html."""
+    src = (ROOT / "pipeline" / "build_research.py").read_text()
+    assert "four gauges" not in src
+    assert "three gauges" in src

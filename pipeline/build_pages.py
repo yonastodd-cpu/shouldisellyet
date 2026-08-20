@@ -71,7 +71,11 @@ KINDS = {
                "sub":"A warning signal has tripped. Not a crisis — but this is exactly how turns start, months before prices move."},
     "red":    {"tag":"ACT",   "hex":"#d64545","soft":"#fbe9e9","line":"#ecc3c3",
                "head":"Danger lines crossed in {zip}",
-               "sub":"Multiple signals are past the thresholds that preceded past downturns. Sellers here are losing pricing power."},
+               # NOT "multiple". Under v1 red needed 4 points and no single
+               # check could reach it. Under v2 price_falling_fast alone
+               # scores 3 = ACT, so an ACT page can have exactly one line
+               # crossed and this sentence would be false on it.
+               "sub":"At least one signal is past the thresholds that preceded past downturns. Sellers here are losing pricing power."},
     "strong": {"tag":"ACT",   "hex":"#1f3a5f","soft":"#e8eef7","line":"#c3d2e8",
                "head":"Strong seller's market in {zip}",
                "sub":"Buyers are competing for homes here. If selling was already on your mind, conditions favor you right now."},
@@ -825,8 +829,7 @@ def write_llms_txt(web, meta, scored, pages):
 
 ## How the verdict works
 
-{METHOD_SENTENCE}
-HOLD. The same signals are tested in the strengthening direction, so a clean
+{METHOD_SENTENCE} The same signals are tested in the strengthening direction, so a clean
 market with unusual buyer competition reads as a strong seller's market.
 
 ## Key pages

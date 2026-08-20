@@ -15,17 +15,29 @@ was already a YEAR-OVER-YEAR RATIO, and both casualties were LEVELS. A ratio
 is robust to the metric shift — active DOM sits higher than sold DOM and a
 list-price median sits higher than a sale-price median, but the direction and
 magnitude of their year-over-year change remain comparable. A level is not
-robust to it at all. That is the whole story of this migration in one line,
-and it is why the surviving checks keep their v1 thresholds unchanged.
+robust to it at all.
+
+That made the survivors portable in KIND. It did not make their NUMBERS
+portable, and the first calibration against real data proved it: at v1's
+thresholds dom_stretch fired on 0.8% of ZIPs where the same markets showed
+13.2% on the sale basis, and inventory_surge on 0.5% against 3.8%. Stale
+inventory anchors an active pool and damps its swings, so both lines were
+percentile-matched to the new basis. Only the price lines ported unchanged.
 
   price falling      median list price YoY   < -2% / -5%
   time to sell       active DOM YoY          > +10%   (see the refit below)
   supply building    total listings YoY      > +30%   (see the refit below)
 
-WHAT WAS TUNED, AND WHAT DELIBERATELY WAS NOT. Only the red band moved, 4 to
-3, because the two checks that could contribute 4 points are gone and leaving
-it at 4 would make ACT nearly unreachable. Every surviving check keeps its v1
-weight and its v1 threshold.
+WHAT WAS TUNED. Four things, not one. The red band moved 4 to 3, because the
+two checks that could contribute 4 points are gone and leaving it at 4 would
+make ACT nearly unreachable. The Tier B calibration then moved dom_stretch
++40% to +10%, inventory_surge +50% to +30%, and dom_shrink -15% to -20%. Every
+surviving check keeps its v1 WEIGHT; two no longer keep its threshold.
+
+A consequence worth stating because the copy got it wrong for a day: with red
+at 3, price_falling_fast alone reaches ACT. Under v1 no single check could, so
+any sentence promising a reader that "multiple signals" are past the line is
+false on a price-only ACT.
 
 The bands were fitted to preserve SEMANTICS, not the national distribution.
 Running v1's own logic on the committed data with the two lost signals
@@ -39,12 +51,11 @@ FOR is the plan's actual test — "if most of the country flips category, the
 thresholds are wrong, not the country" — and a naive port fails it loudly:
 unchanged bands collapse ACT to 9.7% and produce zero strong readings.
 
-THRESHOLDS ARE PROVISIONAL until calibrated against real RentCast responses.
-They were fitted on Redfin-sourced values for the three surviving metrics,
-which are comparable in KIND (all three are YoY ratios) but not identical in
-behaviour — active DOM includes stale inventory that a sold-DOM series never
-sees, so its year-over-year swings are damped. SPEC["provisional"] stays True
-until someone re-runs calibrate_v2.py against the archive and says so.
+THRESHOLDS ARE CALIBRATED, not provisional. They were first fitted on
+Redfin-sourced proxies, then refitted on 2026-08-19 against 5,000 real Tier
+A+B responses — which is when the two volume lines moved. SPEC["provisional"]
+is False and a test pins it; changing a threshold again requires re-running
+calibrate_v2.py --from-db. See docs/migration/TIER-B-GATE.md.
 """
 
 from dataclasses import dataclass, field
