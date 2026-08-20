@@ -908,29 +908,27 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <p class="body-p m-hide">Most homeowners don't have an easy way to see when their local housing market is weakening. The data is public, but it's scattered across reports built largely for real estate professionals, investors, and lenders.</p>
       <p class="body-p m-hide">That matters because important changes can begin before falling prices make them obvious.</p>
       <p class="body-p"><b>As an example: Boise, Idaho, November 2021.</b> Homes were taking longer to sell even as prices remained near record highs. The market still looked strong on the surface. Underneath, the warning signs were building.</p>
-      <p class="body-p">Prices held up for roughly another year. Then, by our Redfin-based measure, they fell 17.9% from the peak.</p>
+      <!-- The figure and the vendor's name are withdrawn with everything else.
+           The surrounding narrative is qualitative — "taking longer to sell",
+           "near record highs" — and describes a market rather than publishing
+           a measurement of it, so it stays. This sentence did both. -->
+      <p class="body-p">Prices held up for roughly another year. Then they fell sharply from the peak.</p>
       <p class="body-p">The warning appeared in the data well before the price decline did.</p>
       <p class="body-p m-hide">Boise had already been called overvalued. But overvalued only tells you a market is expensive. It doesn't tell you when conditions are actually changing.</p>
       <p class="body-p"><b>That's the signal we're looking for.</b></p>
       <p><a class="story-link" href="/stories/boise/">Read the full Boise story →</a></p>
     </div>
-    <!-- The page's one memorable object. Everything on it is generated from
-         pipeline/cases/boise-2021.json by pipeline/build_stories.py — the same
-         file the methodology page computes from. The card hides itself if the
-         asset is missing: the section never ships without its chart. -->
-    <figure class="chartcard" id="boise-fig">
-      <figcaption class="cc-head">
-        <span class="cc-title">Boise, ID · Typical sale price</span>
-        <span class="cc-chip">−17.9% from peak</span>
-      </figcaption>
-      <img src="/stories/boise-panel.svg" id="boise-chart" alt="Boise, Idaho: time to sell crosses its danger line in November 2021 while prices keep rising; prices fall twelve months later, a change of -17.9% from the peak. The twelve-month wait is shaded." onerror="document.getElementById('boise-fig').hidden=true">
-      <div class="cc-foot">As covered at the time:
-        <a href="https://fortune.com/2021/12/17/boise-idaho-most-overvalued-housing-market" target="_blank" rel="noopener nofollow">Fortune · Dec 2021</a> ·
-        <a href="https://www.deseret.com/utah/2022/10/5/23367521/housing-market-bust-bubble-crash-boise-idaho-price-decline-zillow/" target="_blank" rel="noopener nofollow">Deseret News · Oct 2022</a> ·
-        <a href="https://fortune.com/2023/08/04/boise-housing-market-looks-like-a-head-fake-home-price-decline-in-june" target="_blank" rel="noopener nofollow">Fortune · Aug 2023</a> ·
-        <a href="https://www.forbes.com/sites/andrewdepietro/2023/10/23/will-the-boise-housing-market-crash/" target="_blank" rel="noopener nofollow">Forbes · Oct 2023</a>
-      </div>
-    </figure>
+    <!-- THE BOISE FIGURE IS WITHDRAWN while the story is paused.
+         It carried the vendor's numbers in three places a reader or a crawler
+         could reach: the chip (−17.9% from peak), the alt text (the same
+         figure again, in a sentence), and the caption naming a typical sale
+         price. An onerror handler hid the figure once the image 404'd, but
+         that is a CLIENT-side hide — the markup, and every number in it, was
+         still served to anything that reads HTML rather than runs it.
+         The image itself stopped being generated when build_stories paused,
+         so this was also a 404 on every homepage load.
+         Restore with the story: pipeline/build_stories.py writes
+         /stories/boise-panel.svg again the moment PAUSED goes false. -->
   </div>
 </section>
 
@@ -1086,7 +1084,10 @@ const SHOW_CASE_ROW = true;   // flipped on 2026-08-09 by operator decision
 // so it carries its own copy of the flag; pipeline/test_data_pause.py asserts
 // the two agree — a homepage still handing out readings after the generators
 // stopped would be the worst of both worlds.
-const DATA_PAUSED = true;
+// DATA_PAUSED was a page-level boolean here. It is gone: whether a reading may
+// be shown is now a property of the RECORD, decided per ZIP a few hundred
+// lines down. A single flag cannot express "these 1,000 ZIPs are released and
+// the other 21,900 are not", which is precisely what Phase 4 does.
 const PAUSE_NOTICE_TITLE = "This reading is being refreshed";
 const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine. " +
   "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
@@ -1820,7 +1821,24 @@ async function run() {
       return;
     }
     const insufficient = (d.r || []).some(x => x[0] === "insufficient_data");
-    const k = KINDS[d.l];
+    // PER-ZIP, NOT PAGE-LEVEL. A provisioned record for a ZIP that is not in a
+    // released tranche is {"st":"MD"} — a real ZIP with no reading yet. That is
+    // the ordinary state of ~22,874 ZIPs today and the ordinary state of
+    // everything outside Tranche 1 tomorrow.
+    //
+    // This replaces a page-level `DATA_PAUSED` constant, which could not
+    // survive Phase 4: it knew nothing about WHICH ZIP was asked for, so
+    // releasing a tranche would have changed nothing for readers and the only
+    // other lever — flipping it globally — would have republished readings for
+    // every ZIP that was not released.
+    //
+    // It also fixes a live break. `KINDS[d.l]` on a record with no level gave
+    // undefined, and `k.soft` on the next line threw inside the reveal
+    // timeout, so a visitor saw the spinner vanish and NOTHING take its place:
+    // no verdict card, no waitlist card. Every one of the 22,874 ZIP pages
+    // CTAs into /?zip=NNNNN, so that was the whole funnel.
+    const hasReading = !!(d.l && KINDS[d.l]);
+    const k = hasReading ? KINDS[d.l] : KINDS.green;
     setLocationLine(zip, d.st || "", cityHint);
     $("v-head").style.background = k.soft;
     $("verdict").style.borderColor = k.line;
@@ -1829,9 +1847,9 @@ async function run() {
     // The word comes from VERDICT_COPY, the same map the prose and the share
     // text use. KIND.tag is a fallback only: "strong" was tagged ACT here, so
     // the badge said ACT while the sentence beside it said STRONG.
-    if (DATA_PAUSED) {
+    if (!hasReading) {
       // Emptied, not covered: the badge, the gauges, the masked preview and
-      // the unlock bar each carry a Redfin-derived value of their own, and a
+      // the unlock bar each carry a vendor-derived value of their own, and a
       // banner laid over them would leave every one of them in the DOM.
       $("v-tag").textContent = "";
       $("v-title").textContent = PAUSE_NOTICE_TITLE;
@@ -2081,8 +2099,15 @@ function tickFeed() {
     el.style.opacity = 1;
   }, 450);
 }
-document.getElementById("feed").textContent = "\u25cf " + feedLines()[feedIx++ % 4];
-setInterval(tickFeed, 4200);
+// #feed was removed from the markup but this line was not, so it threw on
+// every page load — and because it runs at top level, it took everything
+// after it in this script block with it. Guarded rather than deleted: the
+// ticker returns if the element does.
+const _feedEl = document.getElementById("feed");
+if (_feedEl) {
+  _feedEl.textContent = "\u25cf " + feedLines()[feedIx++ % 4];
+  setInterval(tickFeed, 4200);
+}
 
 // ————— US map with pulsing metro dots (decorative; degrades gracefully) —————
 const METROS = [[-74.0,40.7],[-118.24,34.05],[-87.63,41.88],[-95.37,29.76],[-112.07,33.45],[-75.16,39.95],[-98.49,29.42],[-117.16,32.72],[-96.80,32.78],[-97.74,30.27],[-81.66,30.33],[-83.0,39.96],[-80.84,35.23],[-86.16,39.77],[-122.33,47.61],[-104.99,39.74],[-71.06,42.36],[-86.78,36.16],[-122.68,45.52],[-115.14,36.17],[-90.05,35.15],[-85.76,38.25],[-87.91,43.04],[-80.19,25.76],[-82.46,27.95],[-84.39,33.75],[-93.27,44.98],[-90.07,29.95],[-111.89,40.76],[-116.20,43.62],[-78.64,35.78],[-94.58,39.10],[-121.49,38.58],[-90.20,38.63],[-79.99,40.44],[-81.69,41.50],[-83.05,42.33],[-76.61,39.29],[-77.44,37.54],[-97.52,35.47],[-106.65,35.08],[-110.97,32.22],[-119.79,36.74],[-95.93,41.26],[-117.43,47.66],[-106.49,31.76],[-108.5,45.78],[-96.79,46.88],[-92.29,34.75],[-79.93,32.78]];

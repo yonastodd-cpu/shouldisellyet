@@ -23,15 +23,31 @@ import data_pause as PAUSE
 HOMEPAGE = (REPO / "web" / "index.html").read_text()
 
 
-def test_the_homepage_flag_agrees_with_the_pipeline_flag():
-    """The homepage is committed, not generated, so it carries its own copy of
-    the switch. Two switches that can disagree is one switch too many — a
-    homepage still handing out readings after the generators stopped would be
-    the worst of both worlds."""
-    m = re.search(r"const DATA_PAUSED = (true|false);", HOMEPAGE)
-    assert m, "the homepage lost its pause flag"
-    assert (m.group(1) == "true") == PAUSE.PAUSED, \
-        f"homepage DATA_PAUSED={m.group(1)} but data_pause.PAUSED={PAUSE.PAUSED}"
+def test_the_homepage_decides_per_zip_not_per_page():
+    """This replaces a check that the homepage's DATA_PAUSED constant agreed
+    with data_pause.PAUSED. Two switches that could disagree was one too many —
+    but ONE switch turned out to be one too few. A page-level boolean knows
+    nothing about which ZIP was asked for, so Phase 4 could not release a
+    tranche through it: released ZIPs would still read "being refreshed", and
+    the only other lever republished everything.
+
+    The homepage now decides from the record. A ZIP outside a released tranche
+    is provisioned as {"st":"MD"} with no level, and no level means no reading.
+
+    It also has to be crash-safe. KINDS[d.l] on a record with no level was
+    undefined and the next line threw inside the reveal timeout, so a visitor
+    saw the spinner disappear and nothing replace it — verified broken in
+    production on 2026-08-19, on every one of the 22,874 pages whose CTA lands
+    on /?zip=NNNNN."""
+    assert "const DATA_PAUSED" not in HOMEPAGE, \
+        "the page-level flag is back; Phase 4 cannot release a tranche through it"
+    assert "const hasReading = !!(d.l && KINDS[d.l])" in HOMEPAGE, \
+        "the homepage must decide from the record, and guard KINDS lookup"
+    assert "if (!hasReading) {" in HOMEPAGE, \
+        "the notice branch must key off the record"
+    # and the guard must precede the first use of k
+    assert HOMEPAGE.index("const hasReading") < HOMEPAGE.index("$(\"v-head\").style.background = k.soft"), \
+        "the level guard must come before k is dereferenced"
 
 
 @pytest.mark.skipif(not PAUSE.PAUSED, reason="only meaningful while paused")
