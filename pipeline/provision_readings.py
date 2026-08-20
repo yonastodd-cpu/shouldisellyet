@@ -107,6 +107,10 @@ def main(argv=None):
     ap.add_argument("--source", default="rentcast")
     ap.add_argument("--no-readings", action="store_true",
                     help="manifest only; never contacts the store")
+    ap.add_argument("--fixture",
+                    help="JSON {zip: reading} to use INSTEAD of the store — "
+                         "offline, for exercising the released render paths "
+                         "without a vendor call or a production release")
     args = ap.parse_args(argv)
 
     manifest = read_manifest(args.manifest) if args.manifest else read_manifest()
@@ -117,7 +121,17 @@ def main(argv=None):
             "live ZIP URL. Restore the manifest before building.")
 
     live = set() if args.no_readings else released(args.tranches)
-    readings = {} if args.no_readings else readings_for(live, args.source)
+    if args.fixture:
+        # The released paths are unreachable in a normal build — nothing is
+        # released — so the only way to render and test them is to supply the
+        # readings directly. Deliberately offline: no vendor call, no store,
+        # no row written anywhere.
+        fixture = json.loads(Path(args.fixture).read_text())
+        readings = {z: r for z, r in fixture.items() if z in live}
+        print(f"provision: fixture supplied {len(readings):,} reading(s); "
+              f"the store was not contacted")
+    else:
+        readings = {} if args.no_readings else readings_for(live, args.source)
     if live and not readings:
         print(f"provision: {len(live):,} ZIP(s) released but no readings "
               f"retrieved — they will render the notice")

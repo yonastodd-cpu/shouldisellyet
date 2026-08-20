@@ -422,6 +422,32 @@ jobs:
         with:
           path: web
 
+  # The released render paths — `ok` and `insufficient_data` — are unreachable
+  # in a normal build because nothing is released, which is how a bug in one of
+  # them survived every other gate. This stages a release with FIXTURE readings
+  # (synthetic numbers, no vendor call, no database write), renders those pages
+  # and asserts them.
+  #
+  # A SEPARATE JOB ON PURPOSE. The harness mutates pipeline/tranches.json and
+  # rebuilds pages in the working tree. Running it inside the deploy job would
+  # mean a failure between staging and restoring could put a released ZIP into
+  # the artifact. This job uploads nothing.
+  verify-released:
+    runs-on: ubuntu-latest
+    needs: refresh
+    if: needs.refresh.outputs.deploy == 'true'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Browser smoke — released paths
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+          python3 pipeline/provision_readings.py --no-readings
+          ./scripts/smoke-released.sh
+
   deploy:
     needs: refresh
     if: needs.refresh.outputs.deploy == 'true'

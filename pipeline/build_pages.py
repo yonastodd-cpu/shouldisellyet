@@ -419,6 +419,37 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # the OG image itself and the JSON-LD. A crawler, a social unfurl and a
     # shared link read those, not the banner. So they are ALL neutralised here,
     # in one block, and the per-ZIP OG card falls back to the brand image.
+    # A RELEASED ZIP WHOSE READING SAYS IT HAS NO READING. verdict_v2 returns
+    # level "green" with an insufficient_data reason when fewer than two
+    # signals are known — HOLD there is a safe default, not a finding. Rendered
+    # without this branch it becomes a confident "No warning signs right now"
+    # on a market we cannot actually read, while the homepage tells the truth
+    # about the same ZIP (index.html branches on the same reason). It stays
+    # noindexed: a page that says it has nothing to say should not compete in
+    # search for a rating it does not have.
+    thin = any(r and r[0] == "insufficient_data" for r in e.get("r") or [])
+    if thin and PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
+        where = f"{city}, {st} ({z})"
+        title = og_title = f"{where} housing market — not enough recent data"
+        desc = og_desc = ("Too few recent listings in this ZIP to read the "
+                          "market reliably. We hold the reading until the "
+                          "signals are dependable.")
+        og_alt = "Not enough recent data for a reading"
+        og_img = f"{SITE}/og/default.png"
+        answer = (f"As of {pretty_period}, there are too few recent listings in "
+                  f"{where} to produce a dependable reading.")
+        stat = ""
+        rows = ""
+        facts_html = ""
+        faq_q = f"Why is there no reading for {z}?"
+        faq_a = ("Smaller markets report too few listings for the signals to be "
+                 "reliable. Rather than publish a rating we cannot stand "
+                 "behind, we hold it until there is enough data.")
+        share_text = f"Not enough recent market data to read {where} yet."
+        k = dict(k, tag="", hex="#6b6861", soft="#f3f1ea", line="#e7e4dd",
+                 head="Not enough recent data",
+                 sub="Too few recent listings here to read the market reliably.")
+
     if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
         where = f"{city}, {st} ({z})"
         title = og_title = PAUSE.title_for(where)
@@ -479,7 +510,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-{PAUSE.robots_meta(z)}
+{PAUSE.robots_meta(z, thin)}
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">

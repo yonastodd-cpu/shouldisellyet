@@ -21,6 +21,17 @@ const BASE = (process.argv[2] || "http://localhost:5177").replace(/\/$/, "");
 // A ZIP with a standing page. Paused today, so it must render the notice.
 const ZIP = process.argv[3] || "20601";
 
+// Released-path coverage. Nothing is released in production, so these paths
+// are unreachable in a normal build — which is exactly why a bug in one of
+// them survived every gate. scripts/smoke-released.sh stages a release
+// locally with fixture readings and passes the ZIPs here.
+const argFor = (flag) => {
+  const i = process.argv.indexOf(flag);
+  return i > -1 ? process.argv[i + 1] : null;
+};
+const RELEASED = argFor("--released");   // expects a full reading
+const THIN = argFor("--thin");           // released, but too little data to read
+
 const RATINGS = /\b(HOLD|WATCH|ACT)\b/;
 
 // DISCLOSURE IS NOT A LEAK. Every page explains the danger lines the engine
@@ -75,7 +86,10 @@ const THIRD_PARTY = /supabase\.co|challenges\.cloudflare|googleapis|gstatic|zipp
 page.on("console", (m) => {
   if (m.type() !== "error") return;
   const text = m.text();
-  if (/Failed to load resource/i.test(text) && (THIRD_PARTY.test(text) || THIRD_PARTY.test(m.location()?.url || ""))) return;
+  // "Failed to load resource" and CORS rejections both. The analytics beacon
+  // pins CORS to the site origin, so every local run produces one.
+  if (/Failed to load resource|blocked by CORS|Access-Control-Allow-Origin/i.test(text) &&
+      (THIRD_PARTY.test(text) || THIRD_PARTY.test(m.location()?.url || ""))) return;
   consoleErrors.push(text);
 });
 page.on("pageerror", (e) => pageErrors.push(String(e)));
@@ -157,7 +171,12 @@ check("paused zip page is noindexed", zipPage.robots.includes("noindex"), zipPag
 check("paused zip page title carries no rating", !RATINGS.test(zipPage.title), zipPage.title);
 
 // ————— 4. purged files are not reachable —————
-for (const path of [
+//
+// Skipped while a release is staged: a released ZIP legitimately regains its
+// preview card and its record regains a reading, so these would fail on
+// correct behaviour.
+const stagedRelease = Boolean(RELEASED || THIN);
+for (const path of stagedRelease ? [] : [
   "/data/cases/boise-2021.json",
   "/data/cases/boise-2021.png",
   "/og/2026-06/20601.png",
@@ -167,12 +186,78 @@ for (const path of [
 }
 
 // The bulk record file may exist, but must carry no measurement.
-const bulk = await page.request.get(`${BASE}/data/zips/MD.json`);
-if (bulk.ok()) {
+const bulk = stagedRelease ? null : await page.request.get(`${BASE}/data/zips/MD.json`);
+if (bulk && bulk.ok()) {
   const recs = await bulk.json();
   const keys = new Set(Object.values(recs).flatMap((v) => Object.keys(v)));
   check("bulk records carry only a state code",
     [...keys].every((k) => k === "st"), [...keys].join(","));
+}
+
+// ————— 5. the released paths —————
+//
+// Only reachable when a release is staged. Skipped otherwise rather than
+// failed: a normal run against production has nothing released and that is
+// the correct state, not a defect.
+if (RELEASED) {
+  await page.goto(`${BASE}/zip/${RELEASED}/`, { waitUntil: "domcontentloaded" });
+  const r = await page.evaluate(() => ({
+    body: document.body.innerText.replace(/\s+/g, " "),
+    robots: (document.querySelector('meta[name="robots"]') || {}).content || "",
+    title: document.title,
+    charts: document.querySelectorAll("svg").length,
+  }));
+  check("released page shows a rating", RATINGS.test(r.title) || RATINGS.test(r.body),
+    r.title.slice(0, 60));
+  check("released page shows its figures", FIGURE.test(stripDisclosed(r.body)),
+    (stripDisclosed(r.body).match(FIGURE) || [])[0] || "none found");
+  check("released page is NOT noindexed", !r.robots.includes("noindex"), r.robots || "(none)");
+  check("released page does not show the pause notice",
+    !/being refreshed|rebuilding/i.test(r.body));
+}
+
+// The twelve-month series is consumed by the HOMEPAGE preview (sparkSVG /
+// renderPreview), not the ZIP page — build_pages emits no SVG at all. This
+// assertion originally targeted the ZIP page and was simply wrong about where
+// the chart lives; it now checks where the series is actually rendered, which
+// is the surface the one-point bug would have shown up on.
+if (RELEASED) {
+  await page.goto(`${BASE}/?zip=${RELEASED}`, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.waitForFunction(() => {
+    const el = document.getElementById("verdict");
+    return el && !el.hidden && getComputedStyle(el).display !== "none";
+  }, { timeout: 15000 }).catch(() => {});
+  const home = await page.evaluate(() => {
+    const pv = document.getElementById("preview");
+    return {
+      verdictText: (document.getElementById("verdict") || {}).innerText || "",
+      metricsLen: (document.getElementById("v-metrics") || {}).innerHTML?.length ?? 0,
+      previewHidden: pv ? pv.hidden : null,
+      sparkPoints: (document.querySelectorAll("#preview polyline, #preview path").length),
+    };
+  });
+  check("homepage shows the released reading", RATINGS.test(home.verdictText),
+    home.verdictText.replace(/\s+/g, " ").slice(0, 70));
+  check("homepage renders its dials", home.metricsLen > 0, `${home.metricsLen} chars`);
+  check("homepage preview is shown", home.previewHidden === false, String(home.previewHidden));
+  check("homepage preview draws the series", home.sparkPoints > 0, `${home.sparkPoints} shapes`);
+}
+
+if (THIN) {
+  await page.goto(`${BASE}/zip/${THIN}/`, { waitUntil: "domcontentloaded" });
+  const r = await page.evaluate(() => ({
+    body: document.body.innerText.replace(/\s+/g, " "),
+    robots: (document.querySelector('meta[name="robots"]') || {}).content || "",
+    title: document.title,
+  }));
+  // HOLD is verdict_v2's safe default when it cannot read a market, not a
+  // finding. Publishing it as one is the failure this covers.
+  check("thin page does not claim a rating", !RATINGS.test(r.title), r.title.slice(0, 70));
+  check("thin page says so plainly", /not enough|too few/i.test(r.body),
+    r.body.slice(0, 80));
+  check("thin page publishes no figure", !FIGURE.test(stripDisclosed(r.body)),
+    (stripDisclosed(r.body).match(FIGURE) || [])[0] || "");
+  check("thin page stays noindexed", r.robots.includes("noindex"), r.robots || "(none)");
 }
 
 await browser.close();

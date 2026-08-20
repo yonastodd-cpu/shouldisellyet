@@ -1,3 +1,7 @@
+# Playwright for the browser smoke test — installed per-run in CI with
+# `npm install --no-save`, and the same way locally. Never committed.
+node_modules/
+
 __pycache__/
 .pytest_cache/
 *.pyc

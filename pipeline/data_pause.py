@@ -143,15 +143,26 @@ def wrongly_promoted(zip_code, basis):
             and basis != RELEASED_BASIS)
 
 
-def robots_meta(zip_code=None):
+def indexable(zip_code=None, thin=False):
+    """Whether a page may be indexed.
+
+    Released is necessary but not sufficient: a ZIP whose reading says it has
+    too little data to read gets a page and an honest state, but should not
+    compete in search for a rating it does not have.
+    """
+    if thin:
+        return False
+    return not PAUSED or (zip_code is not None and zip_code in released_zips())
+
+
+def robots_meta(zip_code=None, thin=False):
     """The one meta tag that deindexes. Empty when the page may be indexed.
 
     Per-ZIP now: a released ZIP drops the noindex, everything else keeps it.
     Callers passing nothing keep the global behaviour, which is correct for
     the metro, story and research pages — none of which are released per-ZIP.
     """
-    live = not PAUSED or (zip_code is not None and zip_code in released_zips())
-    return "" if live else '<meta name="robots" content="noindex,follow">'
+    return "" if indexable(zip_code, thin) else '<meta name="robots" content="noindex,follow">'
 
 
 def notice_html(css_class="pause-notice"):
