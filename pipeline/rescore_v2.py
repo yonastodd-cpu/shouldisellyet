@@ -193,10 +193,16 @@ def compact(market, row, hist):
          "nly": market.new_listings_yoy}
     m = {k: (round(v, 4) if isinstance(v, float) else v)
          for k, v in m.items() if v is not None}
-    out = {"l": verdict.level, "s": verdict.score,
+    # The record carries its own month. The global meta.json is frozen at the
+    # last Redfin run, so a page that took its date from there published August
+    # readings as "Data through June 2026".
+    out = {"p": (row.get("as_of_month") or "") or None,
+           "l": verdict.level, "s": verdict.score,
            "r": [[c, p, round(v, 4) if isinstance(v, float) else v]
                  for c, p, v in verdict.reasons],
            "b": verdict.basis, "m": m}
+    if not out["p"]:
+        out.pop("p")
     h = history_block(hist)
     if h:
         out["h"] = h

@@ -307,3 +307,76 @@ def test_a_page_is_indexable_only_when_it_may_show_its_reading():
                     f"head and body disagree for {z} on basis {b!r}"
     finally:
         PAUSE._allowlist = None
+
+
+# ————— what a RELEASED page may say about its own data —————
+#
+# Tranche 1 published 1,000 pages that were right about the reading and wrong
+# about everything around it, because meta.json is frozen at the last Redfin
+# run and nothing downstream asked which basis the record was on:
+#
+#   "Data through June 2026"                      — the readings are August
+#   "Data provided by Redfin"                     — they are RentCast, two
+#                                                   weeks after Redfin stopped
+#   "The typical home here sold for +9.3%"        — that is an ASKING price
+#   "rising faster than about 66% of U.S. ZIPs"   — ranked against Redfin
+#                                                   SOLD-price deciles
+#   "15,471 ZIPs read HOLD · 7,110 WATCH…"        — withdrawn Redfin counts
+#
+# None of it was visible while everything was paused, because a paused page
+# blanks its stamp and prose. The release is what made the stale half render.
+
+V2 = "active listings"
+
+
+def _released_page(zip_code="95608"):
+    p = ROOT / "web" / "zip" / zip_code / "index.html"
+    if not p.exists():
+        pytest.skip("pages not built")
+    src = p.read_text(encoding="utf-8")
+    if "being refreshed" in src:
+        pytest.skip(f"{zip_code} is not released in this build")
+    return src
+
+
+def test_a_released_page_credits_the_source_its_reading_came_from():
+    src = _released_page()
+    assert "RentCast" in src, "the page does not name the source of its reading"
+    assert "redfin" not in src.lower(), \
+        "a RentCast reading is credited to Redfin — a vendor whose data was withdrawn"
+
+
+def test_a_released_page_dates_itself_from_its_own_reading():
+    """Not from meta.json, which is frozen at the last v1 run."""
+    import json
+    rec = json.loads((ROOT / "web" / "data" / "z" / "95608.json").read_text())
+    if rec.get("b") != V2:
+        pytest.skip("95608 not released")
+    month = rec.get("p")
+    assert month, "the record carries no as-of month"
+    pretty = f"{BP.MONTHS[int(month[5:7]) - 1]} {month[:4]}"
+    src = _released_page()
+    assert f"Data through {pretty}" in src, \
+        f"the page is dated from meta.json, not from its reading ({pretty})"
+
+
+def test_a_released_page_does_not_call_an_asking_price_a_sale_price():
+    """v2 reads active listings. Asking prices run higher than sale prices —
+    the distinction the methodology page exists to make."""
+    src = _released_page()
+    assert "sold for" not in src, \
+        "the page describes an asking-price change as a sale price"
+
+
+def test_a_released_page_publishes_no_cross_basis_comparison():
+    """spy_deciles ranks SOLD-price changes. A v2 spy is an ASKING-price
+    change. Ranking one against the other is not a national percentile."""
+    src = _released_page()
+    assert not re.search(r"rising faster than about \d+%", src), \
+        "a v2 reading is ranked against v1 sold-price deciles"
+
+
+def test_the_homepage_withholds_the_withdrawn_national_counts():
+    js = (ROOT / "web" / "index.html").read_text()
+    assert 'd.b === "active listings"' in js, \
+        "the homepage still shows Redfin national counts beside a v2 reading"

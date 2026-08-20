@@ -1483,12 +1483,18 @@ function renderPreview(d) {
   // (HOLD=green, WATCH=yellow, ACT=red) so the homepage and the report can
   // never disagree. Expandable: percentile + WSI + research link live behind
   // the toggle, built at expand time so async data can never shift layout.
-  const nc = META && META.national && META.national.counts;
+  // The national verdict counts are Redfin-derived and frozen at the last v1
+  // run. Tranche 1 published them beside every RentCast reading — "Across the
+  // country right now: 15,471 ZIPs read HOLD…" — which is neither current nor
+  // ours to republish. Withheld until a national picture exists on the new
+  // basis; 1,000 released ZIPs is not one.
+  const nc = (d && d.b === "active listings") ? null
+           : (META && META.national && META.national.counts);
   row("08", "Your market vs. the nation",
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
-       : '<span>National rating mix loads with the live data.</span>',
+       : '<span>The national rating mix is being rebuilt on the new data source and is not shown yet.</span>',
     { open: true });
 
   // 09 — velocity tease. veil() gets the REAL months-to-line phrase computed

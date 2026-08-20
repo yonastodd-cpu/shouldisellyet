@@ -285,8 +285,21 @@ NAVBAR = """<nav class="top">
 # a ZIP page in its stamp (beside the data it credits, so its footer passes
 # cite=""), a state hub or the markets index in its footer, since neither has
 # a stamp. See docs/ATTRIBUTION.md.
-CITE = ('Data provided by <a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>, '
-        'a national real estate brokerage')
+# The credit has to name the source the reading actually came from. Tranche 1
+# published RentCast-derived readings under "Data provided by Redfin", two
+# weeks after Redfin ingestion stopped — a false attribution to a vendor whose
+# data the site had just withdrawn, on the one line a reader would check.
+CITE_V1 = ('Data provided by <a href="https://www.redfin.com" target="_blank" '
+           'rel="noopener">Redfin</a>, a national real estate brokerage')
+CITE_V2 = "Market statistics from RentCast"
+
+
+def cite_for(basis):
+    """Attribution for a reading on this basis."""
+    return CITE_V2 if basis == PAUSE.RELEASED_BASIS else CITE_V1
+
+
+CITE = CITE_V1
 
 # City names come from the GeoNames US postal export (CC BY 4.0), which asks
 # for credit and accepts a link to www.geonames.org. Any one city name is a
@@ -311,7 +324,11 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # pause branch below replaces every one of these values anyway.
     level = e.get("l") or "green"
     k = KINDS[level]; m = e.get("m", {}); strong = level == "strong"
-    period = meta.get("period", "")
+    # meta.json is frozen at the last Redfin run (2026-06) because fetch_data
+    # has not run since ingestion stopped. A v2 reading is as-of its own month,
+    # and tranche 1 published August readings under "Data through June 2026" —
+    # two months stale, and pointing at a window inside the withdrawn data.
+    period = e.get("p") or meta.get("period", "")
     pretty_period = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
     updated = meta.get("generated", date.today().isoformat())
     state_name = STATE_NAMES.get(st, st)
@@ -335,8 +352,17 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     facts = []
     if m.get("spy") is not None:
         d = m["spy"]
-        facts.append(f"The typical home here sold for <b>{pct(d)}</b> compared with a year ago." if d < 0 or d > 0
-                     else "The typical sale price here is flat against a year ago.")
+        # v2 reads ACTIVE LISTINGS: this is the asking price, not the sale
+        # price. Calling it "sold for" is the exact confusion the methodology
+        # page was rewritten to prevent — asking prices run higher than sale
+        # prices — and it shipped over v2 data on the first release.
+        if e.get("b") == PAUSE.RELEASED_BASIS:
+            facts.append(f"The typical home here is <b>asking</b> {pct(d)} compared with a year ago."
+                         if d < 0 or d > 0
+                         else "The typical asking price here is flat against a year ago.")
+        else:
+            facts.append(f"The typical home here sold for <b>{pct(d)}</b> compared with a year ago." if d < 0 or d > 0
+                         else "The typical sale price here is flat against a year ago.")
     if m.get("dom") is not None and m.get("domy") is not None:
         dy = round(m["domy"])
         unit = "day" if abs(dy) == 1 else "days"
@@ -345,7 +371,13 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     fm = fastest_month(e.get("h"))
     if fm:
         facts.append(f"Over the last three years, homes in {esc(city)} have sold fastest in <b>{fm}</b> — worth knowing when you plan a listing.")
-    p = percentile(m.get("spy"), (meta.get("national") or {}).get("spy_deciles"))
+    # spy_deciles is a table of Redfin SOLD-price year-over-year changes. A v2
+    # spy is an ASKING-price change. Ranking one against the other compares two
+    # different measurements and reports the answer as a national percentile —
+    # published on every released page in tranche 1. Withheld until the deciles
+    # are rebuilt on the active-listing basis.
+    p = (None if e.get("b") == PAUSE.RELEASED_BASIS
+         else percentile(m.get("spy"), (meta.get("national") or {}).get("spy_deciles")))
     if p:
         pack = ("near the top of the pack" if p >= 85 else "ahead of most markets" if p >= 60
                 else "squarely mid-pack" if p > 40 else "behind most markets" if p > 15 else "near the bottom of the pack")
@@ -411,8 +443,9 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     faq_a = vc["qa"].format(city=city)
     # Credit rides with the data: shown when a reading is, blanked when it is
     # not. Overwritten by the pause branch below.
+    basis = e.get("b", PAUSE.LEGACY_BASIS)
     stamp_html = (f"Data through {esc(pretty_period)} · updated {esc(updated)} · "
-                  f"{CITE} · {PLACES_CITE}")
+                  f"{cite_for(basis)} · {PLACES_CITE}")
 
     # ————— REDFIN SUNSET, PHASE 0 —————
     # The body banner is the least of it: the verdict word and the metric
