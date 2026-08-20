@@ -294,17 +294,6 @@ jobs:
         continue-on-error: true
         run: python3 pipeline/indexnow.py --old /tmp/old_zips --new web/data/zips
 
-      # Gated on `changed` until 2026-08-19, which meant the suite had not run
-      # in CI since Phase 0 began — Phase 0 forces changed=false. The absence
-      # tests that exist to stop withdrawn figures reaching production were
-      # therefore never executed by a deploy. Now runs whenever we deploy at
-      # all, which is the only condition under which a page can reach a reader.
-      - name: Run tests
-        if: steps.check.outputs.deploy == 'true'
-        run: |
-          pip install pytest
-          pytest pipeline/ -q
-
       - name: Commit refreshed data
         if: steps.check.outputs.changed == 'true'
         run: |
@@ -343,6 +332,17 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python3 pipeline/provision_readings.py
+
+      # AFTER provisioning, deliberately. web/data/zips is generated now, so a
+      # suite that ran before it existed was testing a directory the deploy
+      # would never see — and that is exactly how this step failed the first
+      # time it was armed. Tests should assert against what actually ships.
+      # Still before the build and the upload, so a failure blocks both.
+      - name: Run tests
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          pip install pytest
+          pytest pipeline/ -q
 
       - name: Build ZIP pages, hubs, sitemaps and share cards
         if: steps.check.outputs.deploy == 'true'

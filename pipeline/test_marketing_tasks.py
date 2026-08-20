@@ -955,7 +955,13 @@ def test_a_flip_post_calls_hold_share_what_it_is():
     import json as _j
     vel = _j.loads((REPO / "web" / "data" / "velocity-aggregates.json").read_text())
     g = next(x for x in vel["gathering"] if x["cbsa"] == "49620")
-    zips = _j.loads((REPO / "web" / "data" / "zips" / "PA.json").read_text())
+    # web/data/zips is generated now, not committed — a fresh checkout has no
+    # such directory until provisioning runs.
+    pa = REPO / "web" / "data" / "zips" / "PA.json"
+    if not pa.exists():
+        import pytest as _p
+        _p.skip("per-ZIP records not provisioned in this checkout")
+    zips = _j.loads(pa.read_text())
     members = [z for z in g["member_zips"] if z in zips]
     # MIGRATION HOLD. velocity-aggregates.json is frozen at the legacy
     # closed-sale basis — velocity.py is one of the eleven steps Phase 0 gates
