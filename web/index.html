@@ -936,7 +936,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <h2>We keep watch for you.</h2>
   <p class="body-p">The same kind of visibility now runs automatically for your ZIP.</p>
   <div class="steps steps3">
-    <div class="step"><div class="num">1</div><div class="t">Enter your ZIP.</div><p>We pull the latest public housing-market data whenever new figures are released.</p></div>
+    <div class="step"><div class="num">1</div><div class="t">Enter your ZIP.</div><p>We check your ZIP against licensed market statistics for the homes currently listed for sale there.</p></div>
     <div class="step"><div class="num">2</div><div class="t">We compare it with history.</div><p>Past housing downturns leave patterns. We check whether your local numbers are beginning to resemble the conditions that appeared before previous declines.</p></div>
     <div class="step"><div class="num">3</div><div class="t">You get a simple reading — and we keep watching.</div><p><b class="rate rate-g">HOLD</b>, <b class="rate rate-a">WATCH</b>, or <b class="rate rate-r">ACT</b>, with the numbers behind it. If something meaningful changes, we email you.</p></div>
   </div>
@@ -1629,8 +1629,13 @@ function renderFreshLine() {
   for (let i = 1; i <= 7; i++) {
     const d = new Date(now); d.setDate(now.getDate() + i);
     if (d.getDay() === 1 || d.getDay() === 4) {
+      // "readings refresh the moment new figures land" promised a cadence
+      // nothing keeps. The Mon/Thu cron is real, but it exits early while
+      // ingestion is stopped, and the methodology page now says plainly that
+      // the refresh cadence is not settled. A line about freshness must not
+      // outrun the page that documents it.
       el.textContent = "Next data check: " + days[d.getDay()] + ", " +
-        mons[d.getMonth()] + " " + d.getDate() + " — readings refresh the moment new figures land.";
+        mons[d.getMonth()] + " " + d.getDate() + ".";
       el.hidden = false;
       return;
     }
@@ -1675,6 +1680,16 @@ async function renderChangedStat() {
   // claim on the page's closing line.
   const el = $("changed-stat");
   if (!el) return;
+  // WITHHELD ACROSS THE CHANGE OF SOURCE. Both inputs are v1: proof.json
+  // counts rating flips computed from the withdrawn vendor's data, and
+  // scoredZips() sums the Redfin national buckets. The sentence was computed
+  // rather than hard-coded precisely so a quiet month could not leave a false
+  // claim on the closing line — but a computation over withdrawn inputs is
+  // still a false claim, and it was reading "1 in 3 ZIP codes changed rating
+  // with June's data" beside live August readings. It returns when the flip
+  // count is rebuilt on the active-listing basis.
+  return;
+  /* eslint-disable no-unreachable */
   try {
     const p = await fetch("data/proof.json").then(r => r.ok ? r.json() : null);
     const scored = scoredZips();
@@ -1687,6 +1702,7 @@ async function renderChangedStat() {
     el.textContent = `1 in ${oneIn} ZIP codes changed rating` + (month ? ` with ${month}'s data.` : ".");
     el.hidden = false;
   } catch (e) { /* absent → the heading stays hidden */ }
+  /* eslint-enable no-unreachable */
 }
 
 async function renderScorecardLine() {
@@ -2112,13 +2128,17 @@ function feedLines() {
   // never a claim we can't back. Below 1,000 (or with meta missing) it falls
   // back to "U.S. ZIP markets" — a sentence that still reads, rather than a
   // guessed number or the gap left by dropping one.
+  // scoredZips() sums meta.national.counts, which is Redfin-derived and
+  // frozen at the last v1 run. It is the same withdrawn figure the result
+  // card stopped showing, so it cannot be the basis of a coverage claim
+  // either. The standing-page count is ours and is true today.
   const n = scoredZips();
   const scale = n >= 1000 ? Math.floor(n / 1000).toLocaleString("en-US") + ",000+" : "U.S.";
   return [
-    "scoring " + scale + " ZIP markets · data through " + period,
+    "standing pages for " + scale + " ZIP markets",
     "signals: price trend · time to sell · homes for sale",
-    "source: public housing-market data · refreshed on publication",
-    "readings recompute automatically when new figures publish",
+    "source: licensed market statistics · homes currently listed for sale",
+    "danger lines are published, not proprietary",
   ];
 }
 let feedIx = 0;

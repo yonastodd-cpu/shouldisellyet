@@ -283,3 +283,38 @@ def test_no_existing_disclaimer_was_dropped_when_the_terms_were_strengthened():
                    "decisions about your home are yours",
                    "licensed professional who knows your specific facts"):
         assert clause in tos, f"the terms lost the {clause!r} protection"
+
+
+def test_the_homepage_promises_no_freshness_the_site_cannot_keep():
+    """The methodology page says the refresh cadence is not settled. The
+    homepage said the opposite in three places at once — "readings refresh the
+    moment new figures land", "refreshed on publication", "readings recompute
+    automatically when new figures publish" — beside a step describing a
+    licensed vendor's statistics as "public housing-market data".
+
+    Comments are stripped: the fixes quote the retired wording on purpose, and
+    a guard that forbids naming an old mistake pushes the explanation out.
+    """
+    src = (ROOT / "web" / "index.html").read_text()
+    code = re.sub(r"//[^\n]*", "", src)
+    code = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+    for claim in ("refresh the moment new figures land",
+                  "refreshed on publication",
+                  "recompute automatically",
+                  "latest public housing-market data"):
+        assert claim not in code, (
+            f"the homepage claims {claim!r} while the methodology page says the "
+            "cadence is not settled and the source is licensed")
+
+
+def test_no_headline_stat_is_computed_from_the_withdrawn_counts():
+    """meta.national.counts is Redfin-derived and frozen at the last v1 run.
+    The result card stopped showing it; the coverage line and the "1 in N ZIP
+    codes changed rating" stat were still summing it, so the same withdrawn
+    figure kept reaching the page by another route."""
+    src = (ROOT / "web" / "index.html").read_text()
+    assert 'd.b === "active listings"' in src, "the result card can still show it"
+    i = src.index("async function renderChangedStat")
+    body = src[i:i + 1400]
+    assert re.search(r"^\s*return;\s*$", body, re.M), \
+        "the changed-rating stat is computed again from withdrawn inputs"
