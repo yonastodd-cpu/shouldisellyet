@@ -370,17 +370,35 @@ jobs:
       # URLs. Generated directories are rebuilt each deploy, so a short build
       # publishes a short site — count the pages against the manifest and
       # refuse to upload if they disagree.
+      # The last thing between a broken build and mass URL deletion. Every
+      # generated tree is rebuilt each deploy, so a short build publishes a
+      # short site.
+      #
+      # It counted only web/zip at first, and that was not enough: metro pages
+      # are generated from a DIFFERENT population and a bug there took 609
+      # directories to 1 while the ZIP count stayed perfect. Every generated
+      # tree needs its own floor, and the floors are the counts the site
+      # publishes today.
       - name: Gate on page count
         if: steps.check.outputs.deploy == 'true'
         run: |
-          want=$(( $(wc -l < pipeline/data/page_manifest.csv) - 1 ))
+          fail=0
+          want=$(awk -F, 'NR>1 && $3==1' pipeline/data/page_manifest.csv | wc -l | tr -d ' ')
           have=$(find web/zip -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' | wc -l | tr -d ' ')
-          echo "manifest: $want · built: $have"
-          if [ "$have" -lt "$want" ]; then
-            echo "::error::built $have ZIP pages for $want manifest rows — \
-          refusing to upload, this deploy would delete $((want - have)) live URLs."
-            exit 1
-          fi
+          echo "zip pages   — manifest: $want · built: $have"
+          [ "$have" -lt "$want" ] && { echo "::error::built $have ZIP pages for $want manifest rows; would delete $((want - have)) live URLs."; fail=1; }
+
+          for tree in metro stories; do
+            n=$(find "web/$tree" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+            echo "$tree pages — built: $n"
+          done
+          m=$(find web/metro -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+          [ "$m" -lt 600 ] && { echo "::error::only $m metro directories built (expected ~609) — refusing to upload."; fail=1; }
+          s=$(find web/stories -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+          [ "$s" -lt 1 ] && { echo "::error::no story pages built — refusing to upload."; fail=1; }
+          r=$(find web/research -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+          [ "$r" -lt 2 ] && { echo "::error::only $r research releases built (expected 2+) — refusing to upload."; fail=1; }
+          exit $fail
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'

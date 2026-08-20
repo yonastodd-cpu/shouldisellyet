@@ -122,3 +122,26 @@ def test_purge_manifest_lists_every_moved_file():
     manifest = (ROOT / "PURGE_MANIFEST.md").read_text()
     for stem in PURGED_STEMS:
         assert stem in manifest, f"{stem} moved but not in PURGE_MANIFEST.md"
+
+
+# ————— URL-set floors —————
+
+def test_metro_membership_uses_the_wider_scored_population():
+    """Metro pages are built from a DIFFERENT population than ZIP pages: every
+    scored ZIP, not only those with a standing page. Building them from the
+    narrow set drops 92 metros below the 8-ZIP floor, and building them from
+    records that no longer carry a level drops all 609 to zero. Both were
+    measured, not theorised."""
+    src = (ROOT / "pipeline" / "build_metro.py").read_text()
+    assert "read_manifest(pages_only=False)" in src, \
+        "build_metro must use the wider scored population"
+
+
+def test_manifest_records_both_populations():
+    import csv as _csv
+    rows = list(_csv.DictReader(
+        open(ROOT / "pipeline" / "data" / "page_manifest.csv", encoding="utf-8")))
+    pages = sum(1 for r in rows if r["page"] == "1")
+    assert len(rows) > pages, "the scored set must be wider than the page set"
+    assert pages > 20000, f"only {pages} standing pages in the manifest"
+    assert len(rows) > 25000, f"only {len(rows)} scored ZIPs in the manifest"

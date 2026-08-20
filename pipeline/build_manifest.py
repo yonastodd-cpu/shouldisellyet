@@ -40,11 +40,18 @@ OUT = Path(__file__).parent / "data" / "page_manifest.csv"
 
 
 def eligible(entries, places):
-    """The rule build_pages.main() has always used, in one place.
+    """Both populations this site depends on, frozen in one pass.
 
-    Kept verbatim rather than simplified: this is the last time it can run
-    against the data it was written for, so it must reproduce exactly the set
-    of pages the site publishes today.
+    TWO of them, which cost 92 metro pages to discover. A ZIP gets a standing
+    /zip/ page under the completeness rule build_pages has always used — that
+    is `page=1`. But /metro/ membership was always a BROADER set: every ZIP
+    with a usable verdict, whether or not it had a page. 26,587 against
+    22,874. Freezing only the narrower one dropped 92 metros below the
+    8-ZIP floor and would have deleted them on the next deploy.
+
+    Membership is geography and the page rule is data completeness; they were
+    never the same question, and the old code answered each from the metrics
+    independently. With the metrics gone both have to be recorded here.
     """
     out, skipped = [], {}
     for z, e in sorted(entries.items()):
@@ -52,15 +59,23 @@ def eligible(entries, places):
         if any(r and r[0] == "insufficient_data" for r in e.get("r") or []):
             skipped["insufficient_verdict"] = skipped.get("insufficient_verdict", 0) + 1
             continue
+        if e.get("l") not in ("green", "yellow", "red", "strong"):
+            skipped["no_verdict"] = skipped.get("no_verdict", 0) + 1
+            continue
+        state = e.get("st") or (places[z][1] if z in places else "")
         need = (("spy", "dom", "domy", "invy") if e.get("b")
                 else ("mos", "spy", "dom", "domy"))
+        page = 1
         if any(m.get(k) is None for k in need):
             skipped["incomplete_dials"] = skipped.get("incomplete_dials", 0) + 1
-            continue
-        if z not in places:
+            page = 0
+        elif z not in places:
             skipped["no_city_name"] = skipped.get("no_city_name", 0) + 1
+            page = 0
+        if not state:
+            skipped["no_state"] = skipped.get("no_state", 0) + 1
             continue
-        out.append((z, e.get("st") or places[z][1]))
+        out.append((z, state, page))
     return out, skipped
 
 
@@ -71,10 +86,15 @@ def load_entries(zips=ZIPS):
     return out
 
 
-def read_manifest(path=OUT):
+def read_manifest(path=OUT, pages_only=True):
+    """Rows as (zip, state). pages_only=True gives the standing-page set that
+    build_pages publishes; False gives the wider scored set that metro
+    membership has always counted."""
     if not Path(path).exists():
         return []
-    return [(r["zip"], r["state"]) for r in csv.DictReader(open(path, encoding="utf-8"))]
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    return [(r["zip"], r["state"]) for r in rows
+            if not pages_only or r.get("page") == "1"]
 
 
 def write_manifest(rows, path=OUT):
@@ -82,7 +102,7 @@ def write_manifest(rows, path=OUT):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["zip", "state"])
+        w.writerow(["zip", "state", "page"])
         w.writerows(rows)
 
 
@@ -100,7 +120,9 @@ def main(argv=None):
     print(f"scored ZIPs: {len(entries):,}")
     for k, v in sorted(skipped.items()):
         print(f"  skipped {k}: {v:,}")
-    print(f"standing pages: {len(rows):,}")
+    pages = sum(1 for r in rows if r[2] == 1)
+    print(f"scored ZIPs kept (metro membership): {len(rows):,}")
+    print(f"standing pages: {pages:,}")
 
     if args.check:
         have = read_manifest(args.out)

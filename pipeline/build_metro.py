@@ -97,17 +97,33 @@ def load_zip_cbsa():
 
 
 def load_entries(data_dir):
-    """Only ZIPs with a usable verdict — the same filter build_pages.py applies
-    before giving a ZIP a page, and the same population research.py restates
-    and velocity.py scores. Without it this page counted 78 ZIPs while the post
-    that links to it said 76, a discrepancy with no honest explanation."""
-    out = {}
+    """The ZIPs this site publishes a page for — which is the manifest.
+
+    This used to keep only records carrying a usable verdict, matching the
+    completeness test build_pages applied. That test is gone: the URL set is
+    now pipeline/data/page_manifest.csv and per-ZIP records are provisioned,
+    so an unreleased ZIP's record is {"st": ST} with no level at all. Left
+    alone, this returned an EMPTY dict, by_metro was empty, every metro fell
+    under --min-zips, and the deploy emitted ZERO of the 609 live /metro/
+    pages — deleting all of them, since web/metro/ is gitignored and rebuilt
+    each deploy. Measured before this change: 609 directories became 1.
+
+    Membership is geography, not data: a ZIP belongs to its metro whether or
+    not we currently publish a reading for it.
+    """
+    from build_manifest import read_manifest
+    records = {}
     for f in sorted(Path(data_dir, "zips").glob("*.json")):
-        for z, e in json.loads(f.read_text()).items():
-            if any(r[0] == "insufficient_data" for r in (e.get("r") or [])):
-                continue
-            if e.get("l") in ("green", "yellow", "red", "strong"):
-                out[z] = e
+        records.update(json.loads(f.read_text()))
+    out = {}
+    # pages_only=False: metro membership is the wider SCORED set, not the
+    # standing-page set. Using the narrow one drops 92 metros below the
+    # 8-ZIP floor.
+    for z, st in read_manifest(pages_only=False):
+        e = records.get(z) or {"st": st}
+        if any(r[0] == "insufficient_data" for r in (e.get("r") or [])):
+            continue
+        out[z] = e
     return out
 
 
@@ -189,8 +205,15 @@ def read_line(share, prev):
 
 def zip_row(z, e, places):
     city = places.get(z, ("", ""))[0]
-    lvl = e.get("l")
-    m = e.get("m") or {}
+    # These pages list every ZIP in the metro with its rating and dial values.
+    # They were never pause-gated, so they kept publishing both for the whole
+    # withdrawal — 88 rating words and a column of price changes on the Austin
+    # page alone, verified live. A released ZIP still shows its reading.
+    if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
+        lvl, m = None, {}
+    else:
+        lvl = e.get("l")
+        m = e.get("m") or {}
     cells = []
     for key, _label, line, op, fmt, shown in DIALS:
         v = m.get(key)
@@ -209,8 +232,17 @@ def zip_row(z, e, places):
 def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     short = short_metro(name)
     series = metro_series(hist, cbsa)
-    scored = len(zips)
-    holds = sum(1 for z in zips if entries[z].get("l") in ("green", "strong"))
+    # Count only ZIPs whose reading may be shown. The hero, the share and the
+    # "N of M rate HOLD or better" line are all counted from the rows below
+    # them — so when those rows are blanked, counting the underlying records
+    # anyway publishes a number the page contradicts. It did: every paused
+    # metro read "0 of 83 rate HOLD or better today" above a table of dashes,
+    # and the hero claimed a 100% warning share. Not 0 and not 100 — unknown.
+    live = [z for z in zips
+            if PAUSE.shows_data(z, (entries[z] or {}).get("b", PAUSE.LEGACY_BASIS))]
+    scored = len(live)
+    total = len(zips)
+    holds = sum(1 for z in live if entries[z].get("l") in ("green", "strong"))
     warn = scored - holds
 
     # THE HERO IS COUNTED FROM THE ROWS BELOW IT, NOT FROM history.json.
@@ -230,7 +262,8 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     desc = (f"{share:.0f}% of the {scored} ZIP codes we track in {short} are showing a "
             f"housing warning sign as of {period}. Free per-ZIP ratings, updated monthly."
             if share is not None else
-            f"Per-ZIP housing ratings for {short}, updated monthly.")
+            f"Per-ZIP housing ratings for {short} — {total} ZIP codes tracked. "
+            f"{PAUSE.NOTICE_TITLE}.")
 
     rows = "".join(zip_row(z, entries[z], places)
                    for z in sorted(zips, key=lambda z: (entries[z].get("l") != "red",
@@ -367,7 +400,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
     <div class="mfig">
       <div class="mlabel">Where they stand today</div>
       <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
-      <div class="mcap">of the {scored} ZIP codes we track here rate WATCH or ACT</div>
+      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if scored else f"ratings for the {total} ZIP codes we track here are being refreshed"}</div>
     </div>
     {det_block}
   </div>
@@ -377,7 +410,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <div class="msub">{esc(spark_caption(series))}</div>
 
   <h2>Every ZIP code we track here</h2>
-  <p class="note">{holds} of {scored} rate HOLD or better today. A value in red is
+  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if scored else PAUSE.NOTICE_BODY} A value in red is
   past its published danger line. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
   <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
@@ -388,12 +421,10 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <details class="receipt">
     <summary>Behind this number</summary>
     <div class="receipt-body">
-      <p><b>What goes in.</b> Every ZIP code in this metro we can score — {scored}
+      <p><b>What goes in.</b> Every ZIP code in this metro we can score — {total}
       of them this month. A ZIP is scored when it has enough recent sales to read;
       the rest are left out rather than guessed at.</p>
-      <p><b>The maths.</b> {warn} of those {scored} ZIP codes show at least one
-      signal past its danger line, which is {share:.0f}%. You can count them in the
-      table above: every row tagged WATCH or ACT.</p>
+      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT." if scored else PAUSE.NOTICE_BODY}</p>
       <p><b>Why there is a line at all.</b> Each danger line is the level at which,
       in past downturns, that signal began leading price declines rather than
       following them. The lines are fixed, published, and identical for every ZIP

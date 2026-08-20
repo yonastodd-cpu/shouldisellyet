@@ -38,6 +38,16 @@ must be scrubbed.
 | `pipeline/tier_interim.csv` | Realtor.com | one derived count column | regenerate without it |
 | `pipeline/cases/*` (8) | Redfin | moved out of the artifact 2026-08-19, still in the repo and its history | |
 
+## Seventh leaking surface, found 2026-08-19
+
+The 609 `/metro/` pages listed every ZIP in a metro with its rating and dial
+values, and were never pause-gated — 88 rating words and a column of price
+changes on the Austin page alone, verified live. They also published counts
+derived from the withdrawn readings: "0 of 83 rate HOLD or better today" above
+a table of dashes, and a hero claiming a 100% warning share. Not 0 and not
+100 — unknown. Rows, counts and captions now follow the same pause check as
+every other surface.
+
 ## Borderline, named rather than silently kept
 
 `web/data/meta.json` carries `national.spy_deciles` — an eleven-value national
