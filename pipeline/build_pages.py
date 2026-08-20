@@ -1089,7 +1089,11 @@ def main():
     # a crawler two opposite things at once — the same reasoning that holds the
     # research pages out below. It was the one paused-tree URL still in the
     # submitted sitemap.
-    urls = [f"{SITE}/", f"{SITE}/press.html"]
+    # methodology.html states the sources, the basis and the danger lines. It
+    # is disclosure, it stays true while paused, and it is what /methodology
+    # now resolves to — so unlike the reading surfaces it belongs in the
+    # sitemap whether or not readings are showing.
+    urls = [f"{SITE}/", f"{SITE}/press.html", f"{SITE}/methodology.html"]
     if PAUSE.shows_data():
         urls.append(f"{SITE}/zip/")
         # The sample report exists to show a real reading. While paused it

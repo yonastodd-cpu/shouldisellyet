@@ -589,13 +589,18 @@ def main(argv=None):
         import shutil
         shutil.rmtree(final)
     stage.rename(final)
-    # /methodology is the path every definition links to. The page itself has
-    # lived at /research/methodology.html since the research build shipped;
-    # this is the short, quotable route to it rather than a second copy.
+    # /methodology is the path every definition links to. It used to redirect
+    # to /research/methodology.html — but that document describes the
+    # Warning-Sign Index, a deliberately FROZEN four-signal series kept
+    # comparable month to month, not how a current ZIP reading is computed.
+    # Every "see our methodology" link on the site therefore delivered a reader
+    # to a paper about a different metric. It now points at the site's own
+    # methodology page, which states the sources, the active-listing basis, the
+    # three signals and their lines, and the refresh cadence.
     meth = web / "methodology"
     meth.mkdir(parents=True, exist_ok=True)
     (meth / "index.html").write_text(
-        redirect_page(f"{SITE}/research/methodology.html",
+        redirect_page(f"{SITE}/methodology.html",
                       "Taking you to the methodology…"), encoding="utf-8")
 
     print(f"build_metro: {n} metro page(s) + hub + /methodology · "

@@ -25,10 +25,10 @@
 {"@type":"Organization","@id":"https://shouldisellyet.com/#org","name":"ShouldISellYet","url":"https://shouldisellyet.com/","legalName":"Yayday LLC","description":"Housing-market early-warning reports for homeowners. Not a brokerage.","logo":{"@type":"ImageObject","url":"https://shouldisellyet.com/apple-touch-icon.png"}},
 {"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — Know before your home equity is at risk","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
 {"@type":"FAQPage","@id":"https://shouldisellyet.com/#faq","mainEntity":[
-{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check four public signals for your ZIP code: months of supply, the year-over-year price trend, how long homes take to sell, and the share of listings cutting price. Each has a danger line drawn from how markets behaved before past national downturns. ShouldISellYet computes all four for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account."}},
-{"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means multiple danger lines are crossed and sellers are losing pricing power. Most ZIP codes read HOLD — the reading often says don't sell."}},
-{"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all four market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
-{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Public housing-market data, refreshed whenever new figures publish. Data provided by Redfin, a national real estate brokerage, with an independent cross-check from Realtor.com listings, the Federal Housing Finance Agency house price index, and Freddie Mac's mortgage rate survey. The danger thresholds are published, not proprietary."}}]}]}</script>
+{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three public signals for your ZIP code, all computed from homes currently listed for sale: the year-over-year asking-price trend, how long listings take to sell, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are being rebuilt on a new data source and are not being shown right now."}},
+{"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means enough danger lines are crossed to reach the top band — one line alone can be enough when prices are falling fast. Most ZIP codes read HOLD — the reading often says don't sell."}},
+{"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all three market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
+{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. The site is between data sources: ingestion from its previous vendor stopped on 14 August 2026 and readings are being rebuilt."}}]}]}</script>
 
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -781,7 +781,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <div class="card crunch hidden" id="crunch">
       <div class="crunch-head">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
       <div class="crunch-row"><span class="crunch-dot"></span><span>Pulling the latest inventory</span><span class="crunch-bar"></span></div>
-      <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.25s"></span><span>Scanning listings for price cuts</span><span class="crunch-bar"></span></div>
+      <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.25s"></span><span>Checking how the pool of homes for sale is moving</span><span class="crunch-bar"></span></div>
       <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.5s"></span><span>Measuring days on market</span><span class="crunch-bar"></span></div>
       <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.75s"></span><span>Testing against danger thresholds</span><span class="crunch-bar"></span></div>
     </div>
@@ -985,7 +985,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <div class="proofline band-eyebrow" id="freshline" hidden></div>
   <div class="proofline band-eyebrow" id="proofline" hidden></div>
   <h2 id="changed-stat" hidden></h2>
-  <p class="band-p">Markets don't stand still. Your free check takes about 10 seconds and includes your current reading and all four market gauges.</p>
+  <p class="band-p">Markets don't stand still. Your free check takes about 10 seconds and includes your current reading and all three market gauges.</p>
   <p class="band-p"><b>No account. No credit card.</b></p>
   <div class="band-ctas">
     <a class="btn btn-light" href="#check" onclick="document.getElementById('zip').focus()">Check my ZIP — free</a>
@@ -1285,7 +1285,11 @@ function buildMetricRows(d, strong) {
   }
   if (m.dom != null && m.domy != null) {
     const prior = m.dom - m.domy, p = prior > 0 ? m.domy/prior : 0;
-    const t = strong ? (p <= -0.15 ? "s" : "g") : (p > 0.4 ? "a" : "g");
+    // Calibrated active-listing lines (verdict_v2.SPEC dom_shrink/dom_stretch).
+    // These were -0.15/0.4 — the pre-refit sale-basis numbers — while the note
+    // rendered on the same row already said "-20% y/y". The dial coloured at a
+    // line five points from the one it displayed.
+    const t = strong ? (p <= -0.20 ? "s" : "g") : (p > 0.10 ? "a" : "g");
     rows.push({ name:"TIME TO SELL", val:Math.round(m.dom)+" days", t,
       fill:clampPct((p*100+50)/150*100), th: strong ? 23.3 : 60,
       note: strong ? (t==="s" ? Math.round(-m.domy)+" days faster y/y" : "strong line: −20% y/y")
@@ -2099,7 +2103,7 @@ function feedLines() {
   const scale = n >= 1000 ? Math.floor(n / 1000).toLocaleString("en-US") + ",000+" : "U.S.";
   return [
     "scoring " + scale + " ZIP markets · data through " + period,
-    "signals: supply · price trend · time to sell · price cuts",
+    "signals: price trend · time to sell · homes for sale",
     "source: public housing-market data · refreshed on publication",
     "readings recompute automatically when new figures publish",
   ];

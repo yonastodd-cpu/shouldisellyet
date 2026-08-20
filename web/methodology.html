@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="/track.js" defer></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="How ShouldISellYet computes a HOLD, WATCH or ACT reading: the data sources by name, what the numbers measure, the three signals and their published danger lines, and how often each ZIP refreshes.">
+<title>Methodology — how a ShouldISellYet reading is computed</title>
+<link rel="canonical" href="https://shouldisellyet.com/methodology.html">
+<link rel="icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#faf8f4">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#faf8f4;color:#1c2430;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px}
+  a{color:#1f3a5f}
+  h1{font-family:'Newsreader',Georgia,serif;font-size:32px;margin-bottom:4px}
+  .date{font-size:13px;color:#5c6673;margin-bottom:36px}
+  h2{font-family:'Newsreader',Georgia,serif;font-size:20px;margin:30px 0 8px}
+  p,li{font-size:15px;color:#3a4450}
+  ul{padding-left:22px;margin:8px 0}
+  .nav{font-size:13.5px;margin-bottom:28px}
+
+  .lede{font-size:16.5px;color:#2a3440}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #e6e1d8;vertical-align:top}
+  th{font-family:'Archivo',sans-serif;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#5c6673}
+  .note{background:#f4f1ea;border-left:3px solid #c8b89a;padding:12px 16px;margin:16px 0;font-size:14.5px;color:#3a4450}
+  code{background:#f0ece3;padding:1px 5px;border-radius:3px;font-size:13px}
+</style></head>
+<body><div class="wrap">
+  <div class="nav"><a href="/">← ShouldISellYet.com</a> · <a href="/terms.html">Terms</a> · <a href="/research/methodology.html">Research index</a></div>
+  <h1>Methodology</h1>
+  <div class="date">Reading methodology v2 · last revised 20 August 2026</div>
+
+  <p class="lede">A reading is one word — HOLD, WATCH or ACT — about a ZIP code's housing market. This page says where the numbers come from, what they measure, how they are scored, and how often they change. Every danger line we use is published below; none of them is proprietary.</p>
+
+  <div class="note"><b>Readings are currently paused.</b> We stopped taking data from our previous market-data vendor on 14 August 2026 and are rebuilding readings on a new source. Until that finishes, ZIP pages show a notice instead of a rating. This page describes the rebuilt method, so that it is public before the readings return rather than after.</div>
+
+  <h2>1. Where the data comes from</h2>
+  <p>Readings are computed from <b>RentCast</b>, a licensed market-statistics API. We pay for it, and we use its ZIP-level statistics about homes currently listed for sale. This is the only source that feeds a reading.</p>
+  <p>Three further sources support the product without feeding any reading:</p>
+  <table>
+    <tr><th>Source</th><th>What it is used for</th><th>Feeds a reading?</th></tr>
+    <tr><td><b>Federal Housing Finance Agency</b> house price index (U.S. Government, public domain)</td><td>Testing our danger lines against what actually happened the following year, and as an independent price benchmark</td><td>No</td></tr>
+    <tr><td><b>U.S. Census Bureau</b> ZCTA and CBSA files (public domain)</td><td>Mapping ZIP codes to metropolitan areas, and place names</td><td>No</td></tr>
+    <tr><td><b>Freddie Mac</b> Primary Mortgage Market Survey</td><td>The mortgage-rate context shown on paid reports</td><td>No</td></tr>
+  </table>
+  <p>We previously showed an independent cross-check against Realtor.com listing data. <b>That cross-check is not running.</b> It compared against our former vendor's figures, and it has not been rebuilt for the new source. It is not displayed, and nothing on the site should be read as one.</p>
+  <p>No source sponsors, endorses, or partners with this site, and no source has any influence over a reading.</p>
+
+  <h2>2. What the numbers measure — and what changed</h2>
+  <p>Our readings are computed from <b>active-listing statistics</b>: the prices sellers are asking, and how the pool of homes for sale is moving. These differ from sold-price statistics. Asking prices run higher than sale prices, and time-on-market measured across unsold listings runs longer than time-to-contract measured across homes that sold.</p>
+  <p>We use listing data because it leads the market rather than trailing it: price cuts and lengthening listing times show up here weeks before they show up in closed sales. <b>A reading is a direction, not an appraisal.</b></p>
+  <div class="note">This is a change. Until August 2026 our readings were computed largely from <b>closed sales</b>. A number on a page today is a different kind of number than one from before that date, even when the reading word is the same. We hold the reading comparable over time; we cannot hold the underlying measurement identical, because it is not.</div>
+
+  <h2>3. The formula, and what it lost</h2>
+  <p>The reading weighs <b>three</b> signals. It used to weigh five. Two have no equivalent in active-listing data and were not replaced:</p>
+  <table>
+    <tr><th>Signal</th><th>Status</th></tr>
+    <tr><td>Months of supply</td><td><b>Gone.</b> It needs the number of homes that sold, and active-listing statistics cannot see closings. This was the highest-weighted check in the old formula.</td></tr>
+    <tr><td>Share of listings cutting price</td><td><b>Gone.</b> No equivalent field.</td></tr>
+    <tr><td>Year-over-year price trend</td><td>Survives, now measured on asking prices</td></tr>
+    <tr><td>How long homes take to sell</td><td>Survives, now measured across active listings</td></tr>
+    <tr><td>How the pool of homes for sale is changing</td><td>Survives</td></tr>
+  </table>
+  <p>Which three survived is not luck: every survivor was already a year-over-year <i>ratio</i>, and both casualties were <i>levels</i>. A level does not port across a change of basis — an active-listing median sits higher than a sold median — but the direction and size of a year-over-year change stays comparable.</p>
+  <p><b>We would rather say this plainly than not: a three-signal reading is less informed than a five-signal one.</b> With two of five danger signals genuinely gone, the engine has less evidence, and it calls fewer ACTs than the old one did. We left that drop in place. Tuning the thresholds until the old distribution reappeared would manufacture confidence the data no longer supports.</p>
+
+  <h2>4. The danger lines</h2>
+  <p>Each signal has one published line. Crossing a line scores points; the points decide the word.</p>
+  <table>
+    <tr><th>Signal</th><th>Danger line</th><th>Points</th></tr>
+    <tr><td>Asking prices vs. a year ago</td><td>below <code>−2%</code></td><td>2</td></tr>
+    <tr><td>Asking prices vs. a year ago (steeper)</td><td>below <code>−5%</code></td><td>3</td></tr>
+    <tr><td>Time to sell vs. a year ago</td><td>up more than <code>+10%</code></td><td>1</td></tr>
+    <tr><td>Homes for sale vs. a year ago</td><td>up more than <code>+30%</code></td><td>1</td></tr>
+  </table>
+  <p><b>ACT</b> at 3 points or more · <b>WATCH</b> at 1 or more · <b>HOLD</b> at zero. Because the steepest price line alone scores 3 points — the ACT threshold — <b>a single signal can reach ACT</b> when prices are falling fast. ACT does not mean several lines are crossed.</p>
+  <p>A market with no lines crossed and all three strength conditions — asking prices up <code>+5%</code> or more, time to sell down <code>−20%</code> or more, homes for sale down <code>−15%</code> or more — reads as a strong seller's market, which we also render as ACT: it is a reason to consider selling.</p>
+  <p>If fewer than 2 of the three signals can be computed for a ZIP, we publish no reading at all: the page says the data is insufficient rather than showing a rating we do not have the evidence for.</p>
+  <p>The formula is versioned. This is <b>v2</b>. The lines above were calibrated against real active-listing data in August 2026, not carried over: two of them fired almost never when the old numbers were applied to the new basis, so they were re-fitted to flag a similar share of markets. Changes to a line are versioned and restated, not applied silently.</p>
+
+  <h2>5. How often a reading refreshes</h2>
+  <p>Not every ZIP refreshes at the same rate, and we would rather say so than imply a uniform freshness we do not have. Market data is licensed per ZIP code and costs money to refresh, so the busiest ZIP codes will refresh most often and the rest less often.</p>
+  <div class="note"><b>The exact cadence is not settled yet.</b> We have not run a refresh cycle on the new source, so we are not going to publish a schedule we cannot yet keep. The plan is monthly for roughly the busiest thousand ZIP codes and less often — quarterly or twice a year — for the rest. When the cadence is set, this section will state it exactly, and every page will show the date its own data runs through.</div>
+  <p>Today no ZIP page shows a reading date, because no ZIP page shows a reading.</p>
+
+  <h2>6. What a reading is not</h2>
+  <p>A reading is general information about a housing market. It is <b>not financial, investment, legal, or real-estate advice</b>, it is <b>not an appraisal or valuation of any property</b>, and it should not be the basis of a decision to sell. It describes a market, not your home, and it knows nothing about your property's condition, your finances, or your circumstances. Consult a licensed real-estate professional before making sale decisions. The full <a href="/terms.html">Terms of Service</a> govern.</p>
+
+  <h2>7. Corrections</h2>
+  <p>If a figure here disagrees with what the site shows, the site is wrong and we want to know: <a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>. Our danger lines are checked against the engine automatically on every build, so a discrepancy is a bug rather than a difference of opinion.</p>
+</div></body></html>

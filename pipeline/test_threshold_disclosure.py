@@ -61,6 +61,39 @@ def test_the_client_dials_agree_with_the_spec():
             f"{name} states the wrong strong DOM line"
 
 
+def test_the_client_dial_COLOURS_at_the_line_it_displays():
+    """The label and the branch are two different numbers, and only one of them
+    was checked.
+
+    Both files rendered "strong line: −20% y/y" while branching on p <= -0.15,
+    and coloured the danger state at p > 0.4 against a spec of +10%. The test
+    above passed throughout, because a note string is not a threshold. A ZIP
+    whose DOM rose 20% y/y was amber server-side and green client-side — the
+    same ZIP, two colours, depending on which renderer drew it.
+
+    Comments are stripped first: the fix documents the retired numbers on the
+    line above the branch, and a guard that forbids naming an old mistake
+    pushes the explanation out of the file.
+    """
+    stretch, shrink = SPEC["dom_stretch"], SPEC["dom_shrink"]
+    for name in ("index.html", "market-render.js"):
+        src = (ROOT / "web" / name).read_text()
+        code = re.sub(r"//[^\n]*", "", src)          # line comments
+        code = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+
+        branch = re.search(r"p\s*<=\s*(-?[\d.]+)\s*\?\s*\"s\"", code)
+        assert branch, f"{name}: could not find the strong-DOM branch"
+        assert float(branch.group(1)) == shrink, (
+            f"{name} colours the strong dial at {branch.group(1)} but the spec "
+            f"line is {shrink} — the label says {D['dom_shrink']}")
+
+        danger = re.search(r"p\s*>\s*(-?[\d.]+)\s*\?\s*\"a\"", code)
+        assert danger, f"{name}: could not find the DOM danger branch"
+        assert float(danger.group(1)) == stretch, (
+            f"{name} colours the danger dial at {danger.group(1)} but the spec "
+            f"line is {stretch} — the label says {D['dom_stretch']}")
+
+
 def test_no_reader_facing_python_copy_states_a_retired_signal():
     """Months of supply and price-cut share are not part of a current reading.
     Any sentence offering them to a reader as a current signal is wrong."""
@@ -152,3 +185,101 @@ def test_the_frozen_spec_doc_states_the_calibrated_lines():
     # and wrong inside it as current lines.
     for stale in ("> +40%", "> +50%"):
         assert stale not in table, f"the scoring table still states {stale!r}"
+
+
+def test_the_methodology_page_states_every_line_the_engine_uses():
+    """The site's own methodology page, created 2026-08-20.
+
+    Until then /methodology redirected to /research/methodology.html — a
+    document about the Warning-Sign Index, a deliberately FROZEN four-signal
+    series. Every "see our methodology" link on the site delivered a reader to
+    a paper about a different metric than the one their ZIP page shows.
+
+    It is hand-written, like press.html, so it gets the same guard: every
+    number on it must be the number the engine uses.
+    """
+    html = (ROOT / "web" / "methodology.html").read_text()
+    for key in ("price_slow", "price_fast", "dom_stretch", "inventory_surge",
+                "price_surge", "dom_shrink", "inventory_drop"):
+        assert D[key] in html, f"the methodology page omits the {key} line ({D[key]})"
+    assert f"<b>ACT</b> at {SPEC['red']} points" in html
+    assert f"<b>WATCH</b> at {SPEC['yellow']}" in html
+    assert f"fewer than {SPEC['min_known']} of the three signals" in html
+
+    # The retired signals may be NAMED as retired; they may not be offered.
+    for stale in ("all four", "four public signals", "four signals"):
+        assert stale not in html.lower(), f"the methodology page offers {stale!r}"
+    assert "Gone." in html, "the page no longer says the two lost signals are gone"
+
+
+def test_the_methodology_page_does_not_claim_a_crosscheck_that_is_not_running():
+    """The Realtor.com cross-check compared against the FORMER vendor's figures
+    and was never rebuilt for the new source. web/market-render.js hides the
+    strip when the record carries no cross-check field, which is every record.
+    Copy asserting it in the present tense described something dormant."""
+    html = (ROOT / "web" / "methodology.html").read_text()
+    assert "That cross-check is not running." in html, \
+        "the methodology page no longer says the cross-check is off"
+
+
+def test_no_page_promises_act_means_multiple_lines():
+    """With red at 3, price_falling_fast alone reaches ACT. The homepage FAQ
+    JSON-LD — the most quotable methodology statement on the site, served to
+    answer engines — asserted the opposite. The existing guard scanned only
+    build_pages.py and verdict_copy.json for the capitalised string, so it
+    could not see this."""
+    import verdict_v2 as v2
+    single = v2.evaluate(v2.MarketV2(zip_code="x", list_price_yoy=-0.08, listings_yoy=0.0))
+    assert single.word == "ACT" and len(single.reasons) == 1, "the premise changed"
+    # Match the CLAIM, not one phrasing of it. The first version of this test
+    # looked for "multiple danger lines are crossed" — the JSON-LD wording —
+    # and passed while press.html's legend said "multiple lines crossed" four
+    # words differently, on the page this file calls the one methodology
+    # surface a crawler is invited to read.
+    claim = re.compile(r"multiple[^<.]{0,30}lines", re.I)
+    for path in list((ROOT / "web").glob("*.html")) + \
+                [ROOT / "pipeline" / "data" / "verdict_copy.json",
+                 ROOT / "pipeline" / "build_pages.py"]:
+        m = claim.search(path.read_text(encoding="utf-8", errors="replace"))
+        assert not m, (f"{path.name} promises {m.group()!r} on a reading a "
+                       "single signal can trigger")
+
+
+# ————— Terms of Service —————
+
+def test_the_terms_disclose_sources_basis_and_cadence():
+    """Counsel Q5 asked what the terms must disclose about (a) the new data
+    sources, (b) the shift from sold-home to for-sale measurements, and (c) the
+    varying refresh cadence. Before 2026-08-20 the terms disclosed none of the
+    three, and named a vendor we had stopped taking data from."""
+    tos = (ROOT / "web" / "terms.html").read_text()
+    assert "differ from final sale prices" in tos, "(b) the basis shift is undisclosed"
+    assert "currently listed for sale" in tos
+    assert "Freshness varies by ZIP code" in tos, "(c) the cadence variance is undisclosed"
+    assert "public domain" in tos, "(a) the supporting sources are unnamed"
+    assert "not an appraisal or valuation" in tos
+    assert "should not be the basis of a decision to sell" in tos
+    assert "Consult a licensed real-estate professional" in tos
+
+
+def test_the_terms_do_not_name_a_vendor_we_no_longer_use():
+    import data_pause as PAUSE
+    tos = (ROOT / "web" / "terms.html").read_text().lower()
+    assert PAUSE.PAUSED_SOURCE not in tos, \
+        f"the terms still name {PAUSE.PAUSED_SOURCE} as a current data source"
+
+
+def test_no_existing_disclaimer_was_dropped_when_the_terms_were_strengthened():
+    """A strengthening pass that quietly removes a protection is a weakening
+    pass. These are the clauses the pre-2026-08-20 terms carried; every one
+    must still be there."""
+    tos = " ".join(re.sub(r"<[^>]+>", " ",
+                          (ROOT / "web" / "terms.html").read_text()).split()).lower()
+    for clause in ("not financial", "not an appraisal", "no guarantee",
+                   "consult licensed professionals", "general information",
+                   "not an offer", "not a prediction", "as is", "as available",
+                   "without warranties of any kind",
+                   "does not account for your circumstances",
+                   "decisions about your home are yours",
+                   "licensed professional who knows your specific facts"):
+        assert clause in tos, f"the terms lost the {clause!r} protection"

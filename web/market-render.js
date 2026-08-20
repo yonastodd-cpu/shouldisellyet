@@ -76,14 +76,14 @@ const MARKET = (function () {
              why:strong?"Prices rising 5%+ a year is faster than normal appreciation — a strength signal when supply is thin.":"A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns.",
              yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
     if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
-      const t = strong ? (p<=-0.15?"s":"g") : (p>0.4?"a":"g");
+      const t = strong ? (p<=-0.20?"s":"g") : (p>0.10?"a":"g");  // SPEC dom_shrink/dom_stretch
       rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
         note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −20% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
         how:{what:"How many days the typical home sits on the market before a buyer commits.",
              goesin:(m.sold!=null) ? "days from listing to contract for the "+m.sold.toLocaleString()+" homes sold in the latest month, and for last year's sales"
                    : "days from listing to contract for every home sold in the latest month, and for last year's sales",
              math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago", bt:"dom",
-             why:strong?"Homes selling 15%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 40% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
+             why:strong?"Homes selling 20%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 10% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
              yours:"Yours: "+Math.round(m.dom)+" days"}}); }
     if (m.pd != null){ const t = strong ? (m.pd<0.20?"s":"g") : (m.pd>0.35?"a":"g");
       rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:strong?28.6:50,
@@ -100,7 +100,7 @@ const MARKET = (function () {
              goesin:(m.inv!=null) ? m.inv.toLocaleString()+" homes for sale now vs. about "+Math.round(m.inv/(1+m.invy)).toLocaleString()+" a year ago"
                    : "the count of homes for sale now, against the same month last year",
              math:"homes for sale this month ÷ homes for sale the same month last year", bt:"inv",
-             why:"A jump past +50% is a wave of new supply — when listings outrun buyers, price pressure follows.",
+             why:"A jump past +30% is a wave of new supply — when listings outrun buyers, price pressure follows.",
              yours:"Yours: "+(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%"}}); }
     // The backtest measured the DANGER lines; strong-market mode explains
     // different thresholds, so its disclosures skip the backtest sentence.
