@@ -13,7 +13,8 @@ research section):
                                      attribution and data-through baked in
   web/research/{yyyy-mm}/*.csv       state/metro aggregates, flip list,
                                      national WSI history
-  web/research/{yyyy-mm}/LICENSE.txt free with citation
+  web/research/{yyyy-mm}/LICENSE.txt attribution-only terms; no dataset
+                                     redistribution, no competing products
 
 The CSVs carry ONLY derived fields — verdict counts, warning shares, deltas,
 flips. No upstream Redfin/Realtor metric columns ship here: the verdict layer
@@ -651,10 +652,14 @@ require ≥ 15 scored ZIPs.</p>
 {measured}
 
 <h2 id="citation">Use and citation</h2>
-<p>Index values, league tables, and release CSVs are free to use, chart, and
-republish with citation: <b>"Source: ShouldISellYet Research."</b> The CSVs
+<p>Index values, league tables, and release CSVs may be used, quoted, charted,
+and republished in journalism, research, analysis, and commentary, with
+attribution: <b>"Source: ShouldISellYet (shouldisellyet.com)."</b> The CSVs
 carry ShouldISellYet's derived indicators only — never upstream raw metrics,
-which belong to their publishers. Media/data questions:
+which belong to their publishers, and we grant no rights in any third party's
+underlying data. Redistributing the files as a dataset, or using them to build
+a competing data product or service, is not permitted; the full terms ship
+with each release as <code>LICENSE.txt</code>. Media/data questions:
 <a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
 
 <h2 id="changelog">Changelog</h2>
@@ -754,7 +759,7 @@ footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;fo
 <footer>
   <div><a href="/research/">ShouldISellYet Research</a> · <a href="/research/methodology.html">Methodology</a> · <a href="/">Home</a> · <a href="/press.html">Press</a></div>
   <div style="margin-top:8px">{CITE}</div>
-  <div style="margin-top:8px">Free to use with citation: "Source: ShouldISellYet Research." Verdicts and the Warning-Sign Index are computed by ShouldISellYet from public market data and are general information, not financial or real-estate advice.</div>
+  <div style="margin-top:8px">Use with attribution: "Source: ShouldISellYet (shouldisellyet.com)." Not for dataset redistribution or competing products — see each release's LICENSE.txt. Verdicts and the Warning-Sign Index are computed by ShouldISellYet from public market data and are general information, not financial or real-estate advice.</div>
 </footer>
 </div></body></html>"""
 
@@ -954,18 +959,27 @@ def write_csvs(rep, series, outdir):
             w.writerow([r["zip"], r["city"], r["state"], r["from"], r["to"]])
 
     (outdir / "LICENSE.txt").write_text(
-        f"""ShouldISellYet Research — {pretty(month)} release data
-{SITE}/research/{month}/
+        f"""ShouldISellYet Research Files — Terms of Use
+{pretty(month)} release · {SITE}/research/{month}/
 
-Free to use, republish, and chart — including commercially — with citation:
+These files contain aggregate indicators computed by ShouldISellYet from its
+own published readings: counts of ZIP codes per category, percentage shares,
+month-over-month changes, and a list of the individual ZIP markets whose
+verdict changed this month. They contain no third-party vendor data, and
+nothing in them may be represented as the measurements of any data vendor.
 
-    Source: ShouldISellYet Research
+You may use, quote, chart, and republish these indicators in journalism,
+research, analysis, and commentary, with attribution: "Source: ShouldISellYet
+(shouldisellyet.com)".
 
-These files contain ShouldISellYet's own derived indicators (verdict counts,
-the Warning-Sign Index, warning shares, verdict changes). They do not contain
-and may not be represented as Redfin's or Realtor.com's underlying market
-metrics; obtain those from the sources directly. Verdict methodology:
-{SITE}/research/methodology.html
+These files are provided as-is, without warranty of any kind, including
+fitness for a particular purpose. ShouldISellYet grants no rights in any third
+party's underlying data. Redistribution of these files as a dataset, or use of
+them to build a competing data product or service, is not permitted. Readings
+are informational only and are not financial, investment, or real-estate
+advice.
+
+Verdict methodology: {SITE}/research/methodology.html
 """)
 
 
@@ -1111,7 +1125,7 @@ instead</a> — one plain answer for your market, free.</p>
 
 <h2>Download the data</h2>
 <p>{csv_links}</p>
-<p class="note">Free with citation ("Source: ShouldISellYet Research"). Files carry ShouldISellYet's derived indicators only — verdicts, shares, changes — never upstream raw metrics.</p>
+<p class="note">Use with attribution ("Source: ShouldISellYet (shouldisellyet.com)"). Files carry ShouldISellYet's derived indicators only — verdicts, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>.</p>
 
 {appendix}
 <h2>Methodology, briefly</h2>

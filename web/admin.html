@@ -1080,11 +1080,12 @@ ZIP codes while moving toward the danger lines faster than almost anywhere:
 - ${mkWhy(g)}
 - Median nearest signal: ${mtlProse(g.median_mtl)} at the current 3-month pace.
 
-Happy to share the underlying table (free with citation), a quote, or the
+Happy to share the underlying table (free to quote and chart with
+attribution; not for dataset redistribution), a quote, or the
 methodology. Data through ${period}.
 
 — ShouldISellYet Research
-Source: ShouldISellYet Research, shouldisellyet.com`;
+Source: ShouldISellYet (shouldisellyet.com)`;
 }
 
 function mkPost(g) {
@@ -1094,7 +1095,7 @@ ${Math.round(g.hold_share)}% of its scored ZIP codes still rate HOLD — but ${m
 At the current pace the median nearest signal is ${mtlProse(g.median_mtl)}.
 
 Watch your own ZIP free: shouldisellyet.com
-(Source: ShouldISellYet Research, data through ${MK.vel ? MK.vel.period : ""})`;
+(Source: ShouldISellYet (shouldisellyet.com), data through ${MK.vel ? MK.vel.period : ""})`;
 }
 
 async function mkCopy(i, kind, btn) {

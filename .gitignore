@@ -77,3 +77,9 @@ pipeline/velocity/zip-velocity-latest.json
 # Read-only exposure audit — names every sensitive path and commit in one
 # place. Kept local; publishing it would publish the map.
 AUDIT_REPORT.md
+# LICENSE_AUDIT.md names an exposure that is still OPEN — the exact URL of a
+# live per-ZIP file, the row count, and the fact that no gate catches it. The
+# sibling audits (PURGE_MANIFEST, HISTORY_SCRUB_NOTES, ABSENCE_TEST_AUDIT) are
+# tracked because what they describe is finished. This repo is public; a
+# roadmap to an open hole is not something to publish alongside the hole.
+LICENSE_AUDIT.md

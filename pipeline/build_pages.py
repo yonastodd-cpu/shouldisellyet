@@ -869,7 +869,8 @@ market with unusual buyer competition reads as a strong seller's market.
   definition, danger lines, backtest, and changelog for the research series.
 - [ShouldISellYet Research](https://shouldisellyet.com/research/): the monthly
   Warning-Sign Index — the share of scored ZIP markets showing warning signs —
-  with state league tables and downloadable CSVs (free with citation).
+  with state league tables and downloadable CSVs (use with attribution; no
+  dataset redistribution).
 - [Markets by state](https://shouldisellyet.com/zip/): standing verdict pages
   for {pages:,} ZIP markets, each with its signal gauges and danger lines.
 - [Sample report](https://shouldisellyet.com/report.html): what the paid
@@ -878,9 +879,11 @@ market with unusual buyer competition reads as a strong seller's market.
 
 ## Citing this site
 
-Cite as: "Source: ShouldISellYet Research, shouldisellyet.com" — link either
-the research hub or the specific ZIP page. Research CSVs are free to reuse
-with that citation.
+Cite as: "Source: ShouldISellYet (shouldisellyet.com)" — link either the
+research hub or the specific ZIP page. Research CSVs may be quoted and charted
+with that attribution; redistributing them as a dataset, or using them to build
+a competing data product or service, is not permitted. Full terms ship with
+each release as LICENSE.txt.
 
 ## Data attribution
 

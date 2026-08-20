@@ -790,7 +790,10 @@ published danger lines. For {month}: {rec['wsi']:.1f}%, {hook}.
 
 The release has state and metro league tables, the ZIPs that crossed the
 danger line this month, and free downloadable CSVs (state, metro, ZIP level)
-— free to use with citation. Local numbers for your coverage area are
+— free to quote and chart with attribution ("Source: ShouldISellYet
+(shouldisellyet.com)"); redistributing them as a dataset or building a
+competing data product from them is not permitted. Local numbers for your
+coverage area are
 pre-computed on the page.
 
 {rel}
