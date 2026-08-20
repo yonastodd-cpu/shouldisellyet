@@ -20,8 +20,10 @@ sys.path.insert(0, str(REPO / "pipeline"))
 
 import build_stories as bs
 
-CASE = json.loads((REPO / "web" / "data" / "cases" / "boise-2021.json").read_text())
-MISS = json.loads((REPO / "web" / "data" / "cases" / "miss-39500.json").read_text())
+# Moved out of web/ on 2026-08-19 — the per-case files carry a vendor's
+# monthly measurements and were being served publicly.
+CASE = json.loads((REPO / "pipeline" / "cases" / "boise-2021.json").read_text())
+MISS = json.loads((REPO / "pipeline" / "cases" / "miss-39500.json").read_text())
 
 
 def test_the_headline_facts_match_the_case_file():

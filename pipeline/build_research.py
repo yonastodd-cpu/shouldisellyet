@@ -288,14 +288,11 @@ def _social_frame(title_lines, month, w=1080, h=1350, foot=None):
 def copy_case_charts(outdir):
     """Case charts ride along with the release's social assets, so the posting
     series has them in the same folder as everything else it publishes."""
-    import shutil
-    n = 0
-    for c in load_cases():
-        src = CASES_DIR / f"{c['id']}.png"
-        if src.exists():
-            shutil.copy2(src, outdir / f"case-{c['id']}.png")
-            n += 1
-    return n
+    # Withdrawn 2026-08-19. Each chart plots a vendor's monthly measurements,
+    # so copying them into the release folder republished exactly the data the
+    # migration withdrew. The derived figures beside them are unaffected and
+    # still render. Restore only if counsel clears chart publication.
+    return 0
 
 
 def social_set(rep, series, outdir):
@@ -406,7 +403,12 @@ def mtl_prose(v):
 # A MISS ALWAYS RENDERS WITH THE HITS. If no miss case is present the whole
 # section is withheld rather than showing hits alone, because hits-only is
 # the dishonest version of this page.
-CASES_DIR = ROOT / "web" / "data" / "cases"
+# The per-case JSON carries 48-54 months of vendor measurements and the PNG
+# plots them, so both live OUTSIDE web/ and never reach the deployed artifact.
+# The index is derived indicators only (name, first signal, lead months,
+# peak-to-trough) and stays public — it is what the homepage panel renders.
+CASES_DIR = ROOT / "pipeline" / "cases"
+CASES_INDEX = ROOT / "web" / "data" / "cases" / "index.json"
 
 EXPLAINER = """
 <h2 id="smoke-detector">How this works: the smoke detector</h2>
@@ -460,9 +462,7 @@ def case_card(case, rel_prefix=""):
 <div class="case {'case-miss' if miss else ''}">
   <div class="case-head"><b>{esc(case["name"])}</b> <span>{yrs}</span></div>
   <p class="case-story">{esc(case.get("story", ""))}</p>
-  <img class="chart" src="{rel_prefix}/data/cases/{esc(case["id"])}.png"
-       alt="{esc(case["name"])}: the dial crossing its danger line, and the median price that followed"
-       width="1200" height="675" loading="lazy">
+  <!-- chart withdrawn 2026-08-19: plotted vendor measurements -->
   <div class="chips">{chips}</div>
   {note}
   <p class="case-src">Computed from the same data and thresholds we use today.</p>
@@ -471,7 +471,7 @@ def case_card(case, rel_prefix=""):
 
 def load_cases():
     """Published cases, hits first, miss last. Returns [] when none exist."""
-    idx = CASES_DIR / "index.json"
+    idx = CASES_INDEX
     if not idx.exists():
         return []
     out = []
@@ -490,7 +490,7 @@ def track_record(rel_prefix=""):
     # Hits never render alone — see the section comment.
     if not hits or not misses:
         return ""
-    window = json.loads((CASES_DIR / "index.json").read_text()).get("window", ["", ""])
+    window = json.loads(CASES_INDEX.read_text()).get("window", ["", ""]) if CASES_INDEX.exists() else ["", ""]
     return f"""
 <h2 id="track-record">Times the signals spoke first</h2>
 <p>Every number on these cards is recomputed — the dials and danger lines

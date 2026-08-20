@@ -37,7 +37,11 @@ import data_pause as PAUSE
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CASES = ROOT / "web" / "data" / "cases"
+# Moved out of web/ on 2026-08-19 so the case data stops being publicly
+# downloadable. build_stories MUST keep reading it: /stories/{slug}/ is
+# generated at deploy and gitignored, so a build that finds no case data
+# deletes a live URL — the one thing this migration forbids.
+CASES = ROOT / "pipeline" / "cases"
 SITE = "https://shouldisellyet.com"
 
 # Which cases are published as stories, in order. The template is general —

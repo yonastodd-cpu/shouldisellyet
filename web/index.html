@@ -915,7 +915,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       <p><a class="story-link" href="/stories/boise/">Read the full Boise story →</a></p>
     </div>
     <!-- The page's one memorable object. Everything on it is generated from
-         web/data/cases/boise-2021.json by pipeline/build_stories.py — the same
+         pipeline/cases/boise-2021.json by pipeline/build_stories.py — the same
          file the methodology page computes from. The card hides itself if the
          asset is missing: the section never ships without its chart. -->
     <figure class="chartcard" id="boise-fig">
@@ -1092,13 +1092,16 @@ const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine
   "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
 let PV_CASE = null;
 if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
+  // The index carries every field this panel renders — name, first signal,
+  // lead months, peak-to-trough — so the second fetch is gone. It pulled the
+  // full case file: 48-54 months of a vendor's measurements plus their peak
+  // and trough prices, downloaded into every visitor's browser to display four
+  // derived numbers. Withdrawn 2026-08-19; those files no longer ship at all.
   fetch("data/cases/index.json").then(r => r.ok ? r.json() : null).then(j => {
     const hits = (j && j.published || []).filter(p => p.kind !== "miss");
     if (!hits.length) return;
     // Rotate by day so repeat visitors don't always meet the same market.
-    const pick = hits[Math.floor(Date.now() / 86400000) % hits.length];
-    return fetch("data/cases/" + pick.id + ".json").then(r => r.ok ? r.json() : null)
-      .then(c => { PV_CASE = c; });
+    PV_CASE = hits[Math.floor(Date.now() / 86400000) % hits.length];
   }).catch(() => {});
 }
 fetch("research/wsi.json").then(r => r.ok ? r.json() : null).then(j => {

@@ -66,7 +66,7 @@ from utm import SLUG_RE, metro_slug, metro_tag, slug, token, utm_url
 from velocity import load_cbsa                  # zip -> cbsa, cbsa -> title
 
 ROOT = Path(__file__).resolve().parents[1]
-CASES_DIR = ROOT / "web" / "data" / "cases"
+CASES_DIR = ROOT / "pipeline" / "cases"   # moved out of web/ 2026-08-19
 PACK_DIR = Path(__file__).parent / "marketing"  # tests point this at a tmpdir
 SCHEMA_V23 = ROOT / "supabase" / "schema-v23.sql"
 
@@ -1420,7 +1420,9 @@ def cand_evergreen(cases, ws, period):
         "why_detail": "\n".join([
             f"- Track-record case {c['id']}: first signal "
             f"{pretty_month(c['first_signal'])}, peak-to-trough "
-            f"{c['peak_to_trough'] * 100:.1f}% (chart: web/data/cases/{c['id']}.png).",
+            f"{c['peak_to_trough'] * 100:.1f}% (chart: pipeline/cases/{c['id']}.png — "
+            f"operator-only since 2026-08-19; it plots vendor measurements and "
+            f"must not be attached to a public post without clearance).",
             f"- Used because the week of {_mon_day_d(ws)} would otherwise be "
             f"empty — evergreen never displaces a live angle."]),
         # "peak-to-trough" is how an analyst says it. A homeowner asks how far
