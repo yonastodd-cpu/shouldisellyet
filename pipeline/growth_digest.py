@@ -34,6 +34,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 from growth_config import (ANGLE_COUNT, DIGEST_RECIPIENTS, MIN_SOLD_FOR_ANGLE,
                            RATE_BURST_POINTS, is_dmv)
 
@@ -59,6 +60,8 @@ def prev_period(p):
 def load_current(data_dir):
     """zip -> {l, m, h, st} for every scored ZIP."""
     out = {}
+    require_shards(Path(data_dir, "zips"), "growth_digest.load_current",
+                   "the withdrawn per-ZIP metric block")
     for f in sorted(Path(data_dir, "zips").glob("*.json")):
         st = f.stem
         for z, e in json.loads(f.read_text()).items():

@@ -51,6 +51,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 from fetch_data import load_rows, row_to_metrics
 from verdict import ZipMetrics, evaluate
 
@@ -111,6 +112,8 @@ def load_shard_levels(data_dir):
     """(levels, states) for the current month, restated from each ZIP's
     published metrics — NOT from the shard's 5-signal verdict."""
     levels, states = {}, {}
+    require_shards(Path(data_dir, "zips"), "research.load_shard_levels",
+                   "the withdrawn per-ZIP metrics (mos, spy, dom, domy, invy)")
     for f in sorted(Path(data_dir, "zips").glob("*.json")):
         for z, e in json.loads(f.read_text()).items():
             mm = e.get("m", {})

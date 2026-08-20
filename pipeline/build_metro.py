@@ -112,9 +112,15 @@ def load_entries(data_dir):
     not we currently publish a reading for it.
     """
     from build_manifest import read_manifest
+    # One file per ZIP since 2026-08-20. This read was left pointing at the
+    # removed per-state layout, and the bug hid because the fallback two lines
+    # below — {"st": st} — is byte-identical to what a blanked record looks
+    # like today. It would have surfaced at Tranche 1: with records always
+    # empty, the insufficient_data filter can never fire, so a released ZIP
+    # with too little data to score would still be counted into its metro.
     records = {}
-    for f in sorted(Path(data_dir, "zips").glob("*.json")):
-        records.update(json.loads(f.read_text()))
+    for f in sorted(Path(data_dir, "z").glob("*.json")):
+        records[f.stem] = json.loads(f.read_text())
     out = {}
     # pages_only=False: metro membership is the wider SCORED set, not the
     # standing-page set. Using the narrow one drops 92 metros below the

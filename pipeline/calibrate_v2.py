@@ -34,6 +34,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 import verdict as v1
 import verdict_v2 as v2
 
@@ -44,6 +45,8 @@ LEVELS = ("green", "yellow", "red", "strong")
 
 def load_entries(zips=ZIPS):
     out = {}
+    require_shards(zips, "calibrate_v2.load_entries",
+                   "the v1 signals mos and pd, which no v2 record carries")
     for f in sorted(Path(zips).glob("*.json")):
         out.update(json.loads(f.read_text()))
     return out

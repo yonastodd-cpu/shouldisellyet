@@ -25,6 +25,7 @@ Optional:
 """
 
 import argparse
+from shard_layout import require_shards
 import json
 import os
 import sys
@@ -354,6 +355,12 @@ def main():
     if not (sb_url and sb_key):
         print("Supabase secrets not configured — DRY RUN, nothing to check.")
         return
+
+    # load_zip_data swallows OSError and returns None per ZIP, so a missing
+    # data directory reads as "no subscriber's market moved" and sends nothing.
+    # Silence is the safe direction here, but it is not the truthful one.
+    require_shards(Path(args.data, "zips"), "check_watches",
+                   "the withdrawn per-ZIP metric block")
 
     watchers = fetch_watchers(sb_url, sb_key)
     total_watches = sum(len(w.get("watches") or []) for w in watchers)

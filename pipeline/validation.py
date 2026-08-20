@@ -37,6 +37,7 @@ from pathlib import Path
 from statistics import median
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 from growth_digest import snap_level
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -154,6 +155,8 @@ def main():
               f"{out['first_validation']} (snapshots since {first_snap})")
     else:
         entries = {}
+        require_shards(Path(args.data, "zips"), "validation",
+                       "the withdrawn per-ZIP metric block it scores against")
         for f in sorted(Path(args.data, "zips").glob("*.json")):
             entries.update(json.loads(f.read_text()))
         out["v12"] = score(snaps[want12], entries, 12)

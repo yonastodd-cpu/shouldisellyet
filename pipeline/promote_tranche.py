@@ -39,7 +39,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 import data_pause as PAUSE
 
 ROOT = Path(__file__).resolve().parents[1]
-ZIPS = ROOT / "web" / "data" / "zips"
+# (the per-state layout is gone; the basis now comes from the store —
+#  see readings(). Kept out of the module so nothing re-defaults to it.)
 TIERS = Path(__file__).parent / "tier_interim.csv"
 GSC = Path(__file__).parent / "gsc_zip.csv"
 
@@ -56,16 +57,51 @@ def save_file(data, path=None):
     p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-def readings(zips_dir=ZIPS):
-    """{zip: basis} across the committed per-state files. A legacy reading
-    has no `b` field, which is how it is recognised."""
+def readings(zips_dir=None, source="rentcast"):
+    """{zip: basis} — which ZIPs have a v2 reading behind them.
+
+    THE PUBLIC ARTIFACT CANNOT ANSWER THIS, and used to be asked anyway. An
+    unreleased ZIP's record is {"st": "XX"} by construction — no level, no
+    basis — because withholding it is the whole point of the pause. So reading
+    web/data to decide what may be released asks the output whether the input
+    exists. It happened to work while records were the Redfin-era shape and
+    every ZIP carried metrics; it stopped the moment those were blanked, and
+    stopped visibly on 2026-08-20 when the per-state files were removed
+    entirely: every candidate came back "no reading at all" and Tranche 1
+    could not be staged.
+
+    The private store is the real answer. A ZIP is stageable when market_stats
+    has scored data for it — the same source provision_readings scores from.
+
+    zips_dir is kept for fixtures and tests, and now accepts either layout:
+    one file per state ({zip: entry}) or one file per ZIP (the entry, named
+    {zip}.json).
+    """
+    if zips_dir:
+        return _readings_from_files(zips_dir)
+    from rescore_v2 import db_rows
+    out = {}
+    for row, _hist in db_rows(source):
+        z = (row.get("zip") or "").strip()
+        if z:
+            out[z] = PAUSE.RELEASED_BASIS
+    return out
+
+
+def _readings_from_files(zips_dir):
+    """Fixture reader. Accepts both the per-state and per-ZIP layouts."""
     out = {}
     for f in sorted(Path(zips_dir).glob("*.json")):
         try:
-            for z, e in json.loads(f.read_text()).items():
-                out[z] = e.get("b", PAUSE.LEGACY_BASIS)
+            doc = json.loads(f.read_text())
         except (ValueError, OSError):
             continue
+        if isinstance(doc, dict) and f.stem.isdigit() and "st" in doc:
+            out[f.stem] = doc.get("b", PAUSE.LEGACY_BASIS)   # one file per ZIP
+        elif isinstance(doc, dict):
+            for z, e in doc.items():                          # one file per state
+                if isinstance(e, dict):
+                    out[z] = e.get("b", PAUSE.LEGACY_BASIS)
     return out
 
 
@@ -184,7 +220,9 @@ def main(argv=None):
                     help="stamp the file only; do not write public.zip_release")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--file", default=str(PAUSE.TRANCHES))
-    ap.add_argument("--zips", default=str(ZIPS))
+    ap.add_argument("--zips", default=None,
+                    help="read the basis from files instead of the store "
+                         "(fixtures and tests; accepts either layout)")
     ap.add_argument("--tiers-file", default=str(TIERS))
     ap.add_argument("--gsc-file", default=str(GSC))
     args = ap.parse_args(argv)
@@ -225,7 +263,19 @@ def main(argv=None):
         raise SystemExit(f"{args.name} already exists — use --release, or "
                          f"pick another name")
 
-    basis_by_zip = readings(args.zips)
+    try:
+        basis_by_zip = readings(args.zips)
+    except SystemExit as e:
+        raise SystemExit(
+            f"promote_tranche: could not read the private store ({e}).\n"
+            "Staging needs to know which ZIPs have a v2 reading, and only the "
+            "store knows — the public records are blanked by design. Check "
+            "the Supabase link, or pass --zips with a fixture directory.")
+    if not basis_by_zip and not args.zips:
+        raise SystemExit(
+            "promote_tranche: the store returned no scored ZIPs.\n"
+            "Every candidate would be blocked as 'no reading at all', which "
+            "reads like a clean no-op and is not one. Refusing to continue.")
     picks = candidates(args.tiers_file, args.gsc_file, tier=args.tier,
                        ranking=args.ranking, count=args.count)
     eligible, blocked = partition(picks, basis_by_zip, staged_zips(data))

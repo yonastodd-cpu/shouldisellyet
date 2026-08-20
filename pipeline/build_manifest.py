@@ -29,6 +29,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 # NOT imported at module level: build_pages imports read_manifest from here,
 # so a top-level import either way round is a cycle. This module is the one
 # that can defer, because only its main() needs place names — read_manifest,
@@ -81,6 +82,8 @@ def eligible(entries, places):
 
 def load_entries(zips=ZIPS):
     out = {}
+    require_shards(zips, "build_manifest.load_entries",
+                   "the withdrawn per-ZIP metrics used for page eligibility")
     for f in sorted(Path(zips).glob("*.json")):
         out.update(json.loads(f.read_text()))
     return out
@@ -125,19 +128,31 @@ def main(argv=None):
     print(f"standing pages: {pages:,}")
 
     if args.check:
+        # eligible() returns (zip, state, page) but read_manifest returns
+        # (zip, state), so comparing them directly could never be equal —
+        # --check reported MISMATCH on a healthy repo and then raised
+        # ValueError unpacking the derived rows. The advertised verification
+        # path never worked.
         have = read_manifest(args.out)
-        if have == rows:
+        derived = [(z, st) for z, st, *_ in rows]
+        if have == derived:
             print("manifest matches the derived set")
             return 0
-        only_file = set(have) - set(rows)
-        only_derived = set(rows) - set(have)
+        only_file = set(have) - set(derived)
+        only_derived = set(derived) - set(have)
         print(f"MISMATCH: {len(only_file):,} in file only, {len(only_derived):,} derived only")
         for z, st in list(only_file)[:5]:
             print(f"  file only: {z} {st}")
-        for z, st in list(only_derived)[:5]:
+        for z, st, *_ in list(only_derived)[:5]:
             print(f"  derived only: {z} {st}")
         return 1
 
+    if not rows:
+        raise SystemExit(
+            f"build_manifest: derived 0 rows — refusing to write {args.out}.\n"
+            "The committed manifest freezes the standing-page population; an "
+            "empty one would replace it with a header and the next build would "
+            "refuse to run. Check the input directory before re-running.")
     write_manifest(rows, args.out)
     print(f"wrote {args.out}")
     return 0

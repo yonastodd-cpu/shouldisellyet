@@ -50,6 +50,7 @@ from pathlib import Path
 from statistics import median
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 from growth_digest import snap_level, snap_metrics  # v1/v2 snapshot readers
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -197,6 +198,8 @@ def gathering(sig):
 
 def load_entries(data_dir):
     out = {}
+    require_shards(Path(data_dir, "zips"), "velocity.load_entries",
+                   "the Redfin homes-sold count (m.sold) and a 36-point history")
     for f in sorted(Path(data_dir, "zips").glob("*.json")):
         for z, e in json.loads(f.read_text()).items():
             e["_zip"], e["st"] = z, e.get("st") or f.stem

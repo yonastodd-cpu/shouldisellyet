@@ -166,3 +166,18 @@ def test_stale_cards_are_cleared_even_without_pillow():
     clear = src.index("if og_dir.exists():")
     guard = src.index("if not args.no_cards:")
     assert clear < guard, "stale cards must be cleared before the Pillow guard"
+
+
+def test_the_removed_per_state_layout_is_not_back_in_the_artifact():
+    """web/data/zips/ was removed on 2026-08-20 when provisioning moved to one
+    file per ZIP. Nothing reads it any more — but fetch_data.py still WRITES
+    it, so a local `--input` run against any export would recreate 51 files
+    inside the deployed tree, unlinked and unread, each holding whatever
+    records the export carried. Unlinked is exactly how the case-study files
+    were being served to every visitor while the pages showed a notice.
+    """
+    legacy = WEB / "data" / "zips"
+    assert not legacy.exists(), (
+        f"{legacy.relative_to(ROOT)} is back in the artifact. Nothing reads it; "
+        "everything reads web/data/z/. If a pipeline run recreated it, that "
+        "output is unlinked vendor data sitting in the deployed tree.")

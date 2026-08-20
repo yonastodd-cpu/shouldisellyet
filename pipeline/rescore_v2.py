@@ -46,6 +46,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from shard_layout import require_shards
 import verdict_v2 as v2
 from calibrate_v2 import DB_SQL, _num
 
@@ -156,6 +157,8 @@ def merge(entry, scored):
 
 
 def run(rows, zips_dir=ZIPS, dry=False):
+    require_shards(zips_dir, "rescore_v2.run",
+                   "the per-state shard layout it rewrites in place")
     files = sorted(Path(zips_dir).glob("*.json"))
     data = {f: json.loads(f.read_text()) for f in files}
     index = {z: f for f, d in data.items() for z in d}
