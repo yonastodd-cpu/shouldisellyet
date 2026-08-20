@@ -7,7 +7,7 @@
 <script src="/track.js" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Press — ShouldISellYet</title>
-<meta name="description" content="What ShouldISellYet is, how its HOLD/WATCH/ACT verdicts are computed from four public housing signals with disclosed thresholds, and how to reach us.">
+<meta name="description" content="What ShouldISellYet is, how its HOLD/WATCH/ACT verdicts are computed from three public housing signals with disclosed thresholds, and how to reach us.">
 <link rel="canonical" href="https://shouldisellyet.com/press.html">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://shouldisellyet.com/og/default.png">
@@ -16,7 +16,7 @@
 <meta name="twitter:image" content="https://shouldisellyet.com/og/default.png">
 
 <meta property="og:title" content="Press — ShouldISellYet">
-<meta property="og:description" content="How the verdicts are computed: four public signals, disclosed danger lines, and a verdict that often says don't sell.">
+<meta property="og:description" content="How the verdicts are computed: three public signals, disclosed danger lines, and a verdict that often says don't sell.">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
@@ -86,29 +86,30 @@ footer a{color:var(--faint-ink)}
   <p class="lede">ShouldISellYet.com answers one question for homeowners: is the market where my home sits turning against me? Enter a ZIP code and you get a plain-English verdict — <b>HOLD</b>, <b>WATCH</b>, or <b>ACT</b> — computed from public housing-market data, free, with no account. Paid products add the homeowner's own numbers (equity, walk-away proceeds, lock-in cost) and monthly alerts when their market shifts. It is operated by Yayday LLC and is not a brokerage; it does not list, sell, or value individual homes.</p>
 
   <h2>How the verdict is computed</h2>
-  <p>Four public signals, each with a danger line drawn from how markets behaved before past national downturns. The thresholds are published, not proprietary — the point is that anyone can check our work.</p>
+  <p>Three public signals, each with a danger line calibrated against active-listing data. The thresholds are published, not proprietary — the point is that anyone can check our work.</p>
   <p>You can check it on specific markets: the <a href="/research/methodology.html">methodology page</a> carries recomputed case studies — every date and lead time re-derived from the source data under today's published thresholds, including one market that crossed a danger line and then recovered. We publish the miss alongside the hits on purpose.</p>
 
-  <div class="dials" role="img" aria-label="The four signals and their danger lines: months of supply at 4.0 months, price trend at minus 2 percent year over year, time to sell at plus 40 percent year over year, and price cuts at 35 percent of listings.">
-    <div class="dial">
-      <span class="nm">MONTHS OF SUPPLY</span>
-      <span class="track"><span class="th" style="left:50%"></span><span class="lab" style="left:50%">danger line</span></span>
-      <span class="line">above <b>4.0 months</b></span>
-    </div>
+  <!-- THREE signals, not four. Months of supply and price-cut share both need
+       a closed-sale count that active-listing statistics cannot see, so the
+       rebuilt engine drops them; the two volume lines were recalibrated
+       because the ported values fired on under 1% of markets on the new basis.
+       These numbers are pipeline/verdict_v2.SPEC — a test fails if they
+       disagree. See docs/migration/reading-methodology-v2.md. -->
+  <div class="dials" role="img" aria-label="The three signals and their danger lines: price trend at minus 2 percent year over year, time to sell at plus 10 percent year over year, and homes for sale at plus 30 percent year over year.">
     <div class="dial">
       <span class="nm">PRICES VS. LAST YEAR</span>
-      <span class="track"><span class="th" style="left:58%"></span></span>
+      <span class="track"><span class="th" style="left:58%"></span><span class="lab" style="left:58%">danger line</span></span>
       <span class="line">below <b>−2% y/y</b></span>
     </div>
     <div class="dial">
       <span class="nm">TIME TO SELL</span>
       <span class="track"><span class="th" style="left:60%"></span></span>
-      <span class="line">up <b>40% y/y</b></span>
+      <span class="line">up <b>10% y/y</b></span>
     </div>
     <div class="dial">
-      <span class="nm">LISTINGS CUTTING PRICE</span>
+      <span class="nm">HOMES FOR SALE</span>
       <span class="track"><span class="th" style="left:50%"></span></span>
-      <span class="line">above <b>35%</b></span>
+      <span class="line">up <b>30% y/y</b></span>
     </div>
     <div class="legend">
       <span><i style="background:var(--green)"></i>HOLD — no lines crossed</span>

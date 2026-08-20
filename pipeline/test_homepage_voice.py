@@ -51,7 +51,12 @@ def test_the_danger_lines_are_still_disclosed_beside_the_readers_numbers():
     # this test tracks that value rather than pinning a historical one. The
     # months-of-supply and price-cut lines still appear for legacy entries,
     # which no longer render but whose dials remain in the shared code.
-    for line in ("4.0 mo", "−2% y/y", "35%", "+30% y/y"):
+    # The v1 lines (4.0 mo, 35%) belong to signals a current reading no longer
+    # has; the two that survive must be the CALIBRATED ones, not the ported
+    # ones the copy quoted for a day after the refit.
+    from verdict_v2 import disclosure as _d
+    D = _d()
+    for line in (f"{D['price_slow']} y/y", f"line: {D['inventory_surge']} y/y"):
         assert line in script, f"danger line {line!r} no longer reaches the verdict card"
 
 

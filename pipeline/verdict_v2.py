@@ -19,8 +19,8 @@ robust to it at all. That is the whole story of this migration in one line,
 and it is why the surviving checks keep their v1 thresholds unchanged.
 
   price falling      median list price YoY   < -2% / -5%
-  time to sell       active DOM YoY          > +40%
-  supply building    total listings YoY      > +50%
+  time to sell       active DOM YoY          > +10%   (see the refit below)
+  supply building    total listings YoY      > +30%   (see the refit below)
 
 WHAT WAS TUNED, AND WHAT DELIBERATELY WAS NOT. Only the red band moved, 4 to
 3, because the two checks that could contribute 4 points are gone and leaving
@@ -232,3 +232,49 @@ def to_compact(v, m):
               "inv": m.total_listings, "ppsfy": m.ppsf_yoy,
               "nly": m.new_listings_yoy},
     }
+
+
+# ————— DISCLOSURE —————
+
+def disclosure(spec=SPEC):
+    """The danger lines, as a reader is told them.
+
+    Everything that states a threshold to a human derives it from here, so the
+    copy cannot drift from the engine. It did: after the Tier B refit moved
+    dom_stretch from +40% to +10% and inventory_surge from +50% to +30%, every
+    page, the press kit, the research methodology and this module's own
+    docstring went on stating the old numbers — telling readers a rule the
+    engine no longer applied.
+
+    Client JavaScript cannot import this. It keeps literals, and
+    test_threshold_disclosure.py parses them and fails when they disagree —
+    the same arrangement test_prices.py already uses for the two pricing
+    blocks that cannot import each other either.
+    """
+    def pct(v):
+        s = f"{abs(v) * 100:.0f}%"
+        return ("+" if v > 0 else "\u2212") + s
+    return {
+        "price_slow": pct(spec["price_slow"]),      # −2%
+        "price_fast": pct(spec["price_fast"]),      # −5%
+        "dom_stretch": pct(spec["dom_stretch"]),    # +10%
+        "inventory_surge": pct(spec["inventory_surge"]),  # +30%
+        "price_surge": pct(spec["price_surge"]),    # +5%
+        "dom_shrink": pct(spec["dom_shrink"]),      # −20%
+        "inventory_drop": pct(spec["inventory_drop"]),    # −15%
+        "signal_count": 3,
+        "signal_names": ("the year-over-year price trend",
+                         "how long homes take to sell",
+                         "how the pool of homes for sale is changing"),
+    }
+
+
+def methodology_sentence(spec=SPEC):
+    """One sentence naming every signal and its line, built from the spec."""
+    d = disclosure(spec)
+    return (f"Three public signals, each with a danger line recalibrated for "
+            f"active-listing data: the year-over-year price trend "
+            f"({d['price_slow']}), how long homes take to sell "
+            f"({d['dom_stretch']} year over year), and the number of homes for "
+            f"sale ({d['inventory_surge']} year over year). A ZIP crossing "
+            f"enough of them reads WATCH or ACT; a clean ZIP reads HOLD.")

@@ -80,6 +80,13 @@ KINDS = {
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
 import data_pause as PAUSE
 from build_manifest import read_manifest
+from verdict_v2 import SPEC as V2, disclosure, methodology_sentence
+
+# Every number this file states to a reader comes from the engine's own spec.
+# The copy and the thresholds drifted once already — the Tier B refit moved two
+# lines and the pages went on quoting the old ones.
+DISCLOSED = disclosure()
+METHOD_SENTENCE = methodology_sentence()
 
 # Derived, never typed: whatever verdict_copy.json says is the word. Placed
 # here rather than beside KINDS because the copy map is imported below it.
@@ -105,6 +112,12 @@ def load_places():
 def metric_rows(m, strong):
     """Mirrors buildMetricRows() in web/index.html — same thresholds, same colours."""
     rows = []
+    # v1-ONLY DIALS. Months of supply and price-cut share need a closed-sale
+    # count that active-listing statistics cannot produce, so a v2 reading
+    # carries neither and these two branches never fire for one. They are kept
+    # rather than deleted so a legacy record still renders correctly if one is
+    # ever inspected, and their lines are the v1 lines because that is what a
+    # v1 record was scored against.
     if m.get("mos") is not None:
         v = m["mos"]; t = ("s" if v < 2.5 else "g") if strong else ("r" if v > 6 else "a" if v > 4 else "g")
         rows.append(("MONTHS OF SUPPLY", f"{v:.1f} mo", t, clamp(v/8*100), 31.3 if strong else 50,
@@ -115,7 +128,8 @@ def metric_rows(m, strong):
                      "strong line: +5% y/y" if strong else ("holding or rising" if t == "g" else "line: −2% y/y")))
     if m.get("dom") is not None and m.get("domy") is not None:
         d, dy = m["dom"], m["domy"]; prior = d - dy; p = dy/prior if prior > 0 else 0
-        t = ("s" if p <= -.15 else "g") if strong else ("a" if p > .4 else "g")
+        # The calibrated active-listing lines, not the ported sale-basis ones.
+        t = ("s" if p <= V2["dom_shrink"] else "g") if strong else ("a" if p > V2["dom_stretch"] else "g")
         rows.append(("TIME TO SELL", f"{round(d)} days", t, clamp((p*100+50)/150*100), 23.3 if strong else 60,
                      (f"+{round(dy)} days y/y" if dy > 0 else "as fast as last yr")))
     if m.get("pd") is not None:
@@ -126,9 +140,9 @@ def metric_rows(m, strong):
         # +30% is the calibrated active-listing line (TIER-B-GATE.md). Only
         # v2 entries are ever displayed — every legacy entry is paused — so
         # the dial and the engine agree on everything a reader can see.
-        v = m["invy"]; t = "a" if v > .30 else "g"
+        v = m["invy"]; t = "a" if v > V2["inventory_surge"] else "g"
         rows.append(("NEW SUPPLY VS. LAST YR", pct(v).replace(".0", ""), t, clamp((v*100+20)/120*100), 41.7,
-                     "line: +30% y/y" if t == "g" else "surging"))
+                     f"line: {DISCLOSED['inventory_surge']} y/y" if t == "g" else "surging"))
     return rows[:4]
 
 
@@ -161,7 +175,7 @@ def card_stat(m):
         return f"Homes here sell in {round(dom)} days"
     if spy is not None:
         return f"Prices are {'up' if spy >= 0 else 'down'} {abs(spy)*100:.1f}% from a year ago"
-    return "See the four signals for this ZIP"
+    return "See the signals for this ZIP"
 
 
 def percentile(spy, deciles):
@@ -513,7 +527,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <h2>{esc(faq_q)}</h2>
 <p class="method">{esc(faq_a)}</p>
 <h2>How this verdict is computed</h2>
-<p class="method">Four public signals, each with a danger line drawn from past national downturns: months of supply (4.0), the year-over-year price trend (−2%), how long homes take to sell (+40% year over year), and the share of listings cutting price (35%). A ZIP crossing enough of them reads WATCH or ACT; a clean ZIP reads HOLD. <a href="/#signals">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>
+<p class="method">{METHOD_SENTENCE} <a href="/#signals">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>
 <h2>Nearby markets</h2>
 <ul class="nearby">{nb}</ul>
 <p style="margin-top:16px"><a href="/zip/{st}/">All {esc(state_name)} markets →</a></p>
@@ -811,10 +825,7 @@ def write_llms_txt(web, meta, scored, pages):
 
 ## How the verdict works
 
-Four public signals, each tested against a fixed, published danger line drawn
-from past national downturns: months of supply (4.0), year-over-year price
-trend (−2%), time to sell (+40% y/y), and the share of listings cutting price
-(35%). A ZIP past enough danger lines reads WATCH or ACT; a clean ZIP reads
+{METHOD_SENTENCE}
 HOLD. The same signals are tested in the strengthening direction, so a clean
 market with unusual buyer competition reads as a strong seller's market.
 

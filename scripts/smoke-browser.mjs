@@ -31,8 +31,23 @@ const RATINGS = /\b(HOLD|WATCH|ACT)\b/;
 // measured value. These literals are subtracted before the scan; anything left
 // that looks like a figure is the ZIP's.
 const DISCLOSED = [
-  "4.0", "−2%", "-2%", "−5%", "-5%", "+40%", "40%", "35%", "20%",
-  "+30%", "30%", "+5%", "−15%", "-15%", "−20%", "-20%", "2.5",
+  "−20%",
+  "−15%",
+  "-15%",
+  "-20%",
+  "+30%",
+  "+10%",
+  "-2%",
+  "30%",
+  "20%",
+  "+5%",
+  "10%",
+  "-5%",
+  "−2%",
+  "−5%",
+  "15%",
+  "5%",
+  "2%",
 ];
 const stripDisclosed = (s) => DISCLOSED.reduce((acc, d) => acc.split(d).join(""), s);
 // A market figure as a reader would see one: a percentage, a day count, a

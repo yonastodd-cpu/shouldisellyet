@@ -592,20 +592,29 @@ four index signals are known for the month. Insufficient-data ZIPs are
 excluded from both numerator and denominator. STRONG (seller's-market)
 verdicts count in the denominator only.</p>
 
-<h2 id="danger-lines">The four signals</h2>
-<p>Identical thresholds to the site's published danger lines, evaluated by
-the same scoring engine — restated on a constant four-signal basis so every
-month of the series measures the same thing:</p>
+<h2 id="danger-lines">The four signals behind this index</h2>
+<p><b>These are the index's thresholds, and they are deliberately frozen.</b>
+The Warning-Sign Index is a historical series, so it is computed on a constant
+four-signal basis over closed-sale statistics — restating it under new rules
+would make this month incomparable with every month before it.</p>
+<p>The site's <i>current</i> per-ZIP readings are computed differently: three
+signals over active-listing statistics, with two lines recalibrated for that
+basis. Months of supply and price-cut share need a closed-sale count that
+active-listing data cannot see, so they are not part of a current reading. See
+the <a href="/research/methodology.html">methodology page</a> for the reading
+engine; the table below describes this index only.</p>
 <table><thead><tr><th>Signal</th><th>Danger line</th></tr></thead><tbody>
 <tr><td>Months of supply</td><td class="mono">&gt; 4 (severe &gt; 6)</td></tr>
 <tr><td>Median sale price, y/y</td><td class="mono">&lt; −2% (fast &lt; −5%)</td></tr>
 <tr><td>Time to sell, y/y</td><td class="mono">&gt; +40%</td></tr>
 <tr><td>Inventory, y/y</td><td class="mono">&gt; +50%</td></tr>
 </tbody></table>
-<p class="note">The site's per-ZIP verdicts additionally use the share of
-listings with price cuts (&gt; 35%) where Redfin publishes it. That signal has
-no history before 2026 and is deliberately excluded from the index; measured
-impact of the exclusion at adoption was 0.2 points (62.2% vs 62.4%).</p>
+<p class="note">A fifth signal — the share of listings cutting price
+(&gt; 35%) — was used by per-ZIP verdicts under the previous engine but has no
+history before 2026, so it is deliberately excluded from this index; measured
+impact of the exclusion at adoption was 0.2 points (62.2% vs 62.4%). The
+current reading engine does not use it either: the data source behind it is no
+longer in use.</p>
 
 <h2 id="seam">Sources and the seam</h2>
 <p>The <b>continuous series</b> begins {esc(pretty(seam))}: Redfin Data Center
@@ -1103,7 +1112,7 @@ instead</a> — one plain answer for your market, free.</p>
 
 {appendix}
 <h2>Methodology, briefly</h2>
-<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose verdict is WATCH or ACT. Verdicts come from fixed, published danger lines (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%, price cuts&nbsp;&gt;35%), backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
+<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose verdict is WATCH or ACT. This index is computed on a frozen four-signal basis (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%) so the series stays comparable month to month; the site's current per-ZIP readings use three signals over active-listing data with recalibrated lines, backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
 """
     # Article + Dataset markup for answer engines. Dates follow the ZIP-page
     # precedent: the data build's generated stamp (meta.json), day-precision;
