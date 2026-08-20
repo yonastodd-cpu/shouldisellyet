@@ -11,11 +11,22 @@ on:
     # build_research, committed research data): the Research launch sat
     # undeployed because this filter only watched web/**. Bot commits from
     # inside this workflow carry [skip ci] so they cannot re-trigger it.
-    # scripts/** matters: the browser smoke and the released-paths harness live
-    # there, and without it a change to a GATE never runs the gate. A fix to
-    # the smoke test sat unexercised because of exactly this — the push landed
-    # and no run started.
-    paths: ["web/**", "pipeline/**", "scripts/**"]
+    # EVERY PATH THAT CAN CHANGE WHAT DEPLOYS, INCLUDING THE THINGS THAT DECIDE
+    # WHETHER A DEPLOY IS SAFE.
+    #
+    # web/** and pipeline/** shape the output. scripts/** holds the browser
+    # smoke and the released-paths harness. .github/** is this file and its
+    # siblings — the gates themselves, and the ordering between them.
+    #
+    # The last two were added after each proved the point: a fix to the smoke
+    # test pushed cleanly and no run started, and before that a workflow edit
+    # arming the test step went unexercised for the same reason. A control that
+    # can be edited without anything running it is not a control.
+    #
+    # The cost is real and accepted: a workflow edit now triggers a full
+    # 22,874-page rebuild and deploy. That is the price of never again shipping
+    # a broken gate that looks fine because nothing ran it.
+    paths: ["web/**", "pipeline/**", "scripts/**", ".github/**"]
 
 permissions:
   contents: write
