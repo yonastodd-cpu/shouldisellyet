@@ -76,26 +76,37 @@ def _rpc_rows(source, zips=None):
     key = os.environ.get("SUPABASE_SERVICE_KEY", "")
     if not url or not key:
         return None
-    body = {"p_source": source}
-    if zips:
-        # Ask for exactly what is needed. Requesting all 5,000 and keeping the
-        # ~1,000 we want cost 23 of them on the first CI run: the function
-        # returns all 5,000 (verified in psql) and the REST layer delivered
-        # fewer. Asking by ZIP makes the response small and, more importantly,
-        # makes short delivery detectable — the caller knows what it asked for.
-        body["p_zips"] = sorted(zips)
-    req = urllib.request.Request(
-        f"{url}/rest/v1/rpc/readings_for_scoring",
-        data=json.dumps(body).encode(), method="POST",
-        headers={"apikey": key, "Authorization": f"Bearer {key}",
-                 "Content-Type": "application/json",
-                 "Accept-Profile": "public", "Range-Unit": "items"})
-    with urllib.request.urlopen(req, timeout=600) as r:
-        rows = json.loads(r.read().decode())
-    if zips is not None and len(rows) < len(set(zips)):
+    # BATCHED. Each row carries twelve months of nested history, so the whole
+    # 5,000-ZIP set is a response large enough that PostgREST returned it
+    # SHORT the first time (977 of 1,000 ZIPs arrived) and answered HTTP 500
+    # the second, once an explicit filter made it try to deliver all of them.
+    # The function itself handles the full set in about a second — verified
+    # directly in psql — so the limit is the transport, and the fix is to stop
+    # asking it to move that much at once.
+    #
+    # Unfiltered requests stay single-shot: calibration wants every row and
+    # has no list to batch by.
+    def _post(payload):
+        req = urllib.request.Request(
+            f"{url}/rest/v1/rpc/readings_for_scoring",
+            data=json.dumps(payload).encode(), method="POST",
+            headers={"apikey": key, "Authorization": f"Bearer {key}",
+                     "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=600) as r:
+            return json.loads(r.read().decode())
+
+    if not zips:
+        return _post({"p_source": source})
+
+    want = sorted(set(zips))
+    BATCH = 400
+    rows = []
+    for i in range(0, len(want), BATCH):
+        rows.extend(_post({"p_source": source, "p_zips": want[i:i + BATCH]}))
+    if len(rows) < len(want):
         got = {x.get("zip") for x in rows}
-        short = sorted(set(zips) - got)
-        print(f"::warning::rescore: asked the store for {len(set(zips)):,} ZIP(s) "
+        short = sorted(set(want) - got)
+        print(f"::warning::rescore: asked the store for {len(want):,} ZIP(s) "
               f"and received {len(rows):,}. Missing {len(short):,}, e.g. "
               f"{', '.join(short[:5])}")
     return rows
