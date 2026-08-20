@@ -894,6 +894,15 @@ def main():
             for z, e in eligible:
                 if z not in card_set:
                     continue
+                # A card is a PICTURE OF THE READING: render_card paints the
+                # verdict and card_stat's figure into the pixels. The pages
+                # stopped pointing at these on day one of the pause, but the
+                # images kept being generated and kept deploying, so ~3,400 of
+                # them sat at /og/{period}/{zip}.png returning 200 to anyone
+                # who asked — including anything that had cached the URL from
+                # a share. A file nobody links to is still a published file.
+                if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
+                    continue
                 city, st, _ = places[z]
                 render_card(z, city, st, e["l"], card_stat(e.get("m", {})),
                             pretty_month(period), og_dir / period / f"{z}.png")

@@ -87,6 +87,35 @@ def test_build_reads_case_data_from_outside_the_artifact():
                 f"{mod} still reads per-case data from inside the artifact"
 
 
+def test_no_per_zip_share_card_is_generated_while_paused():
+    """The card is a picture of the reading — render_card paints the verdict
+    and a market figure into the pixels. Pages stopped linking them on day one
+    of the pause; the images kept generating and kept deploying, so ~3,400 sat
+    at /og/{period}/{zip}.png returning 200. Anything holding a cached share
+    URL could still fetch the withdrawn numbers."""
+    import build_pages as BP
+    import data_pause as PAUSE
+    src = (ROOT / "pipeline" / "build_pages.py").read_text()
+    loop = src[src.index("for z, e in eligible:\n                if z not in card_set"):]
+    loop = loop[:loop.index("cards_made += 1")]
+    assert "PAUSE.shows_data" in loop, \
+        "per-ZIP card rendering is no longer gated on the pause"
+
+
+def test_og_directory_holds_no_per_zip_card_while_paused():
+    """Belt and braces against the built output, not just the source."""
+    import data_pause as PAUSE
+    if not PAUSE.PAUSED:
+        pytest.skip("not paused — per-ZIP cards are expected")
+    og = WEB / "og"
+    if not og.exists():
+        return
+    stray = [str(p.relative_to(ROOT)) for p in og.rglob("*.png")
+             if re.fullmatch(r"\d{5}", p.stem)
+             and not PAUSE.shows_data(p.stem)]
+    assert not stray, f"per-ZIP cards in the artifact while paused: {stray[:5]}"
+
+
 def test_purge_manifest_lists_every_moved_file():
     """The manifest is what the history scrub reads; a file moved without
     being listed would survive in git history forever."""
