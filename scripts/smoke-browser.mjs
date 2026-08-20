@@ -18,8 +18,32 @@
 import { chromium } from "playwright";
 
 const BASE = (process.argv[2] || "http://localhost:5177").replace(/\/$/, "");
-// A ZIP with a standing page. Paused today, so it must render the notice.
-const ZIP = process.argv[3] || "20601";
+
+// A ZIP with a standing page that is still PAUSED, so it must render the
+// notice. This was hardcoded to 20601 — which tranche 2 released, at which
+// point every paused-path assertion started failing against a page that was
+// correctly showing a reading. A fixture that names a specific ZIP has a shelf
+// life measured in tranches, so the paused ZIP is now RESOLVED at runtime:
+// the candidate is used if its record carries no reading, otherwise the next
+// one is tried. Passing a ZIP explicitly still overrides, and the run prints
+// which ZIP it settled on so a failure is readable.
+const CANDIDATES = [process.argv[3], "20601", "01001", "01002", "01005", "01008"]
+  .filter(Boolean);
+
+async function resolvePausedZip() {
+  for (const z of CANDIDATES) {
+    try {
+      const r = await fetch(`${BASE}/data/z/${z}.json`);
+      if (!r.ok) continue;
+      const rec = await r.json();
+      if (!rec || !rec.l) return z;            // no reading => still paused
+    } catch (e) { /* try the next */ }
+  }
+  console.error(`FATAL: none of ${CANDIDATES.join(", ")} is still paused — ` +
+    "the paused-path assertions cannot be exercised. Pass a paused ZIP explicitly.");
+  process.exit(2);
+}
+const ZIP = await resolvePausedZip();
 
 // Released-path coverage. Nothing is released in production, so these paths
 // are unreachable in a normal build — which is exactly why a bug in one of
@@ -217,10 +241,15 @@ for (const [path, label] of [["/report.html", "sample report"],
 // preview card and its record regains a reading, so these would fail on
 // correct behaviour.
 const stagedRelease = Boolean(RELEASED || THIN);
+// The OG path uses the RESOLVED paused ZIP, not a hardcoded one. It was
+// /og/2026-06/20601.png, and tranche 2 released 20601 — at which point the
+// check failed because the ZIP had correctly regained its card. The purged
+// case files are genuinely gone for good and stay literal; a per-ZIP card is
+// only "purged" for a ZIP that is still paused.
 for (const path of stagedRelease ? [] : [
   "/data/cases/boise-2021.json",
   "/data/cases/boise-2021.png",
-  "/og/2026-06/20601.png",
+  `/og/2026-06/${ZIP}.png`,
 ]) {
   const r = await page.request.get(`${BASE}${path}`);
   check(`purged file is gone: ${path}`, r.status() === 404, `HTTP ${r.status()}`);

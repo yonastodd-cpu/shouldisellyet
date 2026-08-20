@@ -124,6 +124,13 @@ def db_rows(source="rentcast", zips=None):
         if "{" not in proc.stdout:
             raise SystemExit(f"db query returned no JSON. stderr: {proc.stderr[:300]}")
         rows = json.loads(proc.stdout[proc.stdout.index("{"):]).get("rows", [])
+        # The RPC applies the filter server-side; the CLI query does not take
+        # one. Without this the two paths honour the same argument differently
+        # — asking for 4,000 ZIPs and getting all 5,000 back, silently — and
+        # every count derived from the result is over the wrong population.
+        if zips is not None:
+            want = set(zips)
+            rows = [r for r in rows if (r.get("zip") or "") in want]
     out = []
     for r in rows:
         hist = r.get("history")
