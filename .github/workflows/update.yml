@@ -400,6 +400,22 @@ jobs:
           [ "$r" -lt 2 ] && { echo "::error::only $r research releases built (expected 2+) — refusing to upload."; fail=1; }
           exit $fail
 
+      # THE GATE EVERY OTHER GATE CANNOT BE. On 2026-08-19 the homepage ZIP
+      # lookup threw inside a setTimeout and a visitor saw nothing at all —
+      # while unit tests passed, the page-count gate passed, and curl returned
+      # 200 on every URL. None of those execute JavaScript. This runs the built
+      # site in a real browser and asserts a ZIP lookup ANSWERS, with no
+      # uncaught exception. It is the only check in this pipeline that could
+      # have caught that class of break.
+      - name: Browser smoke test
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+          python3 -m http.server 5177 --directory web &
+          for i in $(seq 1 20); do curl -sf http://localhost:5177/ >/dev/null && break; sleep 0.5; done
+          node scripts/smoke-browser.mjs http://localhost:5177
+
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@v5
