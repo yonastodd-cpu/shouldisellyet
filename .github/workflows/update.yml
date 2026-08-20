@@ -11,7 +11,11 @@ on:
     # build_research, committed research data): the Research launch sat
     # undeployed because this filter only watched web/**. Bot commits from
     # inside this workflow carry [skip ci] so they cannot re-trigger it.
-    paths: ["web/**", "pipeline/**"]
+    # scripts/** matters: the browser smoke and the released-paths harness live
+    # there, and without it a change to a GATE never runs the gate. A fix to
+    # the smoke test sat unexercised because of exactly this — the push landed
+    # and no run started.
+    paths: ["web/**", "pipeline/**", "scripts/**"]
 
 permissions:
   contents: write
