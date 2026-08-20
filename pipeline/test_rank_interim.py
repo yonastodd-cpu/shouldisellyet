@@ -143,24 +143,41 @@ def test_load_acs_treats_blank_owner_as_unknown(tmp_path):
 
 # ————— drift canary —————
 
-def test_eligibility_still_mirrors_build_pages():
-    """has_standing_page duplicates build_pages.py's eligible loop, because
-    that loop is inline in main() and cannot be called. If the conditions
-    there change, this fails and points at the copy that must follow."""
+def test_build_pages_takes_its_url_set_from_the_manifest():
+    """This used to assert that build_pages re-derived eligibility from vendor
+    metrics, and that rank_interim mirrored the rule. It no longer derives it:
+    pipeline/data/page_manifest.csv freezes the URL set as a committed
+    contract, because the metrics it was derived from have left the repo and
+    a build that re-derived from absent data would emit zero pages and delete
+    ~23,000 live URLs.
+
+    What must hold now is that the manifest governs and that an empty one
+    stops the build rather than silently shortening the site."""
     src = (Path(__file__).parent / "build_pages.py").read_text()
-    loop = src[src.index("eligible, skipped = "):src.index("eligible.sort()")]
-    assert 'r[0] == "insufficient_data"' in loop
-    assert re.search(r'\("mos",\s*"spy",\s*"dom",\s*"domy"\)', loop)
-    assert "if z not in places" in loop
-    assert loop.count("skipped[") == 3, (
-        "build_pages gained or lost an eligibility condition — mirror it in "
-        "rank_interim.has_standing_page")
+    loop = src[src.index("manifest = read_manifest()"):src.index("eligible.sort()")]
+    assert "refusing to" in loop, "an empty manifest must abort the build"
+    assert "for z, st in manifest" in loop, "the manifest must drive the loop"
+    # The message is split across f-string lines, so match a fragment that
+    # survives the wrapping rather than the sentence.
+    assert "build a short site" in loop, \
+        "the page count must be asserted against the manifest"
+    assert "len(manifest)" in loop
 
 
 def test_real_data_ranking_is_sane():
-    """Against the committed data, not fixtures: the tier that gets bought."""
+    """Against the retained data, not fixtures: the tier that gets bought.
+
+    web/data/zips is now generated and carries no metrics, so this needs the
+    retained export. That is gitignored by design, so the test skips where it
+    is absent — including CI. The ranking itself is already frozen in
+    pipeline/tier_interim.csv; recomputing it is an operator action against
+    private storage, not something a build does."""
     from build_pages import load_places as real_places
-    entries = rank_interim.load_entries()
+    private = Path(__file__).resolve().parents[1] / "_private_data_export" / "web" / "data" / "zips"
+    if not private.exists():
+        pytest.skip("retained export not present (gitignored) — ranking is "
+                    "frozen in tier_interim.csv")
+    entries = rank_interim.load_entries(private)
     rows, dropped = build(entries, load_acs(), real_places())
     assert len(rows) > 5000, "paid tier cannot be filled with quality ZIPs"
     assert len(rows) + sum(dropped.values()) == len(entries)

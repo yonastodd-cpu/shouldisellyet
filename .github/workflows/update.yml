@@ -329,6 +329,21 @@ jobs:
       # refresh would make a site-only push deploy a web/ with no zip/ —
       # silently removing ~18.6k live URLs. Reads committed web/data only, so
       # it needs no download and takes ~4s.
+      # web/data/zips is no longer committed — it is generated here from the
+      # page manifest, plus readings pulled from the private store for ZIPs in
+      # a released tranche. With no tranche released this writes 22,874
+      # notice-only records and contacts nothing.
+      #
+      # If the store is unreachable this still writes every manifest record:
+      # losing a reading degrades a page to its notice, losing a record
+      # deletes a live URL, and those are not the same size of mistake.
+      - name: Provision per-ZIP records
+        if: steps.check.outputs.deploy == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/provision_readings.py
+
       - name: Build ZIP pages, hubs, sitemaps and share cards
         if: steps.check.outputs.deploy == 'true'
         run: |
@@ -350,6 +365,22 @@ jobs:
           # output is gitignored, so a deploy that skipped it would upload a
           # web/ with dead <img> URLs on the admin queue.
           python3 pipeline/post_pack.py --render
+
+      # The last thing standing between a broken build and ~23,000 deleted
+      # URLs. Generated directories are rebuilt each deploy, so a short build
+      # publishes a short site — count the pages against the manifest and
+      # refuse to upload if they disagree.
+      - name: Gate on page count
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          want=$(( $(wc -l < pipeline/data/page_manifest.csv) - 1 ))
+          have=$(find web/zip -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' | wc -l | tr -d ' ')
+          echo "manifest: $want · built: $have"
+          if [ "$have" -lt "$want" ]; then
+            echo "::error::built $have ZIP pages for $want manifest rows — \
+          refusing to upload, this deploy would delete $((want - have)) live URLs."
+            exit 1
+          fi
 
       - name: Upload site
         if: steps.check.outputs.deploy == 'true'

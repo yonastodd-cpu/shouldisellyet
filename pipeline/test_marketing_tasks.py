@@ -970,10 +970,11 @@ def test_a_flip_post_calls_hold_share_what_it_is():
     # recomputes on a uniform basis. It cannot be violated in a user-visible
     # way meanwhile: Phase 0 set all 32 queued marketing posts to `skipped`,
     # so nothing quotes this number today.
-    if any(zips[z].get("b") for z in members):
+    if any(zips[z].get("b") for z in members) or not any(zips[z].get("l") for z in members):
         import pytest as _p
-        _p.skip("velocity aggregate frozen pre-migration; members now mixed-basis "
-                "(see docs/migration/PHASE1-PLUS.md correction 6)")
+        _p.skip("velocity aggregate frozen pre-migration, and web/data/zips is "
+                "now generated without readings until a tranche releases — "
+                "nothing to compare like with like yet")
     green = sum(1 for z in members if zips[z].get("l") == "green")
     both = sum(1 for z in members if zips[z].get("l") in ("green", "strong"))
     assert round(100 * both / len(members), 1) == g["hold_share"], \

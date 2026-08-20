@@ -12,6 +12,19 @@ archive/
 # never commit it.
 supabase/.temp/
 
+# Vendor-derived records pulled out of the public repo (Prompt 1). RETAINED,
+# not deleted — legal review wants retention, so this is moved to private
+# storage by hand rather than removed. Never commit it back.
+_private_data_export/
+
+# Generated at deploy time by pipeline/provision_readings.py from the
+# committed page manifest, plus readings for released tranches pulled from the
+# private store. Was committed source carrying per-ZIP vendor metrics for
+# 28,000+ ZIPs — and because the whole of web/ is the deployed artifact, it
+# was also a public bulk-download endpoint at /data/zips/{ST}.json regardless
+# of whether any page linked it.
+web/data/zips/
+
 # Generated at deploy time by pipeline/build_pages.py from committed web/data.
 # ~18.6k pages / 147MB — never committed (9.8MB gzipped in the Pages artifact).
 web/zip/

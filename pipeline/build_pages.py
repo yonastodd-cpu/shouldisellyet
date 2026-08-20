@@ -79,6 +79,7 @@ KINDS = {
 
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
 import data_pause as PAUSE
+from build_manifest import read_manifest
 
 # Derived, never typed: whatever verdict_copy.json says is the word. Placed
 # here rather than beside KINDS because the copy map is imported below it.
@@ -286,13 +287,17 @@ FOOTER = """<footer>
 
 def zip_page(z, e, place, meta, neighbours, has_card=False):
     city, st, _ = place
-    k = KINDS[e["l"]]; m = e.get("m", {}); strong = e["l"] == "strong"
+    # A provisioned record for an unreleased ZIP is just {"st": ST} — no
+    # level, no metrics. That is the ordinary case now, not an error: the
+    # pause branch below replaces every one of these values anyway.
+    level = e.get("l") or "green"
+    k = KINDS[level]; m = e.get("m", {}); strong = level == "strong"
     period = meta.get("period", "")
     pretty_period = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
     updated = meta.get("generated", date.today().isoformat())
     state_name = STATE_NAMES.get(st, st)
     stat = card_stat(m)
-    vc = vcopy(e["l"])          # shared verdict copy: word, translation, emoji
+    vc = vcopy(level)           # shared verdict copy: word, translation, emoji
     # T3: share text introduces the site before the card even loads. Built
     # from the same map, so the translation can never drift from the card.
     share_text = (f"{vc['emoji']} Just ran a free checkup on my ZIP's housing market — "
@@ -367,11 +372,19 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # count no active-listing feed has, so a v2 page states its listing count
     # instead. Guarded rather than assumed — an unguarded m['mos'] here would
     # KeyError on every re-scored ZIP.
-    second = (f"{m['mos']:.1f} months of supply" if m.get("mos") is not None
-              else f"{int(m['inv']):,} homes on the market")
-    answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
-              f"{vc['short']} — the reading is {vc['word']}, with homes selling in about "
-              f"{round(m['dom'])} days and {second}.")
+    # A record with no reading has none of these. Build the sentence only when
+    # there is something to say; the pause branch below replaces it wholesale
+    # anyway, and reaching into m for a page that has no metrics is how a
+    # reading-less record used to crash the build one KeyError at a time.
+    if m.get("dom") is not None:
+        second = (f"{m['mos']:.1f} months of supply" if m.get("mos") is not None
+                  else f"{int(m['inv']):,} homes on the market" if m.get("inv") is not None
+                  else "its current listing activity")
+        answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
+                  f"{vc['short']} — the reading is {vc['word']}, with homes selling in about "
+                  f"{round(m['dom'])} days and {second}.")
+    else:
+        answer = f"{PAUSE.NOTICE_TITLE} for {city}, {st} ({z}). {PAUSE.NOTICE_BODY}"
     # The Q&A pair: question a person actually asks, two-sentence answer from
     # the canonical copy map (verdict_copy.json qa — never hand-written here,
     # so the FAQ can't drift from the card and the share text).
@@ -552,7 +565,7 @@ def share_stub(z, e, place, meta, has_card):
     these never compete with the real /zip/ pages in search.
     """
     city, st, _ = place
-    vc = vcopy(e["l"])
+    vc = vcopy(e.get("l") or "green")
     stat = card_stat(e.get("m", {}))
     period = meta.get("period", "")
     live = PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))
@@ -823,24 +836,46 @@ def main():
     places = load_places()
     only = {z.strip() for z in args.only.split(",") if z.strip()}
 
-    eligible, skipped = [], defaultdict(int)
+    # THE URL SET COMES FROM THE MANIFEST, NOT FROM THE DATA.
+    #
+    # It used to be derived here: glob the per-ZIP records and keep whatever
+    # passed a completeness test over vendor metrics. That made the published
+    # URL set an emergent property of a vendor's monthly coverage, and it made
+    # the build fail catastrophically rather than gracefully — with the
+    # metrics gone, every ZIP failed the test, zero directories were emitted,
+    # and since generated directories are rebuilt each deploy, the deploy
+    # would have DELETED ~23,000 live URLs.
+    #
+    # pipeline/data/page_manifest.csv freezes that decision as a committed,
+    # reviewable contract of zip,state. Records now arrive from
+    # provision_readings.py: a released ZIP carries its reading, everything
+    # else carries {"st": ST} and renders the notice. Losing a reading
+    # degrades a page; losing a page destroys a URL. Only one of those is
+    # recoverable, so the manifest governs.
+    manifest = read_manifest()
+    if not manifest:
+        raise SystemExit("page_manifest.csv is missing or empty — refusing to "
+                         "build, because emitting zero pages deletes every "
+                         "live ZIP URL.")
+    entries = {}
     for f in sorted((data / "zips").glob("*.json")):
-        for z, e in json.loads(f.read_text()).items():
-            if only and z not in only:
-                continue
-            m = e.get("m", {})
-            if any(r[0] == "insufficient_data" for r in e.get("r", [])):
-                skipped["insufficient_verdict"] += 1; continue
-            # Basis-aware: a v2 reading has no months-of-supply (RentCast
-            # cannot see closings), so demanding `mos` would strike every
-            # re-scored ZIP off the site at the moment it became publishable.
-            need = (("spy", "dom", "domy", "invy") if e.get("b")
-                    else ("mos", "spy", "dom", "domy"))
-            if any(m.get(k) is None for k in need):
-                skipped["incomplete_dials"] += 1; continue
-            if z not in places:
-                skipped["no_city_name"] += 1; continue
-            eligible.append((z, e))
+        entries.update(json.loads(f.read_text()))
+
+    eligible, skipped = [], defaultdict(int)
+    for z, st in manifest:
+        if only and z not in only:
+            continue
+        if z not in places:
+            skipped["no_city_name"] += 1; continue
+        # A manifest row with no provisioned record still gets its page. The
+        # record only decides whether a reading renders.
+        e = entries.get(z) or {"st": st}
+        e.setdefault("st", st)
+        eligible.append((z, e))
+    if not only and len(eligible) + sum(skipped.values()) != len(manifest):
+        raise SystemExit(f"manifest has {len(manifest):,} rows but "
+                         f"{len(eligible):,} pages were prepared — refusing to "
+                         f"build a short site.")
     eligible.sort()
     if args.limit:
         eligible = eligible[:args.limit]
@@ -904,7 +939,7 @@ def main():
                 if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
                     continue
                 city, st, _ = places[z]
-                render_card(z, city, st, e["l"], card_stat(e.get("m", {})),
+                render_card(z, city, st, e.get("l") or "green", card_stat(e.get("m", {})),
                             pretty_month(period), og_dir / period / f"{z}.png")
                 cards_made += 1
     else:
@@ -920,7 +955,7 @@ def main():
         d.mkdir(parents=True, exist_ok=True)
         (d / "index.html").write_text(page, encoding="utf-8")
         b = len(page.encode()); total_bytes += b; biggest = max(biggest, b)
-        k = KINDS[e["l"]]
+        k = KINDS[e.get("l") or "green"]
         # The hub lists every ZIP in the state with its verdict word beside it.
         # zip_page() blanks the word for a paused ZIP, but that happens inside
         # zip_page — the hub builds its own row here and was publishing the
@@ -998,15 +1033,19 @@ def main():
                   f"carry a legacy reading and stay dark — {', '.join(wrong[:5])}"
                   f"{' …' if len(wrong) > 5 else ''}")
     chunks = write_sitemaps(web, urls, lastmod)
-    # scored = every verdict-carrying ZIP in the data (the homepage's basis);
-    # pages = the subset with standing pages. Both live so llms.txt can't
-    # drift — which is also why a LIMITED build must not write it: --limit /
-    # --only shrink len(eligible), and a smoke build that reached the host
-    # would publish "standing pages for 2 ZIP markets" as fact.
+    # scored = ZIPs the site can speak for; pages = those with a standing page.
+    # Both live so llms.txt can't drift — which is also why a LIMITED build
+    # must not write it: --limit / --only shrink len(eligible), and a smoke
+    # build that reached the host would publish "standing pages for 2 ZIP
+    # markets" as fact.
+    #
+    # scored was counted from the per-ZIP files, which used to be committed
+    # source covering every ZIP the vendor scored. They are provisioned output
+    # now, so that count became a count of whatever this run happened to
+    # write — a build whose provisioning was skipped published "for 0 U.S. ZIP
+    # codes" as fact. The manifest is the durable number.
     if not (args.limit or only):
-        scored = sum(len(json.loads(f.read_text()))
-                     for f in sorted((data / "zips").glob("*.json")))
-        write_llms_txt(web, meta, scored, len(eligible))
+        write_llms_txt(web, meta, len(manifest), len(eligible))
 
     print(f"pages: {len(eligible):,} ZIP + {len(by_state)} state hubs + 1 index")
     print(f"skipped: {dict(skipped)}")
