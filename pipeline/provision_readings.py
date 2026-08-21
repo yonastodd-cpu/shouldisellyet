@@ -96,7 +96,7 @@ def build(manifest, readings):
     return by_state
 
 
-def write(by_state, out=OUT, build_out=BUILD):
+def write(by_state, out=OUT, build_out=None):
     """Two sets of records: one the site ships, one only the build sees.
 
     THE PUBLIC SET CARRIES NO FIGURES. web/data/z/{zip}.json is {"st": "MD"}
@@ -137,7 +137,18 @@ def write(by_state, out=OUT, build_out=BUILD):
     A missing file is a ZIP we do not cover, which is exactly what the client
     needs to know, so the prefix lookup disappears with the state files.
     """
-    out, build_out = Path(out), Path(build_out)
+    # A DEFAULT MUST NOT POINT AT SHARED STATE. build_out used to default to
+    # the repo-root BUILD directory, so a caller overriding only `out` — every
+    # test does — rmtree'd the real private records and replaced them with its
+    # fixtures. CI runs provision, then pytest, then build_pages: provisioning
+    # wrote 5,000 readings, the suite wiped them, and the build put 5,000
+    # released pages back behind the notice. Green tests, dark site.
+    #
+    # The private set now follows wherever the public one is written unless a
+    # caller says otherwise, so a test writing to tmp_path stays in tmp_path.
+    out = Path(out)
+    build_out = Path(build_out) if build_out is not None else (
+        BUILD if out == OUT else out.parent / "_private_readings")
     for d in (out, build_out):
         if d.exists():
             shutil.rmtree(d)    # stale records must not survive the switch

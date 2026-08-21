@@ -98,3 +98,21 @@ def test_the_browser_smoke_runs_before_the_artifact_is_uploaded():
     assert "Browser smoke test" in wf, "the browser gate is not wired into CI"
     assert wf.index("Browser smoke test") < wf.index("Upload site"), \
         "a browser failure must block the upload, not follow it"
+
+
+def test_writing_elsewhere_does_not_touch_the_real_private_records(tmp_path):
+    """A default argument pointing at shared state is a landmine.
+
+    write(by_state, out=tmp) used to leave build_out at its repo-root default,
+    so every test that wrote records rmtree'd the private set the build reads
+    from. In CI — provision, then pytest, then build — that turned 5,000
+    released pages dark while every test passed.
+    """
+    import provision_readings as PR
+    real = PR.BUILD
+    before = sorted(p.name for p in real.glob("*.json")) if real.is_dir() else None
+    PR.write(PR.build([("20814", "MD")], {}), tmp_path / "pub")
+    after = sorted(p.name for p in real.glob("*.json")) if real.is_dir() else None
+    assert after == before, "writing to a temp directory disturbed the real records"
+    assert (tmp_path / "_private_readings" / "20814.json").exists(), \
+        "the private set did not follow the public one"
