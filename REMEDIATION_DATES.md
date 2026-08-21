@@ -15,6 +15,7 @@ dated a withdrawal from the day we believed it happened and was wrong twice.
 | Tranche 2 released (4,000 ZIPs) | 2026-08-20T19:51:54Z | same |
 | **Bulk-downloadable serving of underlying figures stopped** | **2026-08-21T01:36:16Z** | see below |
 | **Per-ZIP research file withdrawn** | **2026-08-21T03:22:25Z** | see below |
+| GitHub GC request **prepared** | 2026-08-21 | `GITHUB_PURGE_REQUEST.md` |
 
 ## Bulk serving of underlying figures
 
@@ -82,3 +83,27 @@ specific stories", which keeps the press relationship without the open bulk
 grant. `web/research/` is generated on every deploy, so the takedown is the
 generator change — there is no separate deletion step, and the files stop
 existing at the next build.
+
+
+## GitHub garbage collection — three stages, tracked separately
+
+The counsel memo needs to state each of these accurately, and they are not the
+same event. Until the third line has a date, the repository still holds the
+objects.
+
+| Stage | Date | Evidence |
+|---|---|---|
+| History rewritten and force-pushed | 2026-08-20T02:57Z | `HISTORY_SCRUB_NOTES.md`; verified from a fresh clone |
+| GC request **prepared** | 2026-08-21 | `GITHUB_PURGE_REQUEST.md` — 24 commits, 71 files, blob hashes |
+| GC request **submitted** | *(blank — operator action)* | support ticket number |
+| GitHub **confirmed** complete | *(blank — awaiting reply)* | written confirmation and effective date |
+
+**Fork network: empty** (`forks_count: 0`, `network_count: 0`, checked
+2026-08-21). Garbage collection on our repository would not purge forks, so this
+matters: had there been any, the request would have been insufficient on its
+own.
+
+**The accurate statement until confirmation arrives:** history was rewritten
+and force-pushed on 20 August 2026; the original objects remain on GitHub's
+servers, unreferenced but retrievable by commit SHA; garbage collection has
+been requested and is not yet confirmed. Anything stronger overstates it.

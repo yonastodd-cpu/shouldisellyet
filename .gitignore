@@ -83,4 +83,13 @@ AUDIT_REPORT.md
 # tracked because what they describe is finished. This repo is public; a
 # roadmap to an open hole is not something to publish alongside the hole.
 LICENSE_AUDIT.md
+
+# GITHUB_PURGE_REQUEST.md lists the exact commit SHAs by which the withdrawn
+# data is STILL retrievable from GitHub — that is the whole point of the
+# request. Committing it to a public repo would publish a working index to the
+# objects we are asking to have deleted, turning a request to make data harder
+# to find into a document that makes it easier. It goes in the support ticket,
+# not the repo. Remove this line once GitHub confirms the GC is complete and
+# the SHAs point at nothing.
+GITHUB_PURGE_REQUEST.md
 .build/
