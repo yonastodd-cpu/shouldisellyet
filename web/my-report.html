@@ -961,6 +961,8 @@ fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
     ",000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.";
 });
 
+const MARKET_API = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/market-reading";
+
 async function lookup(zip){
   if (INDEX){
     // One file per ZIP — see index.html's lookup(). This fetched a whole
@@ -971,6 +973,27 @@ async function lookup(zip){
       const r = await fetch("data/z/" + zip + ".json");
       if (r.ok) rec = await r.json();
     } catch (e) {}
+
+    // Figures from the endpoint, one ZIP per request. The static record
+    // carries our reading and no vendor measurement — see index.html's
+    // lookup() and the endpoint's own header for why the serving model is the
+    // thing that matters here rather than the data.
+    if (rec && rec.l) {
+      try {
+        const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip));
+        if (f.ok) {
+          const d = await f.json();
+          if (d && d.dataStatus === "ok") {
+            rec.m = d.metrics || {};
+            rec.h = (Array.isArray(d.priceHistory) && d.priceHistory.length)
+              ? { s: d.priceHistory[0].month,
+                  p: d.priceHistory.map(r => r.medianListPrice),
+                  d: d.priceHistory.map(r => r.daysOnMarket == null ? null : r.daysOnMarket) }
+              : null;
+          }
+        }
+      } catch (e) { /* the report renders its reading; the dials stay empty */ }
+    }
     stateCache[zip] = rec;
     return rec;
   }

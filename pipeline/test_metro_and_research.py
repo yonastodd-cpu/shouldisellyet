@@ -111,10 +111,20 @@ def test_the_colour_test_is_made_at_printed_precision():
 
 @pytest.mark.skipif(not METRO_DIR.exists(), reason="metro pages not built")
 def test_the_table_headers_are_readable_by_a_civilian():
+    """Was: the three figure columns must be spelled out in plain English
+    rather than abbreviated. Those columns are gone — one fetch of a metro
+    page returned a price figure for every ZIP in it, which is distribution
+    of the vendor's measurements rather than display of ours. The plain-English
+    rule still applies to what is left.
+    """
     h = (METRO_DIR / "grand-rapids-mi" / "index.html").read_text()
-    for label in ("Months of supply", "Price vs. last year", "Listings cutting price"):
-        assert f"<th class=\"num\">{label}" in h or f">{label}<" in h, label
+    for label in ("ZIP", "City", "Rating"):
+        assert f">{label}<" in h, label
     assert ">Supply<" not in h and ">Cutting price<" not in h
+    for retired in ("Months of supply", "Price vs. last year", "Listings cutting price"):
+        assert retired not in h, (
+            f"the metro table publishes {retired!r} per ZIP again — that is "
+            "many ZIPs' figures in one request")
 
 
 @pytest.mark.skipif(not METRO_DIR.exists(), reason="metro pages not built")

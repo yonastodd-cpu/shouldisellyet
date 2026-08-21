@@ -76,3 +76,21 @@ RentCast price points, on branch `backup-local`.
 indicators (counts, shares, deltas, ratings). No vendor measurements.
 `pipeline/fhfa_zip.csv`, `acs_zip.csv`, `zip_cbsa.csv`, `zip_places.csv`,
 `zip_centroids.json` — US Government works, public domain.
+
+
+## Added 2026-08-20 — bulk figure files, for the next history scrub
+
+These shipped inside `web/` and are now removed from the deployed tree. They
+are listed here because they are also in git history and should go in the next
+scrub pass.
+
+| Path | What it held |
+|---|---|
+| `web/data/z/*.json` (the released 5,000, as they stood before this change) | Seven current RentCast metrics per ZIP plus a twelve-month series of median asking price and average days-on-market — roughly 120,000 raw monthly vendor values across the set. The current files at this path are safe: they carry only our reading, its basis, the month and the state. |
+| `web/data/zips/*.json` (51 state files, removed 2026-08-20 earlier) | Already listed above; noted again because the per-ZIP files that replaced them carried the same class of data until this change. |
+
+Note the metro pages are NOT listed: they carried one figure per ZIP row in
+rendered HTML rather than in a data file, and the fix was to stop rendering the
+column. There is no file to purge, but `git log -p -- pipeline/build_metro.py`
+will show the figures in historical build output if any was ever committed
+(it was not — `web/` is generated).

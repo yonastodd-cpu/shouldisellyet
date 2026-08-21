@@ -974,7 +974,12 @@ def main():
     # ZIPs are read, so this is 22,874 small opens rather than a glob of
     # everything that happens to be in the directory.
     entries = {}
-    zdir = data / "z"
+    # The build reads the PRIVATE record set. web/data/z carries only state
+    # codes now — the figures were removed from it because 5,000 per-ZIP files
+    # holding a twelve-month history each is a downloadable dataset, whatever
+    # the file layout. Pages still render their own ZIP's figures; they just
+    # get them from a directory that never ships.
+    zdir = ROOT / ".build" / "readings"
     for zip_code, _st in manifest:
         f = zdir / f"{zip_code}.json"
         if f.exists():

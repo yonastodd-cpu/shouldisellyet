@@ -37,8 +37,52 @@ import { rateAllowed } from "../_shared/ratelimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-// Static, matching every other function here — see verify-access for why a
-// reflected origin is unsafe across concurrent requests in one isolate.
+// ═══ WHY THIS IS AN ENDPOINT AND NOT A FILE ═══
+//
+// The vendor's licence permits displaying their statistics; what it does not
+// clearly permit is redistributing them as a dataset. Those are not different
+// data — they are different SERVING MODELS, and the difference is what this
+// function exists to make true.
+//
+// The site used to ship web/data/z/{zip}.json: 5,000 files named by ZIP code,
+// each carrying current metrics and a twelve-month history — roughly 120,000
+// raw monthly vendor values, downloadable without authentication and
+// collectable by iterating five digits. Every property of that arrangement
+// said "dataset": bulk, enumerable, unauthenticated, complete, and served
+// whether or not anyone was looking at the page it belonged to.
+//
+// Serving one ZIP per request, rate-limited, from an origin-pinned endpoint
+// does not make scraping impossible and is not meant to. It makes the thing we
+// operate a page-display service rather than a distribution channel — which is
+// the distinction the licence question turns on. Someone determined can still
+// collect it; the point is that we are not the ones handing it out.
+//
+// Keep it that way: one zip per request, no list form, no wildcard, no index,
+// named columns only, and never raw_json.
+//
+// Static allowlist, not reflection — see verify-access for why a reflected
+// origin is unsafe across concurrent requests in one isolate. The localhost
+// entries are what let the build's own browser gate exercise this path; a gate
+// that cannot reach the endpoint cannot prove the pages still render.
+const ALLOWED_ORIGINS = new Set([
+  "https://shouldisellyet.com",
+  "http://localhost:5177",
+  "http://localhost:5178",
+  "http://127.0.0.1:5177",
+  "http://127.0.0.1:5178",
+]);
+
+function corsFor(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin":
+      ALLOWED_ORIGINS.has(origin) ? origin : "https://shouldisellyet.com",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "https://shouldisellyet.com",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -51,15 +95,41 @@ const CORS = {
 // stale-while-revalidate keeps a tranche release from stampeding the origin.
 const CACHE = "public, max-age=86400, stale-while-revalidate=604800";
 
-function json(body: unknown, status = 200, cache = false) {
+// cors is PASSED IN, never read from module scope. One isolate serves
+// concurrent requests from different origins, and a shared mutable header
+// object is how one caller's origin ends up on another caller's response.
+function json(body: unknown, cors: Record<string, string>,
+              status = 200, cache = false) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...(cache ? { "Cache-Control": CACHE } : { "Cache-Control": "no-store" }),
-      ...CORS,
+      ...cors,
     },
   });
+}
+
+// Year-over-year from the twelve-month series: newest against oldest. The
+// pipeline computes the same ratios the same way (verdict_v2.from_market_stats),
+// and a page must not be able to tell which produced the number it is showing.
+function yoy(hist: Record<string, unknown>[], s: Record<string, unknown>) {
+  const num = (v: unknown) => (typeof v === "number" ? v : v == null ? null : Number(v));
+  const first = hist.length ? hist[0] : null;
+  const ratio = (now: number | null, then: number | null) =>
+    now == null || then == null || then === 0 ? null : (now - then) / then;
+
+  const domNow = num(s.active_dom);
+  const domThen = first ? num(first.active_dom) : null;
+  const out: Record<string, number> = {};
+  const set = (k: string, v: number | null) => { if (v != null && isFinite(v)) out[k] = v; };
+
+  set("spy", ratio(num(s.list_median_price), first ? num(first.median_list_price) : null));
+  set("dom", domNow);
+  set("domy", domNow != null && domThen != null ? domNow - domThen : null);
+  set("inv", num(s.total_listings));
+  set("invy", ratio(num(s.total_listings), first ? num(first.total_listings) : null));
+  return out;
 }
 
 async function rest(path: string) {
@@ -71,10 +141,11 @@ async function rest(path: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  const cors = corsFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   const zip = new URL(req.url).searchParams.get("zip") ?? "";
-  if (!/^\d{5}$/.test(zip)) return json({ error: "bad zip" }, 400);
+  if (!/^\d{5}$/.test(zip)) return json({ error: "bad zip" }, cors, 400);
 
   // Same layer-2 limiter every other public function uses. A per-ZIP endpoint
   // is enumerable by nature — 22,874 keys — so this is what stops the whole
@@ -86,7 +157,7 @@ Deno.serve(async (req) => {
   // primary interaction, not a payment-token check. A visitor comparing a few
   // ZIPs must not be throttled, while 22,874 keys still cannot be walked.
   if (!(await rateAllowed(req, "market-reading", 120, 3600))) {
-    return json({ error: "slow down" }, 429);
+    return json({ error: "slow down" }, cors, 429);
   }
 
   try {
@@ -101,7 +172,7 @@ Deno.serve(async (req) => {
       return json(
         { zip, state: null, reading: null, asOf: null, lastUpdated: null,
           metrics: {}, priceHistory: [], dataStatus: "pending_migration" },
-        200, true,
+        cors, 200, true,
       );
     }
 
@@ -116,7 +187,7 @@ Deno.serve(async (req) => {
       return json(
         { zip, state: null, reading: null, asOf: null, lastUpdated: null,
           metrics: {}, priceHistory: [], dataStatus: "insufficient_data" },
-        200, true,
+        cors, 200, true,
       );
     }
     const s = rows[0];
@@ -131,8 +202,8 @@ Deno.serve(async (req) => {
     //    holds one row per month and only the current month had been loaded.
     //    The contract promised twelve; the sparkline would have been a dot.
     const hist = await rest(
-      `market_history?zip=eq.${zip}&select=as_of_month,median_list_price` +
-        `&order=as_of_month.asc&limit=12`,
+      `market_history?zip=eq.${zip}&select=as_of_month,median_list_price,` +
+        `active_dom,total_listings&order=as_of_month.asc&limit=12`,
     );
 
     return json({
@@ -141,19 +212,23 @@ Deno.serve(async (req) => {
       reading: null,          // filled by the reading engine once wired
       asOf: s.as_of_month,
       lastUpdated: s.retrieved_at,
-      metrics: {
-        medianListPrice: s.list_median_price,
-        medianListPricePerSqFt: s.list_median_ppsf,
-        daysOnMarket: s.active_dom,
-        totalListings: s.total_listings,
-        newListings: s.new_listings,
-      },
+      // EXACTLY WHAT A PAGE RENDERS, AND NOTHING ELSE.
+      //
+      // The three year-over-year figures are computed here rather than
+      // shipped as two raw levels for the client to divide, because a
+      // response carrying both endpoints of a series is a smaller dataset but
+      // still a dataset. Price-per-sqft and new-listings year-over-year are
+      // deliberately absent: no page displays them, and they were shipping in
+      // the static files purely because the record shape happened to include
+      // them.
+      metrics: yoy(hist, s),
       priceHistory: hist.map((h: Record<string, unknown>) => ({
         month: h.as_of_month,
         medianListPrice: h.median_list_price,
+        daysOnMarket: h.active_dom,
       })),
       dataStatus: "ok",
-    }, 200, true);
+    }, cors, 200, true);
   } catch (_e) {
     // Never echo the error: a REST failure message can carry column names and
     // row fragments. A page that cannot reach us should render the notice, not
@@ -161,7 +236,7 @@ Deno.serve(async (req) => {
     return json(
       { zip, state: null, reading: null, asOf: null, lastUpdated: null,
         metrics: {}, priceHistory: [], dataStatus: "pending_migration" },
-      200, false,
+      cors, 200, false,
     );
   }
 });

@@ -83,3 +83,4 @@ AUDIT_REPORT.md
 # tracked because what they describe is finished. This repo is public; a
 # roadmap to an open hole is not something to publish alongside the hole.
 LICENSE_AUDIT.md
+.build/

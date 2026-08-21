@@ -1148,6 +1148,24 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
   }
 }).catch(() => {});
 
+// The one place a vendor figure enters this page. One ZIP per request; there
+// is no list form and no wildcard, by design — see the function's own header.
+const MARKET_API = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/market-reading";
+
+// The endpoint speaks a named, stable contract; the renderers here were
+// written against the old compact record. Mapping in one place keeps the
+// change to the serving model and out of the rendering.
+// The endpoint already names its fields the way the renderers expect —
+// spy, dom, domy, inv, invy — so this is a pass-through, not a translation.
+// It exists so there is exactly one place to look when the contract moves.
+function apiMetrics(m) { return m || {}; }
+function apiHistory(rows) {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return { s: rows[0].month,
+           p: rows.map(r => r.medianListPrice),
+           d: rows.map(r => r.daysOnMarket == null ? null : r.daysOnMarket) };
+}
+
 async function lookup(zip) {
   // Never race the data fetch — a parse-time run() (the /?zip= prefill path)
   // must see the same data a hand-typed check sees. The crunch animation's
@@ -1174,6 +1192,32 @@ async function lookup(zip) {
       const r = await fetch("data/z/" + zip + ".json");
       if (r.ok) rec = await r.json();
     } catch (e) { /* network failure reads as "not covered" — see below */ }
+
+    // THE FIGURES COME FROM THE ENDPOINT, ONE ZIP AT A TIME.
+    //
+    // The static record above carries our own output — the reading word, its
+    // basis, the month — and no vendor measurement. It used to carry all of
+    // them, including a twelve-month price series, which made 5,000 files
+    // named by ZIP code into a downloadable dataset of roughly 120,000 vendor
+    // values. The vendor's licence covers displaying their statistics, not
+    // distributing them, and those are the same data served two different
+    // ways; this is the second way stopping.
+    //
+    // A failure here is not a failure of the page: the reading still renders,
+    // and the dials simply do not. That is the right degradation — the word is
+    // the product, the figures are the evidence behind it.
+    if (rec && rec.l) {
+      try {
+        const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip));
+        if (f.ok) {
+          const d = await f.json();
+          if (d && d.dataStatus === "ok") {
+            rec.m = apiMetrics(d.metrics);
+            rec.h = apiHistory(d.priceHistory);
+          }
+        }
+      } catch (e) { /* dials stay empty; the reading still shows */ }
+    }
     zipCache[zip] = rec;
     return rec;
   }

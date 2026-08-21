@@ -123,8 +123,12 @@ def load_entries(data_dir):
     # like today. It would have surfaced at Tranche 1: with records always
     # empty, the insufficient_data filter can never fire, so a released ZIP
     # with too little data to score would still be counted into its metro.
+    # The PRIVATE record set, not web/data/z. The public files carry only a
+    # state code now — repointing build_pages and forgetting this one blanked
+    # every rating on all 608 metro pages, which is what a build reading the
+    # wrong side of that split looks like.
     records = {}
-    for f in sorted(Path(data_dir, "z").glob("*.json")):
+    for f in sorted((ROOT / ".build" / "readings").glob("*.json")):
         records[f.stem] = json.loads(f.read_text())
     out = {}
     # pages_only=False: metro membership is the wider SCORED set, not the
@@ -225,15 +229,20 @@ def zip_row(z, e, places):
     else:
         lvl = e.get("l")
         m = e.get("m") or {}
+    # NO PER-ZIP FIGURES IN THIS TABLE. It used to carry a dial column per ZIP,
+    # which made one fetch of a metro page a download of many ZIPs' vendor
+    # measurements: 211 of them on /metro/new-york-ny/, and 4,699 distinct ZIPs
+    # — 94% of everything released — harvestable in 608 requests against 22,874
+    # for the per-ZIP files. Denser than the artifact we removed, and it did not
+    # look like a data file, which is why it survived every earlier pass.
+    #
+    # The rating stays: it is our own derived output, one word, and it is what
+    # the table is for. A reader who wants the figures behind it opens that
+    # ZIP's page, which is the page-display model the licence question turns on.
+    # (Two of the three columns had rendered as em-dashes since the migration
+    # anyway — months of supply and price-cut share are v1 signals the engine
+    # no longer computes.)
     cells = []
-    for key, _label, line, op, fmt, shown in DIALS:
-        v = m.get(key)
-        if v is None:
-            cells.append('<td class="num">—</td>')
-            continue
-        s = shown(v)
-        past = (s > line) if op == "gt" else (s < line)
-        cells.append(f'<td class="num{" past" if past else ""}">{esc(fmt(v))}</td>')
     return (f'<tr><td class="mono"><a href="/zip/{esc(z)}/">{esc(z)}</a></td>'
             f'<td>{esc(city)}</td>'
             f'<td><span class="tag {TAGCLASS.get(lvl, "")}">{esc(WORD.get(lvl, "—"))}</span></td>'
@@ -440,8 +449,6 @@ table.zips td.past{{color:#a33;font-weight:600}}
   past its published danger line. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
   <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
-  <th class="num">Months of supply</th><th class="num">Price vs. last year</th>
-  <th class="num">Listings cutting price</th>
   </tr></thead><tbody>{rows}</tbody></table></div>
 
   <details class="receipt">

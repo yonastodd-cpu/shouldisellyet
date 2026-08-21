@@ -40,7 +40,8 @@ from build_manifest import read_manifest
 from rescore_v2 import compact, db_rows
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "web" / "data" / "z"     # one file per ZIP; see write()
+OUT = ROOT / "web" / "data" / "z"        # PUBLIC: state code only, no figures
+BUILD = ROOT / ".build" / "readings"     # PRIVATE: full records, never deployed
 TRANCHES = Path(__file__).parent / "tranches.json"
 
 
@@ -95,8 +96,30 @@ def build(manifest, readings):
     return by_state
 
 
-def write(by_state, out=OUT):
-    """ONE FILE PER ZIP, not one per state.
+def write(by_state, out=OUT, build_out=BUILD):
+    """Two sets of records: one the site ships, one only the build sees.
+
+    THE PUBLIC SET CARRIES NO FIGURES. web/data/z/{zip}.json is {"st": "MD"}
+    for every ZIP, released or not. It exists so the client can tell a ZIP we
+    cover from one we do not, and for nothing else.
+
+    THE PRIVATE SET carries the readings and is written outside web/, so the
+    deploy cannot pick it up. build_pages reads it to render each page's own
+    figures into that page's HTML.
+
+    WHY THEY ARE SEPARATE. Per-ZIP public files fixed one problem and created a
+    larger one. They stopped a page downloading a whole state to show one ZIP —
+    but 5,000 files named by ZIP code, each holding current metrics and a
+    twelve-month history, is a dataset anyone can collect by iterating five
+    digits: roughly 60,000 asking prices and 60,000 days-on-market values,
+    downloadable without authentication. That is distribution of the vendor's
+    underlying measurements whatever the file layout, and it is what the
+    licence question turns on.
+
+    The reading is ours and stays on the page. The vendor's figures now reach a
+    reader one page at a time, from the endpoint, or not at all.
+
+    Superseded reasoning, kept because it explains the shape:
 
     A state file made the browser download every record in the state to
     display one — 382 for Maryland, 1,475 for California. While every record
@@ -114,14 +137,36 @@ def write(by_state, out=OUT):
     A missing file is a ZIP we do not cover, which is exactly what the client
     needs to know, so the prefix lookup disappears with the state files.
     """
-    out = Path(out)
-    if out.exists():
-        shutil.rmtree(out)      # stale state shards must not survive the switch
-    out.mkdir(parents=True, exist_ok=True)
+    out, build_out = Path(out), Path(build_out)
+    for d in (out, build_out):
+        if d.exists():
+            shutil.rmtree(d)    # stale records must not survive the switch
+        d.mkdir(parents=True, exist_ok=True)
     n = 0
     for records in by_state.values():
         for zip_code, record in records.items():
+            # PUBLIC: OUR output only — the reading word, its basis, the
+            # month it is as of, and the state. Not one vendor measurement.
+            #
+            # This is the licence distinction expressed in the data model.
+            # The HOLD/WATCH/ACT word is ours: we computed it, and displaying
+            # it is the use the vendor's terms clearly permit. The figures
+            # underneath it are theirs, and those now come one ZIP at a time
+            # from the endpoint or not at all. Enumerating every file here
+            # yields a list of ZIPs and what we think of them — a directory of
+            # our own opinions, which is not a redistribution of their data.
+            #
+            # Deliberately absent: m (the seven metrics), h (the twelve-month
+            # price and days-on-market series), s and r (the score and its
+            # reason triples, which carry derived vendor ratios).
+            public = {"st": record.get("st", "")}
+            for k in ("l", "b", "p"):
+                if record.get(k) is not None:
+                    public[k] = record[k]
             (out / f"{zip_code}.json").write_text(
+                json.dumps(public, separators=(",", ":")), encoding="utf-8")
+            # PRIVATE: the full record, for the build only.
+            (build_out / f"{zip_code}.json").write_text(
                 json.dumps(record, separators=(",", ":")), encoding="utf-8")
             n += 1
     return n
