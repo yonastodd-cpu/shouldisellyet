@@ -1329,8 +1329,7 @@ def cand_recap(rep, hist, cbsa_names, period):
         # 3 — the part that did not get better.
         ("It did not get better everywhere.",
          f"{flips:,} individual ZIP markets crossed from healthy into warning "
-         f"territory this month. Every one of them is named in the flip list that "
-         f"ships free with the release. A national average is not a promise about "
+         f"territory this month. A national average is not a promise about "
          f"any one street."),
         # 4 — the same-denominator metro: two raw counts, nothing to argue with.
         ("One market shows the shift with no arithmetic to argue about.",

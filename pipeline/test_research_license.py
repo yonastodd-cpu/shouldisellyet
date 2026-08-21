@@ -45,6 +45,7 @@ Run: python3 -m pytest pipeline/test_research_license.py -q
 
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -208,6 +209,61 @@ VENDOR = {"median_price", "price", "dom", "days_on_market", "inventory",
           "price_cut_share", "ppsf", "price_per_sqft", "months_supply"}
 
 
+def test_research_exports_are_aggregates_only(built):
+    """RELEASE GATE. No per-ZIP rows, no vendor-metric columns.
+
+    zip-flips-{month}.csv named every market that crossed into warning and
+    what it was rated — 2,135 rows in June, 2,403 in July — under a licence
+    granting reuse. Withdrawn 2026-08-21 for three reasons: it distributed the
+    core product output in bulk while the site serves readings a page at a
+    time; it published ratings for ZIP codes whose own pages withhold them
+    (1,946 of the 2,403 July rows); and counsel's review of the grant is
+    pending, with the aggregates the defensible subset.
+
+    An export may describe the SET — counts, shares, changes. It may not
+    enumerate its members.
+    """
+    csvs = sorted(built.glob("*/*.csv"))
+    assert csvs, "write_csvs() stopped writing release CSVs"
+    for path in csvs:
+        with path.open(encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+        header = rows[0]
+        assert "zip" not in [h.lower() for h in header], (
+            f"{path.name} has a zip column — an export that names individual "
+            "markets is a directory of them, whatever else is in the row")
+        for col in header:
+            assert col not in VENDOR, (
+                f"{path.name} ships {col!r}, a third-party vendor measurement")
+        # A five-digit value anywhere is the same thing by another route —
+        # except a CBSA code, which is also five digits and identifies a metro
+        # area, not a ZIP. Skipping that column by name rather than loosening
+        # the pattern, so a stray ZIP elsewhere still fails.
+        cbsa_at = [i for i, h in enumerate(header) if h.lower() == "cbsa"]
+        for row in rows[1:]:
+            for i, cell in enumerate(row):
+                if i in cbsa_at:
+                    continue
+                assert not re.fullmatch(r"\d{5}", cell.strip()), (
+                    f"{path.name} contains a bare ZIP code ({cell}) outside a "
+                    "zip column")
+
+
+def test_no_release_page_names_a_zip_and_its_rating(built):
+    """The same withdrawal, in page clothing. The release page rendered 55
+    per-ZIP rating rows — 47 of them for ZIPs the site was declining to rate —
+    so removing only the file would have left the contents on the page."""
+    pages = sorted((ROOT / "web" / "research").glob("*/index.html"))
+    if not pages:
+        pytest.skip("research not built")
+    for f in pages:
+        html = f.read_text(encoding="utf-8")
+        named = set(re.findall(r"/zip/(\d{5})/", html))
+        assert not named, (
+            f"{f.parent.name} names {len(named)} ZIP(s) on the release page: "
+            f"{sorted(named)[:5]}")
+
+
 def test_licence_describes_what_the_csvs_actually_contain(built):
     csvs = sorted(built.glob("*/*.csv"))
     assert csvs, "write_csvs() stopped writing release CSVs"
@@ -234,3 +290,10 @@ def test_licence_describes_what_the_csvs_actually_contain(built):
                 f"{path} enumerates only aggregates, but the folder ships "
                 "per-ZIP verdict readings. The licence must describe them or "
                 "they must stop shipping.")
+        else:
+            # They stopped shipping. The licence must stop claiming them too,
+            # or it describes a folder that no longer exists — the same defect
+            # in the other direction.
+            assert "individual ZIP markets whose" not in text, (
+                f"{path} still describes a per-ZIP list that is no longer "
+                "published")

@@ -11,7 +11,7 @@ research section):
   web/research/{yyyy-mm}/index.html  one release, seven-part structure
   web/research/{yyyy-mm}/*.png       WSI chart + state map, 1200×675,
                                      attribution and data-through baked in
-  web/research/{yyyy-mm}/*.csv       state/metro aggregates, flip list,
+  web/research/{yyyy-mm}/*.csv       state/metro aggregates,
                                      national WSI history
   web/research/{yyyy-mm}/LICENSE.txt attribution-only terms; no dataset
                                      redistribution, no competing products
@@ -854,8 +854,7 @@ def narrative(rep):
         f"A national average is not a promise about any one street, and this month "
         f"it hid a lot of movement: <b>{flips:,}</b> individual ZIP markets crossed "
         f"from healthy into warning territory even as the national share {verb}. "
-        f"Every one of them is named in the free flip list below, alongside the "
-        f"{scored:,} markets scored this month.")
+        f"out of the {scored:,} markets scored this month.")
 
     return ('<div class="narrative">'
             + "".join(f"<p>{x}</p>" for x in paras) + "</div>")
@@ -900,7 +899,10 @@ def three_bullets(rep):
         s = ts[0]
         place = f"{s['city']}, {s['state']}" if s["city"] else s["state"]
         span, clamped = streak_span(s["months"], rep)
-        out.append(f"Longest current warning streak: <b>{s['zip']}</b> ({esc(place)}) — "
+        # The place, not the ZIP: a named ZIP with its rating is the thing
+        # being withdrawn, and one of them in prose is the same act as 2,403
+        # of them in a file.
+        out.append("Longest current warning streak: <b>" + esc(place) + "</b> — "
                    + (f"at WATCH or ACT in every one of the {span} months of the "
                       f"continuous series." if clamped else
                       f"{span} consecutive months at WATCH or ACT."))
@@ -960,11 +962,21 @@ def write_csvs(rep, series, outdir):
                         key=lambda r: -r["delta"]):
             w.writerow([r["key"], r["name"], r["scored"], r["share"], r["delta"]])
 
-    with (outdir / f"zip-flips-{month}.csv").open("w", newline="") as f:
-        w = csv.writer(f, lineterminator="\n")
-        w.writerow(["zip", "city", "state", "from_verdict", "to_verdict"])
-        for r in rep["flips_to_warning"]:
-            w.writerow([r["zip"], r["city"], r["state"], r["from"], r["to"]])
+    # THE PER-ZIP FILE IS NO LONGER PUBLISHED. zip-flips-{month}.csv named
+    # every ZIP that crossed into warning and what it was rated — 2,135 rows
+    # in June, 2,403 in July — under a licence granting reuse. Three reasons,
+    # decided 2026-08-21:
+    #
+    #   (a) it distributed the core product output in bulk under an open
+    #       grant, while the site itself serves readings a page at a time;
+    #   (b) it published ratings for ZIP codes whose own pages withhold them —
+    #       1,946 of the 2,403 July rows were ZIPs the site was refusing to
+    #       rate;
+    #   (c) counsel's review of the grant is pending, and the aggregates are
+    #       the defensible subset of what it covers.
+    #
+    # Counts, shares and deltas continue: those are statements about the set,
+    # not a directory of individual markets and our opinion of each.
 
     (outdir / "LICENSE.txt").write_text(
         f"""ShouldISellYet Research Files — Terms of Use
@@ -972,8 +984,8 @@ def write_csvs(rep, series, outdir):
 
 These files contain aggregate indicators computed by ShouldISellYet from its
 own published readings: counts of ZIP codes per category, percentage shares,
-month-over-month changes, and a list of the individual ZIP markets whose
-verdict changed this month. They contain no third-party vendor data, and
+and month-over-month changes. They describe the set of markets we score, not
+the individual markets in it. They contain no third-party vendor data, and
 nothing in them may be represented as the measurements of any data vendor.
 
 You may use, quote, chart, and republish these indicators in journalism,
@@ -1021,18 +1033,6 @@ def release_page(rep, series, outdir, rel_url, gen_date=""):
             for r in rows)
 
     flips = rep["flips_to_warning"]
-    flip_rows = "".join(
-        f'<tr><td class="mono"><a href="/zip/{r["zip"]}/">{r["zip"]}</a></td>'
-        f'<td>{esc(r["city"])}, {r["state"]}</td><td>{word(r["from"])} → <b>{word(r["to"])}</b></td></tr>'
-        for r in flips[:40])
-    streak_rows = "".join(
-        f'<tr><td class="mono"><a href="/zip/{r["zip"]}/">{r["zip"]}</a></td>'
-        f'<td>{esc(r["city"])}, {r["state"]}</td>'
-        f'<td class="n">{streak_span(r["months"], rep)[0]}'
-        f'{"+" if streak_span(r["months"], rep)[1] else ""}</td>'
-        f'<td>{word(r["level"])}</td></tr>'
-        for r in rep["top_streaks"][:15])
-
     # ————— The gathering list (metro-level approach velocity) —————
     # METRO AGGREGATES ONLY — deliberately the public/press layer of the
     # velocity build. Per-ZIP velocity is the paid product and never appears
@@ -1079,7 +1079,6 @@ at the current pace.</p>"""
             ("wsi-history.csv", "WSI history"),
             (f"state-aggregates-{month}.csv", "State aggregates"),
             (f"metro-aggregates-{month}.csv", "Metro movers"),
-            (f"zip-flips-{month}.csv", "ZIP flip list"),
             ("LICENSE.txt", "License"),
         ])
 
@@ -1120,11 +1119,12 @@ instead</a> — one plain answer for your market, free.</p>
 <p class="note">Metro league tables cover Metropolitan Statistical Areas with at least 15 scored ZIPs, so small-sample noise cannot top the table.</p>
 
 <h2>Crossed the danger line this month</h2>
-<p class="lede" style="font-size:1rem">{len(flips):,} ZIP markets moved from HOLD or STRONG into WATCH or ACT.{' Showing the first 40 — the CSV has all of them.' if len(flips) > 40 else ''}</p>
-<table><thead><tr><th>ZIP</th><th>Place</th><th>Change</th></tr></thead><tbody>{flip_rows}</tbody></table>
-
-<h2>Longest current warning streaks</h2>
-<table><thead><tr><th>ZIP</th><th>Place</th><th>Months</th><th>Now</th></tr></thead><tbody>{streak_rows}</tbody></table>
+<p class="lede" style="font-size:1rem">{len(flips):,} ZIP markets moved from HOLD or STRONG into WATCH or ACT.</p>
+<p class="note">We do not publish the list. Naming individual markets and their
+ratings is the same distribution the CSV was withdrawn for — 47 of the 55 ZIPs
+this table used to show were ones the site itself was declining to rate.
+Per-ZIP data is available on request for specific stories:
+<a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
 {gathering_html}
 
 <h2>Your state, in one paragraph</h2>
@@ -1173,9 +1173,6 @@ instead</a> — one plain answer for your market, free.</p>
         dataset(f"Metro warning-sign movers — {pretty(month)}",
                 "Metro areas (≥15 scored ZIPs) deteriorating and improving fastest.",
                 f"metro-aggregates-{month}.csv", month),
-        dataset(f"ZIP verdict flips — {pretty(month)}",
-                "Every ZIP market that moved from HOLD or STRONG into WATCH or ACT this month.",
-                f"zip-flips-{month}.csv", month),
     ]}, separators=(",", ":"))
 
     (outdir / "index.html").write_text(page(

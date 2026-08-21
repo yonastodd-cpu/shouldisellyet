@@ -14,6 +14,7 @@ dated a withdrawal from the day we believed it happened and was wrong twice.
 | Tranche 1 released (1,000 ZIPs) | 2026-08-20T18:22:28Z | `pipeline/tranches.json`; `public.zip_release` |
 | Tranche 2 released (4,000 ZIPs) | 2026-08-20T19:51:54Z | same |
 | **Bulk-downloadable serving of underlying figures stopped** | **2026-08-21T01:36:16Z** | see below |
+| **Per-ZIP research file withdrawn** | **2026-08-21T03:22:25Z** | see below |
 
 ## Bulk serving of underlying figures
 
@@ -50,3 +51,34 @@ After that timestamp:
 This does not make collection impossible and is not meant to. It makes what we
 operate a page-display service rather than a distribution channel, which is
 the distinction the licence question turns on.
+
+
+## Per-ZIP research file withdrawn
+
+**Publication of the per-ZIP ratings file stopped 2026-08-21T03:22:25Z.** Affected months:
+**2026-06** (`zip-flips-2026-06.csv`, 2,135 rows) and **2026-07**
+(`zip-flips-2026-07.csv`, 2,403 rows). Both are gone from
+`https://shouldisellyet.com/research/{month}/`. The state and metro
+aggregates, the Warning-Sign Index history, the charts and the release pages
+all continue.
+
+The same rows were also rendered on each release page as HTML — 55 per-ZIP
+rating rows, 40 flips and 15 streaks. Those are withdrawn too: removing the
+file while leaving its contents on the page would have been a change of format
+rather than of practice.
+
+Decided for three reasons:
+
+- It distributed the core product output in bulk under an open grant, while
+  the site itself serves readings a page at a time.
+- It published ratings for ZIP codes whose own pages withhold them. Of the
+  2,403 rows in the July file, **1,946** were ZIPs the site was declining to
+  rate; of the 55 ZIPs named on the July release page, **47** were.
+- Counsel's review of the grant is pending, and the aggregates are the
+  defensible subset of what it covers.
+
+Journalist-facing copy now reads "Per-ZIP data is available on request for
+specific stories", which keeps the press relationship without the open bulk
+grant. `web/research/` is generated on every deploy, so the takedown is the
+generator change — there is no separate deletion step, and the files stop
+existing at the next build.

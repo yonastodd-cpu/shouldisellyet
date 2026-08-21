@@ -791,13 +791,13 @@ Index — the share of ~25,000 scored U.S. ZIP housing markets showing warning
 signs (elevated supply, falling prices, slowing sales) against fixed,
 published danger lines. For {month}: {rec['wsi']:.1f}%, {hook}.
 
-The release has state and metro league tables, the ZIPs that crossed the
-danger line this month, and free downloadable CSVs (state, metro, ZIP level)
-— free to quote and chart with attribution ("Source: ShouldISellYet
+The release has state and metro league tables, the count of ZIPs that
+crossed the danger line this month, and free downloadable CSVs (state and
+metro) — free to quote and chart with attribution ("Source: ShouldISellYet
 (shouldisellyet.com)"); redistributing them as a dataset or building a
 competing data product from them is not permitted. Local numbers for your
-coverage area are
-pre-computed on the page.
+coverage area are pre-computed on the page. Per-ZIP data is available on
+request for specific stories — just ask.
 
 {rel}
 
@@ -822,7 +822,7 @@ def research_section(rep, out_dir):
         f'<a href="{rel}{f}">{t}</a>' for f, t in [
             ("", "release page"), ("wsi-chart.png", "WSI chart"),
             ("state-map.png", "state map"), ("wsi-history.csv", "history CSV"),
-            (f"zip-flips-{month}.csv", "flip list")])
+            ])
     return (
         '<h2 style="font-size:17px;margin:26px 0 6px">📊 Research release — '
         f'{H(rep["pretty_month"])}</h2>'
