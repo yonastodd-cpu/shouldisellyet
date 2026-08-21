@@ -301,6 +301,23 @@ def cite_for(basis):
 
 CITE = CITE_V1
 
+
+def hub_cite():
+    """Attribution for a page that lists many ZIPs rather than showing one.
+
+    The 51 state hubs and the markets index carried "Data provided by Redfin,
+    a national real estate brokerage" in their footers — present tense, on
+    pages listing readings computed from RentCast, eleven days after Redfin
+    ingestion stopped. Found by the crawl gate on its first production run,
+    after three earlier rounds of checking had gone past them: a hub is
+    generated, so it has a template, but nothing in the matrix asked what its
+    FOOTER said.
+
+    A hub does not display any one ZIP's figures, so it credits the source of
+    the readings it lists rather than a per-record basis.
+    """
+    return CITE_V2 if PAUSE.RELEASED_BASIS else CITE_V1
+
 # City names come from the GeoNames US postal export (CC BY 4.0), which asks
 # for credit and accepts a link to www.geonames.org. Any one city name is a
 # bare fact, but across ~18.6k ZIP pages and 51 state hubs we reproduce a
@@ -779,7 +796,7 @@ def state_hub(st, entries, meta):
 <h1>{esc(name)} housing markets</h1>
 <p class="method">A free HOLD / WATCH / ACT verdict for each of the {len(entries)} {esc(name)} ZIP codes with enough reported sales to score. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
 {''.join(body)}
-{FOOTER.format(cite=CITE + ". " + PLACES_CITE + ". ")}
+{FOOTER.format(cite=hub_cite() + ". " + PLACES_CITE + ". ")}
 </div></body></html>"""
 
 
@@ -828,7 +845,7 @@ def markets_index(states, meta):
 <h1>Browse markets by state</h1>
 <p class="method">{total:,} U.S. ZIP codes with enough reported sales to score, each with a free verdict from public market data. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
 <ul class="statecols">{items}</ul>
-{FOOTER.format(cite=CITE + ". ")}
+{FOOTER.format(cite=hub_cite() + ". ")}
 </div></body></html>"""
 
 
@@ -927,7 +944,7 @@ each release as LICENSE.txt.
 
 ## Data attribution
 
-Market data: Data provided by Redfin, a national real estate brokerage{rdc} · FHFA ZIP-level house price
+Market data: Market statistics from RentCast{rdc} · FHFA ZIP-level house price
 index (benchmark) · Freddie Mac PMMS 30-yr weekly average (mortgage rate).
 Place names from GeoNames.org (CC BY 4.0). No source sponsors, endorses, or
 partners with this site.

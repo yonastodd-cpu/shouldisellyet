@@ -52,9 +52,15 @@ GREEN = (46, 158, 91)
 AMBER = (200, 137, 31)
 RED = (214, 69, 69)
 
+# HISTORICAL, NOT CURRENT. The Warning-Sign Index's pre-2026 series really is
+# reconstructed from Redfin's archived Data Center tracker, so this page has to
+# say so — dropping the attribution to make a vendor grep pass would trade a
+# disclosure problem for a worse one. What it must not do is read as a present
+# tense credit, which is what "Data provided by Redfin" said on four research
+# pages while the readings came from RentCast.
 CITE = RDC.credit(
-        'Data provided by <a href="https://www.redfin.com" target="_blank" '
-        'rel="noopener">Redfin</a>, a national real estate brokerage · '
+        'Pre-2026 history restated from <a href="https://www.redfin.com" '
+        'target="_blank" rel="noopener">Redfin</a>\u2019s archived tracker · '
         'Listing data from Realtor.com&reg; Economic Research · Place names '
         'from <a href="https://www.geonames.org" target="_blank" '
         'rel="noopener">GeoNames</a> (CC BY 4.0)')

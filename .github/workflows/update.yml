@@ -465,6 +465,19 @@ jobs:
           python3 pipeline/provision_readings.py --no-readings
           ./scripts/smoke-released.sh
 
+      - name: Crawl gate — every published URL
+        run: |
+          # Scope is derived from the built tree and the sitemaps, so this
+          # cannot go stale the way a hand-kept page list did: the two static
+          # marketing pages that kept serving withdrawn figures for eleven days
+          # were missed because nothing enumerated URLs, only templates.
+          python3 pipeline/build_pages.py >/dev/null
+          python3 pipeline/build_metro.py >/dev/null
+          python3 pipeline/build_research.py >/dev/null
+          python3 -m http.server 5177 --directory web >/dev/null 2>&1 &
+          sleep 2
+          node scripts/crawl-gate.mjs http://localhost:5177 --sample 60
+
   deploy:
     needs: refresh
     if: needs.refresh.outputs.deploy == 'true'

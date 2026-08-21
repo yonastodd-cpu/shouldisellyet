@@ -1,0 +1,56 @@
+# Daily absence gate against PRODUCTION.
+#
+# The build-time gate proves what we built. This proves what is being served,
+# and the difference is not academic: the sample-report and press-page misses
+# were production-state misses. Both were committed files that no generator
+# touched, so every pipeline check passed while the deployed site served a
+# WATCH rating for a named ZIP and the national verdict mix from the withdrawn
+# dataset. Eleven days.
+#
+# Scope is derived from the sitemaps plus a filesystem walk, so a page cannot
+# be forgotten here — forgetting to create it would remove it from the site.
+
+name: Crawl production
+
+on:
+  schedule:
+    - cron: "0 11 * * *"      # daily, 11:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Crawl the live site
+        id: crawl
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+          node scripts/crawl-gate.mjs https://shouldisellyet.com --sample 80 --list \
+            | tee /tmp/crawl.log
+        # The URL list comes from the checkout's sitemaps; production serves the
+        # same ones. A drift between them is itself worth failing on.
+
+      - name: Open an issue on any finding
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'The daily production crawl found something.\n\n';
+            try { body += '```\n' + fs.readFileSync('/tmp/crawl.log','utf8').slice(-6000) + '\n```'; }
+            catch (e) { body += '(no log captured)'; }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `Production crawl gate failed — ${new Date().toISOString().slice(0,10)}`,
+              body,
+              labels: ['data-rights'],
+            });
