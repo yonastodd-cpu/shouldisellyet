@@ -7,7 +7,7 @@
 <script src="/track.js" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Press — ShouldISellYet</title>
-<meta name="description" content="What ShouldISellYet is, how its HOLD/WATCH/ACT verdicts are computed from three public housing signals with disclosed thresholds, and how to reach us.">
+<meta name="description" content="What ShouldISellYet is, how its HOLD/WATCH/ACT readings are computed from three signals in licensed market statistics with disclosed thresholds, and how to reach us.">
 <link rel="canonical" href="https://shouldisellyet.com/press.html">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://shouldisellyet.com/og/default.png">
@@ -16,7 +16,7 @@
 <meta name="twitter:image" content="https://shouldisellyet.com/og/default.png">
 
 <meta property="og:title" content="Press — ShouldISellYet">
-<meta property="og:description" content="How the verdicts are computed: three public signals, disclosed danger lines, and a verdict that often says don't sell.">
+<meta property="og:description" content="How the readings are computed: three signals from licensed market statistics, disclosed danger lines, and a reading that often says don't sell.">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
@@ -50,9 +50,10 @@ p{margin:0 0 14px}
 .dial .line{font-size:.875rem;color:var(--faint-ink)}
 .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.8125rem;color:var(--faint-ink);margin-top:16px;padding-top:14px;border-top:1px solid var(--hairline2)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
-.mix{display:flex;height:30px;border-radius:7px;overflow:hidden;margin:14px 0 8px;border:1px solid var(--hairline)}
-.mix span{display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:650;color:#fff}
 .pull{border-left:3px solid var(--navy);background:#f4f6fa;border-radius:0 10px 10px 0;padding:16px 20px;margin:16px 0}
+.counts{border:1px solid var(--hairline);border-radius:12px;background:#fff;padding:20px 24px;margin:16px 0 6px}
+.counts p:last-child{margin-bottom:0}
+.asof{font-size:.8125rem;color:var(--faint-ink)}
 .contact{border:1px solid var(--hairline);border-radius:12px;background:#fff;padding:20px 24px;margin-top:10px}
 footer{border-top:1px solid var(--hairline);margin-top:36px;padding-top:16px;font-size:.875rem;color:var(--faint-ink)}
 footer a{color:var(--faint-ink)}
@@ -83,26 +84,44 @@ footer a{color:var(--faint-ink)}
 <div class="wrap">
   <div class="k" style="margin-top:24px">PRESS &amp; MEDIA</div>
   <h1>What this is</h1>
-  <p class="lede">ShouldISellYet.com answers one question for homeowners: is the market where my home sits turning against me? Enter a ZIP code and you get a plain-English verdict — <b>HOLD</b>, <b>WATCH</b>, or <b>ACT</b> — computed from public housing-market data, free, with no account. Paid products add the homeowner's own numbers (equity, walk-away proceeds, lock-in cost) and monthly alerts when their market shifts. It is operated by Yayday LLC and is not a brokerage; it does not list, sell, or value individual homes.</p>
+  <p class="lede">ShouldISellYet.com answers one question for homeowners: is the market where my home sits turning against me? Enter a ZIP code and you get a plain-English reading — <b>HOLD</b>, <b>WATCH</b>, or <b>ACT</b> — computed from licensed market statistics, free, with no account. Paid products add the homeowner's own numbers (equity, walk-away proceeds, lock-in cost) and monthly alerts when their market shifts. It is operated by Yayday LLC and is not a brokerage; it does not list, sell, or value individual homes.</p>
 
-  <h2>How the verdict is computed</h2>
-  <p>Three public signals, each with a danger line calibrated against active-listing data. The thresholds are published, not proprietary — the point is that anyone can check our work.</p>
-  <p>You can check it on specific markets: the <a href="/research/methodology.html">methodology page</a> carries recomputed case studies — every date and lead time re-derived from the source data under today's published thresholds, including one market that crossed a danger line and then recovered. We publish the miss alongside the hits on purpose.</p>
+  <h2>How much of the country is live</h2>
+  <!-- COUNTS HAVE ONE SOURCE OF TRUTH and this page is not it. The generated
+       markets index at /zip/ computes these from the page manifest and the
+       release allowlist on every build; the two numbers below are a hand copy
+       taken on the date stamped beneath them. That is a drift risk of exactly
+       the kind that put a stale backtest ladder on this page for months, so
+       the figures are dated in the copy rather than stated as a running total,
+       and the reader is pointed at the generated index. If this page ever
+       becomes generated, render these from the same helper /zip/ uses. -->
+  <div class="counts">
+    <p><b>Live readings for 5,000 of 22,874 U.S. ZIP codes.</b> Every state and the District of Columbia has at least one. The rest are being rebuilt: those pages show a rebuild notice rather than a rating, because a page with no current reading shows no reading at all.</p>
+    <p>Readings returned on <b>20 August 2026</b>. Ingestion from our previous market-data vendor stopped on 14 August 2026, and the engine was rebuilt on a licensed market-statistics API before any reading went back up.</p>
+    <p class="asof">Figures on this page were taken on 22 August 2026. The running count is on the <a href="/zip/">markets index</a>, which computes it on every build. Each ZIP page shows the month its own reading runs through; a page with no reading shows no date.</p>
+  </div>
+
+  <h2>How a reading is computed</h2>
+  <p>Three signals, each drawn from licensed market statistics about homes currently listed for sale, and each with a published danger line. The thresholds are disclosed, not proprietary — the point is that anyone can check our work. The full method, including the two signals the rebuilt engine lost, is on the <a href="/methodology.html">methodology page</a>.</p>
 
   <!-- THREE signals, not four. Months of supply and price-cut share both need
        a closed-sale count that active-listing statistics cannot see, so the
        rebuilt engine drops them; the two volume lines were recalibrated
        because the ported values fired on under 1% of markets on the new basis.
        These numbers are pipeline/verdict_v2.SPEC — a test fails if they
-       disagree. See docs/migration/reading-methodology-v2.md. -->
-  <div class="dials" role="img" aria-label="The three signals and their danger lines: price trend at minus 2 percent year over year, time to sell at plus 10 percent year over year, and homes for sale at plus 30 percent year over year.">
+       disagree. See docs/migration/reading-methodology-v2.md.
+       The middle dial was labelled TIME TO SELL until 2026-08-22. It measures
+       time on market across listings that have NOT sold, which methodology
+       section 2 says runs longer than time-to-contract; the old label named a
+       quantity the data cannot see. -->
+  <div class="dials" role="img" aria-label="The three signals and their danger lines: price trend at minus 2 percent year over year, time on market at plus 10 percent year over year, and homes for sale at plus 30 percent year over year.">
     <div class="dial">
       <span class="nm">PRICES VS. LAST YEAR</span>
       <span class="track"><span class="th" style="left:58%"></span><span class="lab" style="left:58%">danger line</span></span>
       <span class="line">below <b>−2% y/y</b></span>
     </div>
     <div class="dial">
-      <span class="nm">TIME TO SELL</span>
+      <span class="nm">TIME ON MARKET</span>
       <span class="track"><span class="th" style="left:60%"></span></span>
       <span class="line">up <b>10% y/y</b></span>
     </div>
@@ -114,46 +133,50 @@ footer a{color:var(--faint-ink)}
     <div class="legend">
       <span><i style="background:var(--green)"></i>HOLD — no lines crossed</span>
       <span><i style="background:var(--amber)"></i>WATCH — early signals moving</span>
-      <span><i style="background:var(--red)"></i>ACT — enough lines crossed to reach the top band</span>
+      <span><i style="background:var(--red)"></i>ACT — enough points to reach the top band</span>
     </div>
   </div>
-  <p style="font-size:.875rem;color:var(--faint-ink)">The same signals are read in the opposite direction too: a market with zero warnings and at least three strength signals reads as a strong seller's market. Every dial on the site discloses its source counts, its formula in words, and why its line sits where it does.</p>
+  <p style="font-size:.875rem;color:var(--faint-ink)">Crossing a line scores points, and the points decide the word. A steeply falling price trend scores enough on its own to reach ACT, so an ACT does not imply that every line is crossed. Prices are measured on what sellers are asking; time on market is measured across listings that are still for sale, which is not the same thing as how long a sale takes. Every dial on the site discloses its source counts, its formula in words, and why its line sits where it does.</p>
+  <p style="font-size:.875rem;color:var(--faint-ink)">The same signals are read in the opposite direction too: a market with no lines crossed and all three strength conditions — asking prices up <b>+5%</b> or more, time on market down <b>−20%</b> or more, homes for sale down <b>−15%</b> or more — reads as a strong seller's market. The published vocabulary is three words, so that lands in the <b>ACT</b> band, qualified as a seller's market rather than as a warning.</p>
 
-  <h2>The verdict often says don't sell — by design</h2>
+  <h2>The reading often says don't sell — by design</h2>
   <div class="pull">
-    <p style="margin:0">A tool built to generate real-estate leads would find urgency everywhere. Ours doesn't — most readings tell a homeowner to do nothing, which is the product working correctly. The current distribution is not published while readings are being rebuilt on a new data engine; it will be restated from the new source rather than carried over from the old one.</p>
+    <p style="margin:0">A tool built to generate real-estate leads would find urgency everywhere. Ours doesn't: most live readings currently come back HOLD, which is the product working correctly. We are not publishing a national breakdown by rating on this page while coverage is still being rebuilt — a share computed over the first tranche of live ZIP codes is not a share of the country, and would be quoted as one.</p>
   </div>
-  
-  <!-- These numbers RENDER from /data/backtest.json (written by
-       pipeline/backtest_thresholds.py). Do not retype them here: they were
-       hand-typed prose until 2026-08-09 and had silently drifted from the
-       computed truth. pipeline/test_no_handwritten_claims.py fails the build
-       if any figure on this page disagrees with that file; `git log -S"ZIP-years"
-       -- web/press.html` has the full account. The no-JS fallback below is
-       generated from the same file and must be regenerated with it.
-       Superseded figures are deliberately NOT quoted here — this page is
-       written to be crawled and cited, and a wrong number in the source is
-       still a wrong number an answer engine can lift. -->
-  <p id="backtest-ladder">We also test the thresholds rather than assert them, replaying year-end signal snapshots against the federal government's own annual house-price index for the following year. The published ladder is withdrawn while the reading engine is rebuilt: it measured the previous engine's thresholds, two of which have since been recalibrated, so quoting it now would describe a formula the site no longer runs. It will be recomputed and republished on the new basis.</p>
+
+  <!-- THE LADDER STAYS OFF THIS PAGE. It was hand-typed prose until 2026-08-09,
+       drifted from the computed truth, and published a HOLD rate that flattered
+       us by a point; pipeline/test_no_handwritten_claims.py exists because of
+       it and pipeline/test_pause_leaks.py now forbids the figures here outright.
+       Beyond the drift, the arithmetic is v1's: those results scored the
+       five-signal engine, and two of the three lines the site runs today were
+       recalibrated in August 2026. Superseded figures are deliberately NOT
+       quoted, not even to disown them — this page is written to be crawled and
+       cited, and a wrong number in the source is still a wrong number an answer
+       engine can lift. -->
+  <p id="backtest-ladder">We test the danger lines rather than assert them, replaying year-end signal snapshots against the federal government's own annual house-price index for the following year. <b>The published ladder measured the previous five-signal engine, and it validates that engine — not the one now running.</b> Two of today's three lines were recalibrated in August 2026 for a different kind of measurement, so quoting the old results as evidence for a current reading would describe a formula the site does not run. The figures are therefore withdrawn from this page rather than restated. A backtest of the three-signal engine will be computed and published on the same basis, and it will be labelled as its own.</p>
 
   <h2>Where the data comes from</h2>
-  <p>Readings are computed from public and licensed housing-market data. The site is between data sources: ingestion from its previous market-data vendor stopped on 14 August 2026, and readings are being rebuilt on a licensed market-statistics API. Mortgage rates come from Freddie Mac's Primary Mortgage Market Survey; an official price benchmark uses the Federal Housing Finance Agency's ZIP-level index; place names come from GeoNames. No source sponsors, endorses, or partners with this site, and no source has any influence over a reading.</p>
-  <p>Data refreshes automatically when new figures publish, and every page shows the month its data runs through.</p>
+  <p>A reading is computed from <b>licensed market statistics</b> — ZIP-level data about homes currently listed for sale, bought under a commercial licence. It is not public data, and we would rather say that plainly than let a looser word imply a provenance we do not have. The provider is named plainly on the <a href="/methodology.html">methodology page</a>; we do not use its name as a marketing credential. This is the only source that feeds a reading.</p>
+  <p>Three further sources support the product without feeding any reading: the <b>Federal Housing Finance Agency</b> house price index (U.S. Government, public domain), used to test our danger lines and as an independent price benchmark; <b>U.S. Census Bureau</b> ZCTA and CBSA files (public domain), used to map ZIP codes to metropolitan areas; and the <b>Freddie Mac</b> Primary Mortgage Market Survey, which supplies the mortgage-rate context on paid reports. Place names come from <b>GeoNames</b> (CC BY 4.0). Those four are genuinely public; the market statistics are not.</p>
+  <p>We previously showed an independent cross-check against Realtor.com listing data. <b>That cross-check is not currently running.</b> It compared against our former vendor's figures and has not been rebuilt for the new source. It is not displayed anywhere on the site, and nothing on the site should be read as one.</p>
+  <p>No source sponsors, endorses, or partners with this site, and no source has any influence over a reading.</p>
+  <p>Freshness varies by ZIP code. Market data is licensed per ZIP and costs money to refresh, so the busiest ZIP codes refresh most often and the rest less often; the cadence on the new source is not settled yet, and we would rather not publish a schedule we cannot keep. Every page that shows a reading shows the month that reading's own data runs through.</p>
 
   <h2>Free to cite: ShouldISellYet Research</h2>
-  <p>Every month we publish the <b><a href="/research/">Warning-Sign Index</a></b> — the share of scored U.S. ZIP markets showing warning signs, computed from the same danger lines described above and charted back to 2012. Each release carries national, state and metro numbers, the ZIPs that crossed the danger line that month, and a one-paragraph local angle for every state.</p>
-  <p><b>The data is downloadable and free to quote, chart, and cite</b> ("Source: ShouldISellYet (shouldisellyet.com)") — state and metro CSVs, plus the full index history. Per-ZIP data is available on request for specific stories. Charts are published at 1200&times;675 with attribution already baked in, so they can run as-is. Redistributing the files as a dataset, or using them to build a competing data product or service, is not permitted; the full terms ship with each release as LICENSE.txt. Definitions, the FHFA backtest, and a versioned changelog live on the <a href="/research/methodology.html">methodology page</a>; the index definition is fixed, and any change to it is versioned and restated rather than applied silently.</p>
+  <p>Every month we publish the <b><a href="/research/">Warning-Sign Index</a></b> — the share of scored U.S. ZIP markets showing warning signs, computed from fixed, published danger lines and charted back to 2012. Each release carries national, state and metro numbers, the ZIPs that crossed the danger line that month, and a one-paragraph local angle for every state. The index runs on a deliberately frozen basis so the series stays comparable month to month, which means it is <i>not</i> the same computation as a current ZIP reading; the methodology page documents the difference and the seam where the data source changed.</p>
+  <p><b>The data is downloadable and free to quote, chart, and cite</b> ("Source: ShouldISellYet (shouldisellyet.com)") — state and metro CSVs, plus the full index history. Per-ZIP data is available on request for specific stories. Charts are published at 1200&times;675 with attribution already baked in, so they can run as-is. Redistributing the files as a dataset, or using them to build a competing data product or service, is not permitted; the full terms ship with each release as LICENSE.txt. Definitions, the FHFA backtest, restatement rules, and a versioned changelog live on the <a href="/research/methodology.html">research methodology page</a>; the index definition is fixed, and any change to it is versioned and restated rather than applied silently.</p>
 
   <h2>Media contact</h2>
   <div class="contact">
     <p style="margin:0 0 6px"><b>press@shouldisellyet.com</b></p>
-    <p style="margin:0;font-size:.9375rem;color:var(--muted)">Happy to walk through the methodology, share the threshold backtest, or pull the verdict history for a specific market or region on request — custom cuts for coverage are free.</p>
+    <p style="margin:0;font-size:.9375rem;color:var(--muted)">Happy to walk through the methodology, explain exactly what the licensed statistics do and do not measure, or pull the reading history for a specific market or region on request — custom cuts for coverage are free.</p>
   </div>
 
   <footer>
-    <a href="/">Home</a> · <a href="/research/">Research</a> · <a href="/zip/">Browse markets by state</a> · <a href="/report.html">Sample report</a> ·
+    <a href="/">Home</a> · <a href="/methodology.html">Methodology</a> · <a href="/research/">Research</a> · <a href="/zip/">Browse markets by state</a> · <a href="/report.html">Sample report</a> ·
     <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
-    <div class="disc">Verdicts are generated from public housing-market data and are for general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
+    <div class="disc">Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
   </footer>
 </div>
 </body>

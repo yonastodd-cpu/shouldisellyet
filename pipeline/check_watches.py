@@ -161,7 +161,7 @@ def render_watch_email(metric, direction, threshold, current_value, zip_code, to
   <h1 style="font-size:24px;margin:6px 0 4px">{whose} {label} just {verb} {fmt_metric(metric, threshold)}</h1>
   <p style="font-size:14px;color:#667085">You asked to hear about this. Current reading: <b>{fmt_metric(metric, current_value)}</b>.</p>
   <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your report →</a></p>
-  <p style="font-size:12px;color:#98a2b3;line-height:1.5">This is your own number, computed from the inputs you saved and the latest public market data — not an appraisal. Not financial advice. Turn this alert off anytime from your report page.</p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5">This is your own number, computed from the inputs you saved and the latest licensed market statistics — not an appraisal. Not financial advice. Turn this alert off anytime from your report page.</p>
 </div>"""
     return subject, html
 

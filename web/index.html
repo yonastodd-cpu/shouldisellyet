@@ -25,10 +25,10 @@
 {"@type":"Organization","@id":"https://shouldisellyet.com/#org","name":"ShouldISellYet","url":"https://shouldisellyet.com/","legalName":"Yayday LLC","description":"Housing-market early-warning reports for homeowners. Not a brokerage.","logo":{"@type":"ImageObject","url":"https://shouldisellyet.com/apple-touch-icon.png"}},
 {"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — Know before your home equity is at risk","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
 {"@type":"FAQPage","@id":"https://shouldisellyet.com/#faq","mainEntity":[
-{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three public signals for your ZIP code, all computed from homes currently listed for sale: the year-over-year asking-price trend, how long listings take to sell, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are being rebuilt on a new data source and are not being shown right now."}},
-{"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means enough danger lines are crossed to reach the top band — one line alone can be enough when prices are falling fast. Most ZIP codes read HOLD — the reading often says don't sell."}},
+{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three market signals for your ZIP code, all computed from licensed statistics on homes currently listed for sale: the year-over-year asking-price trend, how long listed homes have been on the market, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are live for 5,000 ZIP codes today; the remaining standing pages are being rebuilt."}},
+{"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means it is worth doing something now: usually because enough danger lines are crossed to reach the top band — one line alone can be enough when prices are falling fast — and occasionally for the opposite reason, when buyers are competing hard and conditions favor a seller. The reading always says which. Most ZIP codes read HOLD — the reading often says don't sell."}},
 {"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all three market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
-{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. The site is between data sources: ingestion from its previous vendor stopped on 14 August 2026 and readings are being rebuilt."}}]}]}</script>
+{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. Readings have been live on this basis since 20 August 2026 for 5,000 of the 22,874 U.S. ZIP codes with a standing page; the rest are being rebuilt."}}]}]}</script>
 
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -582,13 +582,8 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
             transition:color .12s ease}
 .foot-nav a:hover{color:var(--navy-dark);text-decoration-thickness:2px}
 .foot-nav a:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:2px}
-/* Admin is operator plumbing: last in the row and quieter in both colour and
-   weight, but it keeps the underline so it still reads as a link. --faint-ink
-   rather than the --fainter it used before, which is decorative-only (see
-   :root). The selector must stay `.foot-nav a.foot-admin` (0,2,1) — a bare
-   `.foot-admin` (0,1,0) loses to `.foot-nav a` and renders identically. */
-.foot-nav a.foot-admin{color:var(--faint-ink);font-weight:400}
-.foot-nav a.foot-admin:hover{color:var(--ink);text-decoration-thickness:1px}
+/* .foot-admin is gone with the Admin link it styled — see the footer markup.
+   Nothing else used it. */
 /* --hairline2 is the lighter of the two rules, keeping this subordinate to the
    border-top that already separates footer{} from the section above it. */
 .foot-legal{margin-top:18px;padding-top:20px;border-top:1px solid var(--hairline2)}
@@ -759,7 +754,12 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   </svg>
   <div class="hero-in">
   <div style="display:flex;flex-direction:column;gap:22px">
-    <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON THE LATEST PUBLIC HOUSING DATA</div>
+    <!-- The badge carries no date. It used to be rewritten at runtime to
+         "MARKET DATA THROUGH JUNE 2026" from meta.json, which is frozen at
+         the last v1 run — a stale month stamped on the front door beside
+         live August readings. A date belongs beside a reading, and the
+         result card renders one from the reading's own as-of month. -->
+    <div class="eyebrow" id="eyebrow">FREE ZIP CHECK · BUILT ON LICENSED MARKET DATA</div>
     <h1>We monitor your local housing market for signs of change.</h1>
     <p class="sub m-hide">Homes sitting longer. Inventory building. Sellers cutting prices. These signals can start moving before home prices do.</p>
     <p class="sub">We track them for your ZIP code and turn the data into one simple reading: <b class="rate rate-g">HOLD</b>, <b class="rate rate-a">WATCH</b>, or <b class="rate rate-r">ACT</b>.</p>
@@ -774,9 +774,20 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
       </div>
       <div class="fineprint">Free — no account. Your reading in about 10 seconds.</div>
     </div>
-    <!-- Scale line. Doubles as the map's caption — the map below carries no
-         caption of its own, per the brief. Count is computed from meta.json. -->
-    <p class="scale-line"><b id="scale-count">33,000+ ZIP codes</b>, re-scored whenever new data is released. Yours is one of them.</p>
+    <!-- Scale line. ONE SOURCE OF TRUTH for both figures:
+           22,874 = rows in pipeline/data/page_manifest.csv with page=1, the
+                    committed URL contract — every ZIP with a standing page.
+            5,000 = of those, the ZIPs a reader can actually see a reading
+                    for: in a released tranche (pipeline/tranches.json) AND
+                    carrying the released basis (data_pause.shows_data).
+         It used to read "33,000+ ZIP codes", computed by summing
+         meta.national.counts — Redfin-derived, frozen at the last v1 run, and
+         a count of SCORED ZIPs rather than of readings anyone can see. Both
+         halves were wrong: the number and what it claimed.
+         Typed here because nothing ships these counts to the browser yet.
+         When a generator emits them (pipeline/coverage.py is the proposed
+         home), render them instead of typing them. -->
+    <p class="scale-line"><b>Live readings for 5,000 of 22,874 U.S. ZIP codes.</b> The rest are being rebuilt.</p>
 
     <div class="card crunch hidden" id="crunch">
       <div class="crunch-head">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
@@ -866,8 +877,12 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </div>
 
 <div class="card waitcard" id="waitcard">
-      <div class="t">We're not scoring <span id="wl-zip"></span> yet</div>
-      <p>Smaller markets report too few sales for a reliable reading. Leave your email and we'll tell you the moment your ZIP goes live.</p>
+      <div class="t">We don't cover <span id="wl-zip"></span> yet</div>
+      <!-- "Smaller markets report too few sales for a reliable reading" was
+           false on the current engine: it reads statistics on homes currently
+           LISTED, and never sees a closed sale. What is true is that some ZIPs
+           carry too little listing activity to measure. -->
+      <p>Some ZIPs carry too few active listings to measure reliably. Leave your email and we'll tell you the moment yours goes live.</p>
       <form onsubmit="return joinWaitlist(event)">
         <input type="email" id="wl-email" placeholder="you@email.com" required>
         <!-- Honeypot: no human sees or fills this. Off-screen (not
@@ -905,7 +920,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <h2 class="h2-cap">See changes before they become obvious.</h2>
   <div class="grid56">
     <div>
-      <p class="body-p m-hide">Most homeowners don't have an easy way to see when their local housing market is weakening. The data is public, but it's scattered across reports built largely for real estate professionals, investors, and lenders.</p>
+      <p class="body-p m-hide">Most homeowners don't have an easy way to see when their local housing market is weakening. The data exists, but it sits behind licensed feeds and reports built largely for real estate professionals, investors, and lenders.</p>
       <p class="body-p m-hide">That matters because important changes can begin before falling prices make them obvious.</p>
       <p class="body-p"><b>As an example: Boise, Idaho, November 2021.</b> Homes were taking longer to sell even as prices remained near record highs. The market still looked strong on the surface. Underneath, the warning signs were building.</p>
       <!-- The figure and the vendor's name are withdrawn with everything else.
@@ -1006,23 +1021,26 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
     <a href="refunds.html">Refunds &amp; cancellation</a>
-    <!-- The Admin link is a convenience, not a secret. admin.html is static
-         HTML on a public host, so its URL was never the boundary — every read
-         it does goes through an allowlist-checked RPC, and the anon key gets
-         "permission denied" on all of them. rel="nofollow" keeps it out of
-         crawl budget (the page is noindex and absent from the sitemap
-         anyway); it sits last and, via .foot-admin, one step quieter in
-         colour and weight than the visitor links, so it reads as operator
-         plumbing rather than something a visitor should click. -->
-    <a class="foot-admin" href="admin.html" rel="nofollow">Admin</a>
+    <!-- NO ADMIN LINK. It used to sit here, quietly, on the argument that
+         admin.html is static HTML on a public host so its URL was never the
+         boundary (every read goes through an allowlist-checked RPC; the anon
+         key gets "permission denied"). That argument is still true and it is
+         still not a reason to advertise the operator console to every
+         visitor. Operators can type the URL. Removed 2026-08-22; the page
+         itself is unchanged and remains noindex,nofollow and absent from the
+         sitemap. -->
   </nav>
   <div class="foot-legal">
   <div class="foot-copy">© 2026 ShouldISellYet.com · operated by Yayday LLC</div>
   <div class="disclaimer">Your information is never sold, and we never pass your details to anyone without you asking us to.</div>
   <!-- No source citation here on purpose. The page carries exactly ONE, in
-       the results stamp beside the data it credits (see citeHTML). A second
+       the results stamp beside the data it describes (see run()). A second
        copy down here would be the duplicate the attribution rule forbids. -->
-  <div class="disclaimer" id="attribution">Readings are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
+  <!-- "public housing-market data" was a misstatement of provenance: the
+       market statistics behind a reading are a licensed commercial feed, not
+       public data. (Genuinely public inputs — the FHFA index, ACS, GeoNames —
+       are cited where they are used and are not covered by this sentence.) -->
+  <div class="disclaimer" id="attribution">Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions.</div>
   </div>
 </footer>
 </div>
@@ -1124,27 +1142,18 @@ const DATA_READY = fetch("data/index.json").then(r => r.ok ? r.json() : null).th
 }).then(m => {
   if (m) {
     META = m;
-    // "MARKET DATA THROUGH JUNE 2026" — the month spelled, not the period key.
-    const MN = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
-                "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-    const pm = String(m.period || "").split("-");
-    const label = (pm.length === 2 && MN[Number(pm[1]) - 1])
-      ? MN[Number(pm[1]) - 1] + " " + pm[0]
-      : String(m.period || "").toUpperCase();
-    document.getElementById("eyebrow").textContent =
-      "FREE ZIP CHECK · MARKET DATA THROUGH " + label;
-    // Same counted total as the ticker — one source, so the hero and the feed
-    // can never quote different sizes of the same product.
+    // THE HERO BADGE NO LONGER TAKES A DATE FROM META. meta.json is frozen at
+    // the last v1 run (period 2026-06), so this stamped "MARKET DATA THROUGH
+    // JUNE 2026" across the front door while the readings underneath it were
+    // August. A date now appears in exactly one place — the result card —
+    // and it comes from the reading's own as-of month.
     renderProofLine();
-    renderScale();
     renderChangedStat();
     renderScorecardLine();
     renderFreshLine();
-    const n = scoredZips();
-    if (n >= 1000) {
-      document.getElementById("map-label").textContent =
-        "TRACKING " + Math.floor(n / 1000).toLocaleString("en-US") + ",000+ ZIP MARKETS";
-    }
+    // The ticker label is static too. It used to read "TRACKING 33,000+ ZIP
+    // MARKETS", from the same withdrawn Redfin national counts that produced
+    // the old "33,000+" hero line.
   }
 }).catch(() => {});
 
@@ -1253,11 +1262,22 @@ async function cityFor(zip) {
 
 // ————— Verdict presentation —————
 const $ = id => document.getElementById(id);
-// Links the brand name inside the pipeline's plain-text citation. The exact
-// wording lives in the data (meta.attribution); this only adds the required
-// redfin.com link. See docs/ATTRIBUTION.md.
-function citeHTML(t){
-  return (t || "").replace("Redfin", '<a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>');
+// citeHTML() is gone. It linked the brand name inside meta.attribution ("Data
+// provided by Redfin, a national real estate brokerage") — a vendor whose data
+// was withdrawn, on a page that no longer renders a figure of theirs. Nothing
+// on this page credits a market-data vendor by name now; see the stamp in
+// run() for why. docs/ATTRIBUTION.md still lists this function and needs the
+// same pass.
+//
+// "2026-08" → "August 2026". The reading carries its own as-of month; this
+// only spells it. Mirrors pretty_month() in pipeline/build_pages.py.
+function prettyMonth(p) {
+  const M = ["January","February","March","April","May","June","July",
+             "August","September","October","November","December"];
+  const s = String(p || "");
+  return (s.length === 7 && M[Number(s.slice(5, 7)) - 1])
+    ? M[Number(s.slice(5, 7)) - 1] + " " + s.slice(0, 4)
+    : s;
 }
 
 // `hex` paints the dot (a graphic — no contrast floor). `ink` paints the
@@ -1275,13 +1295,16 @@ const KINDS = {
   red:    { key:"act",   tag:"ACT",   col:"var(--red)",   hex:"#d64545", ink:"#c02f2f", soft:"#fbe9e9", line:"#ecc3c3",
             headline:"Danger lines crossed in {zip}",
             sub:"At least one signal is past the thresholds that preceded past downturns. Sellers here are losing pricing power. If selling was already on your mind, make a plan now — not next spring." },
-  // tag is now only the FALLBACK for when verdict-copy.js fails to load; the
-  // badge and the share text both prefer VERDICT_COPY.word. It still has to be
-  // right, because a fallback that says ACT for a seller's market is the exact
-  // bug this table caused when it was the primary source.
-  strong: { key:"strong", tag:"STRONG",  col:"var(--navy)",  hex:"#1f3a5f", ink:"#1f3a5f", soft:"#e8eef7", line:"#c3d2e8",
-            headline:"Strong seller's market",
-            sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now." }
+  // THE READING WORDS ARE HOLD / WATCH / ACT — the three the methodology
+  // documents and the only three a reader is ever shown. "strong" is a fourth
+  // LEVEL in the engine, not a fourth word: verdict_v2.LEVELS maps it to ACT,
+  // its action class (do something now — because conditions favour you, not
+  // because they are turning against you). Rendering it as a fourth word
+  // published a rating the methodology does not define, so the qualifier moves
+  // into the headline and the sentence under it, where it belongs.
+  strong: { key:"strong", tag:"ACT",  col:"var(--navy)",  hex:"#1f3a5f", ink:"#1f3a5f", soft:"#e8eef7", line:"#c3d2e8",
+            headline:"Seller's market in {zip} — act while it lasts",
+            sub:"Buyers are competing for homes in {zip}. This is an ACT for the opposite reason to a warning: nothing here is turning against you, and if selling was already on your mind, conditions favor you right now." }
 };
 
 // ————— Strong seller's-market upgrade (mirrors pipeline/verdict.py) —————
@@ -1333,11 +1356,15 @@ function buildMetricRows(d, strong) {
     // These were -0.15/0.4 — the pre-refit sale-basis numbers — while the note
     // rendered on the same row already said "-20% y/y". The dial coloured at a
     // line five points from the one it displayed.
+    // TIME ON MARKET, not "time to sell". The figure is days on market across
+    // homes that are still LISTED — it is not time-to-contract, and it runs
+    // longer than one (methodology, section 2). The old label promised the
+    // measurement the data cannot make.
     const t = strong ? (p <= -0.20 ? "s" : "g") : (p > 0.10 ? "a" : "g");
-    rows.push({ name:"TIME TO SELL", val:Math.round(m.dom)+" days", t,
+    rows.push({ name:"TIME ON MARKET", val:Math.round(m.dom)+" days", t,
       fill:clampPct((p*100+50)/150*100), th: strong ? 23.3 : 60,
-      note: strong ? (t==="s" ? Math.round(-m.domy)+" days faster y/y" : "strong line: −20% y/y")
-                   : (m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "as fast as last yr") });
+      note: strong ? (t==="s" ? Math.round(-m.domy)+" days shorter y/y" : "strong line: −20% y/y")
+                   : (m.domy > 0 ? "+"+Math.round(m.domy)+" days y/y" : "no longer than last yr") });
   }
   if (m.pd != null) {
     const t = strong ? (m.pd < 0.20 ? "s" : "g") : (m.pd > 0.35 ? "a" : "g");
@@ -1516,11 +1543,13 @@ function renderPreview(d) {
   row("06", "If prices fell 5%", mask("$▓▓▓,▓▓▓"),
     { aria: "If prices fell 5% — computed from your numbers, unlocked in the full report" });
 
-  // 07 — computable: the real fastest-sale month, blurred.
-  row("07", "When homes here sell fastest",
-    fastest ? '<span aria-hidden="true">Homes here sell fastest in</span> ' + veil(fastest)
+  // 07 — computable: the real shortest-time-on-market month, blurred. The
+  // series is days on market across ACTIVE listings, so the honest claim is
+  // about time on market, not about how fast homes sell.
+  row("07", "When listings here move fastest",
+    fastest ? '<span aria-hidden="true">Listings here spend least time on the market in</span> ' + veil(fastest)
             : mask("▓▓▓▓▓").replace("from your numbers", "from your ZIP's 3-yr history"),
-    { aria: "When homes here sell fastest — unlocked in the full report" });
+    { aria: "When listings here move fastest — unlocked in the full report" });
 
   // 08 — deliberately OPEN and free-tier forever: real national mix, no mask,
   // no lock, no upsell gate. Wording matches market-render.js contextBoxes
@@ -1706,15 +1735,11 @@ async function renderHitRate() {
   } catch (e) { /* absent → the sentence stands without the clause */ }
 }
 
-// The scale line, the closing stat and the scorecard month — all computed, so
-// the page states no figure it cannot re-derive next month.
-function renderScale() {
-  const el = $("scale-count");
-  if (!el) return;
-  const n = scoredZips();
-  // Rounded DOWN to the nearest thousand so "33,000+" is always true.
-  if (n >= 1000) el.textContent = (Math.floor(n / 1000) * 1000).toLocaleString() + "+ ZIP codes";
-}
+// renderScale() is gone. It overwrote the hero's coverage line with a count
+// summed from meta.national.counts — Redfin-derived, frozen at the last v1
+// run, and a count of scored ZIPs rather than of readings a reader can see.
+// The line now states the two counts that are ours and true today; see the
+// source-of-truth note beside it in the markup.
 
 async function renderChangedStat() {
   // "1 in 3 ZIP codes changed rating with June's data." True today (11,272 of
@@ -1949,13 +1974,24 @@ async function run() {
       $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-    $("v-tag").textContent = ((window.VERDICT_COPY || {})[d.l] || {}).word || k.tag;
+    // The word still comes from VERDICT_COPY — the same map the prose, the OG
+    // card and the share text use — with ONE documented exception: "strong".
+    // The map's word for it is STRONG, a fourth rating the methodology does
+    // not define; the engine's own action class for it is ACT. A reader sees
+    // ACT, and the headline below says which kind of ACT it is. When
+    // verdict_copy.json's strong word becomes ACT, this line stops doing
+    // anything and can go.
+    const vword = ((window.VERDICT_COPY || {})[d.l] || {}).word || k.tag;
+    $("v-tag").textContent = d.l === "strong" ? KINDS.strong.tag : vword;
     $("v-tag").style.color = k.ink;
     $("v-title").textContent = insufficient
-      ? "Limited sales data in " + zip
+      ? "Limited listing data in " + zip
       : k.headline.replace("{zip}", zip);
+    // "Smaller markets report few transactions" described an engine that
+    // reads closed sales. This one reads active listings and never sees a
+    // sale, so the shortage it can actually have is of listings.
     $("v-sub").textContent = insufficient
-      ? "Smaller markets report few transactions, so we hold the rating at HOLD until signals are statistically reliable. Here's what we can see:"
+      ? "There are too few active listings here for the signals to be reliable, so we hold the reading at HOLD until they are. Here's what we can see:"
       : k.sub.replace("{zip}", zip);
     $("v-metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"));
     renderPreview(d);   // same synchronous pass — fully rendered before reveal
@@ -1964,10 +2000,21 @@ async function run() {
     // Data provided by Redfin" — two months stale and crediting the vendor
     // whose data was withdrawn. The ZIP pages were fixed server-side; this
     // card renders client-side and kept its own copy of the bug.
+    //
+    // THE VENDOR IS NOT NAMED HERE. It used to read "Market statistics from
+    // RentCast". Their licence bars use of the name "in advertising,
+    // publicity or any other commercial manner" without written consent and
+    // asks for no attribution in return, so the name survives on the
+    // methodology page as a plain statement of source and nowhere else.
+    // Pending counsel — a precaution, not a settled conclusion.
+    //
+    // And the META fallback is gone with it: it stamped "Data through 2026-06
+    // · Data provided by Redfin" — a frozen v1 month and a withdrawn vendor —
+    // under any record that reached here without the released basis. No
+    // record means no date: rule 5 of the copy sweep.
     const v2 = d && d.b === "active listings";
-    const when = (v2 && d.p) ? d.p : (META ? META.period : "");
-    const who = v2 ? "Market statistics from RentCast"
-                   : (META ? citeHTML(META.attribution) : "");
+    const when = (v2 && d.p) ? prettyMonth(d.p) : "";
+    const who = "Market statistics from a licensed data provider";
     $("v-stamp").innerHTML = when ? "Data through " + when + " · " + who : who;
     // Every paid CTA on the page carries the ZIP once we know it — the two in
     // the verdict card and the two down in the pricing table. Each one ships a
@@ -2064,8 +2111,13 @@ $("share-btn").addEventListener("click", () => {
   const where = city ? city + " (" + lastVerdict.zip + ")" : "ZIP " + lastVerdict.zip;
   const url = "https://shouldisellyet.com/s/" + lastVerdict.zip;
   const meaning = (vc.translation || "").split(" — ")[0].toLowerCase();
+  // Same three-word rule as the badge: "strong" shares as ACT, and the
+  // translation beside it ("seller's market — conditions favor you") is the
+  // qualifier that says which kind.
+  const word = lastVerdict.level === "strong" ? KINDS.strong.tag
+                                              : (vc.word || lastVerdict.tag);
   const text = (vc.emoji || "") + " Just ran a free checkup on my ZIP's housing market — " +
-    where + " says " + (vc.word || lastVerdict.tag) +
+    where + " says " + word +
     (meaning ? ": " + meaning : "") + ". Check yours:";
   if (navigator.share) { navigator.share({ text, url }).catch(() => {}); return; }
   const payload = text + " " + url;
@@ -2134,8 +2186,9 @@ $("go").addEventListener("click", run);
   try { city = await cityFor(from); } catch(e) {}
   const where = city ? city + " (" + from + ")" : from;
   const el = $("from-ctx");
+  const word = d.l === "strong" ? KINDS.strong.tag : (vc.word || "");
   el.innerHTML = "<span>Your friend's ZIP \u2014 <b>" + where + "</b> \u2014 says <b>" +
-    (vc.word || "") + "</b>: " + (vc.translation || "").toLowerCase() +
+    word + "</b>: " + (vc.translation || "").toLowerCase() +
     ". What does yours say?</span>" +
     '<button type="button" aria-label="Dismiss">&times;</button>';
   el.hidden = false;
@@ -2180,7 +2233,7 @@ function feedLines() {
   const scale = n >= 1000 ? Math.floor(n / 1000).toLocaleString("en-US") + ",000+" : "U.S.";
   return [
     "standing pages for " + scale + " ZIP markets",
-    "signals: price trend · time to sell · homes for sale",
+    "signals: price trend · time on market · homes for sale",
     "source: licensed market statistics · homes currently listed for sale",
     "danger lines are published, not proprietary",
   ];

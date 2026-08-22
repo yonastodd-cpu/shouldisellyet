@@ -294,7 +294,7 @@ details.how .how-body b{color:#3a4450}
       <div class="f"><select id="in-state" autocomplete="address-level1"><option value="">State</option></select></div>
       <div class="zipnote" id="zipnote"></div>
       <div class="f" style="grid-column:1/-1">
-        <div class="hint" id="addr-hint">Your browser can autofill this. Enter the ZIP and we'll fill in the city and state &mdash; the ZIP drives your market verdict.</div>
+        <div class="hint" id="addr-hint">Your browser can autofill this. Enter the ZIP and we'll fill in the city and state &mdash; the ZIP drives your market reading.</div>
       </div>
     </div>
     <div id="zip-mismatch" class="locked-card" style="display:none;margin-bottom:14px"></div>
@@ -374,7 +374,7 @@ details.how .how-body b{color:#3a4450}
       <div class="k">MARKET SIGNALS IN YOUR ZIP</div>
       <div class="title">The four dials that predict price moves</div>
       <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
-      <p class="dials-intro">Four numbers, all public data, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
+      <p class="dials-intro">Four numbers, all from licensed market statistics, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
       <div id="metrics"></div>
       <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px"></p>
@@ -401,7 +401,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="velocity" data-nav="velocity" style="display:none">
       <div class="k">HOW FAST IS YOUR MARKET MOVING?</div>
       <div class="title">Approach velocity — the distance to each danger line</div>
-      <p class="subt">A verdict says where your market IS. This says where it's HEADED: for each dial,
+      <p class="subt">A reading says where your market IS. This says where it's HEADED: for each dial,
         the direction of travel and — at the current 3-month pace — how many months until it
         crosses the published danger line. Markets usually drift for months before they flip.</p>
       <div id="vel-rows"></div>
@@ -637,8 +637,8 @@ details.how .how-body b{color:#3a4450}
 
     <div class="sec" id="selling-conditions" data-nav="selling" style="display:none">
       <div class="k">SELLING CONDITIONS IN YOUR ZIP</div>
-      <div class="title">How long selling takes here — and when it goes fastest</div>
-      <p class="subt">How long homes take to sell is the earliest visible crack in any housing market — it moves months before prices do. The seasonal pattern below can be worth thousands in timing.</p>
+      <div class="title">How long listings sit here — and when they move fastest</div>
+      <p class="subt">How long listed homes have been sitting on the market is the earliest visible crack in any housing market — it moves months before prices do. The seasonal pattern below can be worth thousands in timing.</p>
       <div id="dom-chart"></div>
       <p id="season-note" style="margin-top:10px"></p>
     </div>
@@ -820,7 +820,7 @@ details.how .how-body b{color:#3a4450}
     <a href="press.html" style="color:inherit">Press</a> ·
 
     <!-- Source citation — see docs/ATTRIBUTION.md before rewording -->
-    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice. Your information is never sold.</div>
+    <div style="margin-top:8px;line-height:1.5">Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice. Your information is never sold.</div>
   </div>
 </div>
 
@@ -854,6 +854,29 @@ function citeHTML(t){
 
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
 const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
+
+// ————— Data vintage, per reading —————
+// Rendered ONLY from the record in hand (p = as-of month, u = retrieved_at).
+// A reading with no date prints no date; nothing here falls back to a global
+// stamp, because a site-wide "data through" is a claim about this ZIP that we
+// cannot make from a shared constant.
+const MONTHS_TITLE = ["January","February","March","April","May","June",
+                      "July","August","September","October","November","December"];
+function asOfLabel(rec){
+  const p = rec && rec.p;
+  if (typeof p !== "string" || !/^\d{4}-\d{2}$/.test(p)) return "";
+  const mi = +p.slice(5,7) - 1;
+  return MONTHS_TITLE[mi] ? MONTHS_TITLE[mi] + " " + p.slice(0,4) : "";
+}
+function retrievedLabel(rec){
+  const u = rec && rec.u;
+  if (!u) return "";
+  const t = Date.parse(u);
+  if (!isFinite(t)) return "";
+  // UTC: retrieved_at is a timestamptz, and a value near midnight rendered in
+  // the reader's local zone would stamp the wrong calendar day.
+  return new Date(t).toLocaleDateString("en-US", {year:"numeric", month:"long", day:"numeric", timeZone:"UTC"});
+}
 
 // Current market 30-year fixed rate (%) — fallback only. The pipeline now
 // writes the live Freddie Mac PMMS number into meta.json
@@ -953,12 +976,12 @@ fetch("data/index.json").then(r=>r.ok?r.json():null).then(j=>{ if(j&&Object.keys
 fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
   META = m;
   MARKET.setMeta(m);   // the shared renderer reads meta for the backtest lines
-  // Counted, not typed — the national ZIP total moves with each refresh.
-  const c = m && m.national && m.national.counts;
-  const n = c ? Object.keys(c).reduce((a,k)=>a+(Number(c[k])||0),0) : 0;
-  if (n >= 1000) $("ctx-subt").textContent =
-    "How your area compares to " + Math.floor(n/1000).toLocaleString("en-US") +
-    ",000+ U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.";
+  // No ZIP count is printed here any more. The only number available was the
+  // sum of meta.national.counts, which is the FROZEN v1 label census (33,426)
+  // — not how many ZIPs carry a live reading today. A count on this page would
+  // have to come from the same source of truth the ZIP index and state hubs
+  // use; until that is plumbed through to the client, the static line in the
+  // markup (no number) is the one that is true.
 });
 
 const MARKET_API = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/market-reading";
@@ -984,6 +1007,11 @@ async function lookup(zip){
         if (f.ok) {
           const d = await f.json();
           if (d && d.dataStatus === "ok") {
+            // The reading's own vintage — the endpoint returns both. Every
+            // date this page prints comes from here, never from meta.json's
+            // site-wide "period" (frozen at the last v1 release).
+            if (d.asOf) rec.p = d.asOf;
+            if (d.lastUpdated) rec.u = d.lastUpdated;
             rec.m = d.metrics || {};
             rec.h = (Array.isArray(d.priceHistory) && d.priceHistory.length)
               ? { s: d.priceHistory[0].month,
@@ -1023,7 +1051,7 @@ const { clampPct, tcol, strongSignals, applyStrong, buildMetricRows, backtestNot
         atOrNear, lineSVG, pctf } = MARKET;
 
 // ————— Approach velocity (paid-only — see the section comment) —————
-const VEL_LABEL = { spy: "Price trend", dom: "Time to sell",
+const VEL_LABEL = { spy: "Price trend", dom: "Time on market",
                     mos: "Months of supply", pd: "Price cuts" };
 const VEL_STATE_RANK = { improving: 0, stable: 1, drifting: 2, "deteriorating fast": 3 };
 
@@ -1172,18 +1200,16 @@ function renderDeepDive(d, zip, val, bal){
       const y12 = atOrNear(home, li-12), q3 = atOrNear(home, li-3);
       y12v = y12;
       const cos = [];
-      cos.push({v: fmt(pv), l: (hasVal ? "EST. PEAK · " : "ZIP MEDIAN PEAK · ") + monthLabel(h.s, pi).toUpperCase()});
+      cos.push({v: fmt(pv), l: (hasVal ? "EST. PEAK · " : "ZIP ASKING-PRICE PEAK · ") + monthLabel(h.s, pi).toUpperCase()});
       if (fromPeak >= -0.005) cos.push({v: "At the high", l: "TODAY — THE 3-YEAR HIGH"});
       else cos.push({v: pctf(fromPeak), l: "FROM THE " + monthLabel(h.s, pi).toUpperCase() + " PEAK"});
       if (y12) cos.push({v: pctf(anchor/y12-1), l: "LAST 12 MONTHS"});
       if (q3) cos.push({v: pctf(anchor/q3-1), l: "LAST 3 MONTHS"});
       $("trend-callouts").innerHTML = cos.map(c=>'<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
-      const soldNote = (m.sold != null)
-        ? " Each month's point is the middle sale price of the homes sold that month (" + m.sold.toLocaleString() + " in the latest month)."
-        : " Each month's point is the middle sale price of the homes sold that month.";
+      const soldNote = " Each month's point is the middle asking price of the homes listed in your ZIP that month.";
       $("trend-foot").textContent = (hasVal
-        ? "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price (indexed to your value estimate). Individual homes vary."
-        : "Your ZIP's median sale price, month by month — market data, not your home.") + soldNote;
+        ? "Your home's estimated trajectory, assuming it tracked your ZIP's median asking price (indexed to your value estimate). Individual homes vary."
+        : "Your ZIP's median asking price, month by month — market data, not your home.") + soldNote;
       // Official benchmark: FHFA's government repeat-sales index for this
       // ZIP — annual and lagged, so it checks the trend, it doesn't lead it.
       const fb = d.f;
@@ -1243,7 +1269,7 @@ function renderDeepDive(d, zip, val, bal){
     $("stress-test").style.display = "block";
   }
 
-  // 06 · selling conditions (time to sell + seasonality)
+  // 06 · selling conditions (time on market + seasonality)
   if (h && h.d && h.d.some(x=>x!=null)){
     $("dom-chart").innerHTML = lineSVG(h.d, h.s, {color:"#8a7a55", h:150, fmt:v=>Math.round(v)+"d", peak:false});
     // seasonality: avg dom by calendar month
@@ -1251,8 +1277,8 @@ function renderDeepDive(d, zip, val, bal){
     h.d.forEach((v,i)=>{ if(v==null) return; const mo=(+h.s.slice(5,7)-1+i)%12; (by[mo]=by[mo]||[]).push(v); });
     let best=-1, bv=Infinity;
     Object.entries(by).forEach(([mo,arr])=>{ if(arr.length>=2){ const a=arr.reduce((x,y)=>x+y,0)/arr.length; if(a<bv){bv=a;best=+mo;} } });
-    $("season-note").innerHTML = "How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales" + ((d.m && d.m.sold != null) ? " (" + d.m.sold.toLocaleString() + " sold in the latest month)." : ".") +
-      (best>=0 ? " Historically, homes here have sold fastest in <b>" + MARKET.MONTHS_LONG[best] + "</b> — worth knowing when you plan your listing." : "");
+    $("season-note").innerHTML = "How long listed homes have been on the market in your ZIP, over time — each point is the middle days-on-market across that month's active listings." +
+      (best>=0 ? " Historically, listings here have cleared fastest in <b>" + MARKET.MONTHS_LONG[best] + "</b> — worth knowing when you plan your listing." : "");
     $("selling-conditions").style.display = "block";
   }
 
@@ -1388,7 +1414,7 @@ async function generate(noScroll){
   }
   $("zip-mismatch").style.display = "none";
   const d = applyStrong(await lookup(zip));
-  if (!d) { err.textContent = "We're not scoring " + zip + " yet (too few reported sales). Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
+  if (!d) { err.textContent = "There's no live reading for " + zip + " yet — that page is still being rebuilt. Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
 
   // Home value: the user's number or nothing. The ZIP median is real market
   // data and still powers the market sections (02's base line, buyer math),
@@ -1462,7 +1488,7 @@ async function generate(noScroll){
     if (m.spy != null) {
       const yearAgo = val / (1 + m.spy);
       const dir = m.spy >= 0 ? "up" : "down";
-      $("eq-trend").textContent = "If your home tracked the ZIP median, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
+      $("eq-trend").textContent = "If your home tracked the ZIP's median asking price, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
     } else $("eq-trend").textContent = "";
     $("eq-eq").textContent = fmt(equity);
     $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
@@ -1500,7 +1526,7 @@ async function generate(noScroll){
       '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmt(selling)+'</span></div>'+
       '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+fmt(bal)+'</span></div>'+
       '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
-    $("wa-asof").textContent = "As of " + today + " · market data through " + (META ? META.period : "latest release") +
+    $("wa-asof").textContent = "As of " + today + " · computed entirely from the numbers you entered" +
       " · all figures estimated" + (timeline ? " · selling timeline: " + $("in-timeline").selectedOptions[0].textContent + " (your input)" : "");
   }
 
@@ -1567,7 +1593,7 @@ async function generate(noScroll){
     const loan = buyV * 0.8;
     const bpi = pmt(loan, mktRate);
     const incYr = bpi / 0.28 * 12;
-    $("rb-buyer-label").textContent = hasVal ? "THE BUYER OF THIS HOME (AT YOUR VALUE)" : "THE BUYER HERE (AT THE ZIP'S MEDIAN PRICE)";
+    $("rb-buyer-label").textContent = hasVal ? "THE BUYER OF THIS HOME (AT YOUR VALUE)" : "THE BUYER HERE (AT THE ZIP'S MEDIAN ASKING PRICE)";
     $("rb-buyer").innerHTML =
       '<div class="prrow" style="padding:8px 0;border:none"><span>Buys at</span><span>' + fmt(buyV) + '</span></div>' +
       '<div class="prrow" style="padding:8px 0;border:none"><span>Puts 20% down</span><span>' + fmt(buyV * 0.2) + '</span></div>' +
@@ -1576,7 +1602,7 @@ async function generate(noScroll){
     $("rb-asof").textContent = "Rules of thumb: 20% down and a payment near 28% of income — real buyers vary. Market rate: " + mktSrc + ".";
   } else {
     $("rb-buyer-label").textContent = "THE BUYER OF THIS HOME";
-    $("rb-buyer").innerHTML = '<p style="font-size:13.5px">This ZIP reports too few sales for a reliable price — add your home value above and this becomes your buyer\'s math.</p>';
+    $("rb-buyer").innerHTML = '<p style="font-size:13.5px">This ZIP has too few active listings for a reliable price — add your home value above and this becomes your buyer\'s math.</p>';
     $("rb-asof").textContent = "Market rate: " + mktSrc + ".";
   }
   $("rb-sense").innerHTML = "<b>Why you care:</b> each 1-point drop in rates gives buyers roughly 10% more buying power — cheaper money tends to support prices, expensive money pressures them. (An approximation, not a forecast.)";
@@ -1596,9 +1622,14 @@ async function generate(noScroll){
   $("connect-card").style.display = AGENT_INTRO_ENABLED ? "block" : "none";
   $("nextstep-generic").style.display = AGENT_INTRO_ENABLED ? "none" : "block";
 
-  $("stamp").innerHTML = "MyMarketCheckup · shouldisellyet.com · market data through " + (META ? META.period : "latest release") +
-    " · " + (d && d.b === "active listings" ? "Market statistics from RentCast"
-             : (META ? citeHTML(META.attribution) : "public market data")) +
+  // Vintage comes from the record in hand; a reading with no date stamps no
+  // date rather than borrowing meta.json's site-wide period.
+  const stampAsOf = asOfLabel(d), stampGot = retrievedLabel(d);
+  $("stamp").innerHTML = "MyMarketCheckup · shouldisellyet.com" +
+    (stampAsOf ? " · market statistics as of " + stampAsOf : "") +
+    (stampGot ? " · retrieved " + stampGot : "") +
+    " · " + (d && d.b === "active listings" ? "Market statistics from a licensed data provider"
+             : (META && META.attribution ? citeHTML(META.attribution) : "licensed market statistics")) +
     "<br>Equity, walk-away, and lock-in figures are estimates computed from the numbers you provided — never a guarantee, and not an appraisal. Not financial, legal, tax, or real-estate advice. Consult licensed professionals before making decisions.";
 
   // deep-dive sections (render only when history/context data exists)
@@ -1697,7 +1728,7 @@ async function fillFromZip(){
     note.textContent = "✓ " + [r.city, r.state].filter(Boolean).join(", ");
   } else if (r.checked) {
     note.className = "zipnote warn";
-    note.textContent = "We're not scoring " + z + " yet — too few reported sales.";
+    note.textContent = "No live reading for " + z + " yet — that page is still being rebuilt.";
   } else { note.textContent = ""; note.className = "zipnote"; }
 }
 $("in-zip").addEventListener("input", function(){

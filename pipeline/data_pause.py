@@ -67,8 +67,8 @@ NOTICE_BODY = ("We're rebuilding this market reading on a new data engine. "
 # verdict word and the metrics, which is exactly what must stop being served.
 NOTICE_TITLE_TMPL = "{place} housing market — reading being refreshed"
 NOTICE_DESC = ("This market reading is being rebuilt on a new data engine and "
-               "will return shortly. Free per-ZIP housing readings from public "
-               "market data.")
+               "will return shortly. Free per-ZIP housing readings from "
+               "licensed market statistics.")
 
 
 # ————— Phase 4: the tranche allowlist —————

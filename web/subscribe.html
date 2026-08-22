@@ -172,7 +172,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
       <div class="row"><b>2.</b><span>You're brought straight back to build your home's full property report, with the address already filled in.</span></div>
       <div class="row"><b>3.</b><span>We send a confirmation email with your private report link.</span></div>
       <div class="row" id="row4"><b>4.</b><span>From then on, you get an email the moment the market for your home shifts — up or down. No news is good news.</span></div>
-      <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. We monitor local market conditions from public housing-market data for the area your home is in — this is general market information, not an appraisal of your specific home, and not financial advice.</p>
+      <p style="margin-top:16px;border-top:1px solid var(--hairline);padding-top:14px">Operated by Yayday LLC. We monitor local market conditions from licensed market statistics for the area your home is in — this is general market information, not an appraisal of your specific home, and not financial advice.</p>
     </div>
   </div>
 
@@ -184,7 +184,7 @@ h1{font-family:'Newsreader',serif;font-weight:500;font-size:38px;line-height:1.1
     <a href="privacy.html" style="color:inherit">Privacy</a> ·
     <a href="refunds.html" style="color:inherit">Refunds &amp; cancellation</a> ·
 
-    <div style="margin-top:8px;line-height:1.5">Verdicts and reports are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice.</div>
+    <div style="margin-top:8px;line-height:1.5">Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice.</div>
   </div>
 </div>
 
@@ -225,7 +225,7 @@ const COPY = {
       "Your full MyMarketCheckup property report, included and refreshed monthly",
       "An email the moment the market for your home shifts — up or down",
       "Your estimated equity and walk-away-if-you-sold number",
-      "Every signal for your home's area: supply, price trend, time to sell, price cuts",
+      "Every signal for your home's area: supply, price trend, time on market, price cuts",
       "Cancel anytime in one click — no phone call, no runaround"
     ]
   },
@@ -236,7 +236,7 @@ const COPY = {
     price: PRICES.usd(PRICES.REPORT) + ' <small>one-time · credited toward annual MyMarketCheckup within 30 days</small>',
     propTitle: "THE HOME THIS REPORT IS FOR",
     feats: [
-      "Your home's verdict with every market signal gauge",
+      "Your home's reading with every market signal gauge",
       "Your estimated equity and loan-vs-equity breakdown",
       "Your walk-away number if you sold today, itemized",
       "Plain-English guidance for your exact situation",
@@ -400,7 +400,7 @@ async function resolveZip(){
     note.textContent = "✓ " + [r.city, r.state].filter(Boolean).join(", ") + " — we track this ZIP.";
   } else if (r.checked) {
     note.className = "pf-zipnote warn";
-    note.textContent = "We don't have market data for " + z + " yet — too few reported sales. " +
+    note.textContent = "We don't cover " + z + " yet — it isn't in the ZIP codes we currently read. " +
       "Check the ZIP, or email support@shouldisellyet.com and we'll tell you when it's covered.";
   } else {
     note.textContent = "";   // lookup unavailable — say nothing rather than something wrong
@@ -461,7 +461,7 @@ async function go(){
   // fetch blip must never block a paying customer.
   const r = await ADDRESS.resolve(a.zip);
   if (r.checked && !r.known)
-    return fail("We don't have market data for " + a.zip + " yet, so we can't build a report for it. " +
+    return fail("We don't cover " + a.zip + " yet, so we can't build a report for it. " +
                 "Please check the ZIP — or email support@shouldisellyet.com and we'll tell you when it's covered.", "pf-zip");
 
   hint.style.color = "";

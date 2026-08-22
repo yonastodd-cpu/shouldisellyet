@@ -93,3 +93,10 @@ LICENSE_AUDIT.md
 # the SHAs point at nothing.
 GITHUB_PURGE_REQUEST.md
 .build/
+
+# GITHUB_TICKET_PAUSE_REPLY.md records WHY the GC request was paused — that a
+# licence question is open and being taken elsewhere. Same reason as the two
+# entries above: this repo is public, and the reasoning is not for it. The
+# dated fact that the request is paused lives in REMEDIATION_DATES.md; the
+# reasoning does not.
+GITHUB_TICKET_PAUSE_REPLY.md

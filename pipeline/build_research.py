@@ -34,6 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from research import (RESEARCH_DIR, national_series, load_history, pretty,
                       prev_month, region_share, unpack)
+from verdict_copy import COPY as VCOPY
 
 ROOT = Path(__file__).resolve().parents[1]
 FONTS = Path(__file__).parent / "fonts"
@@ -58,7 +59,14 @@ RED = (214, 69, 69)
 # disclosure problem for a worse one. What it must not do is read as a present
 # tense credit, which is what "Data provided by Redfin" said on four research
 # pages while the readings came from RentCast.
+# The current month's numbers are computed from the site's own published
+# readings, which come from a LICENSED market-statistics feed — and this credit
+# named only the two historical sources, so the one source actually behind
+# today's figures was uncredited. Named by kind, not by vendor: the feed's
+# licence bars use of its marks in publicity, so the provider is named on
+# /methodology.html as a plain statement of source and nowhere else.
 CITE = RDC.credit(
+        'Current market statistics from a licensed data provider · '
         'Pre-2026 history restated from <a href="https://www.redfin.com" '
         'target="_blank" rel="noopener">Redfin</a>\u2019s archived tracker · '
         'Listing data from Realtor.com&reg; Economic Research · Place names '
@@ -427,9 +435,10 @@ paying it. What changes first is behaviour, and behaviour is visible.</p>
 <p>Three things happen, in this order, while the headline price still looks
 fine: <b>homes take longer to sell</b>, <b>unsold homes pile up</b>, and
 <b>sellers start cutting asking prices</b>. Each is measurable monthly from
-public data, per ZIP code.</p>
-<p>So we watch three gauges — the year-over-year price trend, how long homes
-take to sell, and how the pool of homes for sale is changing — each with a
+licensed market statistics, per ZIP code.</p>
+<p>So we watch three gauges — the year-over-year price trend, how long listed
+homes have been on the market, and how the pool of homes for sale is changing —
+each with a
 <b>published danger line</b>. The price line is drawn from what happened in
 past downturns; the two volume lines were recalibrated when the underlying
 statistics changed from closed sales to active listings, because the old
@@ -546,8 +555,10 @@ FHFA index declined the following year, versus markets clear of it.</p>
 <table><thead><tr><th>Signal crossed</th><th>Declined next year</th><th>Clear of the line</th></tr></thead>
 <tbody>{rows}</tbody></table>
 <p class="note">Warning ≠ crash: a WATCH/ACT market is one where decline risk is
-elevated versus baseline, not one guaranteed to fall. The full backtest method is
-described on the <a href="/">homepage's signal explanations</a>.</p>"""
+elevated versus baseline, not one guaranteed to fall. The method is the
+paragraph above: each signal's line, applied at year-end, scored against the
+FHFA index the following year. The lines themselves and the calibration record
+are further down this page.</p>"""
 
     # ————— Measured accuracy (forward validation) —————
     # Backtest says "calibrated on the past"; this section is the FORWARD
@@ -565,7 +576,7 @@ described on the <a href="/">homepage's signal explanations</a>.</p>"""
             measured = f"""
 <h2 id="scorecard">Measured, not promised</h2>
 <p>From {esc(val.get("first_snapshot", ""))} onward we snapshot every month's
-verdicts as published, so they can be scored against what prices actually do
+readings as published, so they can be scored against what prices actually do
 next — recall on real declines, precision of the flags, and lead time. The
 first 12-month scoring lands in <b>{esc(val.get("first_validation", ""))}</b>;
 until then this section says "collecting" rather than showing partial
@@ -577,7 +588,7 @@ numbers. Updated monthly once live. One caveat applies now and always:
             lead = val.get("lead_days_median")
             measured = f"""
 <h2 id="scorecard">Measured, not promised</h2>
-<p>Updated monthly, scored against outcomes — verdicts published 12 months
+<p>Updated monthly, scored against outcomes — readings published 12 months
 earlier versus realized price changes since (thresholds: a real decline is
 ≤−5%; a flag counts as right at ≤−2%). Data through {esc(val.get("period", ""))}.</p>
 <table><thead><tr><th>Metric</th><th>Definition</th><th>Measured</th></tr></thead><tbody>
@@ -601,8 +612,9 @@ never silently redefined.</p>
 <p><b>WSI = ZIP markets at WATCH or ACT ÷ all scored ZIP markets</b>, as a
 percentage, computed monthly. A ZIP is <b>scored</b> when at least two of the
 four index signals are known for the month. Insufficient-data ZIPs are
-excluded from both numerator and denominator. STRONG (seller's-market)
-verdicts count in the denominator only.</p>
+excluded from both numerator and denominator. Seller's-market readings — a
+market with no danger line crossed and every strength condition met — count in
+the denominator only.</p>
 
 <h2 id="danger-lines">The four signals behind this index</h2>
 <p><b>These are the index's thresholds, and they are deliberately frozen.</b>
@@ -613,8 +625,8 @@ would make this month incomparable with every month before it.</p>
 signals over active-listing statistics, with two lines recalibrated for that
 basis. Months of supply and price-cut share need a closed-sale count that
 active-listing data cannot see, so they are not part of a current reading. See
-the <a href="/research/methodology.html">methodology page</a> for the reading
-engine; the table below describes this index only.</p>
+the <a href="/methodology.html">reading methodology</a> for the reading engine;
+the table below describes this index only.</p>
 <table><thead><tr><th>Signal</th><th>Danger line</th></tr></thead><tbody>
 <tr><td>Months of supply</td><td class="mono">&gt; 4 (severe &gt; 6)</td></tr>
 <tr><td>Median sale price, y/y</td><td class="mono">&lt; −2% (fast &lt; −5%)</td></tr>
@@ -622,7 +634,7 @@ engine; the table below describes this index only.</p>
 <tr><td>Inventory, y/y</td><td class="mono">&gt; +50%</td></tr>
 </tbody></table>
 <p class="note">A fifth signal — the share of listings cutting price
-(&gt; 35%) — was used by per-ZIP verdicts under the previous engine but has no
+(&gt; 35%) — was used by per-ZIP readings under the previous engine but has no
 history before 2026, so it is deliberately excluded from this index; measured
 impact of the exclusion at adoption was 0.2 points (62.2% vs 62.4%). The
 current reading engine does not use it either: the data source behind it is no
@@ -630,8 +642,8 @@ longer in use.</p>
 
 <h2 id="seam">Sources and the seam</h2>
 <p>The <b>continuous series</b> begins {esc(pretty(seam))}: Redfin Data Center
-hub data, the same file the site refreshes from, ~25,000 scored ZIPs per
-month. The <b>2012–2019 tail</b> is reconstructed from Redfin's legacy market
+hub data — the file the site refreshed from until 14 August 2026, and no
+longer does — ~25,000 scored ZIPs per month. The <b>2012–2019 tail</b> is reconstructed from Redfin's legacy market
 tracker (~18,000 ZIPs, a prior universe), drawn in a lighter stroke, and
 <b>excluded from every record, delta, and superlative</b>. The two sources
 overlap for 72 months; per-ZIP level agreement across 1.36M shared zip-months
@@ -767,7 +779,7 @@ footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;fo
 <footer>
   <div><a href="/research/">ShouldISellYet Research</a> · <a href="/research/methodology.html">Methodology</a> · <a href="/">Home</a> · <a href="/press.html">Press</a></div>
   <div style="margin-top:8px">{CITE}</div>
-  <div style="margin-top:8px">Use with attribution: "Source: ShouldISellYet (shouldisellyet.com)." Not for dataset redistribution or competing products — see each release's LICENSE.txt. Verdicts and the Warning-Sign Index are computed by ShouldISellYet from public market data and are general information, not financial or real-estate advice.</div>
+  <div style="margin-top:8px">Use with attribution: "Source: ShouldISellYet (shouldisellyet.com)." Not for dataset redistribution or competing products — see each release's LICENSE.txt. Readings and the Warning-Sign Index are computed by ShouldISellYet from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice.</div>
 </footer>
 </div></body></html>"""
 
@@ -999,17 +1011,25 @@ them to build a competing data product or service, is not permitted. Readings
 are informational only and are not financial, investment, or real-estate
 advice.
 
-Verdict methodology: {SITE}/research/methodology.html
+Reading methodology: {SITE}/research/methodology.html
 """)
 
 
 # ————— pages —————
 
 def word(level):
-    return {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "STRONG"}.get(level, level)
+    """The reader-facing word for a level — from the canonical copy map.
+
+    This was a third hand-typed level->word table, and a hand-typed table is
+    how the site came to render a fourth word ("STRONG") that
+    web/methodology.html explicitly says does not exist: "There is no fourth
+    word — HOLD, WATCH and ACT are the whole vocabulary." Resolving that is
+    one edit to pipeline/data/verdict_copy.json, and this follows it.
+    """
+    return VCOPY[level]["word"] if level in VCOPY else level
 
 
-def release_page(rep, series, outdir, rel_url, gen_date=""):
+def release_page(rep, series, outdir, rel_url):
     month = rep["month"]
     rec = rep["records"]
     bullets = "".join(f"<li>{b}</li>" for b in three_bullets(rep))
@@ -1119,7 +1139,7 @@ instead</a> — one plain answer for your market, free.</p>
 <p class="note">Metro league tables cover Metropolitan Statistical Areas with at least 15 scored ZIPs, so small-sample noise cannot top the table.</p>
 
 <h2>Crossed the danger line this month</h2>
-<p class="lede" style="font-size:1rem">{len(flips):,} ZIP markets moved from HOLD or STRONG into WATCH or ACT.</p>
+<p class="lede" style="font-size:1rem">{len(flips):,} ZIP markets moved from a reading with no danger line crossed into WATCH or ACT.</p>
 <p class="note">We do not publish the list. Naming individual markets and their
 ratings is the same distribution the CSV was withdrawn for — 47 of the 55 ZIPs
 this table used to show were ones the site itself was declining to rate.
@@ -1133,18 +1153,23 @@ Per-ZIP data is available on request for specific stories:
 
 <h2>Download the data</h2>
 <p>{csv_links}</p>
-<p class="note">Use with attribution ("Source: ShouldISellYet (shouldisellyet.com)"). Files carry ShouldISellYet's derived indicators only — verdicts, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>.</p>
+<p class="note">Use with attribution ("Source: ShouldISellYet (shouldisellyet.com)"). Files carry ShouldISellYet's derived indicators only — readings, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>.</p>
 
 {appendix}
 <h2>Methodology, briefly</h2>
-<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose verdict is WATCH or ACT. This index is computed on a frozen four-signal basis (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%) so the series stays comparable month to month; the site's current per-ZIP readings use three signals over active-listing data with recalibrated lines, backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
+<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose reading is WATCH or ACT. This index is computed on a frozen four-signal basis (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%) so the series stays comparable month to month; the site's current per-ZIP readings use three signals over active-listing data with recalibrated lines, backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
 """
-    # Article + Dataset markup for answer engines. Dates follow the ZIP-page
-    # precedent: the data build's generated stamp (meta.json), day-precision;
-    # no truer per-release publish date exists in the research JSONs, which
-    # carry month granularity only.
+    # Article + Dataset markup for answer engines.
+    #
+    # THE DATE IS THE RELEASE'S OWN MONTH, NOT A GLOBAL BUILD STAMP. This used
+    # to prefer meta.json's `generated` — one date for the whole site, frozen
+    # at the last data build (2026-08-10) — which stamped every release, from
+    # the oldest to the newest, with the same datePublished AND dateModified.
+    # Two claims that were both wrong: the June release was not published in
+    # August, and no release was modified on the day every other one was. The
+    # month in the report is the only date the research data actually carries.
     canon = f"{SITE}{rel_url}"
-    pub = gen_date or f"{month}-01"
+    pub = f"{month}-01"
     org = {"@type": "Organization", "@id": SITE + "/#org", "name": "ShouldISellYet",
            "url": SITE + "/", "legalName": "Yayday LLC",
            "logo": {"@type": "ImageObject", "url": SITE + "/apple-touch-icon.png"}}
@@ -1164,7 +1189,7 @@ Per-ZIP data is available on request for specific stories:
          "author": {"@id": SITE + "/#org"}, "publisher": {"@id": SITE + "/#org"},
          "image": canon + "og.png"},
         dataset("ShouldISellYet Warning-Sign Index — monthly history",
-                "Monthly share of scored U.S. ZIP markets whose verdict is WATCH or ACT, "
+                "Monthly share of scored U.S. ZIP markets whose reading is WATCH or ACT, "
                 "with a series column separating the continuous run from the reconstructed tail.",
                 "wsi-history.csv", f"{series[0][0]}/{month}"),
         dataset(f"State warning-sign aggregates — {pretty(month)}",
@@ -1193,7 +1218,7 @@ def hub_page(h, series, releases, outdir):
 <div class="eyebrow">SHOULDISELLYET RESEARCH</div>
 <h1>The Warning-Sign Index</h1>
 <p class="lede">One number for the temperature of the U.S. housing market:
-the share of scored ZIP markets whose verdict is WATCH or ACT — computed
+the share of scored ZIP markets whose reading is WATCH or ACT — computed
 monthly for {len(series)} months and counting, from fixed, published danger
 lines. Free to cite; the data is downloadable in every release.</p>
 <p><span class="big">{cur_v:.1f}%</span><br>
@@ -1239,12 +1264,6 @@ def main():
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
 
-    # Day-precision date for Article markup — the data build's generated
-    # stamp, same source the ZIP pages already use for datePublished.
-    meta_p = Path(args.web) / "data" / "meta.json"
-    gen_date = (json.loads(meta_p.read_text()).get("generated", "")
-                if meta_p.exists() else "")
-
     seam = h.get("seam")
     wsi_chart(series, {"delta": None}, changelog, stage / "wsi-chart.png", seam=seam)
     for p in reports:
@@ -1260,7 +1279,7 @@ def main():
         og_card(rep, outdir / "og.png")
         social_set(rep, upto, outdir)
         copy_case_charts(outdir)
-        release_page(rep, upto, outdir, f"/research/{month}/", gen_date=gen_date)
+        release_page(rep, upto, outdir, f"/research/{month}/")
 
     hub_page(h, series, releases, stage)
     methodology_page(h, changelog, stage)

@@ -182,7 +182,7 @@ function welcomeMonitorEmail(zip: string, token: string) {
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup</p>
   <h1 style="font-size:26px;margin:6px 0 12px">You're watching ${zip}.</h1>
-  <p style="font-size:16px;line-height:1.6">From now on we check the early-warning data for your ZIP on every release — supply, prices, price cuts, time to sell — and email you the moment the picture changes. Most months you'll hear nothing, and that is the good outcome.</p>
+  <p style="font-size:16px;line-height:1.6">From now on we check the early-warning data for your ZIP on every release — asking prices, time on market, and the number of homes for sale — and email you the moment the picture changes. Most months you'll hear nothing, and that is the good outcome.</p>
   <p style="font-size:16px;line-height:1.6">Your full property report is ready now. Open it below, add your home value and mortgage balance, and it builds in seconds — save it as a PDF, come back anytime.</p>
   <p style="margin:24px 0"><a href="${link}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open my report →</a></p>
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark that link</b> — it's your private access to the report and it works only for you.</p>
@@ -227,9 +227,9 @@ function welcomeReportEmail(zip: string, token: string, city: string,
   <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">🚦 MyMarketCheckup</p>
   <p style="font-size:16px;line-height:1.6">Here's your link — it works on any device and it's yours to keep:</p>
   <p style="margin:22px 0"><a href="${link}" style="${btn}">View my report →</a></p>
-  <p style="font-size:16px;line-height:1.6">It covers ${place}: the four market signals, your home's value trend, and — if you've added your numbers — your equity, walk-away number, and what today's rates mean for you.</p>
+  <p style="font-size:16px;line-height:1.6">It covers ${place}: the market signals, your home's value trend, and — if you've added your numbers — your equity, walk-away number, and what today's rates mean for you.</p>
   ${promo ? `
-  <p style="font-size:16px;line-height:1.6">One thing a report can't do is watch. Markets turn quietly — inventory creeps up, price cuts spread — and the whole point is hearing it early. <b>MyMarketCheckup</b> monitors ${zip} continuously and emails you the moment the verdict changes, plus a refreshed report monthly.</p>
+  <p style="font-size:16px;line-height:1.6">One thing a report can't do is watch. Markets turn quietly — inventory creeps up, price cuts spread — and the whole point is hearing it early. <b>MyMarketCheckup</b> monitors ${zip} continuously and emails you the moment the reading changes, plus a refreshed report monthly.</p>
   ${offer}
   <p style="margin:22px 0"><a href="${upgrade}" style="${btn}">Turn on instant notifications →</a></p>` : ""}
   <p style="font-size:12.5px;color:#5c6673;line-height:1.5"><b>Bookmark your report link</b> — it's your private access and it works only for you.</p>

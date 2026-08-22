@@ -61,29 +61,29 @@ const MARKET = (function () {
       rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:strong?31.3:50,
         note:strong?(t==="s"?"past the strong line: 2.5 mo":"strong line: 2.5 mo"):(t==="g"?"line: 4.0 mo":"past the line"),
         how:{what:"If no new homes were listed, how long until everything currently for sale is sold.",
-             goesin:(m.inv!=null&&m.sold!=null) ? m.inv.toLocaleString()+" homes listed for sale · "+m.sold.toLocaleString()+" homes sold in the latest month"
-                   : "every home listed for sale, and every home sold in the latest month",
+             goesin:(m.inv!=null&&m.sold!=null) ? m.inv.toLocaleString()+" homes listed for sale · "+m.sold.toLocaleString()+" sales in the latest month"
+                   : "every home listed for sale, and the latest month of sales",
              math:"homes for sale ÷ homes sold per month", bt:"mos",
              why:strong?"Below 2.5 months, buyers are competing over too few homes — the classic seller's-market line.":"Markets that crossed 4.0 months of supply in past national downturns typically saw sellers lose pricing power, with price declines following.",
              yours:"Yours: "+m.mos.toFixed(1)+" mo"}}); }
     if (m.spy != null){ const t = strong ? (m.spy>=0.05?"s":"g") : (m.spy<-0.05?"r":m.spy<-0.02?"a":"g");
       rows.push({name:"PRICES VS. LAST YR", val:(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%", t, fill:clampPct((0.12-m.spy)/0.24*100), th:strong?29.2:58.3,
         note:strong?(t==="s"?"past the strong line: +5% y/y":"strong line: +5% y/y"):(t==="g"?"holding or rising":"line: −2% y/y"),
-        how:{what:"What the typical home sells for now, compared with the same month a year ago.",
-             goesin:(m.sold!=null) ? "the sale prices of the "+m.sold.toLocaleString()+" homes sold in the latest month, and of the homes sold the same month last year"
-                   : "the sale price of every home sold in the latest month, and of every home sold the same month last year",
-             math:"this month's typical sale price ÷ the typical price 12 months ago, as a percent change", bt:"price",
+        how:{what:"What sellers are asking for the typical home now, compared with the same month a year ago. These are asking prices, not sale prices — asking prices run higher.",
+             goesin:(m.inv!=null) ? "the asking prices of the "+m.inv.toLocaleString()+" homes currently listed, and of the homes listed the same month last year"
+                   : "the asking price of every home currently listed, and of every home listed the same month last year",
+             math:"this month's typical asking price ÷ the typical asking price 12 months ago, as a percent change", bt:"price",
              why:strong?"Prices rising 5%+ a year is faster than normal appreciation — a strength signal when supply is thin.":"A drop past −2% is bigger than month-to-month noise — the level that preceded wider price declines in past national downturns.",
              yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
     if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
       const t = strong ? (p<=-0.20?"s":"g") : (p>0.10?"a":"g");  // SPEC dom_shrink/dom_stretch
-      rows.push({name:"TIME TO SELL", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
+      rows.push({name:"TIME ON MARKET", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
         note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −20% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
-        how:{what:"How many days the typical home sits on the market before a buyer commits.",
-             goesin:(m.sold!=null) ? "days from listing to contract for the "+m.sold.toLocaleString()+" homes sold in the latest month, and for last year's sales"
-                   : "days from listing to contract for every home sold in the latest month, and for last year's sales",
-             math:"the middle (median) days-on-market among homes that sold, and how that compares with a year ago", bt:"dom",
-             why:strong?"Homes selling 20%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 10% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
+        how:{what:"How long the homes currently for sale have been listed. This is time ON MARKET across unsold listings — not time-to-contract, and it runs longer.",
+             goesin:(m.inv!=null) ? "days on market across the "+m.inv.toLocaleString()+" homes currently listed, and the same measure a year ago"
+                   : "days on market across every home currently listed, and the same measure a year ago",
+             math:"the middle (median) days on market among homes currently for sale, and how that compares with a year ago", bt:"dom",
+             why:strong?"Listings turning over 20%+ faster than last year means buyers are moving quickly — a strength signal.":"Homes sitting 10% longer than a year ago is the earliest visible crack — it shows up months before prices actually move.",
              yours:"Yours: "+Math.round(m.dom)+" days"}}); }
     if (m.pd != null){ const t = strong ? (m.pd<0.20?"s":"g") : (m.pd>0.35?"a":"g");
       rows.push({name:"LISTINGS W/ PRICE CUTS", val:Math.round(m.pd*100)+"%", t, fill:clampPct(m.pd/0.7*100), th:strong?28.6:50,

@@ -438,9 +438,18 @@ def story_page(case, miss):
 </div>
 
 <div class="foot">
-  Recomputed from the same public data and danger lines used today
+  <!-- "public data" was wrong twice over: the market statistics behind a
+       current reading are a licensed commercial feed, not public, and the
+       historical series a case is recomputed from is a vendor archive. This
+       says only what is true of both — the same data and the same lines,
+       which is the claim the sentence exists to make — and matches the
+       wording the coda above already uses. -->
+  Recomputed from the same data and danger lines we use today
   ({esc(case.get("computed_from", ""))}).
   <a href="/methodology/">Methodology</a> · <a href="/">Home</a>
+  <div style="margin-top:8px">Readings are computed from licensed market
+  statistics and are general information only — not financial, legal, tax, or
+  real-estate advice.</div>
 </div>
 </div></body></html>"""
 

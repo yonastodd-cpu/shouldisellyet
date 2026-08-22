@@ -52,7 +52,7 @@ const REFERRAL = (function () {
   const MATERIAL_CONNECTION =
     "If you choose to work with an introduced agent, our referring agent's " +
     "brokerage may receive a standard broker-to-broker referral fee. This " +
-    "never affects your verdict and never costs you anything.";
+    "never affects your reading and never costs you anything.";
 
   /** True only when every REQUIRED credential is present — see rule 2.
    *

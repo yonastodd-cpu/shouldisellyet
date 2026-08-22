@@ -34,12 +34,13 @@ import argparse
 import csv
 import html
 import json
-import data_pause as PAUSE
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import data_pause as PAUSE
+from verdict_copy import COPY as VCOPY
 
 ROOT = Path(__file__).resolve().parents[1]
 # A metro needs this many ZIPs with a current reading before its warning
@@ -54,7 +55,27 @@ SPARK_MONTHS = 6
 
 esc = lambda s: html.escape(str(s), quote=True)
 
-WORD = {"green": "HOLD", "yellow": "WATCH", "red": "ACT", "strong": "STRONG"}
+# THE ADVICE DISCLAIMER WAS MISSING HERE ENTIRELY. Every /zip/ page, state hub
+# and the markets index carry one (build_pages.FOOTER); ~609 metro pages and
+# the metro index carried none, and they are the pages a marketing post lands
+# a cold reader on. Wording matches the site footer so the two cannot drift.
+DISCLAIMER = ("Readings are computed from licensed market statistics and are "
+              "general information only — not financial, legal, tax, or "
+              "real-estate advice.")
+
+# NOT A HAND-TYPED MAP ANY MORE. This was the sixth independent copy of the
+# level->word table, and a hand-typed table is how the site came to show four
+# words on metro pages while web/methodology.html says the vocabulary is three
+# ("There is no fourth word"). pipeline/data/verdict_copy.json is canonical —
+# resolving the `strong` word to ACT is therefore ONE edit in that file, and
+# this renderer follows it without a second decision being made here.
+WORD = {lvl: VCOPY[lvl]["word"] for lvl in VCOPY}
+
+# The qualifier renders beside the word whatever the word is. `strong` means a
+# market with no danger line crossed and all three strength conditions met —
+# a reason to consider selling, not a warning — and nothing in a one-word tag
+# conveys that on its own.
+QUAL = {"strong": "seller's market"}
 TAGCLASS = {"green": "green", "yellow": "amber", "red": "red", "strong": "strong"}
 # The four public dials and the published line each is measured against. These
 # are the same numbers and the same thresholds every /zip/ page shows.
@@ -140,6 +161,45 @@ def load_entries(data_dir):
             continue
         out[z] = e
     return out
+
+
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+
+
+def pretty_period(period):
+    """'2026-08' -> 'August 2026'. Anything else comes back untouched, so a
+    malformed value degrades to something readable rather than raising."""
+    p = str(period or "")
+    if len(p) == 7 and p[4] == "-" and p[:4].isdigit() and p[5:7].isdigit():
+        try:
+            return f"{MONTHS[int(p[5:7]) - 1]} {p[:4]}"
+        except IndexError:
+            return p
+    return p
+
+
+def live_period(entries, zips=None):
+    """The as-of month of the readings THIS page actually shows, or "".
+
+    A date stamp has to come from the readings under it, never from a global.
+    web/data/meta.json's `period` is the last Redfin data build — frozen at
+    2026-06 and not moving again — while the released v2 readings carry their
+    own as-of month in `p` (2026-08 today). Stamping the global on a page
+    showing August readings dated all 609 metro pages two months early, and
+    dated the 555 pages with no reading at all to a month whose data they are
+    not showing.
+
+    So: the newest as-of month among the readings the page may display, and
+    "" when it may display none. Every caller must render nothing at all for
+    "" rather than a placeholder — a page with no reading gets no date.
+    """
+    pool = entries if zips is None else zips
+    months = {(entries.get(z) or {}).get("p") for z in pool
+              if PAUSE.shows_data(z, (entries.get(z) or {}).get("b", PAUSE.LEGACY_BASIS))}
+    months.discard(None)
+    months.discard("")
+    return max(months) if months else ""
 
 
 def spark_caption(series):
@@ -243,15 +303,27 @@ def zip_row(z, e, places):
     # anyway — months of supply and price-cut share are v1 signals the engine
     # no longer computes.)
     cells = []
+    qual = QUAL.get(lvl, "")
     return (f'<tr><td class="mono"><a href="/zip/{esc(z)}/">{esc(z)}</a></td>'
             f'<td>{esc(city)}</td>'
-            f'<td><span class="tag {TAGCLASS.get(lvl, "")}">{esc(WORD.get(lvl, "—"))}</span></td>'
-            + "".join(cells) + "</tr>")
+            f'<td><span class="tag {TAGCLASS.get(lvl, "")}">{esc(WORD.get(lvl, "—"))}</span>'
+            + (f'<span class="qual">{esc(qual)}</span>' if qual else "")
+            + "</td>" + "".join(cells) + "</tr>")
 
 
-def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
+def page(cbsa, name, zips, entries, places, hist, vel_row, og):
     short = short_metro(name)
     series = metro_series(hist, cbsa)
+    # NO `period` PARAMETER ANY MORE. It used to arrive from web/data/meta.json
+    # and every date on the page came from it; that value is the last data
+    # build's month and has been frozen at 2026-06 since the vendor migration,
+    # so all 609 pages were stamped two months behind the readings they show.
+    # The date now comes from the readings on THIS page, and is absent when
+    # there are none. meta.json's period survives in main() under the name it
+    # is still true about — the OG asset folder.
+    period = live_period(entries, zips)
+    pperiod = pretty_period(period)
+    through = f" · data through {esc(pperiod)}" if pperiod else ""
     # Count only ZIPs whose reading may be shown. The hero, the share and the
     # "N of M rate HOLD or better" line are all counted from the rows below
     # them — so when those rows are blanked, counting the underlying records
@@ -262,6 +334,15 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
             if PAUSE.shows_data(z, (entries[z] or {}).get("b", PAUSE.LEGACY_BASIS))]
     scored = len(live)
     total = len(zips)
+    # A seller's-market reading (`strong`) crosses no danger line, so it is
+    # not a warning — that is why it sits with HOLD here and stays out of the
+    # numerator, matching research.wsi_of(). Its ROW now carries a visible
+    # "seller's market" qualifier (see QUAL), and the sentences under the
+    # table and in the receipt name it as the exception to "count every row
+    # tagged WATCH or ACT" — which they have to, because the moment
+    # verdict_copy.json resolves this level's word to ACT (the outstanding
+    # taxonomy fix; web/methodology.html already publishes it that way) the
+    # count and the tag stop agreeing without it.
     holds = sum(1 for z in live if entries[z].get("l") in ("green", "strong"))
     warn = scored - holds
 
@@ -290,14 +371,17 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
     share = (100.0 * warn / scored) if scored >= MIN_SCORED_FOR_SHARE else None
     prev = None
     url = f"{SITE}/metro/{slugify(name)}/"
-    title = f"{short} housing market: is it time to sell? ({period})"
+    title = (f"{short} housing market: is it time to sell?"
+             + (f" ({pperiod})" if pperiod else ""))
     desc = (f"{share:.0f}% of the {scored} ZIP codes we track in {short} are showing a "
-            f"housing warning sign as of {period}. Free per-ZIP ratings, updated monthly."
+            f"housing warning sign"
+            + (f" as of {pperiod}" if pperiod else "")
+            + ". Free per-ZIP readings, updated monthly."
             if share is not None else
-            (f"Per-ZIP housing ratings for {short} — {scored} of {total} ZIP codes "
-             f"rated so far, the rest being refreshed."
+            (f"Per-ZIP housing readings for {short} — live for {scored} of {total} "
+             f"ZIP codes; the rest are being rebuilt."
              if scored else
-             f"Per-ZIP housing ratings for {short} — {total} ZIP codes tracked. "
+             f"Per-ZIP housing readings for {short} — {total} ZIP codes tracked. "
              f"{PAUSE.NOTICE_TITLE}."))
 
     rows = "".join(zip_row(z, entries[z], places)
@@ -328,22 +412,28 @@ def page(cbsa, name, zips, entries, places, hist, period, vel_row, og):
                f'past a line. It is the same ZIP codes counted a second way, so it '
                f'does not add to the figure above.</p>')
 
-    jsonld = json.dumps({
-        "@context": "https://schema.org",
-        "@graph": [
-            {"@type": "Dataset", "name": f"{short} per-ZIP housing signals, {period}",
-             "description": desc, "url": url,
-             "creator": {"@type": "Organization", "name": "ShouldISellYet",
-                         "url": SITE + "/"},
-             "temporalCoverage": period, "isAccessibleForFree": True,
-             "license": SITE + "/research/methodology.html"},
-            {"@type": "Article", "headline": title, "datePublished": f"{period}-01",
-             "mainEntityOfPage": url,
-             "author": {"@type": "Organization", "name": "ShouldISellYet Research"},
-             "publisher": {"@type": "Organization", "name": "ShouldISellYet",
-                           "logo": {"@type": "ImageObject",
-                                    "url": SITE + "/apple-touch-icon.png"}}},
-        ]}, separators=(",", ":"))
+    # The structured dates follow the same rule as the visible stamp: they come
+    # from the readings on the page, and a page with no reading asserts no
+    # coverage and no publication date rather than inheriting a stale global.
+    dataset = {"@type": "Dataset",
+               "name": f"{short} per-ZIP housing signals"
+                       + (f", {pperiod}" if pperiod else ""),
+               "description": desc, "url": url,
+               "creator": {"@type": "Organization", "name": "ShouldISellYet",
+                           "url": SITE + "/"},
+               "isAccessibleForFree": True,
+               "license": SITE + "/research/methodology.html"}
+    article = {"@type": "Article", "headline": title,
+               "mainEntityOfPage": url,
+               "author": {"@type": "Organization", "name": "ShouldISellYet Research"},
+               "publisher": {"@type": "Organization", "name": "ShouldISellYet",
+                             "logo": {"@type": "ImageObject",
+                                      "url": SITE + "/apple-touch-icon.png"}}}
+    if period:
+        dataset["temporalCoverage"] = period
+        article["datePublished"] = f"{period}-01"
+    jsonld = json.dumps({"@context": "https://schema.org",
+                         "@graph": [dataset, article]}, separators=(",", ":"))
 
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -403,6 +493,12 @@ table.zips td.past{{color:#a33;font-weight:600}}
 .tag.amber{{background:#faf1dd;border-color:#e8d5a8;color:#8a6414}}
 .tag.red{{background:#fbe9e9;border-color:#ecc3c3;color:#a33}}
 .tag.strong{{background:#e8eef7;border-color:#c3d2e8;color:#1f3a5f}}
+/* The seller's-market qualifier. It has to sit BESIDE the word, not behind a
+   title attribute: an ACT that means "conditions favour you" and an ACT that
+   means "sellers are losing pricing power" cannot be told apart by colour
+   alone, and colour is the first thing a screen reader drops. */
+.qual{{display:inline-block;margin-left:7px;font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.625rem;letter-spacing:.04em;color:#1f3a5f;white-space:nowrap}}
 </style>
 <script type="application/ld+json">{jsonld}</script>
 </head><body>
@@ -430,12 +526,12 @@ table.zips td.past{{color:#a33;font-weight:600}}
   </div>
 
   <h1 style="margin:0">{esc(short)}</h1>
-  <div class="msub">{esc(name)} · data through {esc(period)}</div>
+  <div class="msub">{esc(name)}{through}</div>
   <div class="mfigs">
     <div class="mfig">
       <div class="mlabel">Where they stand today</div>
       <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
-      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if share is not None else (f"of the {total} ZIP codes we track here, {scored} {'has' if scored == 1 else 'have'} a current rating — too few to give the metro a share yet" if scored else f"ratings for the {total} ZIP codes we track here are being refreshed")}</div>
+      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if share is not None else (f"of the {total} ZIP codes we track here, {scored} {'has' if scored == 1 else 'have'} a live reading — too few to give the metro a share yet" if scored else f"readings for the {total} ZIP codes we track here are being rebuilt")}</div>
     </div>
     {det_block}
   </div>
@@ -445,8 +541,9 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <div class="msub">{esc(spark_caption(series))}</div>
 
   <h2>Every ZIP code we track here</h2>
-  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if share is not None else (f"{holds} of the {scored} ZIP codes rated so far rate HOLD or better; the rest are still being refreshed." if scored else PAUSE.NOTICE_BODY)} A value in red is
-  past its published danger line. Tap a ZIP for its full reading.</p>
+  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if share is not None else (f"{holds} of the {scored} ZIP codes with a live reading rate HOLD or better; the rest are being rebuilt." if scored else PAUSE.NOTICE_BODY)} A row marked
+  <i>seller's market</i> crosses no danger line — conditions there favour a
+  seller rather than turning against one. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
   <table class="zips"><thead><tr><th>ZIP</th><th>City</th><th>Rating</th>
   </tr></thead><tbody>{rows}</tbody></table></div>
@@ -454,26 +551,27 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <details class="receipt">
     <summary>Behind this number</summary>
     <div class="receipt-body">
-      <p><b>What goes in.</b> Every ZIP code in this metro we can score — {total}
-      of them this month. A ZIP is scored when it has enough recent sales to read;
-      the rest are left out rather than guessed at.</p>
-      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT." if share is not None else (f"{scored} of the {total} ZIP codes here have a current rating, of which {warn} show at least one signal past its danger line. That is too few to state a share for the metro — the rest are still being refreshed." if scored else PAUSE.NOTICE_BODY)}</p>
+      <p><b>What goes in.</b> Every ZIP code we track in this metro — {total} of
+      them, {scored} with a live reading. A ZIP shows a reading when its licensed
+      active-listing statistics are complete enough to score; the rest carry a
+      rebuild notice rather than a guess.</p>
+      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT. A row marked seller's market crosses no line and is not among them." if share is not None else (f"{scored} of the {total} ZIP codes here have a live reading, of which {warn} show at least one signal past its danger line. That is too few to state a share for the metro — the rest are being rebuilt." if scored else PAUSE.NOTICE_BODY)}</p>
       <p><b>Why there is a line at all.</b> Each danger line is the level at which,
       in past downturns, that signal began leading price declines rather than
       following them. The lines are fixed, published, and identical for every ZIP
       code in the country — we do not tune them per market.</p>
-      <p><b>Where it comes from.</b> Public housing data, refreshed when a new
-      release publishes; this page is data through {esc(period)}. Full derivation on
+      <p><b>Where it comes from.</b> Licensed market statistics, refreshed when a
+      new release publishes{f"; this page is data through {esc(pperiod)}" if pperiod else ""}. Full derivation on
       the <a href="/methodology">methodology page</a>.</p>
     </div>
   </details>
 
-  <p class="note" style="margin-top:14px">Ratings and danger lines are defined on the
-  <a href="/methodology">methodology page</a>. Data through {esc(period)}, refreshed
+  <p class="note" style="margin-top:14px">Readings and danger lines are defined on the
+  <a href="/methodology">methodology page</a>.{f" Data through {esc(pperiod)}." if pperiod else ""} Refreshed
   when a new release publishes.</p>
 </div>
-<footer class="stamp">ShouldISellYet Research · data through {esc(period)} ·
-<a href="/research/">monthly national report</a></footer>
+<footer class="stamp">ShouldISellYet Research{through} ·
+<a href="/research/">monthly national report</a><br>{DISCLAIMER}</footer>
 </body></html>"""
 
 
@@ -516,7 +614,14 @@ def redirect_page(dest, note):
 
 def hub_page(index, names, period):
     """/metro/ — every metro page, so they are reachable and crawlable rather
-    than only linkable from a post."""
+    than only linkable from a post.
+
+    `period` is the as-of month of the readings behind these pages (see
+    live_period), and is "" when none of them is showing one — in which case
+    the hub carries no date rather than a stale one.
+    """
+    pperiod = pretty_period(period)
+    through = f" · data through {esc(pperiod)}" if pperiod else ""
     items = "".join(
         f'<li><a href="/metro/{esc(s)}/">{esc(short_metro(names[c]))}</a></li>'
         for s, c in sorted(index.items(), key=lambda kv: short_metro(names[kv[1]])))
@@ -525,7 +630,7 @@ def hub_page(index, names, period):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 {PAUSE.robots_meta()}
 <title>Housing market by metro area — ShouldISellYet</title>
-<meta name="description" content="Per-ZIP housing ratings for {len(index)} U.S. metro areas, updated monthly.">
+<meta name="description" content="Per-ZIP housing readings for {len(index)} U.S. metro areas, updated monthly.">
 <link rel="canonical" href="{SITE}/metro/">
 <link rel="stylesheet" href="/zip/zip.css">
 <link rel="icon" href="/favicon.svg">
@@ -540,10 +645,10 @@ def hub_page(index, names, period):
 <div class="wrap">
   <div class="crumb"><a href="/">Home</a> › Metro areas</div>
   <h1>Housing market by metro area</h1>
-  <p>Per-ZIP ratings for {len(index)} metro areas, data through {esc(period)}.</p>
+  <p>Per-ZIP readings for {len(index)} metro areas{f", data through {esc(pperiod)}" if pperiod else ""}.</p>
   <ul class="hubgrid">{items}</ul>
 </div>
-<footer class="stamp">ShouldISellYet Research · data through {esc(period)}</footer>
+<footer class="stamp">ShouldISellYet Research{through}<br>{DISCLAIMER}</footer>
 </body></html>"""
 
 
@@ -559,7 +664,12 @@ def main(argv=None):
     if not meta_p.exists():
         print("build_metro: no web/data/meta.json — nothing to build")
         return 0
-    period = json.loads(meta_p.read_text()).get("period", "")
+    # meta.json's `period` is the last DATA BUILD's month, frozen at the final
+    # Redfin run. It still keys the pre-rendered OG asset folders under
+    # web/assets/mkt/{period}/, which is the only thing it is still true about
+    # — so it is named for that job and never reaches a reader. Reader-facing
+    # dates come from live_period(), off the readings themselves.
+    asset_period = json.loads(meta_p.read_text()).get("period", "")
 
     hist_p = ROOT / "pipeline" / "research" / "history.json"
     if not hist_p.exists():
@@ -599,13 +709,14 @@ def main(argv=None):
         if s in index:                      # verified zero today; refuse to guess
             print(f"build_metro: slug collision {s!r} ({index[s]} vs {cbsa}) — skipped")
             continue
-        og = f"{SITE}/assets/mkt/{period}/mq-{period}-flip-{cbsa}.png"
-        if not (web / "assets" / "mkt" / period / f"mq-{period}-flip-{cbsa}.png").exists():
+        og = f"{SITE}/assets/mkt/{asset_period}/mq-{asset_period}-flip-{cbsa}.png"
+        if not (web / "assets" / "mkt" / asset_period /
+                f"mq-{asset_period}-flip-{cbsa}.png").exists():
             og = f"{SITE}/og/default.png"
         d = stage / s
         d.mkdir(parents=True)
         (d / "index.html").write_text(
-            page(cbsa, name, zips, entries, places, hist, period, vel.get(cbsa), og),
+            page(cbsa, name, zips, entries, places, hist, vel.get(cbsa), og),
             encoding="utf-8")
         index[s] = cbsa
         n += 1
@@ -615,7 +726,10 @@ def main(argv=None):
     (ROOT / "pipeline" / "data" / "metro_slugs.json").write_text(
         json.dumps(index, separators=(",", ":"), sort_keys=True))
 
-    (stage / "index.html").write_text(hub_page(index, names, period), encoding="utf-8")
+    # The hub is dated from every reading it points at, not from the data build.
+    hub_period = live_period(entries)
+    (stage / "index.html").write_text(hub_page(index, names, hub_period),
+                                      encoding="utf-8")
 
     final = web / "metro"
     if final.exists():
@@ -637,7 +751,7 @@ def main(argv=None):
                       "Taking you to the methodology…"), encoding="utf-8")
 
     print(f"build_metro: {n} metro page(s) + hub + /methodology · "
-          f"min {args.min_zips} ZIPs · period {period}")
+          f"min {args.min_zips} ZIPs · readings as of {hub_period or 'none'}")
     return 0
 
 

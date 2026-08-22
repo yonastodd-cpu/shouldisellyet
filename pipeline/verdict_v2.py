@@ -274,18 +274,10 @@ def disclosure(spec=SPEC):
         "dom_shrink": pct(spec["dom_shrink"]),      # −20%
         "inventory_drop": pct(spec["inventory_drop"]),    # −15%
         "signal_count": 3,
-        "signal_names": ("the year-over-year price trend",
-                         "how long homes take to sell",
-                         "how the pool of homes for sale is changing"),
     }
 
 
-def methodology_sentence(spec=SPEC):
-    """One sentence naming every signal and its line, built from the spec."""
-    d = disclosure(spec)
-    return (f"Three public signals, each with a danger line recalibrated for "
-            f"active-listing data: the year-over-year price trend "
-            f"({d['price_slow']}), how long homes take to sell "
-            f"({d['dom_stretch']} year over year), and the number of homes for "
-            f"sale ({d['inventory_surge']} year over year). A ZIP crossing "
-            f"enough of them reads WATCH or ACT; a clean ZIP reads HOLD.")
+# methodology_sentence() and signal_names moved to verdict_copy.py on
+# 2026-08-22. This module returns numbers; the words that describe them are
+# copy and belong with the rest of the copy. disclosure() above is still the
+# single source of the numbers.

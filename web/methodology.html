@@ -34,11 +34,11 @@
 <body><div class="wrap">
   <div class="nav"><a href="/">← ShouldISellYet.com</a> · <a href="/terms.html">Terms</a> · <a href="/research/methodology.html">Research index</a></div>
   <h1>Methodology</h1>
-  <div class="date">Reading methodology v2 · last revised 20 August 2026</div>
+  <div class="date">Reading methodology v2 · last revised 22 August 2026</div>
 
   <p class="lede">A reading is one word — HOLD, WATCH or ACT — about a ZIP code's housing market. This page says where the numbers come from, what they measure, how they are scored, and how often they change. Every danger line we use is published below; none of them is proprietary.</p>
 
-  <div class="note"><b>Readings are currently paused.</b> We stopped taking data from our previous market-data vendor on 14 August 2026 and are rebuilding readings on a new source. Until that finishes, ZIP pages show a notice instead of a rating. This page describes the rebuilt method, so that it is public before the readings return rather than after.</div>
+  <div class="note"><b>Readings are live.</b> We stopped taking data from our previous market-data vendor on 14 August 2026 and rebuilt readings on a new licensed source. Since <b>20 August 2026</b> readings are published for <b>5,000</b> of the <b>22,874</b> U.S. ZIP codes that have a page here; the remaining pages show a rebuild notice instead of a rating until their readings are computed. This page describes the rebuilt method behind every live reading.</div>
 
   <h2>1. Where the data comes from</h2>
   <p>Readings are computed from <b>RentCast</b>, a licensed market-statistics API. We pay for it, and we use its ZIP-level statistics about homes currently listed for sale. This is the only source that feeds a reading.</p>
@@ -64,7 +64,7 @@
     <tr><td>Months of supply</td><td><b>Gone.</b> It needs the number of homes that sold, and active-listing statistics cannot see closings. This was the highest-weighted check in the old formula.</td></tr>
     <tr><td>Share of listings cutting price</td><td><b>Gone.</b> No equivalent field.</td></tr>
     <tr><td>Year-over-year price trend</td><td>Survives, now measured on asking prices</td></tr>
-    <tr><td>How long homes take to sell</td><td>Survives, now measured across active listings</td></tr>
+    <tr><td>How long listed homes have been on the market</td><td>Survives, now measured across active listings</td></tr>
     <tr><td>How the pool of homes for sale is changing</td><td>Survives</td></tr>
   </table>
   <p>Which three survived is not luck: every survivor was already a year-over-year <i>ratio</i>, and both casualties were <i>levels</i>. A level does not port across a change of basis — an active-listing median sits higher than a sold median — but the direction and size of a year-over-year change stays comparable.</p>
@@ -76,18 +76,18 @@
     <tr><th>Signal</th><th>Danger line</th><th>Points</th></tr>
     <tr><td>Asking prices vs. a year ago</td><td>below <code>−2%</code></td><td>2</td></tr>
     <tr><td>Asking prices vs. a year ago (steeper)</td><td>below <code>−5%</code></td><td>3</td></tr>
-    <tr><td>Time to sell vs. a year ago</td><td>up more than <code>+10%</code></td><td>1</td></tr>
+    <tr><td>Time on market vs. a year ago</td><td>up more than <code>+10%</code></td><td>1</td></tr>
     <tr><td>Homes for sale vs. a year ago</td><td>up more than <code>+30%</code></td><td>1</td></tr>
   </table>
   <p><b>ACT</b> at 3 points or more · <b>WATCH</b> at 1 or more · <b>HOLD</b> at zero. Because the steepest price line alone scores 3 points — the ACT threshold — <b>a single signal can reach ACT</b> when prices are falling fast. ACT does not mean several lines are crossed.</p>
-  <p>A market with no lines crossed and all three strength conditions — asking prices up <code>+5%</code> or more, time to sell down <code>−20%</code> or more, homes for sale down <code>−15%</code> or more — reads as a strong seller's market, which we also render as ACT: it is a reason to consider selling.</p>
+  <p>A market with no lines crossed and all three strength conditions — asking prices up <code>+5%</code> or more, time on market down <code>−20%</code> or more, homes for sale down <code>−15%</code> or more — reads as a strong seller's market and is shown as <b>STRONG</b>, qualified on the page as a seller's market rather than a warning: it is a reason to consider selling, not a danger sign. So the published vocabulary is four words — HOLD, WATCH, ACT and STRONG. Internally the engine files STRONG under the same action class as ACT, because both mean “this is a moment to do something”; we do not show it that way, because an ACT badge on a seller's market would read as a warning and mean the opposite of what it is.</p>
   <p>If fewer than 2 of the three signals can be computed for a ZIP, we publish no reading at all: the page says the data is insufficient rather than showing a rating we do not have the evidence for.</p>
   <p>The formula is versioned. This is <b>v2</b>. The lines above were calibrated against real active-listing data in August 2026, not carried over: two of them fired almost never when the old numbers were applied to the new basis, so they were re-fitted to flag a similar share of markets. Changes to a line are versioned and restated, not applied silently.</p>
 
   <h2>5. How often a reading refreshes</h2>
   <p>Not every ZIP refreshes at the same rate, and we would rather say so than imply a uniform freshness we do not have. Market data is licensed per ZIP code and costs money to refresh, so the busiest ZIP codes will refresh most often and the rest less often.</p>
-  <div class="note"><b>The exact cadence is not settled yet.</b> We have not run a refresh cycle on the new source, so we are not going to publish a schedule we cannot yet keep. The plan is monthly for roughly the busiest thousand ZIP codes and less often — quarterly or twice a year — for the rest. When the cadence is set, this section will state it exactly, and every page will show the date its own data runs through.</div>
-  <p>Today no ZIP page shows a reading date, because no ZIP page shows a reading.</p>
+  <div class="note"><b>The exact cadence is not settled yet.</b> We have not yet run a second cycle on the new source, so we are not going to publish a schedule we cannot yet keep. The plan is monthly for roughly the busiest thousand ZIP codes and less often — quarterly or twice a year — for the rest. When the cadence is set, this section will state it exactly.</div>
+  <p>Every page carrying a reading shows the month that reading&rsquo;s own data runs through — today that is August 2026 on all of them. A page with no reading shows no date, because there is no reading date to show.</p>
 
   <h2>6. What a reading is not</h2>
   <p>A reading is general information about a housing market. It is <b>not financial, investment, legal, or real-estate advice</b>, it is <b>not an appraisal or valuation of any property</b>, and it should not be the basis of a decision to sell. It describes a market, not your home, and it knows nothing about your property's condition, your finances, or your circumstances. Consult a licensed real-estate professional before making sale decisions. The full <a href="/terms.html">Terms of Service</a> govern.</p>

@@ -18,6 +18,8 @@ dated a withdrawal from the day we believed it happened and was wrong twice.
 | **Bulk-downloadable serving of underlying figures stopped** | **2026-08-21T01:36:16Z** | see below |
 | **Per-ZIP research file withdrawn** | **2026-08-21T03:22:25Z** | see below |
 | GitHub GC request **prepared** | 2026-08-21 | `GITHUB_PURGE_REQUEST.md` |
+| GitHub GC request **submitted** | 2026-08-22 | ticket #4688700 |
+| GitHub GC request **PAUSED at our request** | 2026-08-22T13:40:24Z | asked to hold, **not withdrawn**. Preservation of the objects now takes precedence over their removal. |
 
 ## Bulk serving of underlying figures
 

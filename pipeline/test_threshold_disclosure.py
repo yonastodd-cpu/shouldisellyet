@@ -18,7 +18,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from verdict_v2 import SPEC, disclosure, methodology_sentence
+from verdict_v2 import SPEC, disclosure
+from verdict_copy import methodology_sentence
 
 ROOT = Path(__file__).resolve().parents[1]
 D = disclosure()
@@ -36,7 +37,10 @@ def test_the_methodology_sentence_states_every_line():
     s = methodology_sentence()
     for line in (D["price_slow"], D["dom_stretch"], D["inventory_surge"]):
         assert line in s, f"the sentence omits {line}"
-    assert "Three public signals" in s
+    assert "Three signals drawn from licensed market statistics" in s
+    # the feed is licensed, not public, and the dial is time on market
+    assert "public signal" not in s
+    assert "take to sell" not in s
 
 
 def test_the_press_page_states_the_engines_lines():

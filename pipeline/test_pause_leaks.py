@@ -182,7 +182,9 @@ def test_a_released_zip_still_renders_its_figures(monkeypatch, tmp_path):
               m={"spy": -0.075, "dom": 52.0, "domy": -3.0, "invy": 0.08, "inv": 979})
     text = visible_text(BP.zip_page("20601", v2, PLACE, META, []))
     assert PAUSE.NOTICE_TITLE not in text
-    assert "days to sell" in text
+    assert "on the market about" in text, "a released ZIP must render its figures"
+    # the dial measures time ON MARKET across unsold listings, not time-to-sell
+    assert "days to sell" not in text and "TIME TO SELL" not in text
 
 
 # ————— the two committed static pages —————
@@ -340,10 +342,20 @@ def _released_page(zip_code="95608"):
 
 
 def test_a_released_page_credits_the_source_its_reading_came_from():
+    """The disclosure requirement is unchanged — a page showing a reading must
+    say where the reading came from. What changed on 2026-08-22 is the FORM:
+    the vendor's licence bars use of its marks "in advertising, publicity or any
+    other commercial manner" without written consent and requires no
+    attribution, so the name is confined to /methodology.html and every other
+    surface credits the source generically. This asserts the credit is present,
+    not that it names anyone."""
     src = _released_page()
-    assert "RentCast" in src, "the page does not name the source of its reading"
+    assert "Market statistics from a licensed data provider" in src, \
+        "the page does not name the source of its reading"
+    assert "RentCast" not in src, \
+        "the vendor is named outside /methodology.html — see docs/ATTRIBUTION.md"
     assert "redfin" not in src.lower(), \
-        "a RentCast reading is credited to Redfin — a vendor whose data was withdrawn"
+        "a reading is credited to Redfin — a vendor whose data was withdrawn"
 
 
 def test_a_released_page_dates_itself_from_its_own_reading():
@@ -390,5 +402,10 @@ def test_the_client_rendered_stamp_also_follows_the_record():
     any gate."""
     for name in ("index.html", "my-report.html"):
         js = (ROOT / "web" / name).read_text(encoding="utf-8")
-        assert 'active listings' in js and "RentCast" in js, \
+        assert 'active listings' in js and "a licensed data provider" in js, \
             f"{name} still stamps every reading with the v1 attribution"
+        # The vendor name is confined to methodology.html pending counsel on
+        # RentCast's trademark clause. Source COMMENTS may still name it — this
+        # checks rendered copy, which is what the clause reaches.
+        visible = re.sub(r"//[^\n]*|/\*.*?\*/|<!--.*?-->", "", js, flags=re.S)
+        assert "RentCast" not in visible, f"{name} names the vendor in rendered copy"

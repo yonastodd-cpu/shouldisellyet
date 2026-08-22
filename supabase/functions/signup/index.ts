@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
               html: `<div style="display:none;max-height:0;overflow:hidden">One click and you're set — we'll email you the moment ${zip} goes live.&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;</div>
 <div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;color:#1c2430;line-height:1.65">
 <p>You (or someone using your address) asked to be told when our housing-market
-verdict for <b>${zip}</b> goes live.</p>
+reading for <b>${zip}</b> goes live.</p>
 <p style="margin:22px 0"><a href="${link}"
    style="background:#1f3a5f;color:#faf8f4;text-decoration:none;padding:13px 22px;border-radius:8px;font-weight:600;display:inline-block">
    Confirm my alert for ${zip}</a></p>

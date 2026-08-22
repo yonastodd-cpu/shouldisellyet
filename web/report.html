@@ -16,7 +16,7 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://shouldisellyet.com/og/default.png">
-<meta name="description" content="A sample MyMarketCheckup property report: the market dials with their full methodology, your equity and walk-away number, lock-in cost, rate context, stress test, and what it all means. Market figures are being rebuilt on a new data engine.">
+<meta name="description" content="A sample MyMarketCheckup property report: the market dials with their full methodology, your equity and walk-away number, lock-in cost, rate context, stress test, and what it all means. This sample’s own market figures have not been rebuilt on the new data engine yet.">
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
@@ -269,7 +269,7 @@ details.how .how-body b{color:#3a4450}
   <h1 class="sample-h1">MyMarketCheckup sample report</h1>
 
   <div class="samplebar">
-    <b>This is a sample.</b> It shows the shape of a full report — your reading, the market dials behind it, and what they mean for your equity and timeline. The market figures are being rebuilt on a new data engine and are not shown right now. Your report is built from your own numbers, and only the address is required.
+    <b>This is a sample.</b> It shows the shape of a full report — your reading, the market dials behind it, and what they mean for your equity and timeline. Live readings are running for a first set of ZIP codes; the ZIP this sample was built around is not one of them yet, so its market figures are not shown. Your report is built from your own numbers, and only the address is required.
     <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn" href="index.html#check">Check your ZIP free →</a>
       <a class="btn-outline" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts · <span data-price="mode-cta">$3.99/mo</span></a>
@@ -286,7 +286,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" data-nav="signals">
       <div class="k">SAMPLE REPORT</div>
       <div class="title">This reading is being refreshed</div>
-      <p class="subt">We&rsquo;re rebuilding market readings on a new data engine. This sample previously showed a real ZIP&rsquo;s figures from our previous data source; it will return once the new engine is live, rebuilt from the new source rather than restored from the old one.</p>
+      <p class="subt">Readings are live on the new data engine for a first set of ZIP codes, and more are being added. This sample previously showed a real ZIP&rsquo;s figures from our previous data source; it returns once that ZIP is rebuilt from the new source, rather than being restored from the old one.</p>
       <p class="subt">Nothing has been deleted, and no report you have purchased is affected.</p>
     </div>
   </div>
@@ -305,7 +305,7 @@ details.how .how-body b{color:#3a4450}
     <a href="zip/" style="color:inherit">Browse markets by state</a> ·
     <a href="press.html" style="color:inherit">Press</a> ·
 
-    <div style="margin-top:8px;line-height:1.5">Sample report with illustrative homeowner figures. Verdicts and reports are generated from public housing-market data and are for general information only — not financial, legal, or real-estate advice.</div>
+    <div style="margin-top:8px;line-height:1.5">Sample report with illustrative homeowner figures. Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice.</div>
   </div>
 </div>
 
@@ -389,15 +389,13 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
       $("trend-callouts").innerHTML = cos.map(c =>
         '<div class="co"><div class="cv">'+c.v+'</div><div class="cl">'+c.l+'</div></div>').join("");
       $("trend-foot").textContent =
-        "Your home's estimated trajectory, assuming it tracked your ZIP's median sale price " +
+        "Your home's estimated trajectory, assuming it tracked your ZIP's median asking price " +
         "(indexed to your value estimate). Individual homes vary." +
-        (m.sold != null
-          ? " Each month's point is the middle sale price of the homes sold that month (" + m.sold.toLocaleString() + " in the latest month)."
-          : " Each month's point is the middle sale price of the homes sold that month.");
+        " Each month's point is the middle asking price of the homes listed in your ZIP that month.";
     }
   }
 
-  // 06 · time-to-sell chart + the seasonality note
+  // 06 · time-on-market chart + the seasonality note
   if (h && h.d && h.d.some(x => x != null)) {
     $("dom-chart").innerHTML = MARKET.lineSVG(h.d, h.s, {color:"#8a7a55", h:150, fmt: v => Math.round(v)+"d", peak:false});
     const by = {};
@@ -407,9 +405,9 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
       if (arr.length >= 2) { const a = arr.reduce((x,y)=>x+y,0)/arr.length; if (a < bv) { bv = a; best = +mo; } }
     });
     $("season-note").innerHTML =
-      "How long homes take to sell in your ZIP, over time — each point is the middle days-on-market among that month's sales" +
-      (m.sold != null ? " (" + m.sold.toLocaleString() + " sold in the latest month)." : ".") +
-      (best >= 0 ? " Historically, homes here have sold fastest in <b>" + MARKET.MONTHS_LONG[best] +
+      "How long listed homes have been on the market in your ZIP, over time — each point is the " +
+      "middle days-on-market across that month's active listings." +
+      (best >= 0 ? " Historically, listings here have cleared fastest in <b>" + MARKET.MONTHS_LONG[best] +
         "</b> — worth knowing when you plan your listing." : "");
   }
 
@@ -437,8 +435,11 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
       '<span class="net">' + MARKET.fmt(V - SAMPLE.bal - V*0.08) + '</span>';
   }
 
-  // data-vintage stamps
-  if (meta.period) document.querySelectorAll(".js-period").forEach(e => e.textContent = meta.period);
+  // Data-vintage stamps used to be written here from meta.period — the
+  // site-wide frozen release month. Rule: a vintage is a claim about ONE
+  // reading, so it renders from that reading's own as-of month or not at all.
+  // There is no .js-period sink on this page today; when the sample is rebuilt
+  // its stamp must read the record, not the global.
 })();
 
 // Same dynamic numbering + jump-nav the real report uses, so the sample can
@@ -454,7 +455,8 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
     el.textContent = num;
     if (sec.id && sec.dataset.nav) nav.push({id: sec.id, num, label: sec.dataset.nav});
   });
-  document.getElementById("jumpnav").innerHTML = nav.map(x =>
+  const jn = document.getElementById("jumpnav");
+  if (jn) jn.innerHTML = nav.map(x =>
     '<a href="#' + x.id + '"><b>' + x.num + '</b>' + x.label + '</a>').join("");
 })();
 </script>

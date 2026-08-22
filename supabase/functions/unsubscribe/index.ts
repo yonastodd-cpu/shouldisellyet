@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
 <p><b>What still reaches you</b>, because it isn't marketing:</p>
 <ul>
   <li>the link to a report you paid for</li>
-  <li>alerts when your ZIP's verdict changes — the thing you signed up for</li>
+  <li>alerts when your ZIP's reading changes — the thing you signed up for</li>
   <li>billing notices, including a heads-up before any renewal</li>
 </ul>
 <p>Want to stop those too? That means cancelling the subscription itself — you can do that yourself from your report page, or email

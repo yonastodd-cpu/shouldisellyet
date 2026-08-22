@@ -27,6 +27,7 @@ import json
 import os
 import shutil
 import sys
+import textwrap
 from collections import defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -85,7 +86,8 @@ from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
 import data_pause as PAUSE
 import realtor_crosscheck as RDC
 from build_manifest import read_manifest
-from verdict_v2 import SPEC as V2, disclosure, methodology_sentence
+from verdict_v2 import SPEC as V2, disclosure
+from verdict_copy import methodology_sentence
 
 # Every number this file states to a reader comes from the engine's own spec.
 # The copy and the thresholds drifted once already — the Tier B refit moved two
@@ -135,8 +137,12 @@ def metric_rows(m, strong):
         d, dy = m["dom"], m["domy"]; prior = d - dy; p = dy/prior if prior > 0 else 0
         # The calibrated active-listing lines, not the ported sale-basis ones.
         t = ("s" if p <= V2["dom_shrink"] else "g") if strong else ("a" if p > V2["dom_stretch"] else "g")
-        rows.append(("TIME TO SELL", f"{round(d)} days", t, clamp((p*100+50)/150*100), 23.3 if strong else 60,
-                     (f"+{round(dy)} days y/y" if dy > 0 else "as fast as last yr")))
+        # "TIME TO SELL" overstated what the number is. On the active-listing
+        # basis this is days a STANDING listing has been on the market, which
+        # methodology section 2 says is not time-to-contract and runs longer.
+        rows.append(("TIME ON MARKET", f"{round(d)} days", t, clamp((p*100+50)/150*100), 23.3 if strong else 60,
+                     (f"+{round(dy)} days y/y" if dy > 0 else
+                      f"−{abs(round(dy))} days y/y" if dy < 0 else "same as last yr")))
     if m.get("pd") is not None:
         v = m["pd"]; t = ("s" if v < .20 else "g") if strong else ("a" if v > .35 else "g")
         rows.append(("LISTINGS W/ PRICE CUTS", f"{round(v*100)}%", t, clamp(v/0.7*100), 28.6 if strong else 50,
@@ -169,15 +175,16 @@ def pretty_month(period):
 
 
 def card_stat(m):
-    """ONE public market stat for the share card. Public feed values only —
-    never a personal input (see og_card.py's privacy note)."""
+    """ONE market stat for the share card. Values already shown on the page —
+    never a personal input (see og_card.py's privacy note). The feed itself is
+    licensed, not public; only these derived figures are published."""
     spy, dom = m.get("spy"), m.get("dom")
     if spy is not None and spy <= -0.02:
         return f"Prices are down {abs(spy)*100:.1f}% from a year ago"
     if spy is not None and spy >= 0.05:
         return f"Prices are up {spy*100:.1f}% from a year ago"
     if dom is not None:
-        return f"Homes here sell in {round(dom)} days"
+        return f"Listed homes here average {round(dom)} days on the market"
     if spy is not None:
         return f"Prices are {'up' if spy >= 0 else 'down'} {abs(spy)*100:.1f}% from a year ago"
     return "See the signals for this ZIP"
@@ -291,7 +298,15 @@ NAVBAR = """<nav class="top">
 # data the site had just withdrawn, on the one line a reader would check.
 CITE_V1 = ('Data provided by <a href="https://www.redfin.com" target="_blank" '
            'rel="noopener">Redfin</a>, a national real estate brokerage')
-CITE_V2 = "Market statistics from RentCast"
+# THE VENDOR IS NOT NAMED HERE. The licence bars use of the mark "in
+# advertising, publicity or any other commercial manner" without written
+# consent, and asks for no attribution in return — so naming it on 22,874 ZIP
+# pages, 51 hubs and the markets index is a trademark exposure that buys
+# nothing. The provenance a reader needs is that the figures are licensed
+# rather than public, and that is what this says. The name survives in exactly
+# one place, web/methodology.html, as a plain nominative statement of source.
+# Pending counsel; a precaution, not a settled conclusion.
+CITE_V2 = "Market statistics from a licensed data provider"
 
 
 def cite_for(basis):
@@ -330,7 +345,7 @@ PLACES_CITE = ('Place names from <a href="https://www.geonames.org" target="_bla
 FOOTER = """<footer>
   <a href="/">Home</a> · <a href="/zip/">Browse markets by state</a> · <a href="/press.html">Press</a> ·
   <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
-  <div class="disc">{cite}Verdicts are computed from public housing-market data and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
+  <div class="disc">{cite}Readings are computed from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice. Every home is different; consult a licensed professional before making decisions. © 2026 ShouldISellYet.com · operated by Yayday LLC.</div>
 </footer>"""
 
 
@@ -345,9 +360,14 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # has not run since ingestion stopped. A v2 reading is as-of its own month,
     # and tranche 1 published August readings under "Data through June 2026" —
     # two months stale, and pointing at a window inside the withdrawn data.
-    period = e.get("p") or meta.get("period", "")
-    pretty_period = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
-    updated = meta.get("generated", date.today().isoformat())
+    #
+    # THE meta.json FALLBACK IS GONE. It was the last route by which a frozen
+    # global date reached a page: a ZIP with no reading of its own inherited
+    # June 2026 and stated it as the vintage of a reading it was not showing.
+    # A page with no reading now carries NO date anywhere — head, body, stamp
+    # or JSON-LD — which is the only honest thing an undated page can do.
+    period = e.get("p") or ""
+    pretty_period = pretty_month(period)
     state_name = STATE_NAMES.get(st, st)
     stat = card_stat(m)
     vc = vcopy(level)           # shared verdict copy: word, translation, emoji
@@ -383,11 +403,14 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     if m.get("dom") is not None and m.get("domy") is not None:
         dy = round(m["domy"])
         unit = "day" if abs(dy) == 1 else "days"
-        tail = (f"{abs(dy)} {unit} {'slower' if dy > 0 else 'faster'} than a year ago" if dy else "the same pace as a year ago")
-        facts.append(f"Homes are taking about <b>{round(m['dom'])} days</b> to sell — {tail}.")
+        # NOT "taking N days to sell". This counts days a listing that is still
+        # for sale has been on the market — methodology section 2: it is not
+        # time-to-contract, and across unsold listings it runs longer than one.
+        tail = (f"{abs(dy)} {unit} {'longer' if dy > 0 else 'shorter'} than a year ago" if dy else "the same as a year ago")
+        facts.append(f"Listed homes here have been on the market about <b>{round(m['dom'])} days</b> — {tail}.")
     fm = fastest_month(e.get("h"))
     if fm:
-        facts.append(f"Over the last three years, homes in {esc(city)} have sold fastest in <b>{fm}</b> — worth knowing when you plan a listing.")
+        facts.append(f"Over the last three years, listings in {esc(city)} have spent the fewest days on the market in <b>{fm}</b> — worth knowing when you plan a listing.")
     # spy_deciles is a table of Redfin SOLD-price year-over-year changes. A v2
     # spy is an ASKING-price change. Ranking one against the other compares two
     # different measurements and reports the answer as a national percentile —
@@ -405,7 +428,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # The data month is in the path so a new month is a NEW url — that is the
     # cache-busting strategy: scrapers key on the image url, so cards refresh
     # exactly when the data does and never go stale behind a CDN.
-    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card else f"{SITE}/og/default.png")
+    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and period else f"{SITE}/og/default.png")
     # T2: the CARD asks the question, so the TITLE states the finding —
     # together they read as Q then A in the preview stack. Drop the state
     # before the city if the 70-char budget is tight.
@@ -420,14 +443,34 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         og_title = cand
         if len(cand) <= 70:
             break
-    og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+    og_desc = f"{stat}. Free monthly reading for any U.S. ZIP."
     og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
-    title = f"Should I Sell My House in {city}, {st}? — {z} Verdict ({pretty_period})"
-    desc = (f"{k['tag']} — {city}, {st} ({z}). "
+    # "Verdict" is gone from everything a visitor reads: it promised a ruling
+    # this site does not issue. The internal level names, JSON keys and
+    # function names keep it — renaming those would be a data migration
+    # wearing a copy change's clothes.
+    title = (f"Should I Sell My House in {city}, {st}? — {z} Reading ({pretty_period})"
+             if pretty_period else
+             f"Should I Sell My House in {city}, {st}? — {z} Reading")
+    # No "updated {date}" any more. It rendered meta.json's frozen build stamp
+    # — 2026-08-10 on every one of 22,874 descriptions — beside figures that
+    # were as-of a different month entirely. The only date this page can stand
+    # behind is its reading's own as-of month, and that is in the title and the
+    # stamp already.
+    # A BARE WORD IS THE WHOLE PROBLEM WITH THE FOURTH STATE. The engine has
+    # four levels and three reader-facing words (verdict_v2.LEVELS: strong ->
+    # ACT), so whatever word the copy map holds, "strong" and "red" can arrive
+    # at a reader looking identical — a search snippet reading "ACT —
+    # Anchorage, AK" is the danger reading and the seller's market spelled the
+    # same way. The colour is not in a snippet, a screen reader or a shared
+    # link. The qualifier is, so it goes wherever the word appears without the
+    # headline beside it to explain it.
+    qual = " (seller's market)" if strong and k["tag"] == KINDS["red"]["tag"] else ""
+    desc = (f"{k['tag']}{qual} — {city}, {st} ({z}). "
             + (f"Prices {pct(m['spy'])} vs. a year ago; " if m.get("spy") is not None else "")
-            + f"homes selling in {round(m['dom'])} days. Free verdict from public market data, updated {updated}."
+            + f"homes on the market ~{round(m['dom'])} days. Free reading from licensed market statistics."
             if m.get("dom") is not None else
-            f"{k['tag']} — {city}, {st} ({z}). Free verdict from public market data, updated {updated}.")
+            f"{k['tag']}{qual} — {city}, {st} ({z}). Free reading from licensed market statistics.")
     url = f"{SITE}/zip/{z}/"
 
     nb = "".join(f'<li><a href="/zip/{n}/">{esc(nc)} · {n}</a></li>' for n, nc in neighbours)
@@ -449,8 +492,8 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
                   else f"{int(m['inv']):,} homes on the market" if m.get("inv") is not None
                   else "its current listing activity")
         answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
-                  f"{vc['short']} — the reading is {vc['word']}, with homes selling in about "
-                  f"{round(m['dom'])} days and {second}.")
+                  f"{vc['short']} — the reading is {vc['word']}, with listed homes on the "
+                  f"market about {round(m['dom'])} days and {second}.")
     else:
         answer = f"{PAUSE.NOTICE_TITLE} for {city}, {st} ({z}). {PAUSE.NOTICE_BODY}"
     # The Q&A pair: question a person actually asks, two-sentence answer from
@@ -461,8 +504,14 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # Credit rides with the data: shown when a reading is, blanked when it is
     # not. Overwritten by the pause branch below.
     basis = e.get("b", PAUSE.LEGACY_BASIS)
-    stamp_html = (f"Data through {esc(pretty_period)} · updated {esc(updated)} · "
-                  f"{cite_for(basis)} · {PLACES_CITE}")
+    # "updated {meta.generated}" is gone with the rest of the frozen stamp: it
+    # was a build date presented next to a data vintage, which reads as
+    # freshness and was not. A retrieved_at exists in market_stats but is not
+    # selected by readings_for_scoring(), so it reaches no record and no
+    # template; until it does, the as-of month is the only date we have.
+    stamp_html = " · ".join(x for x in (
+        f"Data through {esc(pretty_period)}" if pretty_period else "",
+        cite_for(basis), PLACES_CITE) if x)
 
     # ————— REDFIN SUNSET, PHASE 0 —————
     # The body banner is the least of it: the verdict word and the metric
@@ -542,8 +591,15 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
             {"@type": "Organization", "@id": SITE + "/#org", "name": "ShouldISellYet",
              "url": SITE + "/", "legalName": "Yayday LLC",
              "logo": {"@type": "ImageObject", "url": SITE + "/apple-touch-icon.png"}},
+            # datePublished/dateModified used to be meta.json's "generated"
+            # stamp — one frozen build date asserted on 22,874 pages as when
+            # each was last changed. They now carry the reading's own as-of
+            # month (a bare YYYY-MM is a valid ISO 8601 date) and are OMITTED
+            # entirely on a page with no reading, because a page that has no
+            # date should not state one to a crawler either.
             {"@type": "WebPage", "@id": url, "url": url, "name": title, "description": desc,
-             "inLanguage": "en-US", "datePublished": updated, "dateModified": updated,
+             "inLanguage": "en-US",
+             **({"datePublished": period, "dateModified": period} if period else {}),
              "publisher": {"@id": SITE + "/#org"},
              "isPartOf": {"@type": "WebSite", "name": "ShouldISellYet", "url": SITE + "/"},
              "about": {"@type": "Place", "name": f"{city}, {st} {z}",
@@ -612,16 +668,16 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 </div>
 <h2>{esc(faq_q)}</h2>
 <p class="method">{esc(faq_a)}</p>
-<h2>How this verdict is computed</h2>
-<p class="method">{METHOD_SENTENCE} <a href="/#signals">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>
+<h2>How this reading is computed</h2>
+<p class="method">{METHOD_SENTENCE} <a href="/methodology.html">See the full explanation of each dial</a>, including the exact math and what goes into it.</p>
 <h2>Nearby markets</h2>
 <ul class="nearby">{nb}</ul>
 <p style="margin-top:16px"><a href="/zip/{st}/">All {esc(state_name)} markets →</a></p>
 {FOOTER.format(cite="")}
 </div>
 <script>
-// Share this ZIP's verdict. PUBLIC DATA ONLY — the button carries the ZIP,
-// the verdict word and the place name, all of which are already on the page.
+// Share this ZIP's reading. NOTHING PERSONAL — the button carries the ZIP,
+// the reading word and the place name, all of which are already on the page.
 // No personal input exists on this page and none may be introduced here.
 // T4: close the loop for a shared arrival. Banner only — no modal, no email
 // gate; the page below already explains itself. Dismissal sticks per session.
@@ -683,7 +739,11 @@ def share_stub(z, e, place, meta, has_card):
     city, st, _ = place
     vc = vcopy(e.get("l") or "green")
     stat = card_stat(e.get("m", {}))
-    period = meta.get("period", "")
+    # The card is rendered into /og/{the record's own month}/, so the stub has
+    # to build the URL from the same place the page does. Reading meta.json
+    # here pointed every released stub at /og/2026-06/{zip}.png — a month whose
+    # cards are not rendered — while /zip/{zip}/ pointed at /og/2026-08/.
+    period = e.get("p") or ""
     live = PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))
     # A share stub is pure metadata — its whole job is to be read by a scraper
     # rather than a person, which is exactly why it must honour the pause. It
@@ -691,7 +751,7 @@ def share_stub(z, e, place, meta, has_card):
     # in <title> and a metric in og:description while the page it points at
     # showed the refresh notice (verified live on /s/20601/). The per-ZIP OG
     # image goes with it: the card has the numbers painted into the pixels.
-    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and live
+    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and live and period
               else f"{SITE}/og/default.png")
 
     def _title(p_, label="housing market check", show_zip=True):
@@ -709,7 +769,7 @@ def share_stub(z, e, place, meta, has_card):
             og_title = cand
             if len(cand) <= 70:
                 break
-        og_desc = f"{stat}. Free monthly verdict for any U.S. ZIP."
+        og_desc = f"{stat}. Free monthly reading for any U.S. ZIP."
         og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
     dest = f"/?from={z}&amp;utm_source=share"
     dest_js = f"/?from={z}&utm_source=share"
@@ -743,10 +803,40 @@ padding:40px 20px;text-align:center;font-size:16px}}a{{color:#1f3a5f}}</style>
 </body></html>"""
 
 
-def state_hub(st, entries, meta):
+def coverage_line(live, total, noun, as_of=""):
+    """The one sentence that states how much of the site is actually live.
+
+    ONE SOURCE OF TRUTH. The counts used to be typed per surface — "33,000+"
+    on the homepage, len(entries) on a hub, a manifest sum on the index — and
+    they disagreed with each other and with the site. `live` is the number of
+    ZIPs that pass data_pause.shows_data(zip, basis); `total` is the number of
+    standing pages. Both are computed in main() from the manifest and the
+    provisioned records, so neither can be typed wrong here.
+
+    "with enough reported sales to score" is gone with them. The v2 engine
+    reads active listings; it cannot see a closed sale, so no page has ever
+    been gated on one and the phrase was false wherever it appeared.
+
+    DEGRADES RATHER THAN LYING. provision_readings runs before this builder,
+    and the CI smoke path runs it with --no-readings — where `live` is 0. A
+    sentence that published "Live readings for 0 of 22,874 ZIP codes" as fact
+    would be the same class of error this function exists to end, so a zero
+    count states coverage without a number instead.
+    """
+    if not live:
+        return f"Housing-market pages for {total:,} {noun}. Readings are being rebuilt."
+    line = (f"Live readings for {live:,} of {total:,} {noun}, computed from "
+            f"licensed active-listing statistics; the rest are being rebuilt.")
+    return f"{line} Data through {pretty_month(as_of)}." if as_of else line
+
+
+def state_hub(st, entries, meta, live=None, total=None, as_of=""):
     """entries: sorted [(zip, city, county, tag, hex)]"""
     name = STATE_NAMES.get(st, st)
-    updated = meta.get("generated", date.today().isoformat())
+    if total is None:
+        total = len(entries)
+    if live is None:
+        live = sum(1 for e in entries if e[3])
     groups = defaultdict(list)
     for z, city, county, tag, hexc in entries:
         groups[county or (z[:3] + "xx")].append((z, city, tag, hexc))
@@ -761,15 +851,17 @@ def state_hub(st, entries, meta):
     # REDFIN SUNSET, PHASE 0: a state hub is a list of ratings, so its title
     # and description carry the rating vocabulary and the count. Both go.
     if PAUSE.shows_data():
-        title = f"Housing market verdicts for every {name} ZIP code — ShouldISellYet"
-        desc = f"Free HOLD / WATCH / ACT verdicts for {len(entries)} {name} ZIP codes, computed from public market data and updated {updated}."
+        title = f"Housing market readings for every {name} ZIP code — ShouldISellYet"
+        desc = (f"Free HOLD / WATCH / ACT readings for {live:,} of {total:,} {name} "
+                f"ZIP codes, computed from licensed market statistics.")
     else:
         title = PAUSE.title_for(name)
         desc = PAUSE.NOTICE_DESC
     url = f"{SITE}/zip/{st}/"
     ld = json.dumps({"@context":"https://schema.org","@graph":[
         {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,
-         "inLanguage":"en-US","dateModified":updated,
+         "inLanguage":"en-US",
+         **({"dateModified": as_of} if as_of else {}),
          "isPartOf":{"@type":"WebSite","name":"ShouldISellYet","url":SITE+"/"}},
         {"@type":"BreadcrumbList","itemListElement":[
             {"@type":"ListItem","position":1,"name":"Home","item":SITE+"/"},
@@ -794,15 +886,17 @@ def state_hub(st, entries, meta):
 <div class="wrap">
 <div class="crumb"><a href="/">Home</a> › <a href="/zip/">Markets</a> › {esc(name)}</div>
 <h1>{esc(name)} housing markets</h1>
-<p class="method">A free HOLD / WATCH / ACT verdict for each of the {len(entries)} {esc(name)} ZIP codes with enough reported sales to score. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
+<p class="method">{esc(coverage_line(live, total, f"{name} ZIP codes", as_of))}</p>
 {''.join(body)}
 {FOOTER.format(cite=hub_cite() + ". " + PLACES_CITE + ". ")}
 </div></body></html>"""
 
 
-def markets_index(states, meta):
-    updated = meta.get("generated", date.today().isoformat())
-    total = sum(n for _, n in states)
+def markets_index(states, meta, live=None, total=None, as_of=""):
+    if total is None:
+        total = sum(n for _, n in states)
+    if live is None:
+        live = 0
     items = "".join(f'<li><a href="/zip/{st}/">{esc(STATE_NAMES.get(st, st))}</a> <span class="z">{n}</span></li>'
                     for st, n in sorted(states, key=lambda t: STATE_NAMES.get(t[0], t[0])))
     # The markets index had no pause branch, while the state hubs it links to
@@ -810,16 +904,19 @@ def markets_index(states, meta):
     # produced the state-hub leak, one level up. It is not a per-ZIP reading,
     # but it promised readings in the present tense and dated them to a vintage
     # the pages below no longer show.
-    live = PAUSE.shows_data()
-    title = ("Browse housing markets by state — ShouldISellYet" if not live
-             else "Browse housing market verdicts by state — ShouldISellYet")
+    # `live` is now the ZIP COUNT, so the layout switch needs its own name —
+    # it used to shadow this one and the two mean different things.
+    unpaused = PAUSE.shows_data()
+    title = ("Browse housing markets by state — ShouldISellYet" if not unpaused
+             else "Browse housing market readings by state — ShouldISellYet")
     desc = (f"Per-ZIP housing market pages for {total:,} U.S. ZIP codes. "
-            f"{PAUSE.NOTICE_TITLE}." if not live else
-            f"HOLD / WATCH / ACT verdicts for {total:,} U.S. ZIP codes, "
-            f"computed from public market data and updated {updated}.")
+            f"{PAUSE.NOTICE_TITLE}." if not unpaused else
+            f"HOLD / WATCH / ACT readings for {live:,} of {total:,} U.S. ZIP "
+            f"codes, computed from licensed market statistics.")
     url = f"{SITE}/zip/"
     ld = json.dumps({"@context":"https://schema.org","@graph":[
-        {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,"inLanguage":"en-US","dateModified":updated,
+        {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,"inLanguage":"en-US",
+         **({"dateModified": as_of} if as_of else {}),
          "isPartOf":{"@type":"WebSite","name":"ShouldISellYet","url":SITE+"/"}},
         {"@type":"BreadcrumbList","itemListElement":[
             {"@type":"ListItem","position":1,"name":"Home","item":SITE+"/"},
@@ -843,7 +940,7 @@ def markets_index(states, meta):
 <div class="wrap">
 <div class="crumb"><a href="/">Home</a> › Markets</div>
 <h1>Browse markets by state</h1>
-<p class="method">{total:,} U.S. ZIP codes with enough reported sales to score, each with a free verdict from public market data. Data through {esc(meta.get('period',''))} · updated {esc(updated)}.</p>
+<p class="method">{esc(coverage_line(live, total, "U.S. ZIP codes", as_of))}</p>
 <ul class="statecols">{items}</ul>
 {FOOTER.format(cite=hub_cite() + ". ")}
 </div></body></html>"""
@@ -893,14 +990,46 @@ def write_sitemaps(web, urls, lastmod, chunk=10000):
     return n
 
 
-def write_llms_txt(web, meta, scored, pages):
+def write_llms_txt(web, meta, pages, live=0, as_of=""):
     """llms.txt — the site, described for answer engines, with live numbers.
 
     Generated (like robots.txt) so the coverage figures and data month can
     never go stale in a hand-edited file. Kept well under the convention's
-    ~80-line comfort zone."""
-    period = meta.get("period", "")
-    pretty = f"{MONTHS[int(period[5:7])-1]} {period[:4]}" if len(period) == 7 else period
+    ~80-line comfort zone.
+
+    The `scored` argument is gone: it was `len(read_manifest())`, which
+    defaults to pages_only and so was the STANDING-PAGE count published under
+    the wider scored set's name — 22,874 offered to four named crawlers as the
+    number of ZIPs the site can speak for. One count, stated once.
+
+    `live` and `as_of` come from the same count and the same records the ZIP
+    pages render, not from meta.json — whose period is frozen at the last v1
+    run, so this file told four named crawlers the site was "currently through
+    June 2026" while every released page was dated August. When nothing is
+    live (the --no-readings CI path) the coverage clause degrades to prose
+    rather than publishing a zero.
+    """
+    pretty = pretty_month(as_of)
+    summary = (
+        f"ShouldISellYet.com computes a free plain-English housing-market "
+        f"reading — HOLD, WATCH, or ACT — for U.S. ZIP codes from licensed "
+        f"market statistics. Readings are live for {live:,} of the {pages:,} "
+        f"ZIP codes with a standing page"
+        + (f", current through {pretty}" if pretty else "")
+        + "; the rest are being rebuilt. Operated by Yayday LLC. Not a "
+          "brokerage; readings are general information, not financial or "
+          "real-estate advice."
+        if live else
+        f"ShouldISellYet.com computes a free plain-English housing-market "
+        f"reading — HOLD, WATCH, or ACT — for U.S. ZIP codes from licensed "
+        f"market statistics. Readings are being rebuilt on a new data engine "
+        f"and are not shown right now; all {pages:,} ZIP pages stay live. "
+        f"Operated by Yayday LLC. Not a brokerage; readings are general "
+        f"information, not financial or real-estate advice.")
+    # Wrapped here rather than typed as fixed lines: the numbers change the
+    # line breaks, and a blockquote whose ">" markers drift is the one part of
+    # this file a crawler renders as prose.
+    coverage = "\n".join("> " + ln for ln in textwrap.wrap(summary, 74))
     # The Realtor.com clause disappears with the kill switch. This file is read
     # by GPTBot, ClaudeBot, PerplexityBot and CCBot (robots.txt allows all
     # four), so a credit left here outlives one on any rendered page.
@@ -908,13 +1037,9 @@ def write_llms_txt(web, meta, scored, pages):
            if RDC.shows_crosscheck() else "")
     (web / "llms.txt").write_text(f"""# ShouldISellYet
 
-> ShouldISellYet.com computes a free plain-English housing-market verdict —
-> HOLD, WATCH, or ACT — for {scored:,} U.S. ZIP codes from public market data,
-> refreshed on every data release (currently through {pretty}). Operated by
-> Yayday LLC. Not a brokerage; verdicts are general information, not financial
-> or real-estate advice.
+{coverage}
 
-## How the verdict works
+## How the reading works
 
 {METHOD_SENTENCE} The same signals are tested in the strengthening direction, so a clean
 market with unusual buyer competition reads as a strong seller's market.
@@ -927,7 +1052,7 @@ market with unusual buyer competition reads as a strong seller's market.
   Warning-Sign Index — the share of scored ZIP markets showing warning signs —
   with state league tables and downloadable CSVs (use with attribution; no
   dataset redistribution).
-- [Markets by state](https://shouldisellyet.com/zip/): standing verdict pages
+- [Markets by state](https://shouldisellyet.com/zip/): standing reading pages
   for {pages:,} ZIP markets, each with its signal gauges and danger lines.
 - [Sample report](https://shouldisellyet.com/report.html): the shape of the
   paid full report. Its market figures are being rebuilt on a new data engine
@@ -944,10 +1069,10 @@ each release as LICENSE.txt.
 
 ## Data attribution
 
-Market data: Market statistics from RentCast{rdc} · FHFA ZIP-level house price
-index (benchmark) · Freddie Mac PMMS 30-yr weekly average (mortgage rate).
-Place names from GeoNames.org (CC BY 4.0). No source sponsors, endorses, or
-partners with this site.
+Market data: Market statistics from a licensed data provider{rdc} · FHFA
+ZIP-level house price index (benchmark, public domain) · Freddie Mac PMMS
+30-yr weekly average (mortgage rate). Place names from GeoNames.org (CC BY
+4.0). No source sponsors, endorses, or partners with this site.
 """, encoding="utf-8")
 
 
@@ -1021,6 +1146,22 @@ def main():
     if args.limit:
         eligible = eligible[:args.limit]
 
+    # THE COUNTS. Every coverage sentence on the site derives from these two
+    # lines and nothing else. `live` is the predicate the ZIP pages, the hub
+    # rows and the sitemap already use — released tranche AND a record whose
+    # basis is the released one — so a hub cannot claim a reading that the
+    # page it links to refuses to show.
+    live_pairs = [(z, e) for z, e in eligible
+                  if PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))]
+    live_zips = {z for z, _ in live_pairs}
+    live_by_state = defaultdict(int)
+    for z in live_zips:
+        live_by_state[places[z][1]] += 1
+    # The site's data vintage is the as-of month the live readings agree on.
+    # Taking the most recent rather than meta.json's frozen build period is
+    # the whole of rule 5 at the aggregate level: no live reading, no date.
+    as_of = max((e.get("p") or "" for _, e in live_pairs), default="")
+
     # Build into a staging dir, then swap — a half-written tree is never
     # what gets uploaded, even if this process dies mid-run.
     final = web / "zip"
@@ -1052,7 +1193,11 @@ def main():
     top = {z for z, _ in sorted(eligible, key=lambda t: -((t[1].get("m", {}).get("sold")
                                 or t[1].get("m", {}).get("inv") or 0)))[:args.top_cards]}
     card_set = dmv | top
-    period = meta.get("period", "")
+    # A card is written to /og/{month}/{zip}.png and the page builds that URL
+    # from ITS OWN record. Using meta.json's period here wrote every card into
+    # /og/2026-06/ while every released page pointed at /og/2026-08/ — cards
+    # rendered, deployed, and linked by nobody. The month now comes from the
+    # same record on both sides.
     og_dir = web / "og"
     cards_made = 0
     # Stale cards are cleared FIRST, unconditionally. This used to sit inside
@@ -1076,7 +1221,6 @@ def main():
             print(f"WARNING: Pillow missing ({exc}) — skipping cards, pages fall back to the brand card")
             card_set = set()
         else:
-            (og_dir / period).mkdir(parents=True, exist_ok=True)
             render_card("", "", "", "green", "Is your ZIP's market turning?", " ",
                         og_dir / "default.png")     # generic brand card
             for z, e in eligible:
@@ -1091,9 +1235,13 @@ def main():
                 # a share. A file nobody links to is still a published file.
                 if not PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
                     continue
+                cp = e.get("p") or ""
+                if not cp:
+                    continue        # no month, no cache-busting path, no card
                 city, st, _ = places[z]
+                (og_dir / cp).mkdir(parents=True, exist_ok=True)
                 render_card(z, city, st, e.get("l") or "green", card_stat(e.get("m", {})),
-                            pretty_month(period), og_dir / period / f"{z}.png")
+                            pretty_month(cp), og_dir / cp / f"{z}.png")
                 cards_made += 1
     else:
         card_set = set()
@@ -1115,7 +1263,13 @@ def main():
         # readings the pages themselves refuse to show (verified live on
         # /zip/MD/: 137 HOLD, 127 ACT, 108 WATCH). Released ZIPs keep theirs.
         if PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS)):
-            by_state[st].append((z, city, county, k["tag"], k["hex"]))
+            # Qualified here for the same reason as the meta description: a
+            # hub row is a word and a colour, and the row above it may carry
+            # the danger reading under the same word.
+            tag = k["tag"] + (" · seller's market"
+                              if e.get("l") == "strong" and k["tag"] == KINDS["red"]["tag"]
+                              else "")
+            by_state[st].append((z, city, county, tag, k["hex"]))
         else:
             by_state[st].append((z, city, county, "", "#6b6861"))
 
@@ -1133,18 +1287,28 @@ def main():
         shutil.rmtree(s_final)
     s_stage.rename(s_final)
 
-    for st, entries in by_state.items():
+    for st, rows in by_state.items():
         d = stage / st
         d.mkdir(parents=True, exist_ok=True)
-        (d / "index.html").write_text(state_hub(st, sorted(entries), meta), encoding="utf-8")
+        (d / "index.html").write_text(
+            state_hub(st, sorted(rows), meta, live=live_by_state.get(st, 0),
+                      total=len(rows), as_of=as_of), encoding="utf-8")
     (stage / "index.html").write_text(
-        markets_index([(st, len(v)) for st, v in by_state.items()], meta), encoding="utf-8")
+        markets_index([(st, len(v)) for st, v in by_state.items()], meta,
+                      live=len(live_zips), total=len(eligible), as_of=as_of),
+        encoding="utf-8")
 
     if final.exists():
         shutil.rmtree(final)
     stage.rename(final)
 
-    lastmod = meta.get("generated", date.today().isoformat())
+    # lastmod was meta.json's "generated" — 2026-08-10, frozen at the last v1
+    # run and asserted on all 22,874 URLs as when each last changed. The
+    # readings' own as-of month is the only vintage the site can stand behind;
+    # a bare YYYY-MM is valid W3C Datetime, which is what sitemaps take. With
+    # nothing live there is no data vintage, so the build date is the honest
+    # answer to "when did this file last change".
+    lastmod = as_of or date.today().isoformat()
     # /zip/ carries noindex while paused, and submitting a noindexed URL tells
     # a crawler two opposite things at once — the same reasoning that holds the
     # research pages out below. It was the one paused-tree URL still in the
@@ -1189,8 +1353,7 @@ def main():
         # WITH the basis. Passing only the ZIP asks the tranche file, not the
         # record, and submits a page that carries noindex — the third place
         # the same split showed up on 2026-08-20, after the head and the body.
-        live = [z for z, e in eligible
-                if PAUSE.shows_data(z, e.get("b", PAUSE.LEGACY_BASIS))]
+        live = sorted(live_zips)
         urls += [f"{SITE}/zip/{z}/" for z in live]
         held = len(eligible) - len(live) + len(by_state)
         print(f"redfin sunset: {held:,} ZIP/state URLs held out of the "
@@ -1207,19 +1370,22 @@ def main():
                   f"carry a legacy reading and stay dark — {', '.join(wrong[:5])}"
                   f"{' …' if len(wrong) > 5 else ''}")
     chunks = write_sitemaps(web, urls, lastmod)
-    # scored = ZIPs the site can speak for; pages = those with a standing page.
-    # Both live so llms.txt can't drift — which is also why a LIMITED build
-    # must not write it: --limit / --only shrink len(eligible), and a smoke
-    # build that reached the host would publish "standing pages for 2 ZIP
-    # markets" as fact.
+    # pages = ZIPs with a standing page; live = those actually showing one.
+    # Both come from this run so llms.txt can't drift — which is also why a
+    # LIMITED build must not write it: --limit / --only shrink len(eligible),
+    # and a smoke build that reached the host would publish "standing pages
+    # for 2 ZIP markets" as fact.
     #
-    # scored was counted from the per-ZIP files, which used to be committed
-    # source covering every ZIP the vendor scored. They are provisioned output
-    # now, so that count became a count of whatever this run happened to
-    # write — a build whose provisioning was skipped published "for 0 U.S. ZIP
-    # codes" as fact. The manifest is the durable number.
+    # The old `scored` count came from the per-ZIP files, which used to be
+    # committed source covering every ZIP the vendor scored. They are
+    # provisioned output now, so that count became a count of whatever this
+    # run happened to write — a build whose provisioning was skipped published
+    # "for 0 U.S. ZIP codes" as fact. It was then replaced by len(manifest),
+    # which is pages_only and so was the SAME number as `pages` under a wider
+    # name. Two counts that were one count: now there is one.
     if not (args.limit or only):
-        write_llms_txt(web, meta, len(manifest), len(eligible))
+        write_llms_txt(web, meta, len(eligible),
+                       live=len(live_zips), as_of=as_of)
 
     print(f"pages: {len(eligible):,} ZIP + {len(by_state)} state hubs + 1 index")
     print(f"skipped: {dict(skipped)}")
@@ -1229,7 +1395,7 @@ def main():
     if cards_made:
         cb = sum(f.stat().st_size for f in og_dir.rglob("*.png"))
         print(f"og cards: {cards_made:,} rendered ({len(dmv):,} DMV + top {args.top_cards:,}) "
-              f"· {cb/1e6:.0f} MB · /og/{period}/ · {len(eligible)-cards_made:,} ZIPs use the brand card")
+              f"· {cb/1e6:.0f} MB · /og/{as_of}/ · {len(eligible)-cards_made:,} ZIPs use the brand card")
 
 
 if __name__ == "__main__":

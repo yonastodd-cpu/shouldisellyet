@@ -23,7 +23,7 @@ window.ALERT_COPY = {
   // 2026-08-08 no free alert affordance renders in the results block — the
   // inline signup form was removed 2026-07-31 — so this string waits for the
   // surface that next carries it: subscribe.html copy and future report use.)
-  verdict_change: "Alert me · the moment this ZIP's verdict changes",
+  verdict_change: "Alert me · the moment this ZIP's reading changes",
 
   rows: {
     "02": "if my home's value trend turns negative",
@@ -43,7 +43,7 @@ window.ALERT_COPY = {
 // rows["05"] verbatim. Built AFTER the map literal so it can reference it —
 // this file stays the single source for every alert string on the site.
 window.ALERT_COPY.strip = [
-  window.ALERT_COPY.toggle_label + " · the moment my ZIP's verdict changes",
+  window.ALERT_COPY.toggle_label + " · the moment my ZIP's reading changes",
   window.ALERT_COPY.toggle_label + " · if my walk-away number drops below my line",
   window.ALERT_COPY.toggle_label + " · " + window.ALERT_COPY.rows["05"],
 ];
