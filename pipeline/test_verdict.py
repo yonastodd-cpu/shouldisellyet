@@ -258,7 +258,15 @@ def test_load_rdc(tmp_path):
 
 def test_rdc_never_touches_verdict(tmp_path):
     """The cross-check is additive: entries gain `x` but l/s/r/m are
-    byte-identical with and without the RDC feed."""
+    byte-identical with and without the RDC feed.
+
+    RUNS WITH THE SWITCH EXPLICITLY ON. SHOW_REALTOR_CROSSCHECK defaults to
+    off from 2026-08-22 (the ingest is paused pending a terms review), and
+    this test's subject is what the feed does to a verdict when it IS on —
+    with the switch at its default there is no `x` to be additive about, and
+    the test would pass vacuously while proving nothing. Turning it on here
+    keeps the property under test alive through the pause, so the day the
+    flag flips back this is still a real check and not a stale one."""
     import fetch_data as fd
     fixture = tmp_path / "fix.tsv.gz"
     with gzip.open(fixture, "wt") as f:
@@ -275,7 +283,8 @@ def test_rdc_never_touches_verdict(tmp_path):
             [sys.executable, str(repo / "pipeline" / "fetch_data.py"),
              "--input", str(fixture), "--rdc", rdc_arg],
             check=True, capture_output=True,
-            env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_PD": "1"},
+            env={**os.environ, "SISY_SKIP_MORTGAGE": "1", "SISY_SKIP_PD": "1",
+                 "SHOW_REALTOR_CROSSCHECK": "1"},
         )
         return json.loads((repo / "web" / "data" / "zips" / "MD.json").read_text())
 

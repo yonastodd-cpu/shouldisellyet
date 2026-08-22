@@ -469,6 +469,13 @@ def load_rdc(source):
     site simply renders without the cross-check.
     """
     import os
+    # SISY_SKIP_RDC predates the kill switch and is NOT a second policy flag:
+    # it is a local test escape hatch that only ever suppresses a call the
+    # caller already decided to make. SHOW_REALTOR_CROSSCHECK is the one place
+    # the fetch/write/credit decision is taken (pipeline/realtor_crosscheck.py)
+    # and since 2026-08-22 it defaults to off, so this branch is unreachable in
+    # normal operation. Do not grow it into a policy flag — two switches over
+    # one decision is how this repo has previously shipped disagreeing maps.
     if os.environ.get("SISY_SKIP_RDC"):
         print("RDC fetch skipped (SISY_SKIP_RDC)")
         return {}
@@ -606,7 +613,10 @@ def main():
     ap.add_argument("--states", default="",
                     help="Comma-separated state codes to limit output (e.g. MD,VA,DC)")
     ap.add_argument("--rdc", default=RDC_ZIP_URL,
-                    help="Realtor.com RDC ZIP csv path or URL ('' to disable)")
+                    help="Realtor.com RDC ZIP csv path or URL ('' to disable). "
+                         "Ignored unless SHOW_REALTOR_CROSSCHECK=1 — the "
+                         "ingest has been paused since 2026-08-22 pending a "
+                         "terms review (pipeline/realtor_crosscheck.py)")
     args = ap.parse_args()
     states = set(s.strip().upper() for s in args.states.split(",") if s.strip()) or None
 
@@ -624,7 +634,18 @@ def main():
 
     # Off means not fetched, not merely not shown: the switch gates the
     # network call itself, so no Realtor.com request leaves this machine.
+    # OFF IS THE DEFAULT SINCE 2026-08-22 (realtor_crosscheck: terms review).
+    # To resume: SHOW_REALTOR_CROSSCHECK=1, then re-run this script once per
+    # missed month against Realtor.com's dated monthly archive file, passing it
+    # to --rdc. Monthly files mean the pause costs a backfill, not a hole.
     rdc = load_rdc(args.rdc) if (args.rdc and RDC.shows_crosscheck()) else {}
+    # Say the skip out loud. A gate that stops a fetch and prints nothing is
+    # indistinguishable in a six-month-old run log from a step that was never
+    # wired up, and the whole point of a pause is that the record shows a
+    # decision. Emitted here, inside the pipeline step, so the operator reading
+    # CI output meets it in the same place the download used to appear.
+    if args.rdc and not RDC.shows_crosscheck():
+        RDC.log_skip("the Realtor.com monthly cross-check ingest")
     fhfa = load_fhfa_compact()
 
     by_state = defaultdict(dict)

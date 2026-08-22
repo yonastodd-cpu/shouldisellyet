@@ -1,0 +1,65 @@
+# Monthly compliance jobs. Neither touches the site, and neither is on the
+# deploy path — a failure here must never block shipping a page.
+#
+# WHY THESE EXIST
+#
+# Terms snapshot: the counsel memo has to say "we hold the terms as at <date>"
+# and, for the vendor we started with, it cannot — we hold the 21 Aug 2026
+# RentCast terms but not the version in force at our first call. That gap is
+# unrecoverable. This job makes sure the next one is not: it captures what the
+# published terms said, monthly, with a date on it.
+#
+# Fallback health: the FHFA and Census ingests are the degraded-mode fallback if
+# a vendor relationship ends on short notice. The whole value of a fallback is
+# that it works on the day you reach for it, so it is exercised on a cron rather
+# than discovered broken during the emergency it exists for.
+#
+# Both scripts are FAIL-CLOSED: they do nothing without an explicit flag, so
+# neither can fire by accident from another workflow or a local run.
+name: Monthly compliance checks
+
+on:
+  schedule:
+    - cron: "0 6 3 * *"     # 06:00 UTC on the 3rd — after month-end publication
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terms-snapshot:
+    name: Capture vendor terms as published
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # The destination is gitignored on purpose: these are third-party pages
+      # and the point is a private dated record, not republication. So the
+      # capture leaves the runner as a retained artifact, not as a commit.
+      - name: Snapshot published terms
+        run: python3 pipeline/snapshot_vendor_terms.py --fetch
+
+      - name: Retain the capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-terms-${{ github.run_id }}
+          path: docs/vendor-terms/
+          retention-days: 90
+          if-no-files-found: error
+
+  fallback-health:
+    name: Degraded-mode sources still parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Public-domain sources only — no vendor endpoint is contacted, so this
+      # cannot spend metered quota however often it runs.
+      - name: Check FHFA and Census
+        run: python3 pipeline/check_fallback_sources.py --check

@@ -108,3 +108,9 @@ GITHUB_TICKET_PAUSE_REPLY.md
 # repository is public, and a register of open holes does not belong in it.
 # It goes to counsel directly. LEGAL_HOLD.md rule 3 refers to it by name.
 DERIVED_USE_INVENTORY.md
+
+# Dated captures of vendor terms-of-use pages. Kept out of the public repo:
+# they are third-party content, and the point of holding them is the private
+# record of what the terms said on a date, not republication.
+# snapshot_vendor_terms.py refuses to write anywhere git does not ignore.
+docs/vendor-terms/

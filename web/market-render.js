@@ -17,6 +17,21 @@
 // is a module that breaks when the other page changes.
 
 const MARKET = (function () {
+  // ————— FIGURES_KILL_SWITCH —————
+  // Mirrors pipeline/figures_switch.FIGURES_OFF; the third of its three
+  // copies, pinned to the other two by pipeline/test_figures_switch.py.
+  //
+  // This file is the renderer for BOTH report surfaces, so the switch has to
+  // reach further here than on a ZIP page: the four dials AND their "What
+  // goes in / Yours: …" disclosures, the deep-dive line charts, and the
+  // national price percentile. What survives is what survives everywhere —
+  // the reading word, the published danger lines, the methodology.
+  //
+  // NOT the Realtor.com cross-check: that is a different vendor under a
+  // different switch (realtor_crosscheck.py). Only its direction-agreement
+  // line is touched here, because that one is computed from OUR feed's
+  // figures rather than theirs.
+  const FIGURES_OFF = false;
   let META = null;
   const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
   // renderCrossCheck writes straight into #xcheck, which both pages have.
@@ -56,6 +71,10 @@ const MARKET = (function () {
   // add a performance claim here, back it from one of those — never type a
   // lead time or a hit rate into this file.
   function buildMetricRows(d, strong){
+    // FIGURES_KILL_SWITCH: no rows means no dials AND no `how` disclosures,
+    // which is the half that matters here — each one restates the ZIP's own
+    // value twice ("What goes in: 105 homes listed…", "Yours: 57 days").
+    if (FIGURES_OFF) return [];
     const m = d.m || {}, rows = [];
     if (m.mos != null){ const t = strong ? (m.mos<2.5?"s":"g") : (m.mos>6?"r":m.mos>4?"a":"g");
       rows.push({name:"MONTHS OF SUPPLY", val:m.mos.toFixed(1)+" mo", t, fill:clampPct(m.mos/8*100), th:strong?31.3:50,
@@ -176,10 +195,18 @@ const MARKET = (function () {
     // Direction agreement — only judged on signals both feeds carry.
     const dir = (v, dead) => v == null ? null : v > dead ? 1 : v < -dead ? -1 : 0;
     const checks = [];
-    const rd = dir(m.domy, 1), xd = dir(x.domy, 0.03);        // Redfin domy is DAYS; RDC's is a fraction
-    if (rd != null && xd != null) checks.push(rd === xd);
-    const ri = dir(m.invy, 0.03), xi = dir(x.invy, 0.03);
-    if (ri != null && xi != null) checks.push(ri === xi);
+    // FIGURES_KILL_SWITCH. The cross-check's own numbers are the other
+    // vendor's and are not this switch's business. This comparison is: it
+    // reports whether OUR figures point the same way as theirs, which is a
+    // statement about our figures and cannot be made without them. With the
+    // switch on the strip still lists what the other feed sees and simply
+    // draws no conclusion about agreement.
+    if (!FIGURES_OFF) {
+      const rd = dir(m.domy, 1), xd = dir(x.domy, 0.03);      // our domy is DAYS; RDC's is a fraction
+      if (rd != null && xd != null) checks.push(rd === xd);
+      const ri = dir(m.invy, 0.03), xi = dir(x.invy, 0.03);
+      if (ri != null && xi != null) checks.push(ri === xi);
+    }
     let verdictLine = "";
     if (x.q){
       verdictLine = '<div style="margin-top:6px;color:var(--fainter);font-size:12px">Year-over-year comparisons withheld this month — the feed flags this ZIP\'s comparability.</div>';
@@ -217,6 +244,12 @@ const MARKET = (function () {
   // tick every 6 months; 300 does not.
   const NARROW = typeof window !== "undefined" && window.innerWidth <= 640;
   function lineSVG(series, startYM, opts){
+    // FIGURES_KILL_SWITCH. A chart is not a picture of the figures, it IS the
+    // figures: this one draws every monthly observation as a point and then
+    // labels four gridlines, the peak and the end value in plain text. "" is
+    // the same thing it already returns for a series too short to plot, so
+    // every caller's existing empty-chart handling covers this.
+    if (FIGURES_OFF) return "";
     const o = Object.assign({w:NARROW?300:640,h:200,color:"#1f3a5f",fmt:v=>fmt(v),peak:true,area:true}, opts||{});
     const pts = series.map((v,i)=>[i,v]).filter(p=>p[1]!=null);
     if (pts.length < 6) return "";
@@ -292,7 +325,11 @@ const MARKET = (function () {
     const nat = META && META.national;
     if (!nat) return "";
     const boxes = [];
-    if (nat.spy_deciles && nat.spy_deciles.length === 11 && m.spy != null) {
+    // FIGURES_KILL_SWITCH. The first box states a national percentile that
+    // exists only because we hold this ZIP's asking-price change; the second
+    // is mortgage rates, which are nobody's proprietary statistic. One goes,
+    // one stays — the same line drawn on the homepage's macro panel.
+    if (!FIGURES_OFF && nat.spy_deciles && nat.spy_deciles.length === 11 && m.spy != null) {
       const dec = nat.spy_deciles;
       let k = 0; while (k < 10 && m.spy > dec[k+1]) k++;
       const frac = k*10 + (dec[k+1] > dec[k] ? (m.spy-dec[k])/(dec[k+1]-dec[k])*10 : 5);
@@ -312,6 +349,11 @@ const MARKET = (function () {
   return {
     setMeta(m) { META = m; },
     get meta() { return META; },
+    // Exported so the two report pages can gate the figures they render
+    // THEMSELVES — the paid report prints plenty this module never sees. A
+    // fourth hand-typed copy of the flag is the thing to avoid; asking the
+    // renderer costs nothing and cannot drift.
+    showsFigures() { return !FIGURES_OFF; },
     clampPct, tcol, strongSignals, applyStrong,
     buildMetricRows, backtestNote, stateWord, renderMetrics, renderCrossCheck,
     MONTHS, MONTHS_LONG, monthLabel, lastIdx, atOrNear, lineSVG, pctf, fmt,

@@ -84,6 +84,7 @@ KINDS = {
 
 from verdict_copy import COPY as VCOPY, get as vcopy, as_js as vcopy_js
 import data_pause as PAUSE
+import figures_switch as FIG
 import realtor_crosscheck as RDC
 from build_manifest import read_manifest
 from verdict_v2 import SPEC as V2, disclosure
@@ -355,7 +356,22 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # level, no metrics. That is the ordinary case now, not an error: the
     # pause branch below replaces every one of these values anyway.
     level = e.get("l") or "green"
-    k = KINDS[level]; m = e.get("m", {}); strong = level == "strong"
+    # FIGURES_KILL_SWITCH. Every figure on this page reaches it through these
+    # two lines, and when the switch is on they hand back an empty metric
+    # block and no history. That is deliberately the SAME shape as a record
+    # that never had figures — which is the ordinary state of ~17,874 ZIPs, so
+    # the withheld path is the path this build already walks tens of thousands
+    # of times a run, not a branch that first executes the day somebody flips
+    # a flag. Everything downstream (the dials, the prose facts, the answer
+    # sentence, the meta description, the OG stat, the national percentile)
+    # falls silent on its own. Exactly two things needed saying explicitly and
+    # are marked FIGURES_KILL_SWITCH below: the answer sentence, which would
+    # otherwise borrow the pause copy and tell a reader the reading is gone
+    # when it is not, and the OG image, which has its stat painted into the
+    # pixels where no later branch can reach it.
+    m = FIG.metrics(e.get("m", {}))
+    hist = FIG.history(e.get("h"))
+    k = KINDS[level]; strong = level == "strong"
     # meta.json is frozen at the last Redfin run (2026-06) because fetch_data
     # has not run since ingestion stopped. A v2 reading is as-of its own month,
     # and tranche 1 published August readings under "Data through June 2026" —
@@ -408,7 +424,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         # time-to-contract, and across unsold listings it runs longer than one.
         tail = (f"{abs(dy)} {unit} {'longer' if dy > 0 else 'shorter'} than a year ago" if dy else "the same as a year ago")
         facts.append(f"Listed homes here have been on the market about <b>{round(m['dom'])} days</b> — {tail}.")
-    fm = fastest_month(e.get("h"))
+    fm = fastest_month(hist)
     if fm:
         facts.append(f"Over the last three years, listings in {esc(city)} have spent the fewest days on the market in <b>{fm}</b> — worth knowing when you plan a listing.")
     # spy_deciles is a table of Redfin SOLD-price year-over-year changes. A v2
@@ -428,7 +444,16 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
     # The data month is in the path so a new month is a NEW url — that is the
     # cache-busting strategy: scrapers key on the image url, so cards refresh
     # exactly when the data does and never go stale behind a CDN.
-    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and period else f"{SITE}/og/default.png")
+    # FIGURES_KILL_SWITCH. A card is a PICTURE of the reading and its evidence
+    # line, flattened to pixels — nothing downstream can blank a figure that is
+    # already painted. The card loop in main() re-renders these from the same
+    # withheld metrics, so a card built under the switch carries the reading
+    # word and no evidence line; a card built BEFORE it does not, and stays on
+    # disk under its month's path. Pointing at the brand card is the only
+    # answer that holds for both.
+    og_img = (f"{SITE}/og/{period}/{z}.png"
+              if has_card and period and FIG.shows_figures()
+              else f"{SITE}/og/default.png")
     # T2: the CARD asks the question, so the TITLE states the finding —
     # together they read as Q then A in the preview stack. Drop the state
     # before the city if the 70-char budget is tight.
@@ -494,6 +519,17 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         answer = (f"As of {pretty_period}, the housing market in {city}, {st} ({z}) shows "
                   f"{vc['short']} — the reading is {vc['word']}, with listed homes on the "
                   f"market about {round(m['dom'])} days and {second}.")
+    elif e.get("l") and not FIG.shows_figures():
+        # FIGURES_KILL_SWITCH. This page HAS a reading; only the figures behind
+        # it are withheld. Falling through to the pause sentence below would
+        # tell a reader — and an answer engine, which lifts this line whole —
+        # that the reading is being rebuilt, which is false and is the exact
+        # kind of half-true the pause work kept having to undo. So the reading
+        # is stated, and the absence of figures is stated as a choice.
+        answer = ((f"As of {pretty_period}, the housing market in " if pretty_period
+                   else "The housing market in ")
+                  + f"{city}, {st} ({z}) shows {vc['short']} — the reading is "
+                  + f"{vc['word']}. {FIG.WITHHELD_LINE}")
     else:
         answer = f"{PAUSE.NOTICE_TITLE} for {city}, {st} ({z}). {PAUSE.NOTICE_BODY}"
     # The Q&A pair: question a person actually asks, two-sentence answer from
@@ -738,7 +774,11 @@ def share_stub(z, e, place, meta, has_card):
     """
     city, st, _ = place
     vc = vcopy(e.get("l") or "green")
-    stat = card_stat(e.get("m", {}))
+    # FIGURES_KILL_SWITCH. A stub is pure metadata and its og:description IS a
+    # figure — "Prices are down 3.1% from a year ago" was what a scraper got.
+    # Routed through the switch for the same reason the page's metrics are:
+    # card_stat over an empty block already returns a figure-free line.
+    stat = card_stat(FIG.metrics(e.get("m", {})))
     # The card is rendered into /og/{the record's own month}/, so the stub has
     # to build the URL from the same place the page does. Reading meta.json
     # here pointed every released stub at /og/2026-06/{zip}.png — a month whose
@@ -751,7 +791,8 @@ def share_stub(z, e, place, meta, has_card):
     # in <title> and a metric in og:description while the page it points at
     # showed the refresh notice (verified live on /s/20601/). The per-ZIP OG
     # image goes with it: the card has the numbers painted into the pixels.
-    og_img = (f"{SITE}/og/{period}/{z}.png" if has_card and live and period
+    og_img = (f"{SITE}/og/{period}/{z}.png"
+              if has_card and live and period and FIG.shows_figures()
               else f"{SITE}/og/default.png")
 
     def _title(p_, label="housing market check", show_zip=True):
@@ -1240,7 +1281,16 @@ def main():
                     continue        # no month, no cache-busting path, no card
                 city, st, _ = places[z]
                 (og_dir / cp).mkdir(parents=True, exist_ok=True)
-                render_card(z, city, st, e.get("l") or "green", card_stat(e.get("m", {})),
+                # FIGURES_KILL_SWITCH. The stat line is the card's evidence
+                # row and the one place on it a vendor figure appears; the
+                # word, the translation and the place are ours. Re-rendering
+                # under the switch therefore leaves a card that is still worth
+                # having — but the PAGES stop pointing at /og/{month}/ anyway
+                # (see zip_page), because cards rendered before the flip are
+                # still on disk with their figures painted in, and a file
+                # nobody links to is still a published file.
+                render_card(z, city, st, e.get("l") or "green",
+                            card_stat(FIG.metrics(e.get("m", {}))),
                             pretty_month(cp), og_dir / cp / f"{z}.png")
                 cards_made += 1
     else:

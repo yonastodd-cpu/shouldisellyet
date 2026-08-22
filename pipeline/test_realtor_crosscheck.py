@@ -36,13 +36,110 @@ def on(monkeypatch):
     return RDC
 
 
-def test_the_switch_defaults_to_on():
-    """Current behaviour unchanged unless someone sets the variable."""
-    import os
-    assert "SHOW_REALTOR_CROSSCHECK" not in os.environ or RDC.SHOW in (True, False)
+def test_the_switch_defaults_to_off():
+    """INVERTED 2026-08-22. This assertion used to read "the default is no
+    longer ON" and guarded the opposite fact. The Realtor.com monthly ingest
+    ran on unobtained terms while display was already dormant, so the default
+    moved to OFF pending a terms review. The test moves with it: a default is
+    the thing an unconfigured deploy actually does, and it deserves a test in
+    whichever position it is in.
+    """
     src = (ROOT / "pipeline" / "realtor_crosscheck.py").read_text()
-    assert 'os.environ.get("SHOW_REALTOR_CROSSCHECK", "1")' in src, \
-        "the default is no longer ON"
+    assert 'os.environ.get("SHOW_REALTOR_CROSSCHECK", "0")' in src, \
+        "the default is no longer OFF"
+
+
+def test_an_unconfigured_process_fetches_nothing(monkeypatch):
+    """The default asserted through the module, not just its source text.
+
+    A source grep passes if the literal survives a refactor that changes what
+    it means; this imports the module with the variable genuinely absent and
+    asks the predicate every call site asks.
+    """
+    import importlib
+    monkeypatch.delenv("SHOW_REALTOR_CROSSCHECK", raising=False)
+    reloaded = importlib.reload(RDC)
+    try:
+        assert reloaded.SHOW is False
+        assert reloaded.shows_crosscheck() is False
+    finally:
+        importlib.reload(RDC)
+
+
+def test_turning_it_back_on_restores_the_previous_behaviour(monkeypatch):
+    """The pause has to be reversible by variable alone — no code edit.
+
+    Everything the switch gates is checked in the ON position together: the
+    record keeps its cross-check, the credit keeps its clause, and the
+    predicate the producers branch on says yes.
+    """
+    import importlib
+    monkeypatch.setenv("SHOW_REALTOR_CROSSCHECK", "1")
+    reloaded = importlib.reload(RDC)
+    try:
+        assert reloaded.SHOW is True and reloaded.shows_crosscheck() is True
+        rec = {"l": "green", "x": {"inv": 211}, "st": "MD"}
+        assert reloaded.strip(rec) == rec, "ON still strips the cross-check"
+        cite = ("Data provided by Redfin · Listing data from Realtor.com® "
+                "Economic Research · Place names")
+        assert reloaded.credit(cite) == cite, "ON still drops the credit"
+    finally:
+        monkeypatch.delenv("SHOW_REALTOR_CROSSCHECK", raising=False)
+        importlib.reload(RDC)
+
+
+# ————— the pause has to be visible in the record —————
+
+def test_the_skip_says_why_and_that_it_is_deliberate(capsys):
+    """A skipped fetch that prints nothing reads, later, exactly like a step
+    that was never wired up. The line has to carry the reason and the fact
+    that somebody chose this, or the record shows an outage."""
+    line = RDC.log_skip("the Realtor.com monthly cross-check ingest")
+    out = capsys.readouterr().out
+    assert line in out, "log_skip returned a line it never printed"
+    low = line.lower()
+    assert "skipped" in low and "cross-check ingest" in low
+    assert "terms" in low, "the skip does not say why"
+    assert "deliberate pause" in low, "the skip reads as a failure"
+    assert RDC.PAUSED_UTC in line, "the skip is undated"
+    assert "SHOW_REALTOR_CROSSCHECK=1" in line, "the skip hides the way back"
+
+
+def test_the_skip_is_one_line_and_annotated_under_ci(monkeypatch):
+    """GitHub Actions annotations stop at the first newline, so a two-line
+    message would publish the headline and silently drop the reason — which
+    is the only part worth reading. Under CI it must also be an annotation:
+    a notice surfaces on the run summary, a bare print hides in a collapsed
+    step nobody expands."""
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    line = RDC.log_skip()
+    assert "\n" not in line, "the annotation would truncate at the newline"
+    assert line.startswith("::notice title=Realtor.com ingest paused::")
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    assert not RDC.log_skip().startswith("::"), \
+        "a local run should read as a sentence, not an Actions annotation"
+
+
+def test_the_producer_logs_the_skip_rather_than_no_opping():
+    """Wired at the call site, not merely available. The gate and the log have
+    to sit together: a fetch that stops without a line in the run output is
+    the failure this whole task was about."""
+    src = (ROOT / "pipeline" / "fetch_data.py").read_text()
+    assert "RDC.log_skip(" in src, \
+        "fetch_data skips the Realtor fetch without recording that it did"
+    assert "if args.rdc and not RDC.shows_crosscheck():" in src, \
+        "the skip log is not guarded by the switch it reports on"
+
+
+def test_the_module_documents_the_resume_path():
+    """A pause with no written way back becomes a deprecation by attrition.
+    The backfill note is the load-bearing half: monthly archive files mean a
+    missed month is recoverable, so nothing about this is permanent."""
+    src = (ROOT / "pipeline" / "realtor_crosscheck.py").read_text()
+    low = src.lower()
+    assert "backfill" in low, "the resume path does not mention the backfill"
+    assert "not a deprecation" in low, "the pause is not marked as temporary"
+    assert RDC.PAUSED_UTC in src, "the flip is undated in the module"
 
 
 @pytest.mark.parametrize("value,expected", [

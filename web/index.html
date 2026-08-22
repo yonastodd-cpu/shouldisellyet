@@ -1111,6 +1111,23 @@ const SHOW_CASE_ROW = true;   // flipped on 2026-08-09 by operator decision
 const PAUSE_NOTICE_TITLE = "This reading is being refreshed";
 const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine. " +
   "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
+
+// ————— FIGURES_KILL_SWITCH —————
+// Mirrors pipeline/figures_switch.FIGURES_OFF. Read that module for what the
+// switch is for; this is one of its three copies, and pipeline/
+// test_figures_switch.py fails when they disagree.
+//
+// UNLIKE THE PAUSE, THIS ONE IS GLOBAL AND STAYS GLOBAL. data_pause needed a
+// page-level boolean removed because releases are per ZIP; a licence posture
+// about the vendor's numbers is not per ZIP, and pretending it could be would
+// invite exactly the tranche-shaped thinking that does not apply here.
+//
+// ON means: the word still renders, and every figure the word was computed
+// from does not — the four dials, the masked preview's real peak/fastest-
+// month/velocity values, the sparkline, and the national price percentile.
+// The reading, the headline, the stamp and the danger-line copy are ours and
+// stay. It is NOT the pause: a page under this switch has a reading.
+const FIGURES_OFF = false;
 let PV_CASE = null;
 if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
   // The index carries every field this panel renders — name, first signal,
@@ -1335,6 +1352,12 @@ const tink = t => t === "r" ? "#c02f2f" : t === "a" ? "#96650c" : t === "s" ? "#
 // strong=true renders the same gauges against the strong-market thresholds
 // (navy = past the strong line) instead of the danger lines.
 function buildMetricRows(d, strong) {
+  // FIGURES_KILL_SWITCH: no rows, so renderMetrics writes an empty string and
+  // the gauge block is ABSENT rather than blank. Returning early here rather
+  // than emptying #v-metrics at the call site keeps the decision in one place
+  // in each renderer — the Python mirror does the same thing by handing
+  // metric_rows an empty metric block.
+  if (FIGURES_OFF) return [];
   const m = d.m || {}, rows = [];
   if (m.mos != null) {
     const t = strong ? (m.mos < 2.5 ? "s" : "g") : (m.mos > 6 ? "r" : m.mos > 4 ? "a" : "g");
@@ -1517,7 +1540,15 @@ function mask(pattern) {
 }
 
 function renderPreview(d) {
-  const h = d.h;
+  // FIGURES_KILL_SWITCH. The history is the figure people forget, because the
+  // preview's honesty rule already blurs it: a veiled peak is still a real
+  // vendor value in the DOM, and the sparkline publishes twelve monthly
+  // observations as shape with no numeral anywhere. Withholding h here sends
+  // rows 02, 07 and 09 down the mask() fallback that already exists for the
+  // ~9% of ZIPs with no history — a labelled placeholder, which is what the
+  // honesty rule says to render when a value cannot be computed. It never
+  // invents one, and this switch does not change that.
+  const h = FIGURES_OFF ? null : d.h;
   const peak = pvPeak(h), fastest = pvFastestMonth(h);
   const rows = [];
   const row = (num, title, line, opts) => rows.push(Object.assign({ num, title, line }, opts || {}));
@@ -1621,7 +1652,13 @@ function renderPreview(d) {
   // whatever has resolved: percentile always (META is loaded before any
   // verdict can render), WSI + research link only if feature-detection found
   // them. Everything in it is real, dated, and free — no mask, no gate.
-  const spy = d.m && d.m.spy;
+  // FIGURES_KILL_SWITCH. pvPercentile turns this ZIP's asking-price change
+  // into "prices here are rising faster than about 62% of U.S. ZIP codes" —
+  // a sentence with no vendor figure in it that cannot be produced without
+  // one. Withholding spy drops that paragraph and leaves the rest of the
+  // macro panel (the Warning-Sign Index and the case study, different lineage
+  // and a different question) exactly as it was.
+  const spy = FIGURES_OFF ? null : (d.m && d.m.spy);
   const xBtn = document.getElementById("pv-x");
   if (xBtn) xBtn.addEventListener("click", () => {
     const box = document.getElementById("pv-macro");

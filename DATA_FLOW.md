@@ -8,7 +8,7 @@ do I turn off, and what breaks?"
 | Source | Status | Feeds a reading? | Switch |
 |---|---|---|---|
 | **RentCast** `/markets` | Paid, active | **Yes — the only one** | none yet |
-| **Realtor.com** RDC inventory CSV | Free download, dormant | No — display cross-check only | `SHOW_REALTOR_CROSSCHECK` |
+| **Realtor.com** RDC inventory CSV | **Ingest PAUSED 2026-08-22** pending terms review | No — display cross-check only | `SHOW_REALTOR_CROSSCHECK` (**default off**) |
 | **FHFA** ZIP house price index | Public domain | No — threshold backtest, benchmark | n/a |
 | **U.S. Census** ZCTA / CBSA | Public domain | No — metro mapping, place names | n/a |
 | **Freddie Mac** PMMS | Public | No — rate context on paid reports | n/a |
@@ -30,7 +30,7 @@ module state, flipped by editing and deploying — see `pipeline/data_pause.py`.
 
 ## The Realtor.com kill switch
 
-`SHOW_REALTOR_CROSSCHECK` (default **on**) exists because the Realtor.com
+`SHOW_REALTOR_CROSSCHECK` (default **off** since 2026-08-22) exists because the Realtor.com
 research figures are under licence review and the answer is not in yet. Setting
 it to `0` means no Realtor-derived value is fetched, written into `web/`, or
 credited to a reader: `fetch_data.py` skips the download entirely rather than

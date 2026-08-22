@@ -359,10 +359,13 @@ const PUBLIC_PROVENANCE =
 // exactly one place, and this is what keeps it there.
 //
 // DELIBERATE GAP, recorded rather than hidden: Realtor.com is not in this list.
-// Its cross-check is off behind realtor_crosscheck.shows_crosscheck(), but the
-// research footers still credit it as a listing-data source, and whether that
-// credit is live or stale is a licensing question this gate cannot settle.
-// Adding it here would flag four healthy-looking pages on a guess.
+// Its cross-check is off behind realtor_crosscheck.shows_crosscheck(), and as of
+// 2026-08-22 that switch defaults OFF, so the research footers stop crediting it
+// on the next rebuild. The credit going away does not settle the licensing
+// question — we still do not hold their terms — so this stays a gap rather than
+// becoming an assertion. Revisit when the terms are obtained: if the answer is
+// that we may not use their data at all, the name belongs in the pattern below;
+// if we may, the credit comes back and an assertion here would be wrong.
 const DISCONTINUED_VENDOR = /\bredfin\b/gi;
 const CURRENT_VENDOR = /\brentcast\b/gi;
 

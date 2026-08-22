@@ -19,6 +19,16 @@ research section):
 The CSVs carry ONLY derived fields — verdict counts, warning shares, deltas,
 flips. No upstream Redfin/Realtor metric columns ship here: the verdict layer
 is ours to give away; their raw data is not ours to redistribute.
+
+WHAT PUBLISHES IS A FLAG, NOT A REWRITE. research.INDEX_MODE decides whether
+the Warning-Sign Index ships whole ("full", the default and today's
+behaviour), from the current vendor's era forward ("truncated"), or not at
+all while it is reviewed ("paused"); research.INDEX_LICENSE decides whether
+the grant that ships with it includes republication ("current") or quotation
+only ("restricted"). This file is the only place those decisions become
+pixels and bytes — everything here renders from research.published_series()
+rather than from the stored history, so a mode change moves every surface at
+once. Full detail: INDEX_OPTIONS.md.
 """
 
 import argparse
@@ -32,6 +42,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import research as RS                  # the index's publication flags, live
 from research import (RESEARCH_DIR, national_series, load_history, pretty,
                       prev_month, region_share, unpack)
 from verdict_copy import COPY as VCOPY
@@ -133,11 +144,67 @@ def _attrib(d, w, h, month, extra=""):
 
 # ————— chart 1: the WSI time series —————
 
-def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
+def withheld_chart(out, note, month, w=1200, h=675):
+    """The chart's placeholder when there is no publishable series.
+
+    A missing image is not the same statement as a withdrawn one. Paused
+    releases keep the image URL and say, in the picture itself, that the
+    index is under review — otherwise the page has a hole where a reader
+    remembers a chart, and a hole reads as breakage.
+    """
     from PIL import Image, ImageDraw
     img = Image.new("RGB", (w, h), BG)
     d = ImageDraw.Draw(img)
-    cur_m, cur_v = series[-1]
+    d.text((60, 44), "WARNING-SIGN INDEX", font=font(BOLD, 30), fill=INK)
+    y = 150
+    for line in _wrap(note, font(REG, 22), w - 120, d):
+        d.text((60, y), line, font=font(REG, 22), fill=MUTED)
+        y += 34
+    _attrib(d, w, h, month)
+    img.save(out, "PNG", optimize=True)
+
+
+def _wrap(text, f, width, d):
+    """Greedy word wrap against a measured font — Pillow has no text box."""
+    lines, cur = [], ""
+    for word_ in text.split():
+        trial = (cur + " " + word_).strip()
+        if cur and d.textlength(trial, font=f) > width:
+            lines.append(cur)
+            cur = word_
+        else:
+            cur = trial
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None,
+              v2=(), note=""):
+    """The index time series.
+
+    TWO SERIES, NEVER ONE LINE. `series` is the v1 (Redfin-basis) index;
+    `v2` is the new active-listing-basis index, which is a different index
+    and not a continuation of it. When both are present they share an axis
+    and nothing else: separate strokes, a labelled vertical break between
+    them, and no connecting segment. The seam inside v1 is drawn the same
+    way and for the same reason.
+
+    `note` is the truncation's series-break sentence. It is drawn INTO the
+    image because the image is the thing that gets screenshotted and reposted
+    without the page around it.
+    """
+    from PIL import Image, ImageDraw
+    if not series and not v2:
+        raise ValueError("wsi_chart called with nothing to draw — callers "
+                         "must use withheld_chart() when the index is not "
+                         "publishable")
+    img = Image.new("RGB", (w, h), BG)
+    d = ImageDraw.Draw(img)
+    # The headline is the newest published value, which is the v2 point once
+    # v2 exists — a header quoting the old basis over a chart whose live end
+    # is the new one is the splice this whole function refuses to draw.
+    cur_m, cur_v = (v2 or series)[-1]
 
     d.text((60, 44), "WARNING-SIGN INDEX", font=font(BOLD, 30), fill=INK)
     d.text((60, 84), "Share of scored U.S. ZIP markets at WATCH or ACT",
@@ -145,21 +212,33 @@ def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
     big = f"{cur_v:.1f}%"
     fb = font(BOLD, 64)
     d.text((w - 60 - d.textlength(big, font=fb), 36), big, fill=NAVY, font=fb)
+    # …and the month-over-month delta belongs to the records the caller
+    # computed. If those describe a different month than the headline — a v1
+    # records block under a v2 headline — it is not this month's delta and
+    # does not get drawn.
     delta = records.get("delta")
-    if delta is not None:
+    if delta is not None and records.get("month") in (None, cur_m):
         dtxt = f"{'+' if delta >= 0 else '−'}{abs(delta):.1f} pts vs prior month"
         fd = font(REG, 18)
         d.text((w - 60 - d.textlength(dtxt, font=fd), 106), dtxt,
                fill=(RED if delta > 0 else GREEN) if delta else MUTED, font=fd)
 
-    # plot area
-    x0, y0, x1, y1 = 60, 160, w - 60, h - 90
-    vals = [v for _, v in series]
+    # plot area. The break note gets its own two lines at the foot, so the
+    # plot floor lifts to make room — measured, not guessed: the first cut
+    # drew the note straight through the year labels.
+    x0, y0, x1, y1 = 60, 160, w - 60, h - (124 if note else 90)
+    # ONE AXIS, TWO SERIES. Positions come from the union of both series'
+    # months so v1 and v2 sit on a shared, gap-free time axis; with no v2
+    # series (today, and in every default build) this is exactly the v1
+    # month list and every coordinate below is unchanged.
+    axis = sorted({m for m, _ in series} | {m for m, _ in v2})
+    at = {m: i for i, m in enumerate(axis)}
+    vals = [v for _, v in series] + [v for _, v in v2]
     vmax = max(60.0, max(vals) + 4)
     vmin = max(0.0, min(vals) - 4)
 
     def X(i):
-        return x0 + (x1 - x0) * (i / max(1, len(series) - 1))
+        return x0 + (x1 - x0) * (i / max(1, len(axis) - 1))
 
     def Y(v):
         return y1 - (y1 - y0) * ((v - vmin) / (vmax - vmin))
@@ -169,9 +248,9 @@ def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
             d.line([(x0, Y(gv)), (x1, Y(gv))], fill=HAIRLINE, width=1)
             d.text((x0 - 12 - d.textlength(f"{gv}", font=font(REG, 15)), Y(gv) - 9),
                    f"{gv}", font=font(REG, 15), fill=FAINT)
-    years = sorted({m[:4] for m, _ in series})
+    years = sorted({m[:4] for m in axis})
     for yr in years:
-        idx = next(i for i, (m, _) in enumerate(series) if m.startswith(yr))
+        idx = next(i for i, m in enumerate(axis) if m.startswith(yr))
         if idx:
             d.line([(X(idx), y0), (X(idx), y1)], fill=HAIRLINE, width=1)
         if int(yr) % 2 == 0 or len(years) <= 8:
@@ -182,17 +261,24 @@ def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
     for entry in changelog:
         if entry.get("annotate") is False:
             continue
-        m = entry.get("month")
-        idx = next((i for i, (mm, _) in enumerate(series) if mm == m), None)
+        idx = at.get(entry.get("month"))
         if idx is not None:
             d.line([(X(idx), y0), (X(idx), y1)], fill=AMBER, width=2)
             d.text((X(idx) + 5, y0 + 2), f"v{entry['version']}",
                    font=font(BOLD, 14), fill=AMBER)
 
+    def stroke(points, colour, width):
+        """Pillow needs two points for a line; one month is still a chart."""
+        if len(points) >= 2:
+            d.line(points, fill=colour, width=width, joint="curve")
+        elif points:
+            cx0, cy0 = points[0]
+            d.ellipse([cx0 - 4, cy0 - 4, cx0 + 4, cy0 + 4], fill=colour)
+
     # Two strokes, one chart: the pre-seam reconstruction (smaller legacy
     # universe) draws lighter so nobody reads a superlative across it; the
     # continuous series — where records live — is the full-weight line.
-    pts = [(X(i), Y(v)) for i, (_, v) in enumerate(series)]
+    pts = [(X(at[m]), Y(v)) for m, v in series]
     cut = next((i for i, (m, _) in enumerate(series) if seam and m >= seam), 0)
     if seam and 0 < cut < len(series):
         # Deliberately NOT connected across the seam: the two segments are
@@ -204,10 +290,41 @@ def wsi_chart(series, records, changelog, out, w=1200, h=675, seam=None):
         lbl = "continuous series begins"
         d.text((X(cut) + 6, y1 - 24), lbl, font=font(REG, 14), fill=FAINT)
         d.line(pts[cut:], fill=NAVY, width=4, joint="curve")
-    else:
-        d.line(pts, fill=NAVY, width=4, joint="curve")
-    cx, cy = pts[-1]
-    d.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=NAVY, outline=BG, width=3)
+    elif pts:
+        stroke(pts, NAVY, 4)
+    if pts:
+        cx, cy = pts[-1]
+        d.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=NAVY, outline=BG, width=3)
+
+    # THE V2 BREAK IS DRAWN, NEVER BRIDGED. v2 measures different signals
+    # against different lines over a different universe; a stroke joining the
+    # last v1 point to the first v2 point would draw a market move that never
+    # happened. So: its own colour, its own label, and a hard vertical rule
+    # at the changeover when both series are on the canvas.
+    if v2:
+        vpts = [(X(at[m]), Y(v)) for m, v in v2]
+        if pts:
+            bx = X(at[v2[0][0]])
+            d.line([(bx, y0), (bx, y1)], fill=AMBER, width=2)
+            # The break usually sits near the right edge — that is where new
+            # data lives — so the label flips to the left of the rule rather
+            # than running off the canvas, which is how it first shipped.
+            lf = font(BOLD, 14)
+            lbl2 = "new basis — different index"
+            lw = d.textlength(lbl2, font=lf)
+            lx = bx + 6 if bx + 6 + lw <= x1 else bx - 6 - lw
+            d.text((lx, y0 + 22), lbl2, font=lf, fill=AMBER)
+        stroke(vpts, AMBER, 4)
+        vx, vy = vpts[-1]
+        d.ellipse([vx - 7, vy - 7, vx + 7, vy + 7], fill=AMBER, outline=BG, width=3)
+        d.text((x0, y0 - 26), RS.V2_LABEL, font=font(REG, 15), fill=AMBER)
+
+    # The truncation's series-break sentence, drawn into the picture: charts
+    # get screenshotted away from the page that explains them.
+    if note:
+        f = font(REG, 15)
+        for i, line in enumerate(_wrap(note, f, w - 120, d)[:2]):
+            d.text((60, h - 74 + i * 19), line, font=f, fill=FAINT)
 
     _attrib(d, w, h, cur_m)
     img.save(out, "PNG", optimize=True)
@@ -261,6 +378,22 @@ def og_card(rep, out, w=1200, h=630):
     CREAM = (242, 241, 236)
     GOLD = (217, 154, 43)
     rec = rep["records"]
+    # THE SHARE CARD IS THE NUMBER. When the month's value may not be
+    # published, this card cannot be "the page minus the chart" — it is
+    # nothing but the value, so it says instead that the index is withheld.
+    # Withdrawing the page and leaving a cached 1200×630 of the figure on
+    # every social unfurl is the same mistake the per-ZIP OG cards made.
+    if not RS.publishes_month(rep["month"]):
+        d.text((70, 64), "WARNING-SIGN INDEX", font=font(BOLD, 34), fill=GOLD)
+        y = 190
+        for line in _wrap(RS.PAUSED_NOTICE if not RS.publishes_index()
+                          else RS.series_break_note(), font(REG, 40), w - 140, d):
+            d.text((70, y), line, font=font(REG, 40), fill=CREAM)
+            y += 56
+        d.text((70, h - 60), f"{rep['pretty_month']} · ShouldISellYet Research",
+               font=font(REG, 24), fill=(154, 160, 150))
+        img.save(out, "PNG", optimize=True)
+        return
     d.text((70, 64), "WARNING-SIGN INDEX", font=font(BOLD, 34), fill=GOLD)
     big = f"{rec['wsi']:.1f}%"
     d.text((62, 130), big, font=font(BOLD, 230), fill=CREAM)
@@ -322,14 +455,18 @@ def social_set(rep, series, outdir):
     sdir.mkdir(exist_ok=True)
 
     # 1 — the WSI number + trend (crop the landscape chart into the frame)
-    img, d = _social_frame(
-        [f"Warning signs: {rec['wsi']:.1f}% of U.S. ZIP markets",
-         "The Warning-Sign Index, monthly since 2020 (context to 2012)"], month)
-    chart = Image.open(outdir / "wsi-chart.png")
-    cw = 1080 - 128
-    ch = round(chart.height * cw / chart.width)
-    img.paste(chart.resize((cw, ch)), (64, 240))
-    img.save(sdir / "1-wsi.png", "PNG", optimize=True)
+    # Skipped, not blanked, when the month's value is unpublishable: this card
+    # exists only to carry the number, and a posting queue is better off with
+    # one fewer card than with a card that says nothing.
+    if RS.publishes_month(month):
+        img, d = _social_frame(
+            [f"Warning signs: {rec['wsi']:.1f}% of U.S. ZIP markets",
+             "The Warning-Sign Index, monthly since 2020 (context to 2012)"], month)
+        chart = Image.open(outdir / "wsi-chart.png")
+        cw = 1080 - 128
+        ch = round(chart.height * cw / chart.width)
+        img.paste(chart.resize((cw, ch)), (64, 240))
+        img.save(sdir / "1-wsi.png", "PNG", optimize=True)
 
     # 2 — the state map
     img, d = _social_frame(
@@ -600,13 +737,22 @@ earlier versus realized price changes since (thresholds: a real decline is
 <p class="note">One caveat applies to every number above: {caveat}.</p>"""
 
     track = track_record(rel_prefix="")
+    # The methodology page is where a reader goes to find out what happened to
+    # a series. Whatever the mode is doing, it says so here first — above the
+    # definition, not in a footnote under it.
+    mode_note = ""
+    if not RS.publishes_index():
+        mode_note = (f'\n<p class="note homeowner">{esc(RS.PAUSED_NOTICE)} '
+                     f'{esc(RS.PAUSED_FILE_NOTICE)}</p>')
+    elif RS.cutoff_month():
+        mode_note = f'\n<p class="note homeowner">{esc(RS.series_break_note())}</p>'
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH</div>
 <h1>Warning-Sign Index — methodology</h1>
 <p class="lede">Everything needed to check, reuse, or challenge the number.
 The definition is versioned; changes are listed at the bottom and annotated
 on the chart at the month they take effect. History is restated on cutover,
-never silently redefined.</p>
+never silently redefined.</p>{mode_note}
 
 <h2 id="definition">Definition</h2>
 <p><b>WSI = ZIP markets at WATCH or ACT ÷ all scored ZIP markets</b>, as a
@@ -672,15 +818,7 @@ require ≥ 15 scored ZIPs.</p>
 {measured}
 
 <h2 id="citation">Use and citation</h2>
-<p>Index values, league tables, and release CSVs may be used, quoted, charted,
-and republished in journalism, research, analysis, and commentary, with
-attribution: <b>"Source: ShouldISellYet (shouldisellyet.com)."</b> The CSVs
-carry ShouldISellYet's derived indicators only — never upstream raw metrics,
-which belong to their publishers, and we grant no rights in any third party's
-underlying data. Redistributing the files as a dataset, or using them to build
-a competing data product or service, is not permitted; the full terms ship
-with each release as <code>LICENSE.txt</code>. Media/data questions:
-<a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
+{grant_html()}
 
 <h2 id="changelog">Changelog</h2>
 <table><thead><tr><th>Version</th><th>Effective</th><th>Change</th></tr></thead>
@@ -779,7 +917,7 @@ footer{{border-top:1px solid var(--hairline);margin-top:46px;padding-top:18px;fo
 <footer>
   <div><a href="/research/">ShouldISellYet Research</a> · <a href="/research/methodology.html">Methodology</a> · <a href="/">Home</a> · <a href="/press.html">Press</a></div>
   <div style="margin-top:8px">{CITE}</div>
-  <div style="margin-top:8px">Use with attribution: "Source: ShouldISellYet (shouldisellyet.com)." Not for dataset redistribution or competing products — see each release's LICENSE.txt. Readings and the Warning-Sign Index are computed by ShouldISellYet from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice.</div>
+  <div style="margin-top:8px">{footer_grant()} Readings and the Warning-Sign Index are computed by ShouldISellYet from licensed market statistics and are general information only — not financial, legal, tax, or real-estate advice.</div>
 </footer>
 </div></body></html>"""
 
@@ -943,20 +1081,149 @@ def state_paragraph(st, e, month):
 
 # ————— CSVs —————
 
-def write_csvs(rep, series, outdir):
+# ————— the grant, in both widths —————
+#
+# TWO TEXTS, ONE DECISION. research.INDEX_LICENSE picks between them, and it
+# picks for LICENSE.txt, the methodology page's "Use and citation" section,
+# the download note, and the footer at once — because the broadest wording
+# anywhere is the one a reader will rely on, so narrowing four of five
+# surfaces narrows nothing. (test_research_license.py exists because that
+# exact failure has happened here before.)
+#
+# "restricted" removes REPUBLICATION and keeps QUOTATION WITH ATTRIBUTION.
+# It does not touch the existing limits — no dataset redistribution, no
+# competing products, no rights in anyone else's underlying data — those ride
+# in the paragraph below the grant and apply in both widths.
+GRANT_CURRENT = """You may use, quote, chart, and republish these indicators in journalism,
+research, analysis, and commentary, with attribution: "Source: ShouldISellYet
+(shouldisellyet.com)".
+"""
+
+GRANT_RESTRICTED = """You may quote these indicators — individual figures and short extracts — in
+journalism, research, analysis, and commentary, with attribution: "Source:
+ShouldISellYet (shouldisellyet.com)". Republication is NOT granted: these
+files, and the series they contain, may not be reproduced in whole or in
+substantial part, mirrored, re-hosted, or included in another publication's
+own data offering. Quotation with attribution needs no further permission;
+anything beyond quotation needs ours, in writing — press@shouldisellyet.com.
+"""
+
+# The same narrowing in the page's voice. Each of these replaces one HTML
+# passage; the "current" strings are the wording that ships today and are
+# left byte-for-byte alone.
+USE_HTML_CURRENT = """<p>Index values, league tables, and release CSVs may be used, quoted, charted,
+and republished in journalism, research, analysis, and commentary, with
+attribution: <b>"Source: ShouldISellYet (shouldisellyet.com)."</b> The CSVs
+carry ShouldISellYet's derived indicators only — never upstream raw metrics,
+which belong to their publishers, and we grant no rights in any third party's
+underlying data. Redistributing the files as a dataset, or using them to build
+a competing data product or service, is not permitted; the full terms ship
+with each release as <code>LICENSE.txt</code>. Media/data questions:
+<a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>"""
+
+USE_HTML_RESTRICTED = """<p>Index values, league tables, and release CSVs may be <b>quoted</b> —
+individual figures and short extracts — in journalism, research, analysis, and
+commentary, with attribution: <b>"Source: ShouldISellYet
+(shouldisellyet.com)."</b> Republication is not granted: the files, and the
+series they contain, may not be reproduced in whole or in substantial part,
+mirrored, re-hosted, or included in another publication's own data offering.
+The CSVs carry ShouldISellYet's derived indicators only — never upstream raw
+metrics, which belong to their publishers, and we grant no rights in any third
+party's underlying data. Redistributing the files as a dataset, or using them
+to build a competing data product or service, is not permitted; the full terms
+ship with each release as <code>LICENSE.txt</code>. Anything beyond quotation,
+and any media or data question:
+<a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>"""
+
+# One long line each, deliberately: test_research_license.py scans this file
+# for the restriction clause as contiguous text, and a re-wrapped literal puts
+# a quote character in the middle of the clause it is checking for.
+DOWNLOAD_NOTE_CURRENT = """Use with attribution ("Source: ShouldISellYet (shouldisellyet.com)"). Files carry ShouldISellYet's derived indicators only — readings, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>."""
+
+DOWNLOAD_NOTE_RESTRICTED = """Quote with attribution ("Source: ShouldISellYet (shouldisellyet.com)"); republication of the files, or of the series they contain, is not granted. Files carry ShouldISellYet's derived indicators only — readings, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>."""
+
+FOOTER_GRANT_CURRENT = (
+    'Use with attribution: "Source: ShouldISellYet (shouldisellyet.com)." '
+    "Not for dataset redistribution or competing products — see each "
+    "release's LICENSE.txt.")
+
+FOOTER_GRANT_RESTRICTED = (
+    'Quote with attribution: "Source: ShouldISellYet (shouldisellyet.com)." '
+    "Republication not granted; not for dataset redistribution or competing "
+    "products — see each release's LICENSE.txt.")
+
+def grant_html():
+    return (USE_HTML_CURRENT if RS.INDEX_LICENSE == "current"
+            else USE_HTML_RESTRICTED)
+
+
+def download_note():
+    return (DOWNLOAD_NOTE_CURRENT if RS.INDEX_LICENSE == "current"
+            else DOWNLOAD_NOTE_RESTRICTED)
+
+
+def footer_grant():
+    return (FOOTER_GRANT_CURRENT if RS.INDEX_LICENSE == "current"
+            else FOOTER_GRANT_RESTRICTED)
+
+
+def _licence_series_note():
+    """The mode's caveat inside LICENSE.txt. Empty in the default mode, so a
+    default LICENSE.txt is byte-for-byte the one that ships today."""
+    if RS.cutoff_month():
+        return f"\n{RS.series_break_note()} See SERIES-BREAK.txt.\n"
+    if not RS.publishes_index():
+        return (f"\n{RS.PAUSED_FILE_NOTICE} The aggregate files in this "
+                f"folder are\nunaffected.\n")
+    return ""
+
+
+def write_csvs(rep, series, outdir, v2=()):
     month = rep["month"]
     seam = rep.get("seam", "")
 
-    with (outdir / "wsi-history.csv").open("w", newline="") as f:
-        w = csv.writer(f, lineterminator="\n")
-        # The series column is not optional metadata: without it, anyone
-        # charting this file draws the source seam as a market move — the
-        # exact misread the chart's two strokes exist to prevent. The page
-        # can explain; a CSV must carry its own caveats.
-        w.writerow(["month", "wsi_pct", "series"])
-        for m, v in series:
-            w.writerow([m, f"{v:.2f}",
-                        "continuous" if (seam and m >= seam) else "reconstruction"])
+    # WHAT MAY BE PUBLISHED, NOT WHAT IS STORED. `series` is the whole
+    # computed history; these two are the slice this mode distributes. In
+    # "full" they are the same list, which is why a default build is
+    # byte-identical to the one before this switch existed.
+    pub = RS.published_series(series)
+    v2pub = RS.published_v2_series(v2, upto=month)
+
+    if RS.publishes_history_file():
+        with (outdir / "wsi-history.csv").open("w", newline="") as f:
+            w = csv.writer(f, lineterminator="\n")
+            # The series column is not optional metadata: without it, anyone
+            # charting this file draws the source seam as a market move — the
+            # exact misread the chart's two strokes exist to prevent. The page
+            # can explain; a CSV must carry its own caveats.
+            w.writerow(["month", "wsi_pct", "series"])
+            for m, v in pub:
+                w.writerow([m, f"{v:.2f}",
+                            RS.SERIES_CONTINUOUS if (seam and m >= seam)
+                            else RS.SERIES_RECONSTRUCTION])
+            # The v2 index rides in the same file under its OWN series name so
+            # a reader who sorts by month cannot accidentally concatenate two
+            # different indices into one line. Same reason the column exists
+            # at all, one basis change further on.
+            for m, v in v2pub:
+                w.writerow([m, f"{v:.2f}", RS.SERIES_V2])
+
+    # NO SILENT SPLICE. A truncated file that simply starts later looks like
+    # a young index. This drops the sentence that says otherwise into the
+    # release folder beside the CSV, because a downloaded file travels
+    # without the page that explained it.
+    if RS.cutoff_month():
+        (outdir / "SERIES-BREAK.txt").write_text(
+            f"""Warning-Sign Index — series break
+{pretty(month)} release · {SITE}/research/{month}/
+
+{RS.series_break_note()}
+
+wsi-history.csv therefore begins at {RS.cutoff_month()}. Values published
+before that date are not part of this distribution. Rows are labelled in the
+`series` column; rows labelled "{RS.SERIES_V2}" are a different index
+computed on the current basis, not a continuation of the earlier series.
+""")
 
     with (outdir / f"state-aggregates-{month}.csv").open("w", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
@@ -1000,17 +1267,14 @@ and month-over-month changes. They describe the set of markets we score, not
 the individual markets in it. They contain no third-party vendor data, and
 nothing in them may be represented as the measurements of any data vendor.
 
-You may use, quote, chart, and republish these indicators in journalism,
-research, analysis, and commentary, with attribution: "Source: ShouldISellYet
-(shouldisellyet.com)".
-
+{GRANT_CURRENT if RS.INDEX_LICENSE == "current" else GRANT_RESTRICTED}
 These files are provided as-is, without warranty of any kind, including
 fitness for a particular purpose. ShouldISellYet grants no rights in any third
 party's underlying data. Redistribution of these files as a dataset, or use of
 them to build a competing data product or service, is not permitted. Readings
 are informational only and are not financial, investment, or real-estate
 advice.
-
+{_licence_series_note()}
 Reading methodology: {SITE}/research/methodology.html
 """)
 
@@ -1029,22 +1293,49 @@ def word(level):
     return VCOPY[level]["word"] if level in VCOPY else level
 
 
+def index_notice(month):
+    """Why this page is not showing an index value, or "" when it is.
+
+    ONE SENTENCE, ONE REASON. Paused says the index is under review;
+    truncated says the earlier history is no longer distributed and why. A
+    page that simply drops the number tells a reader the site is broken —
+    which is both wrong and the worse impression.
+    """
+    if RS.publishes_month(month):
+        return ""
+    return RS.PAUSED_NOTICE if not RS.publishes_index() else RS.series_break_note()
+
+
 def release_page(rep, series, outdir, rel_url):
     month = rep["month"]
     rec = rep["records"]
     bullets = "".join(f"<li>{b}</li>" for b in three_bullets(rep))
+    # `series` is the computed history; `pub` is the part of it this mode
+    # distributes. Everything reader-facing below renders from `pub`.
+    pub_series = RS.published_series(series)
+    v2pub = RS.published_v2_series(upto=month)
+    shows_index = RS.publishes_month(month)
+    notice = index_notice(month)
 
     # Quotable-stat rule: the WSI historical series was the one headline stat
     # with no HTML-text form — it lived only in the chart PNG and the CSV,
     # and an engine cannot cite a PNG. One dated sentence fixes that.
     year_ago_m = f"{int(month[:4]) - 1}-{month[5:7]}"
-    year_ago = next((v for m0, v in series if m0 == year_ago_m), None)
+    year_ago = next((v for m0, v in pub_series if m0 == year_ago_m), None)
     # prev_wsi is optional (absent on a single-month series — research.py only
     # emits it with >=2 months), so guard it like headline_sentence guards delta.
-    series_text = (f"In text: the index stood at {rec['wsi']:.1f}% in {pretty(month)}"
-                   + (f", versus {rec['prev_wsi']:.1f}% the month before" if rec.get("prev_wsi") is not None else "")
-                   + (f" and {year_ago:.1f}% in {pretty(year_ago_m)}" if year_ago is not None else "")
-                   + f". The full monthly series back to {series[0][0]} is in the CSV below.")
+    if shows_index:
+        series_text = (f"In text: the index stood at {rec['wsi']:.1f}% in {pretty(month)}"
+                       + (f", versus {rec['prev_wsi']:.1f}% the month before" if rec.get("prev_wsi") is not None and RS.publishes_month(prev_month(month)) else "")
+                       + (f" and {year_ago:.1f}% in {pretty(year_ago_m)}" if year_ago is not None else "")
+                       + f". The full monthly series back to {pub_series[0][0]} is in the CSV below.")
+        # The break travels WITH the series, in the same breath as the number
+        # — a truncated chart that says nothing looks like a young index, and
+        # this paragraph is the one a quoting journalist actually reads.
+        if RS.cutoff_month():
+            series_text += " " + RS.series_break_note()
+    else:
+        series_text = notice
 
     def metro_rows(rows):
         return "".join(
@@ -1094,13 +1385,21 @@ at the current pace.</p>"""
         f'{esc(state_paragraph(st, e, month))}</div>'
         for st, e in sorted(rep["states"].items()))
 
+    # The history file is the one download that is a series rather than a
+    # month, so it is the one download a mode can take away. Its link goes
+    # with it — a download button pointing at a withdrawn URL is how a reader
+    # learns about the withdrawal from a browser error page.
+    downloads = []
+    if RS.publishes_history_file():
+        downloads.append(("wsi-history.csv", "WSI history"))
+    downloads += [(f"state-aggregates-{month}.csv", "State aggregates"),
+                  (f"metro-aggregates-{month}.csv", "Metro movers")]
+    if RS.cutoff_month():
+        downloads.append(("SERIES-BREAK.txt", "Series break"))
+    downloads.append(("LICENSE.txt", "License"))
     csv_links = "".join(
-        f'<a class="dl" href="{esc(n)}" download>{esc(t)}</a>' for n, t in [
-            ("wsi-history.csv", "WSI history"),
-            (f"state-aggregates-{month}.csv", "State aggregates"),
-            (f"metro-aggregates-{month}.csv", "Metro movers"),
-            ("LICENSE.txt", "License"),
-        ])
+        f'<a class="dl" href="{esc(n)}" download>{esc(t)}</a>'
+        for n, t in downloads)
 
     # Optional appendix: ONE case card from the track record, rotating by
     # release month so successive releases don't repeat the same one. Hits
@@ -1116,15 +1415,27 @@ at the current pace.</p>"""
                     "which also carries a market that crossed a line and recovered.</p>\n"
                     + case_card(pick, rel_prefix=".."))
 
+    # The head of the release: the index value and everything phrased around
+    # it, or the notice that replaces them. The bullets, tables and state
+    # paragraphs below are aggregates and are NOT index values — they stay in
+    # every mode, which is what "aggregates minus the index" means.
+    if shows_index:
+        head = (f"<h1>Warning-Sign Index: {rec['wsi']:.1f}%</h1>\n"
+                f'<p class="lede">{headline_sentence(rec)}</p>')
+        story = narrative(rep)
+    else:
+        head = (f"<h1>Housing warning signs: {esc(pretty(month))}</h1>\n"
+                f'<p class="lede">{esc(notice)}</p>')
+        story = ""
+
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH · {esc(pretty(month)).upper()} RELEASE · INDEX v{esc(rep['index_version'])}</div>
-<h1>Warning-Sign Index: {rec['wsi']:.1f}%</h1>
-<p class="lede">{headline_sentence(rec)}</p>
+{head}
 <ul class="bullets">{bullets}</ul>
-{narrative(rep)}
+{story}
 <p class="note homeowner">Not a researcher? <a href="/">Check your own ZIP code
 instead</a> — one plain answer for your market, free.</p>
-<img class="chart" src="wsi-chart.png" alt="Warning-Sign Index time series through {esc(pretty(month))}" width="1200" height="675">
+<img class="chart" src="wsi-chart.png" alt="{esc('Warning-Sign Index time series through ' + pretty(month)) if shows_index else esc(notice)}" width="1200" height="675">
 <p class="note">{esc(series_text)}</p>
 <img class="chart" src="state-map.png" alt="Warning share by state, {esc(pretty(month))}" width="1200" height="675">
 
@@ -1153,7 +1464,7 @@ Per-ZIP data is available on request for specific stories:
 
 <h2>Download the data</h2>
 <p>{csv_links}</p>
-<p class="note">Use with attribution ("Source: ShouldISellYet (shouldisellyet.com)"). Files carry ShouldISellYet's derived indicators only — readings, shares, changes — never upstream raw metrics. Redistributing them as a dataset, or using them to build a competing data product or service, is not permitted; full terms in <a href="LICENSE.txt">LICENSE.txt</a>.</p>
+<p class="note">{download_note()}</p>
 
 {appendix}
 <h2>Methodology, briefly</h2>
@@ -1180,18 +1491,29 @@ Per-ZIP data is available on request for specific stories:
         "temporalCoverage": cover,
         "distribution": [{"@type": "DataDownload", "encodingFormat": "text/csv",
                           "contentUrl": canon + fname}]}
+    # THE STRUCTURED DATA IS A PUBLICATION TOO. An answer engine reads this
+    # graph, not the prose, so a withheld value left in the JSON-LD is a
+    # withheld value still being distributed — to the readers hardest to
+    # correct later.
+    covered = pub_series + v2pub
+    history_ds = ([dataset(
+        "ShouldISellYet Warning-Sign Index — monthly history",
+        "Monthly share of scored U.S. ZIP markets whose reading is WATCH or ACT, "
+        "with a series column separating the continuous run from the reconstructed tail."
+        + ("" if not RS.cutoff_month() else " " + RS.series_break_note()),
+        "wsi-history.csv", f"{covered[0][0]}/{covered[-1][0]}")]
+        if RS.publishes_history_file() and covered else [])
     ld = json.dumps({"@context": "https://schema.org", "@graph": [
         org,
         {"@type": "Article", "@id": canon + "#article", "mainEntityOfPage": canon,
-         "headline": f"Warning-Sign Index: {rec['wsi']:.1f}% — {pretty(month)}",
-         "description": headline_sentence(rec),
+         "headline": (f"Warning-Sign Index: {rec['wsi']:.1f}% — {pretty(month)}"
+                      if shows_index else
+                      f"Housing warning signs — {pretty(month)}"),
+         "description": headline_sentence(rec) if shows_index else notice,
          "datePublished": pub, "dateModified": pub,
          "author": {"@id": SITE + "/#org"}, "publisher": {"@id": SITE + "/#org"},
          "image": canon + "og.png"},
-        dataset("ShouldISellYet Warning-Sign Index — monthly history",
-                "Monthly share of scored U.S. ZIP markets whose reading is WATCH or ACT, "
-                "with a series column separating the continuous run from the reconstructed tail.",
-                "wsi-history.csv", f"{series[0][0]}/{month}"),
+        *history_ds,
         dataset(f"State warning-sign aggregates — {pretty(month)}",
                 "Scored ZIPs, warning share, and month-over-month change per U.S. state.",
                 f"state-aggregates-{month}.csv", month),
@@ -1200,30 +1522,72 @@ Per-ZIP data is available on request for specific stories:
                 f"metro-aggregates-{month}.csv", month),
     ]}, separators=(",", ":"))
 
+    # The <title> and description carry the value too — the lesson
+    # data_pause.py learned the expensive way: half a withdrawal is a
+    # withdrawal that reads as done and is not.
+    if shows_index:
+        title = (f"Warning-Sign Index {rec['wsi']:.1f}% — {pretty(month)} · "
+                 f"ShouldISellYet Research")
+        desc = (f"{rep['national']['scored']:,} U.S. ZIP markets scored in "
+                f"{pretty(month)}: {rec['wsi']:.1f}% show warning signs. "
+                f"Monthly index, metro league tables, and downloadable data.")
+    else:
+        title = f"Housing warning signs — {pretty(month)} · ShouldISellYet Research"
+        desc = (f"{rep['national']['scored']:,} U.S. ZIP markets scored in "
+                f"{pretty(month)}: state and metro aggregates, and downloadable "
+                f"data. {notice}")
     (outdir / "index.html").write_text(page(
-        f"Warning-Sign Index {rec['wsi']:.1f}% — {pretty(month)} · ShouldISellYet Research",
-        f"{rep['national']['scored']:,} U.S. ZIP markets scored in {pretty(month)}: "
-        f"{rec['wsi']:.1f}% show warning signs. Monthly index, metro league tables, "
-        "and downloadable data.",
+        title, desc,
         canon, body, og_image=f"{SITE}{rel_url}og.png", jsonld=ld))
 
 
 def hub_page(h, series, releases, outdir):
-    cur_m, cur_v = series[-1]
+    # The hub is the index's own front page, so it is the surface a mode
+    # changes most. It keeps its URL and its explanation in every mode; what
+    # moves is whether a number appears on it.
+    pub_series = RS.published_series(series)
+    v2pub = RS.published_v2_series()
+    shown = pub_series + v2pub
+    notice = ("" if shown else
+              (RS.PAUSED_NOTICE if not RS.publishes_index()
+               else RS.series_break_note()))
+    cur_m, cur_v = shown[-1] if shown else (series[-1][0], None)
+    # EVERY RELEASE KEEPS ITS ROW. The row is the only navigation to a release
+    # page that still exists; dropping it to withhold a number would delete
+    # the link as well as the value. The value alone drops to a dash.
+    pub_months = {m for m, _ in pub_series}
     rel_list = "".join(
         f'<tr><td><a href="/research/{m}/">{esc(pretty(m))}</a></td>'
-        f'<td class="n">{v:.1f}%</td></tr>'
-        for m, v in reversed([(m, dict(series)[m]) for m in releases if m in dict(series)]))
+        + (f'<td class="n">{v:.1f}%</td></tr>' if m in pub_months
+           else '<td class="n">—</td></tr>')
+        for m, v in reversed([(m, dict(series)[m]) for m in releases
+                              if m in dict(series)]))
+    if shown:
+        headline = (f'<p><span class="big">{cur_v:.1f}%</span><br>\n'
+                    f'<span class="note">of scored U.S. ZIP markets show warning '
+                    f'signs · data through {esc(pretty(cur_m))}</span></p>\n'
+                    f'<img class="chart" src="wsi-chart.png" alt="Warning-Sign '
+                    f'Index, full history" width="1200" height="675">'
+                    + (f'\n<p class="note">{esc(RS.series_break_note())}</p>'
+                       if RS.cutoff_month() else ""))
+        lede_tail = (f"computed\nmonthly for {len(pub_series)} months and counting, "
+                     f"from fixed, published danger\nlines. Free to cite; the data "
+                     f"is downloadable in every release.")
+    else:
+        # No number. The image URL survives, carrying the reason inside it —
+        # a 404 where a chart used to be reads as breakage, and this page is
+        # linked from press coverage that will outlive the review.
+        headline = (f'<p class="note homeowner">{esc(notice)}</p>\n'
+                    f'<img class="chart" src="wsi-chart.png" alt="{esc(notice)}" '
+                    f'width="1200" height="675">')
+        lede_tail = ("computed\nmonthly from fixed, published danger lines. "
+                     "Free to cite; the data\nis downloadable in every release.")
     body = f"""
 <div class="eyebrow">SHOULDISELLYET RESEARCH</div>
 <h1>The Warning-Sign Index</h1>
 <p class="lede">One number for the temperature of the U.S. housing market:
-the share of scored ZIP markets whose reading is WATCH or ACT — computed
-monthly for {len(series)} months and counting, from fixed, published danger
-lines. Free to cite; the data is downloadable in every release.</p>
-<p><span class="big">{cur_v:.1f}%</span><br>
-<span class="note">of scored U.S. ZIP markets show warning signs · data through {esc(pretty(cur_m))}</span></p>
-<img class="chart" src="wsi-chart.png" alt="Warning-Sign Index, full history" width="1200" height="675">
+the share of scored ZIP markets whose reading is WATCH or ACT — {lede_tail}</p>
+{headline}
 <p class="note homeowner">Not a researcher? <a href="/">Check your own ZIP code
 instead</a> — one plain answer for your own market, free.</p>
 
@@ -1236,10 +1600,15 @@ rules, and the versioned changelog live on the
 questions: <a href="mailto:press@shouldisellyet.com">press@shouldisellyet.com</a>.</p>
 """
     (outdir / "index.html").write_text(page(
-        f"Warning-Sign Index: {cur_v:.1f}% of U.S. ZIP markets show warning signs",
-        "A monthly index of U.S. housing-market health at ZIP level, from "
-        "ShouldISellYet Research. League tables, local data, free downloads.",
-        f"{SITE}/research/", body, og_image=f"{SITE}/research/wsi-chart.png"))
+        (f"Warning-Sign Index: {cur_v:.1f}% of U.S. ZIP markets show warning signs"
+         if shown else "The Warning-Sign Index — ShouldISellYet Research"),
+        ("A monthly index of U.S. housing-market health at ZIP level, from "
+         "ShouldISellYet Research. League tables, local data, free downloads."
+         if shown else
+         "A monthly index of U.S. housing-market health at ZIP level, from "
+         "ShouldISellYet Research. " + notice),
+        f"{SITE}/research/", body,
+        og_image=f"{SITE}/research/wsi-chart.png" if shown else ""))
 
 
 def main():
@@ -1265,17 +1634,41 @@ def main():
     stage.mkdir(parents=True)
 
     seam = h.get("seam")
-    wsi_chart(series, {"delta": None}, changelog, stage / "wsi-chart.png", seam=seam)
+    # The v2 index: a separate series on the current basis. Empty until
+    # pipeline/research/history-v2.json exists, and an empty series changes
+    # nothing about this build — which is why this can land before the file.
+    v2 = RS.v2_series()
+    note = RS.series_break_note() if RS.cutoff_month() else ""
+    gone = []                 # public URLs this mode withdraws; see below
+
+    hub_series = RS.published_series(series)
+    hub_v2 = RS.published_v2_series(v2)
+    if hub_series or hub_v2:
+        wsi_chart(hub_series, {"delta": None}, changelog,
+                  stage / "wsi-chart.png", seam=seam, v2=hub_v2, note=note)
+    else:
+        withheld_chart(stage / "wsi-chart.png",
+                       RS.PAUSED_NOTICE if not RS.publishes_index()
+                       else RS.series_break_note(), series[-1][0])
     for p in reports:
         rep = json.loads(p.read_text())
         month = rep["month"]
         outdir = stage / month
         outdir.mkdir()
         upto = [(m, v) for m, v in series if m <= month]
-        wsi_chart(upto, rep["records"], changelog, outdir / "wsi-chart.png", seam=seam)
+        pub_upto = RS.published_series(upto)
+        v2_upto = RS.published_v2_series(v2, upto=month)
+        if pub_upto or v2_upto:
+            wsi_chart(pub_upto, rep["records"], changelog,
+                      outdir / "wsi-chart.png", seam=seam, v2=v2_upto, note=note)
+        else:
+            # The image URL stays, carrying the reason. See withheld_chart.
+            withheld_chart(outdir / "wsi-chart.png", index_notice(month), month)
         state_map({st: e for st, e in rep["states"].items()}, month,
                   outdir / "state-map.png")
-        write_csvs(rep, upto, outdir)
+        write_csvs(rep, upto, outdir, v2=v2)
+        if not RS.publishes_history_file():
+            gone.append(f"/research/{month}/wsi-history.csv")
         og_card(rep, outdir / "og.png")
         social_set(rep, upto, outdir)
         copy_case_charts(outdir)
@@ -1292,15 +1685,47 @@ def main():
     # FEATURE-DETECTS this file — absent or stale, the row degrades to the
     # verdict mix + percentile and no research link, never an error.
     latest = json.loads(reports[-1].read_text())
-    (stage / "wsi.json").write_text(json.dumps(
-        dict(latest["records"], release=f"/research/{latest['month']}/"),
-        separators=(",", ":")))
+    if RS.publishes_month(latest["month"]):
+        (stage / "wsi.json").write_text(json.dumps(
+            dict(latest["records"], release=f"/research/{latest['month']}/"),
+            separators=(",", ":")))
+    else:
+        # The homepage feature-detects this file, so withholding it degrades
+        # that row to the verdict mix and no research link — by design, not by
+        # accident. Writing it with the value blanked would be worse: a
+        # consumer that reads `wsi` would get a number-shaped absence.
+        gone.append("/research/wsi.json")
+
+    # ————— what this mode has withdrawn, as a servable list —————
+    # These URLs must answer 410 Gone, not 404: the resources existed, were
+    # cited, and are withdrawn — and 410 is the only status that says
+    # "withdrawn" rather than "never here / try again". GitHub Pages serves
+    # static files and cannot set a status per path, so this manifest is the
+    # input a serving layer (or a future edge rule) needs, and until one
+    # exists these URLs simply stop being published. Said plainly here
+    # because a manifest nobody serves is a promise nobody keeps —
+    # INDEX_OPTIONS.md carries the same caveat for counsel.
+    # Written only when something IS withdrawn, so a default build ships the
+    # same file list it always has.
+    if gone:
+        (stage / "gone.json").write_text(json.dumps(
+            {"status": 410, "reason": RS.PAUSED_FILE_NOTICE
+             if not RS.publishes_index() else RS.series_break_note(),
+             "mode": RS.index_mode(), "urls": sorted(gone)},
+            indent=1, sort_keys=True))
 
     if final.exists():
         shutil.rmtree(final)
     stage.rename(final)
+    shown = hub_series + hub_v2
+    state = (f"WSI {shown[-1][1]:.1f}% through {shown[-1][0]}" if shown
+             else f"index withheld ({RS.index_mode()})")
     print(f"research: hub + {len(releases)} release(s) → {final} "
-          f"(WSI {series[-1][1]:.1f}% through {series[-1][0]})")
+          f"({state})")
+    if RS.index_mode() != "full" or RS.INDEX_LICENSE != "current":
+        print(f"  INDEX_MODE={RS.index_mode()} INDEX_LICENSE={RS.INDEX_LICENSE}"
+              + (f" INDEX_CUTOFF={RS.cutoff_month()}" if RS.cutoff_month() else "")
+              + (f" · {len(gone)} URL(s) withdrawn — see gone.json" if gone else ""))
 
 
 if __name__ == "__main__":

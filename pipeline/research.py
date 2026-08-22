@@ -46,6 +46,7 @@ re-downloadable, so history is reproducible bit-for-bit.
 import argparse
 import csv
 import json
+import os
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -69,6 +70,218 @@ WARN = {"yellow", "red"}
 
 MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
                "August", "September", "October", "November", "December"]
+
+
+# ————————————————————————————————————————————————————————————————————————
+# PUBLICATION OPTIONALITY — the index's three possible futures, as config
+# ————————————————————————————————————————————————————————————————————————
+#
+# WHY THIS BLOCK EXISTS. Every one of the 173 monthly values in history.json
+# is computed from Redfin data, and Redfin ingestion stopped 2026-08-14. What
+# may still be PUBLISHED is a question with counsel, and the answer is one of
+# three: keep publishing the whole series, publish only the current vendor's
+# era, or stop publishing the index while it is reviewed. Building all three
+# now makes the answer a flag flip instead of a project — and, more
+# importantly, makes the flip reversible, because none of them touch the
+# stored history.
+#
+# WHAT NONE OF THESE MODES DO. They do not modify, truncate, or delete
+# pipeline/research/history.json, and they do not remove the Redfin credit
+# from anything still being published. LEGAL_HOLD.md is in force: this file
+# changes what leaves the building, never what is kept. Stripping attribution
+# from data we still publish would be the worse fault, so the credit follows
+# the data — while a value is published, its source is named.
+#
+# READ ONCE, AS A MODULE ATTRIBUTE. Same shape as realtor_crosscheck.SHOW:
+# environment at import, module attribute thereafter, so flipping it in
+# production is a CI variable change and flipping it in a test is one
+# monkeypatch. Callers ask the predicates below rather than comparing the
+# strings themselves — a scattered `== "paused"` is how one surface gets
+# missed.
+#
+# THIS IS A STATIC SITE, so a flip is a variable change plus a rebuild, not
+# an instant switch. Same caveat realtor_crosscheck carries, said again here
+# because somebody will ask "how fast can we turn it off".
+
+INDEX_MODES = ("full", "truncated", "paused")
+INDEX_LICENSES = ("current", "restricted")
+
+# The default is TODAY'S BEHAVIOUR, deliberately. Publication continues
+# unchanged until counsel answers; a deploy of this change must be invisible.
+INDEX_MODE = (os.environ.get("INDEX_MODE") or "full").strip().lower()
+INDEX_LICENSE = (os.environ.get("INDEX_LICENSE") or "current").strip().lower()
+
+# The truncation cutoff: the first month computed on the CURRENT vendor's
+# basis. RentCast readings went live with tranche-1 on 2026-08-20
+# (pipeline/tranches.json), and July 2026 is the last Redfin-basis index
+# value (data_pause.LAST_INGESTED_PERIOD), so the current era starts here.
+# Overridable because "the current vendor's era" is counsel's line to draw,
+# not ours — if they name a different month, it is a variable, not an edit.
+INDEX_CUTOFF = (os.environ.get("INDEX_CUTOFF") or "2026-08").strip()
+
+# A TYPO MUST NOT PUBLISH THE THING WE WERE TOLD TO STOP PUBLISHING. If
+# INDEX_MODE is set to "truncate" or "pause", falling back to the default
+# would silently republish the full Redfin-basis series after counsel asked
+# for less. A build that stops is recoverable in five minutes; a publication
+# that should not have happened is not.
+if INDEX_MODE not in INDEX_MODES:
+    raise SystemExit(
+        f"INDEX_MODE={INDEX_MODE!r} is not one of {INDEX_MODES}. "
+        f"Refusing to guess: the wrong guess republishes the Warning-Sign "
+        f"Index history. See INDEX_OPTIONS.md.")
+if INDEX_LICENSE not in INDEX_LICENSES:
+    raise SystemExit(
+        f"INDEX_LICENSE={INDEX_LICENSE!r} is not one of {INDEX_LICENSES}. "
+        f"Refusing to guess: the wrong guess ships the wider grant. "
+        f"See INDEX_OPTIONS.md.")
+
+# The series names that appear in the published CSV's `series` column and in
+# the chart legend. V1_* are the two segments of the Redfin-basis index that
+# already ship; V2 is the new basis and is NEVER merged into either.
+SERIES_CONTINUOUS = "continuous"
+SERIES_RECONSTRUCTION = "reconstruction"
+SERIES_V2 = "v2-active-listings"
+
+# The v2 index: same fraction (share of scored ZIPs past a danger line), new
+# basis (verdict_v2 lines over active-listing statistics). It is a DIFFERENT
+# INDEX, not a continuation — different signals, different lines, different
+# universe — so it gets its own file, its own series name, its own stroke,
+# and never an append onto the v1 tail. Absent file means an empty series,
+# which is exactly the state today: nothing to publish yet, nothing to hide.
+HISTORY_V2 = RESEARCH_DIR / "history-v2.json"
+V2_BASIS = "active listings"          # matches data_pause.RELEASED_BASIS
+V2_LABEL = "Index v2 · active-listing basis"
+
+
+def index_mode():
+    """The publication mode, read live so a monkeypatch takes effect."""
+    return INDEX_MODE
+
+
+def publishes_index():
+    """May any index value be published at all?"""
+    return INDEX_MODE != "paused"
+
+
+def publishes_history_file():
+    """May the monthly history CSV be published at its public URL?
+
+    False means the URL must stop serving the file — 410 Gone, not 404: the
+    resource existed and is withdrawn, and 410 is the only status that says
+    so. The stored history.json is untouched either way; this is about
+    distribution, not retention.
+    """
+    return INDEX_MODE != "paused"
+
+
+def cutoff_month():
+    """The first month that may be published, or None when all may be."""
+    return INDEX_CUTOFF if INDEX_MODE == "truncated" else None
+
+
+def publishes_month(month):
+    """May a value for this month be published?"""
+    if not publishes_index():
+        return False
+    cut = cutoff_month()
+    return cut is None or month >= cut
+
+
+def published_series(series):
+    """The v1 series as it may be PUBLISHED — never as it is stored.
+
+    full        every month, unchanged
+    truncated   months from the cutoff forward only
+    paused      nothing
+
+    Callers must render from this, not from national_series(), everywhere a
+    value leaves the building: chart, CSV, prose, JSON-LD, share cards.
+    """
+    if not publishes_index():
+        return []
+    cut = cutoff_month()
+    if cut is None:
+        return list(series)
+    return [(m, v) for m, v in series if m >= cut]
+
+
+def series_break_note(cut=None):
+    """The visible note that must travel with a truncated series.
+
+    NO SILENT SPLICE. A chart that simply starts in August 2026 tells a
+    reader the index is four weeks old; a chart that starts there and says
+    why tells them what actually happened. This sentence is the difference,
+    and it ships on the page, in the chart image, in the release folder, and
+    in the licence.
+    """
+    cut = cut or INDEX_CUTOFF
+    return (f"History before {pretty(cut)} was computed from a prior "
+            f"vendor's data and is no longer distributed; the series "
+            f"restarts on the current basis.")
+
+
+# Reader-facing, for the paused mode. Says what is true — the index is under
+# review — without speculating about the outcome or naming the vendor whose
+# licence is being reviewed. Matches the register of data_pause.NOTICE_BODY.
+PAUSED_NOTICE = ("The Warning-Sign Index is under review and is not being "
+                 "published this month. The aggregates on this page are "
+                 "unaffected.")
+PAUSED_FILE_NOTICE = ("The Warning-Sign Index history file is not currently "
+                      "published.")
+
+
+def load_history_v2(path=None):
+    """The v2 index history, or an empty shell when it does not exist yet.
+
+    Same shape as history.json — {"months": [...], "national": {m: [g,y,r,s]}}
+    — so wsi_of()/unpack() work unchanged over it. SCAFFOLD: nothing writes
+    this file yet. It reads as empty today, which keeps every mode's default
+    output identical to what already ships.
+    """
+    p = Path(path or HISTORY_V2)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except ValueError:
+            # A malformed v2 file must not take the research build down and
+            # must not fall back to "pretend it is v1" either. Empty is the
+            # honest reading: we have no v2 series to show.
+            print(f"research: {p.name} is unreadable — v2 series omitted")
+    return {"version": "2.0", "basis": V2_BASIS, "months": [], "national": {}}
+
+
+def v2_series(h2=None):
+    """[(month, wsi)] for the v2 index, ascending. [] until the file exists."""
+    h2 = load_history_v2() if h2 is None else h2
+    out = []
+    for m in sorted(h2.get("months") or []):
+        packed = (h2.get("national") or {}).get(m)
+        if not packed:
+            continue
+        v = wsi_of(unpack(packed))
+        if v is not None:
+            out.append((m, v))
+    return out
+
+
+def published_v2_series(series=None, upto=None):
+    """The v2 series as it may be published, optionally capped at a month.
+
+    Paused withholds it like everything else: the review is of the index,
+    not of one vendor's contribution to it. Truncation does not need to
+    filter it — every v2 month is by definition on the current basis — but
+    the cutoff is applied anyway so the two series can never overlap in a
+    way that reads as continuous.
+    """
+    s = v2_series() if series is None else list(series)
+    if not publishes_index():
+        return []
+    cut = cutoff_month()
+    if cut is not None:
+        s = [(m, v) for m, v in s if m >= cut]
+    if upto is not None:
+        s = [(m, v) for m, v in s if m <= upto]
+    return s
 
 
 def pretty(month):

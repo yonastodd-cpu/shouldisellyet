@@ -180,6 +180,9 @@ def test_a_released_zip_still_renders_its_figures(monkeypatch, tmp_path):
     monkeypatch.setattr(PAUSE, "_allowlist", None)
     v2 = dict(ENTRY, b="active listings",
               m={"spy": -0.075, "dom": 52.0, "domy": -3.0, "invy": 0.08, "inv": 979})
+    import figures_switch
+    if figures_switch.FIGURES_OFF:
+        pytest.skip("figures kill switch is ON — this test asserts figures render")
     text = visible_text(BP.zip_page("20601", v2, PLACE, META, []))
     assert PAUSE.NOTICE_TITLE not in text
     assert "on the market about" in text, "a released ZIP must render its figures"
