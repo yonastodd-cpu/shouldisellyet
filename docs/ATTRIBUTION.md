@@ -1,7 +1,7 @@
 # Attribution rules
 
 **Read this before editing any source citation, the sources strip, or the
-"built on the same public market data" line.** These rules exist for
+"built on the same licensed market statistics" line.** These rules exist for
 compliance *and* for trust: we credit where numbers come from, and we never
 imply a relationship that does not exist.
 
@@ -56,7 +56,7 @@ the footer carries none. Where there is no stamp, the footer carries it.
 `/s/{zip}` share stubs, and both `stripe-webhook` purchase emails.
 
 `terms.html` names Redfin once inside a methodology clause ("Ratings are
-computed from public market data (including data from Redfin…)"). That is
+computed from licensed market statistics…"). That is
 contract text describing how the product works, not an attribution, so it
 stays and is exempt from the one-per-surface count.
 
@@ -134,12 +134,12 @@ source would name the wrong publisher.
 
 The strip carries this line verbatim:
 
-> We compute our verdicts from public market data. No source sponsors,
+> We compute our readings from licensed market statistics. No source sponsors,
 > endorses, or partners with this site.
 
 ## The one marketing line
 
-> Built on the same public data the industry's economists publish —
+> Built on the same licensed market statistics the industry's economists use —
 > Redfin, Realtor.com, FHFA — recomputed for your ZIP and your numbers.
 
 - **One placement only** (pricing section). Do not repeat it elsewhere.

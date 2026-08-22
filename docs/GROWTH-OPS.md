@@ -198,7 +198,7 @@ renders on the site, so link rather than recite if the thread allows it.
 > Markets slow before they fall. Prices are the last thing to move, because
 > sellers hold their asking price long after buyers stop paying it. What moves
 > first is behaviour: homes take longer to sell, unsold homes pile up, and
-> sellers start cutting asking prices. We watch four public signals for those,
+> sellers start cutting asking prices. We watch three licensed market signals for those,
 > each with a danger line drawn from past downturns, and we publish the lines
 > so anyone can check them.
 >
