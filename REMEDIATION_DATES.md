@@ -1,6 +1,8 @@
 # Remediation dates
 
-Dates that go into the counsel memo. Recorded when the change was **deployed
+Dates that go into the counsel memo. **Times are UTC**, with local in brackets where the two fall on different days — the submission below was the evening of 21 August locally and the 22nd in UTC, and a memo that says one without the other invites a question nobody wants to answer twice.
+
+Recorded when the change was **deployed
 and verified live**, not when it was written — an earlier draft of the memo
 dated a withdrawal from the day we believed it happened and was wrong twice.
 
@@ -95,8 +97,9 @@ objects.
 |---|---|---|
 | History rewritten and force-pushed | 2026-08-20T02:57Z | `HISTORY_SCRUB_NOTES.md`; verified from a fresh clone |
 | GC request **prepared** | 2026-08-21 | `GITHUB_PURGE_REQUEST.md` — 24 commits, 71 files, blob hashes |
-| GC request **submitted** | *(blank — operator action)* | support ticket number |
+| GC request **submitted** | 2026-08-22T01:17Z (21 Aug, 21:17 EDT) | GitHub Support ticket **#4688700** (Repositories → Repository features) |
 | GitHub **confirmed** complete | *(blank — awaiting reply)* | written confirmation and effective date |
+| **Outcome** | *(blank — pending)* | granted / refused. Not a formality — see below. |
 
 **Fork network: empty** (`forks_count: 0`, `network_count: 0`, checked
 2026-08-21). Garbage collection on our repository would not purge forks, so this
@@ -107,3 +110,37 @@ own.
 and force-pushed on 20 August 2026; the original objects remain on GitHub's
 servers, unreferenced but retrievable by commit SHA; garbage collection has
 been requested and is not yet confirmed. Anything stronger overstates it.
+
+
+### The outcome may be a refusal, and the memo must allow for it
+
+Submitting this is not the same as it being granted. GitHub's own triage
+answered the request before a human saw it, and said:
+
+> GitHub Support can help with server-side cleanup only for **sensitive data**
+> removal cases … GitHub Support won't remove non-sensitive data, and will only
+> assist where the risk cannot be mitigated by rotating affected credentials …
+> GitHub's published process does **not** support a request to purge
+> unreachable objects solely for licensing or redistribution reasons when the
+> content is not classified as sensitive data.
+
+That was machine-generated and is not a decision, and the same answer directed
+us to file anyway so Support could review it directly. But it is the published
+policy, and it may be the answer.
+
+The argument put to them is that the case satisfies their own test rather than
+seeking an exception to it: their criterion is whether the risk can be
+mitigated by rotating credentials, and licensed third-party data cannot be
+rotated. A leaked key can be invalidated and reissued; a vendor's dataset
+cannot. Removal from storage is the only available mitigation.
+
+The ticket asks for a refusal in writing if it comes to that, because a clear
+refusal settles the question as usefully as a confirmation. **If GitHub
+declines, "gone from the repository" never becomes true**, and the permanent
+accurate statement is "unreferenced but retrievable by commit SHA". Counsel
+needs to know which of those two worlds this is, and until the reply lands
+nobody does.
+
+One failure mode to watch for: a reply that clears cached commit views and
+closes the ticket without running collection. Caches and storage are different
+things, and only the second is what question 1 turns on.
