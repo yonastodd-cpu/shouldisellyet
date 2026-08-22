@@ -100,3 +100,11 @@ GITHUB_PURGE_REQUEST.md
 # dated fact that the request is paused lives in REMEDIATION_DATES.md; the
 # reasoning does not.
 GITHUB_TICKET_PAUSE_REPLY.md
+
+# DERIVED_USE_INVENTORY.md is a lineage map of everything with the former
+# vendor's data in its computation chain, and it names exposures that are still
+# OPEN — including per-ZIP rating data reachable from this repository while the
+# site says it is not published. Same reason as LICENSE_AUDIT.md above: this
+# repository is public, and a register of open holes does not belong in it.
+# It goes to counsel directly. LEGAL_HOLD.md rule 3 refers to it by name.
+DERIVED_USE_INVENTORY.md
