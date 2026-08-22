@@ -3,6 +3,12 @@
 A free home-equity warning system. Enter a ZIP code, get a traffic-light verdict
 (🟢 HOLD / 🟡 WATCH / 🔴 ACT) computed from public housing-market data, refreshed monthly.
 
+> [!IMPORTANT]
+> **A legal hold is in force (22 August 2026).** Redfin-derived material is
+> preserved and must not be deleted — see [LEGAL_HOLD.md](LEGAL_HOLD.md) before
+> running anything that cleans up, prunes, or reclaims space. "Redfin-derived"
+> means lineage, not display: it includes numbers that show no Redfin figure.
+
 ## Architecture ($0/month)
 
 ```

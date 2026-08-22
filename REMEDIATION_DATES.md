@@ -20,6 +20,7 @@ dated a withdrawal from the day we believed it happened and was wrong twice.
 | GitHub GC request **prepared** | 2026-08-21 | `GITHUB_PURGE_REQUEST.md` |
 | GitHub GC request **submitted** | 2026-08-22 | ticket #4688700 |
 | GitHub GC request **PAUSED at our request** | 2026-08-22T13:40:24Z | asked to hold, **not withdrawn**. Preservation of the objects now takes precedence over their removal. |
+| **Legal hold in force; preservation archive created** | 2026-08-22T18:50:29Z | `LEGAL_HOLD.md` at repo root is the switch; archive of 26 files / 1.09 GB held read-only outside the repo with SHA-256 per file in `PRESERVATION_MANIFEST.md`. Two deletion paths changed to move-aside; `pipeline/test_legal_hold.py` fails if either is undone. |
 
 ## Bulk serving of underlying figures
 

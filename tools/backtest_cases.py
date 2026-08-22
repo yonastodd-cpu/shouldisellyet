@@ -655,8 +655,22 @@ def main():
     # truth; anything else in the directory is a leftover.
     keep = ({f"{p['id']}.json" for p in report["published"]} |
             {f"{p['id']}.png" for p in report["published"]} | {"index.json"})
+    # LEGAL HOLD, 22 Aug 2026. These case files are Redfin-derived, and a
+    # standing preservation instruction forbids deleting Redfin-derived
+    # material without counsel's direction. While LEGAL_HOLD.md exists at the
+    # repo root, stale files are RENAMED aside, never unlinked, so the run
+    # still produces a clean directory without destroying anything.
+    _hold = (ROOT / "LEGAL_HOLD.md").exists()
+    _aside = out_dir / "_held"
     for f in list(out_dir.glob("*.json")) + list(out_dir.glob("*.png")):
-        if f.name not in keep:
+        if f.name in keep or f.parent.name == "_held":
+            continue
+        if _hold:
+            _aside.mkdir(exist_ok=True)
+            f.rename(_aside / f.name)
+            report.setdefault("held", []).append(f.name)
+            print(f"LEGAL HOLD: moved {f.name} to _held/ instead of deleting")
+        else:
             f.unlink()
             report.setdefault("pruned", []).append(f.name)
             print(f"pruned stale {f.name}")

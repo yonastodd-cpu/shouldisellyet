@@ -146,7 +146,9 @@ jobs:
           if grep -qi "national real estate brokerage\|data center" "$DIR/redfin-data-center.html" 2>/dev/null; then
             echo "terms page captured ($(wc -c < "$DIR/redfin-data-center.html") bytes)"
           else
-            rm -f "$DIR/redfin-data-center.html"
+            # LEGAL HOLD 22 Aug 2026: keep the failed capture as evidence
+            # that retrieval was attempted and blocked. Do not delete.
+            mv -f "$DIR/redfin-data-center.html" "$DIR/redfin-data-center.BLOCKED.html" 2>/dev/null || true
             echo "::warning::TODO terms-page capture blocked by Redfin bot protection — \
           operator must capture manually (archive.org + dated screenshot, see docs/ATTRIBUTION.md)"
           fi
