@@ -224,9 +224,24 @@ function readBuildInputs() {
   //
   // Without this signal the gate demanded a figure the build had deliberately
   // withheld, and failed a deploy whose output was right. 2026-08-22.
-  let readings = 0;
-  try { readings = readdirSync(join(ROOT, ".build", "readings")).length; } catch { readings = 0; }
-  return { total: pages.size, live, words, readings, degraded: readings === 0 };
+  // Count records that are actually LIVE, not files that exist. CI's verify job
+  // runs `provision_readings.py --no-readings`, which writes all 22,874 records
+  // carrying a state code and nothing else \u2014 so the directory is full and the
+  // build still has zero readings. Counting files got this wrong once already.
+  // Read RELEASED_BASIS from data_pause.py rather than hardcoding it, so the
+  // two cannot drift apart.
+  const basis = (readFileSync(join(ROOT, "pipeline", "data_pause.py"), "utf8")
+    .match(/^RELEASED_BASIS\s*=\s*["'](.+?)["']/m) || [, "active listings"])[1];
+  const needle = `"b":"${basis}"`, needleSpaced = `"b": "${basis}"`;
+  let liveRecords = 0;
+  try {
+    for (const f of readdirSync(join(ROOT, ".build", "readings"))) {
+      if (!f.endsWith(".json")) continue;
+      const s = readFileSync(join(ROOT, ".build", "readings", f), "utf8");
+      if (s.includes(needle) || s.includes(needleSpaced)) { liveRecords = 1; break; }
+    }
+  } catch { liveRecords = 0; }
+  return { total: pages.size, live, words, degraded: liveRecords === 0 };
 }
 
 let TRUTH;
@@ -647,7 +662,7 @@ console.log(`  build inputs    ${TRUTH.live.toLocaleString()} live of ` +
   `${TRUTH.total.toLocaleString()} standing ZIP pages · rating words ` +
   `${[...new Set(TRUTH.words.values())].join(", ")}`);
 if (TRUTH.degraded) {
-  console.log("  coverage        SKIPPED — .build/readings is empty, so the build " +
+  console.log("  coverage        SKIPPED — no record carries the released basis, so the build " +
     "renders coverage as prose. Figures that ARE stated are still checked.");
 }
 
