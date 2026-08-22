@@ -213,7 +213,20 @@ function readBuildInputs() {
   const live = [...released].filter((z) => pages.has(z)).length;
   if (!pages.size) throw new Error("page_manifest.csv listed no pages");
   if (!words.size) throw new Error("verdict_copy.json defined no rating words");
-  return { total: pages.size, live, words };
+
+  // The generators do NOT compute "live" from the tranche file alone \u2014
+  // data_pause.shows_data(zip, basis) also requires the ZIP's private record to
+  // carry the released basis, and those records live in .build/readings, which
+  // is gitignored build output. A job that rebuilds WITHOUT provisioning them
+  // (CI's verify step does exactly that \u2014 provisioning runs in a different
+  // job) computes live = 0, so coverage_line() degrades to prose rather than
+  // publishing "0 of 22,874". That is the correct behaviour.
+  //
+  // Without this signal the gate demanded a figure the build had deliberately
+  // withheld, and failed a deploy whose output was right. 2026-08-22.
+  let readings = 0;
+  try { readings = readdirSync(join(ROOT, ".build", "readings")).length; } catch { readings = 0; }
+  return { total: pages.size, live, words, readings, degraded: readings === 0 };
 }
 
 let TRUTH;
@@ -550,7 +563,11 @@ function checkCopySweep(url, all) {
 // press.html must equal §1b — not merely equal each other.
 function checkCoverage(url, all) {
   const pairs = [...all.matchAll(COVERAGE_PAIR)];
-  if (!pairs.length) {
+  // A build with no provisioned readings legitimately renders prose instead of
+  // a pair. Skip the "must state a figure" assertion there \u2014 never silently
+  // (see the banner below), and never skip the two checks that follow, which
+  // still catch a figure disagreeing with the build.
+  if (!pairs.length && !TRUTH.degraded) {
     flag(url, "states no live/total ZIP coverage figure",
          `expected "${TRUTH.live.toLocaleString()} of ${TRUTH.total.toLocaleString()} ZIP codes"`);
   }
@@ -629,6 +646,10 @@ if (offsite.length) {
 console.log(`  build inputs    ${TRUTH.live.toLocaleString()} live of ` +
   `${TRUTH.total.toLocaleString()} standing ZIP pages · rating words ` +
   `${[...new Set(TRUTH.words.values())].join(", ")}`);
+if (TRUTH.degraded) {
+  console.log("  coverage        SKIPPED — .build/readings is empty, so the build " +
+    "renders coverage as prose. Figures that ARE stated are still checked.");
+}
 
 // THE VOCABULARY, AT ITS SOURCE. Asserted once rather than 22,874 times: every
 // surface takes its word from pipeline/data/verdict_copy.json, so a fourth word
