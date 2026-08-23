@@ -78,8 +78,27 @@ MANIFEST_FIELDS = ["retrieved_at", "slug", "url", "http", "bytes", "sha256",
 # reference belongs in this list too — that is precisely the class of document
 # we cannot currently produce.
 TERMS_URLS = (
-    ("terms-of-service", "https://www.rentcast.io/terms-of-service"),
-    ("privacy-policy", "https://www.rentcast.io/privacy-policy"),
+    # URLs VERIFIED LIVE 2026-08-23, after the first real run 404'd on both of
+    # the guessed ones. RentCast publishes THREE documents, not one, and the
+    # distinction is the same trap this matter has now hit three times — Redfin
+    # site terms vs Data Center, Zillow API vs research data, and now this:
+    #
+    #   /terms-api  "Terms of Use - API"      <- this is Exhibit A, the one the
+    #                                            counsel memo attaches
+    #   /terms      "Terms of Use - Platform" <- a SEPARATE agreement, with its
+    #                                            own liability cap, indemnity and
+    #                                            sublicence clauses. Not held, not
+    #                                            attached, and the memo currently
+    #                                            calls Exhibit A "the only
+    #                                            instrument governing that
+    #                                            relationship".
+    #   /privacy    privacy policy
+    #
+    # All three are captured because which one governs is exactly the question
+    # we keep getting wrong by assuming.
+    ("terms-api", "https://www.rentcast.io/terms-api"),
+    ("terms-platform", "https://www.rentcast.io/terms"),
+    ("privacy", "https://www.rentcast.io/privacy"),
 )
 
 UA = "shouldisellyet-terms-archiver"
