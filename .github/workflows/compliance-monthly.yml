@@ -63,3 +63,30 @@ jobs:
       # cannot spend metered quota however often it runs.
       - name: Check FHFA and Census
         run: python3 pipeline/check_fallback_sources.py --check
+
+  seed-research-store:
+    name: Research state is in the private store
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # THE CUTOVER STEP, and then the thing that keeps it honest.
+      #
+      # levels-*.json and streaks.json are pipeline inputs that were also
+      # committed to a public repo, publishing ~25,000 ZIP-to-rating pairs a
+      # month. They cannot be deleted before the store holds them, because the
+      # next build reads the prior month — so this seeds the store from the
+      # committed files and READS BACK through the same path the build uses.
+      #
+      # It exits non-zero when nothing was written or the read-back fails, which
+      # is the only check that would catch an RLS mistake before the files are
+      # removed. Deliberately NOT on the deploy path: a store problem must not
+      # block shipping a page, and a green deploy must not imply a seeded store.
+      - name: Seed and verify
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/research.py --seed-store

@@ -46,6 +46,7 @@ secrets stays green.
 """
 
 import research
+import research_store
 import argparse
 import json
 import os
@@ -311,6 +312,18 @@ def load_history():
 
 
 def load_streaks():
+    """Store first, committed file second.
+
+    A miss here is tolerable — it only costs a marketing candidate, not a
+    published figure — so this keeps its swallow-and-return-{} behaviour, unlike
+    research.load_levels where a miss would publish a wrong number.
+    """
+    try:
+        got = research_store.get(research_store.STREAKS_KEY)
+        if got is not None:
+            return got
+    except Exception:
+        pass
     p = ROOT / "pipeline" / "research" / "streaks.json"
     try:
         return json.loads(p.read_text())

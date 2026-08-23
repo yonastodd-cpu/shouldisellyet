@@ -52,6 +52,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import research_store as store
 from shard_layout import require_shards
 from fetch_data import load_rows, row_to_metrics
 from verdict import ZipMetrics, evaluate
@@ -492,6 +493,16 @@ def levels_path(month):
 
 
 def save_levels(month, levels):
+    """Write the month's ZIP->level map to the private store AND to the file.
+
+    DUAL WRITE, on purpose and temporarily. The file is what the build has
+    always read; the store is where this data is moving because the file is
+    committed to a public repository. Writing both means a CI run proves the
+    store path works before the files are removed — removing them first would
+    break the next build with no way to tell whether the store ever worked.
+    Drop the file write once a run has demonstrably populated the store.
+    """
+    store.put(store.levels_key(month), levels)
     levels_path(month).write_text(
         json.dumps(levels, separators=(",", ":"), sort_keys=True))
 
@@ -511,14 +522,39 @@ def flip_count(rep):
     return len(rep.get("flips_to_warning") or [])
 
 
-def load_levels(month):
+def load_levels(month, required=True):
+    """The month's ZIP->level map. Store first, committed file second.
+
+    `required=True` means a miss RAISES. This is the whole reason the module
+    exists: if the prior month cannot be read, every ZIP looks new, no ZIP looks
+    like a crossing, and the release page publishes "0 ZIP markets moved" —
+    wrong, and publishable, with no error anywhere. A crash is the better
+    outcome. Pass required=False only where a miss is genuinely expected, which
+    is the first month of the series and nowhere else.
+    """
+    got = store.get(store.levels_key(month))
+    if got is not None:
+        return got
     p = levels_path(month)
-    return json.loads(p.read_text()) if p.exists() else None
+    if p.exists():
+        return json.loads(p.read_text())
+    if required:
+        raise store.StateUnavailable(
+            f"levels for {month} are in neither the store nor {p.name}. "
+            f"Building on this would report zero flips, which is wrong and "
+            f"would publish. Seed the store (research.py --seed-store) or "
+            f"restore the file before continuing.")
+    return None
 
 
 # ————— the per-month research file —————
 
 MIN_METRO_SCORED = 15
+
+# The first month for which per-ZIP levels were ever written. Before this there
+# is legitimately no prior to compare against; from here on, a missing prior is
+# a fault rather than a starting condition, and load_levels raises.
+FIRST_MONTH = "2026-05"
 
 
 def build_month_report(h, month, levels, states, crosswalk, places, streaks):
@@ -553,7 +589,9 @@ def build_month_report(h, month, levels, states, crosswalk, places, streaks):
     deteriorating = sorted(metro_moves, key=lambda r: -r["delta"])[:10]
 
     flips = []
-    prev_levels = load_levels(prev)
+    # The first month of the series has no prior; every later month must
+    # have one, and load_levels raises if it does not.
+    prev_levels = load_levels(prev, required=bool(prev and prev >= FIRST_MONTH))
     if prev_levels:
         for z, lv in levels.items():
             was = prev_levels.get(z)
@@ -717,6 +755,10 @@ def cmd_backfill(args):
     save_history(h)
     save_levels(prev_month(current), hub_m.get(prev_month(current), {}))
     save_levels(current, final_levels)
+    # Dual write, same reasoning as save_levels: the store is where this is
+    # going, the file is what the build has always read, and the file only goes
+    # away once a run has proved the store path.
+    store.put(store.STREAKS_KEY, {"month": current, "warn": streaks})
     (RESEARCH_DIR / "streaks.json").write_text(
         json.dumps({"month": current, "warn": streaks},
                    separators=(",", ":"), sort_keys=True))
@@ -779,13 +821,69 @@ def cmd_monthly(args):
           f"· flips {report['flips_to_warning_count']} · wrote {out.name}")
 
 
+def seed_store():
+    """Copy the committed research state into the private store.
+
+    The cutover step. levels-*.json and streaks.json are pipeline inputs AND
+    committed to a public repository, which is the exposure; they cannot simply
+    be deleted because the next build reads the prior month. So: seed the store
+    from the files, verify, and only then take the files out of the repo.
+
+    Idempotent — an upsert per key. Returns a shell exit code, and returns
+    NON-ZERO when nothing was written, because "seeded successfully" printed by
+    a run with no credentials is exactly how a cutover gets made on a store that
+    is still empty.
+    """
+    if not store.configured():
+        print("seed-store: SUPABASE_URL / SUPABASE_SERVICE_KEY are not set. "
+              "Nothing was written. Do NOT remove the committed files.")
+        return 2
+    wrote = 0
+    for p in sorted(RESEARCH_DIR.glob("levels-*.json")):
+        month = p.stem.replace("levels-", "")
+        payload = json.loads(p.read_text())
+        store.put(store.levels_key(month), payload)
+        print(f"seed-store: levels-{month} -> {len(payload):,} ZIPs")
+        wrote += 1
+    sp = RESEARCH_DIR / "streaks.json"
+    if sp.exists():
+        payload = json.loads(sp.read_text())
+        store.put(store.STREAKS_KEY, payload)
+        print(f"seed-store: streaks -> {len(payload.get('warn', {})):,} ZIPs")
+        wrote += 1
+
+    # Read back through the same path the build uses. A write that cannot be
+    # read is not a seeded store, and this is the only check that would catch
+    # an RLS mistake before the files are gone.
+    bad = []
+    for p in sorted(RESEARCH_DIR.glob("levels-*.json")):
+        month = p.stem.replace("levels-", "")
+        got = store.get(store.levels_key(month))
+        if got is None or len(got) != len(json.loads(p.read_text())):
+            bad.append(f"levels-{month}")
+    if bad:
+        print(f"seed-store: WROTE BUT COULD NOT READ BACK: {', '.join(bad)}. "
+              f"Do NOT remove the committed files.")
+        return 3
+    print(f"seed-store: {wrote} key(s) written and read back. "
+          f"The committed files can now be removed in a follow-up commit.")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE.parent / "web" / "data"))
     ap.add_argument("--backfill", action="store_true")
     ap.add_argument("--hub", help="hub all_zips.csv (v2) for --backfill")
     ap.add_argument("--tracker", help="legacy tracker tsv(.gz) for --backfill")
+    ap.add_argument("--seed-store", action="store_true",
+                    help="upload the committed levels-*.json and streaks.json "
+                         "into the private store, then exit. Run once, with "
+                         "credentials, BEFORE the files are removed from the repo.")
     args = ap.parse_args()
+
+    if args.seed_store:
+        raise SystemExit(seed_store())
     if args.backfill:
         if not (args.hub and args.tracker):
             raise SystemExit("--backfill needs --hub PATH and --tracker PATH")
