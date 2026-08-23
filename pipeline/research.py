@@ -821,6 +821,68 @@ def cmd_monthly(args):
           f"· flips {report['flips_to_warning_count']} · wrote {out.name}")
 
 
+def verify_store_without_files():
+    """Prove the build works with the committed levels files GONE.
+
+    This has to pass before the files leave the repository, and it is
+    deliberately not "does the store have rows in it". The failure being
+    guarded against is subtler: load_levels falls back to the file, the file is
+    there in CI because it is committed, everything looks fine, and the day the
+    files are removed the flip count silently becomes zero.
+
+    So: point levels_path() at an empty directory, forcing every read through
+    the store, then RECOMPUTE the flip count between the last two months and
+    compare it with the count already published in research-{month}.json.
+    Reproducing that number end to end is the only evidence worth having.
+    """
+    import tempfile
+    if not store.configured():
+        print("verify-store: no credentials. This proves nothing — it would "
+              "fall back to the committed files, which is the exact failure "
+              "being tested for. Do NOT remove the files.")
+        return 2
+
+    months = sorted(q.stem.replace("levels-", "")
+                    for q in RESEARCH_DIR.glob("levels-*.json"))
+    if len(months) < 2:
+        print("verify-store: need two months of levels to recompute flips.")
+        return 2
+
+    empty = Path(tempfile.mkdtemp())
+    real_path = globals()["levels_path"]
+    globals()["levels_path"] = lambda m: empty / f"levels-{m}.json"
+    try:
+        loaded = {}
+        for m in months:
+            got = load_levels(m)          # store only — the file is unreachable
+            loaded[m] = got
+            print(f"verify-store: levels-{m} from store -> {len(got):,} ZIPs")
+
+        prev, cur = months[-2], months[-1]
+        # MIRRORS build_month_report's predicate exactly — `was in
+        # ("green","strong") and lv in WARN`. An approximation here would either
+        # coincidentally agree and prove nothing, or disagree and block a
+        # migration that was actually fine.
+        recomputed = sum(
+            1 for z, lv in loaded[cur].items()
+            if loaded[prev].get(z) in ("green", "strong") and lv in WARN)
+
+        rep = json.loads((RESEARCH_DIR / f"research-{cur}.json").read_text())
+        published = flip_count(rep)
+        print(f"verify-store: recomputed {cur} flips from the store = "
+              f"{recomputed:,}; published count = {published:,}")
+        if recomputed != published:
+            print("verify-store: MISMATCH. The store does not reproduce the "
+                  "published figure. Do NOT remove the files.")
+            return 3
+    finally:
+        globals()["levels_path"] = real_path
+
+    print("verify-store: the build reproduces the published flip count with the "
+          "committed files unreachable. Safe to remove them.")
+    return 0
+
+
 def seed_store():
     """Copy the committed research state into the private store.
 
@@ -876,6 +938,10 @@ def main():
     ap.add_argument("--backfill", action="store_true")
     ap.add_argument("--hub", help="hub all_zips.csv (v2) for --backfill")
     ap.add_argument("--tracker", help="legacy tracker tsv(.gz) for --backfill")
+    ap.add_argument("--verify-store", action="store_true",
+                    help="prove the build reproduces the published flip count "
+                         "with the committed levels files unreachable. Must pass "
+                         "BEFORE those files are removed from the repo.")
     ap.add_argument("--seed-store", action="store_true",
                     help="upload the committed levels-*.json and streaks.json "
                          "into the private store, then exit. Run once, with "
@@ -884,6 +950,8 @@ def main():
 
     if args.seed_store:
         raise SystemExit(seed_store())
+    if args.verify_store:
+        raise SystemExit(verify_store_without_files())
     if args.backfill:
         if not (args.hub and args.tracker):
             raise SystemExit("--backfill needs --hub PATH and --tracker PATH")

@@ -96,3 +96,21 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python3 pipeline/research.py --seed-store
+
+      # THE CHECK THAT DECIDES WHETHER THE FILES CAN GO.
+      #
+      # "The store has rows in it" is not the question. The question is whether
+      # the build still produces the right number with the committed files
+      # UNREACHABLE — because while they are committed, load_levels falls back
+      # to them, everything looks healthy, and the day they are removed the flip
+      # count silently becomes zero.
+      #
+      # So this points levels_path() at an empty directory and recomputes July's
+      # flip count from the store alone, using build_month_report's own
+      # predicate, and compares it with the 2,403 already published. It exits
+      # non-zero on any mismatch.
+      - name: Prove the build works without the committed files
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/research.py --verify-store
