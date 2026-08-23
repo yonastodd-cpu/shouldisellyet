@@ -113,4 +113,7 @@ DERIVED_USE_INVENTORY.md
 # they are third-party content, and the point of holding them is the private
 # record of what the terms said on a date, not republication.
 # snapshot_vendor_terms.py refuses to write anywhere git does not ignore.
-docs/vendor-terms/
+docs/vendor-terms
+# No trailing slash on purpose: a `dir/` pattern only matches a directory
+# that already EXISTS, so `git check-ignore` said "not ignored" on a fresh
+# CI checkout and snapshot_vendor_terms.py refused to write. Verified 2026-08-23.

@@ -59,6 +59,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      # openpyxl: FHFA publishes the ZIP5 index as .xlsx and fetch_fhfa imports
+      # it lazily, so the first real run of this job died on ModuleNotFoundError
+      # rather than on anything about the data. Verified 2026-08-23.
+      - name: Install the FHFA reader's dependency
+        run: pip install --quiet openpyxl
+
       # Public-domain sources only — no vendor endpoint is contacted, so this
       # cannot spend metered quota however often it runs.
       - name: Check FHFA and Census
