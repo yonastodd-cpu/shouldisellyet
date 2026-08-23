@@ -117,3 +117,17 @@ docs/vendor-terms
 # No trailing slash on purpose: a `dir/` pattern only matches a directory
 # that already EXISTS, so `git check-ignore` said "not ignored" on a fresh
 # CI checkout and snapshot_vendor_terms.py refused to write. Verified 2026-08-23.
+
+# Per-ZIP research state. Moved to public.research_state (schema-v40) on
+# 2026-08-23 and removed from this repository, which is public: these files
+# published ~25,000 ZIP-to-rating pairs a month, roughly 20,000 of them for
+# markets whose own pages decline to state a rating, while the release page
+# said "We do not publish the list".
+#
+# They are still WRITTEN locally as a cache — research.save_levels dual-writes —
+# so a machine that has run a build keeps working without credentials. The store
+# is the source of truth; CI reads it and has no copy of these.
+# Verified before removal: --verify-store recomputed July's flip count as 2,403
+# from the store alone, with the files unreachable.
+pipeline/research/levels-*.json
+pipeline/research/streaks.json

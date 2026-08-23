@@ -1,6 +1,7 @@
 # Moving research state out of the public repository
 
-**Status: step 1 of 2 done. The files are still committed. Do not remove them yet.**
+**Status: COMPLETE, 2026-08-23.** The files are out of the repository and the
+store is the source of truth. Kept for the record of how it was done.
 
 ## The problem
 
@@ -41,28 +42,42 @@ So: seed the store, prove it can be read back, then remove the files.
 - `research.py --seed-store` uploads the committed files and reads them back.
   Exits non-zero if nothing was written or the read-back fails.
 
-## Step 2 — not done, and here is exactly what it needs
+## Step 2 — done, 2026-08-23
 
-1. **Apply the schema.** `supabase/schema-v40.sql` against the project.
-2. **Seed the store.** Either run the `seed-research-store` job in
-   `.github/workflows/compliance-monthly.yml` (workflow_dispatch), or locally
-   with `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` set:
+1. **Schema applied.** `supabase/schema-v40.sql` against production. Verified by
+   querying `pg_policies` and `role_table_grants` rather than by reading the
+   migration back: RLS on, **zero policies**, and `anon`/`authenticated` hold no
+   grants at all.
+2. **Store seeded.** Four keys — 24,448 / 25,133 / 25,372 / 15,714 entries. The
+   `rows` column matches an actual `jsonb_object_keys` count for every one.
+3. **Verified through the build's own path**, which is not the path it was
+   seeded on. The schema and rows went in over the CLI's Management API; the
+   build reads PostgREST with a service key. The `seed-research-store` CI job
+   holds that key and reported *"4 key(s) written and read back."*
+4. **Proved the build works without the files.** `--verify-store` points
+   `levels_path()` at an empty directory, forcing every read through the store,
+   and recomputes July's flip count with `build_month_report`'s own predicate:
+
    ```
-   python3 pipeline/research.py --seed-store
+   verify-store: recomputed 2026-07 flips from the store = 2,403; published count = 2,403
    ```
-   It must print `written and read back` and exit 0. **If it does not, stop.**
-3. **Prove the build reads the store, not the files.** Move the files aside
-   temporarily and run the monthly build; the flip count must still come out at
-   2,403 for July. If it comes out 0 or raises, the store is not seeded.
-4. **Then remove the files** — `git rm --cached` plus a `.gitignore` entry, in
-   their own commit. Git history retains them, and copies are already preserved
-   under `LEGAL_HOLD.md` in `06-per-zip-research-as-committed/`.
+
+5. **Removed.** `git rm --cached` plus a `.gitignore` entry. The files remain on
+   disk as a local cache — `save_levels` still dual-writes — so a machine that
+   has run a build keeps working without credentials. CI has no copy.
+
+Tests were run in both states before removal: 515 pass with the files, 511 pass
+and 7 skip without them, nothing fails. The skips are the file-fallback tests,
+which are marked rather than deleted so they still cover that path anywhere the
+files exist.
 
 ## What this does not do
 
-Removing the files from the repo's HEAD does not remove them from its history,
-and this repository is public. Anyone with a commit reference can still fetch
-them, exactly as with the objects covered by GitHub ticket #4688700. Closing
-that requires the same conversation with counsel, and the same decision about
-whether a history rewrite is worth its own risks — **`LEGAL_HOLD.md` currently
-forbids one.**
+Removing the files from HEAD does not remove them from the history of a public
+repository. Anyone with a commit reference can still fetch them, exactly as with
+the objects covered by GitHub ticket #4688700. Closing that needs the same
+conversation with counsel and the same judgement about whether a history rewrite
+is worth its own risks — **`LEGAL_HOLD.md` currently forbids one.**
+
+Copies as they stood are preserved in the archive under
+`06-per-zip-research-as-committed/`, so nothing was destroyed to do this.

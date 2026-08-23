@@ -16,6 +16,16 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# The committed levels files are being removed: the store is the source of truth
+# and CI reads it. Tests that exercise the FILE fallback therefore skip where the
+# files are absent instead of failing. They are not deleted, because the fallback
+# still runs on any machine that has them and must keep being covered there.
+_LEVELS = ROOT / "pipeline" / "research" / "levels-2026-07.json"
+needs_committed_levels = pytest.mark.skipif(
+    not _LEVELS.exists(),
+    reason="committed levels files are gone (moved to the private store); "
+           "this test covers the file-fallback path")
 sys.path.insert(0, str(ROOT / "pipeline"))
 
 import research as RS            # noqa: E402
@@ -58,6 +68,7 @@ def test_the_store_is_preferred_over_the_committed_file(fake):
     assert got == {"99999": "red"}, "the file won over the store"
 
 
+@needs_committed_levels
 def test_the_file_still_works_when_the_store_is_empty(fake):
     got = RS.load_levels("2026-07")
     assert got and len(got) > 20000, "fallback to the committed file broke"
@@ -93,6 +104,7 @@ def test_seeding_refuses_without_credentials(monkeypatch, capsys):
     assert "Do NOT remove the committed files" in capsys.readouterr().out
 
 
+@needs_committed_levels
 def test_seeding_verifies_by_reading_back(fake, capsys):
     rc = RS.seed_store()
     assert rc == 0
@@ -101,6 +113,7 @@ def test_seeding_verifies_by_reading_back(fake, capsys):
     assert store.get(store.levels_key("2026-07")) is not None
 
 
+@needs_committed_levels
 def test_seeding_fails_when_the_write_cannot_be_read(monkeypatch, capsys):
     """An RLS mistake would write happily and read nothing. That must not exit 0."""
     monkeypatch.setattr(store, "configured", lambda: True)
