@@ -45,6 +45,7 @@ the plan prints WOULD-INSERT lines, nothing is written, a fork without
 secrets stays green.
 """
 
+import research
 import argparse
 import json
 import os
@@ -1288,7 +1289,7 @@ def cand_recap(rep, hist, cbsa_names, period):
     moves = (rep or {}).get("state_moves") or []
     fell = sum(1 for r in moves if (r.get("delta") or 0) < 0)
     rose = sum(1 for r in moves if (r.get("delta") or 0) > 0)
-    flips = len((rep or {}).get("flips_to_warning") or [])
+    flips = research.flip_count(rep or {})
     scored = (((rep or {}).get("national") or {}).get("scored")) or 0
     stable = _count_stable_metro(hist, cbsa_names, period)
     if not (moves and flips and scored and stable):

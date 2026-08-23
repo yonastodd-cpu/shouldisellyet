@@ -496,6 +496,21 @@ def save_levels(month, levels):
         json.dumps(levels, separators=(",", ":"), sort_keys=True))
 
 
+def flip_count(rep):
+    """How many ZIPs crossed into WATCH/ACT this month.
+
+    Reads `flips_to_warning_count`. The old `flips_to_warning` array carried a
+    named ZIP and its rating for every one of them — 2,403 in July — and every
+    consumer only ever took len() of it. That array was committed to a PUBLIC
+    repository while the release page said "We do not publish the list", so it
+    was reduced on 2026-08-22 and the count stored directly. The len() fallback
+    is for release files written before that date.
+    """
+    if "flips_to_warning_count" in rep:
+        return int(rep["flips_to_warning_count"])
+    return len(rep.get("flips_to_warning") or [])
+
+
 def load_levels(month):
     p = levels_path(month)
     return json.loads(p.read_text()) if p.exists() else None
@@ -579,8 +594,25 @@ def build_month_report(h, month, levels, states, crosswalk, places, streaks):
         "state_moves": state_moves,
         "metros_deteriorating": deteriorating,
         "metros_improving": improving,
-        "flips_to_warning": flips,
-        "top_streaks": top_streaks,
+        # NO PER-ZIP IDENTIFIERS IN THE RELEASE REPORT.
+        #
+        # `flips` carries a named ZIP and its rating for every market that
+        # crossed into WATCH or ACT — 2,403 of them in July 2026. This file is
+        # COMMITTED, and the repository is public, while the release page it
+        # feeds says in terms "We do not publish the list. Naming individual
+        # markets and their ratings is the same distribution the CSV was
+        # withdrawn for." Both were true at once until 2026-08-22.
+        #
+        # Every consumer only ever took len(flips), so the count is what ships.
+        # `top_streaks` is trimmed to the single entry the spotlight card reads;
+        # the other 24 were never rendered anywhere.
+        #
+        # `flips` itself is still computed above — it drives per-state
+        # `flips_in` counts — it is simply not written out. Nothing is deleted:
+        # the prior files are preserved under LEGAL_HOLD.md and in git history.
+        "flips_to_warning": [],
+        "flips_to_warning_count": len(flips),
+        "top_streaks": top_streaks[:1],
         "states": per_state,
     }
 
@@ -744,7 +776,7 @@ def cmd_monthly(args):
     out.write_text(json.dumps(report, indent=1, sort_keys=True))
     r = report["records"]
     print(f"research {month}: WSI {r.get('wsi')}% (Δ {r.get('delta', '—')}) "
-          f"· flips {len(report['flips_to_warning'])} · wrote {out.name}")
+          f"· flips {report['flips_to_warning_count']} · wrote {out.name}")
 
 
 def main():

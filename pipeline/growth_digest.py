@@ -20,6 +20,7 @@ Env (all optional — anything missing degrades to a labelled gap, never a crash
   OPS_DIGEST_RECIPIENTS                comma-separated; overrides config
 """
 
+import research
 import argparse
 import csv
 import glob
@@ -768,7 +769,7 @@ def research_bullets(rep):
         place = f"{s['city']}, {s['state']}" if s.get("city") else s.get("state", "")
         out.append(f"Longest current warning streak: {s['zip']} ({place}), "
                    f"{s['months']} months at WATCH or ACT.")
-    n = len(rep.get("flips_to_warning") or [])
+    n = research.flip_count(rep)
     if n:
         out.append(f"{n:,} ZIPs crossed the danger line this month (CSV in the release).")
     return out[:3]

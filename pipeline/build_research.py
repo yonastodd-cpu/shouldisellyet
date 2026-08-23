@@ -44,7 +44,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import research as RS                  # the index's publication flags, live
 from research import (RESEARCH_DIR, national_series, load_history, pretty,
-                      prev_month, region_share, unpack)
+                      prev_month, region_share, unpack, flip_count)
 from verdict_copy import COPY as VCOPY
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -967,7 +967,7 @@ def narrative(rep):
     moves = rep.get("state_moves") or []
     nat = rep.get("national") or {}
     scored = nat.get("scored")
-    flips = len(rep.get("flips_to_warning") or [])
+    flips = flip_count(rep)
     if wsi is None or not moves or not scored:
         return ""
 
@@ -1056,7 +1056,7 @@ def three_bullets(rep):
                    + (f"at WATCH or ACT in every one of the {span} months of the "
                       f"continuous series." if clamped else
                       f"{span} consecutive months at WATCH or ACT."))
-    n = len(rep["flips_to_warning"])
+    n = flip_count(rep)
     if n:
         out.append(f"<b>{n:,} ZIP markets crossed into warning territory</b> this month "
                    f"(full list in the release CSVs).")
@@ -1343,7 +1343,7 @@ def release_page(rep, series, outdir, rel_url):
             f'<td class="n">{r["share"]:.1f}%</td><td class="n">{arrow(r["delta"])}</td></tr>'
             for r in rows)
 
-    flips = rep["flips_to_warning"]
+    flips = flip_count(rep)
     # ————— The gathering list (metro-level approach velocity) —————
     # METRO AGGREGATES ONLY — deliberately the public/press layer of the
     # velocity build. Per-ZIP velocity is the paid product and never appears
@@ -1450,7 +1450,7 @@ instead</a> — one plain answer for your market, free.</p>
 <p class="note">Metro league tables cover Metropolitan Statistical Areas with at least 15 scored ZIPs, so small-sample noise cannot top the table.</p>
 
 <h2>Crossed the danger line this month</h2>
-<p class="lede" style="font-size:1rem">{len(flips):,} ZIP markets moved from a reading with no danger line crossed into WATCH or ACT.</p>
+<p class="lede" style="font-size:1rem">{flips:,} ZIP markets moved from a reading with no danger line crossed into WATCH or ACT.</p>
 <p class="note">We do not publish the list. Naming individual markets and their
 ratings is the same distribution the CSV was withdrawn for — 47 of the 55 ZIPs
 this table used to show were ones the site itself was declining to rate.
