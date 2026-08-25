@@ -78,8 +78,6 @@ RED = (214, 69, 69)
 # /methodology.html as a plain statement of source and nowhere else.
 CITE = RDC.credit(
         'Current market statistics from a licensed data provider · '
-        'Pre-2026 history restated from <a href="https://www.redfin.com" '
-        'target="_blank" rel="noopener">Redfin</a>\u2019s archived tracker · '
         'Listing data from Realtor.com&reg; Economic Research · Place names '
         'from <a href="https://www.geonames.org" target="_blank" '
         'rel="noopener">GeoNames</a> (CC BY 4.0)')
@@ -787,9 +785,10 @@ current reading engine does not use it either: the data source behind it is no
 longer in use.</p>
 
 <h2 id="seam">Sources and the seam</h2>
-<p>The <b>continuous series</b> begins {esc(pretty(seam))}: Redfin Data Center
-hub data — the file the site refreshed from until 14 August 2026, and no
-longer does — ~25,000 scored ZIPs per month. The <b>2012–2019 tail</b> is reconstructed from Redfin's legacy market
+<p>The <b>continuous series</b> begins {esc(pretty(seam))}: a prior data
+vendor&rsquo;s sold-home statistics — the file the site refreshed from until
+14 August 2026, and no longer does — ~25,000 scored ZIPs per month. The
+<b>2012–2019 tail</b> is reconstructed from that vendor&rsquo;s legacy
 tracker (~18,000 ZIPs, a prior universe), drawn in a lighter stroke, and
 <b>excluded from every record, delta, and superlative</b>. The two sources
 overlap for 72 months; per-ZIP level agreement across 1.36M shared zip-months
@@ -1031,8 +1030,38 @@ def streak_span(months, rep):
     return months, False
 
 
+def metro_tables(rep, metro_rows):
+    """The two metro league tables, extracted so the page template asks
+    RS.publishes_figures() once instead of interpolating four times.
+
+    `metro_rows` is passed in rather than closed over: it is a nested function
+    inside release_page(), so a module-level helper cannot see it. Taking it as
+    a parameter keeps the row formatting where it lives.
+    """
+    return (
+        '<div class="cols">'
+        '<div><h2>Metros deteriorating fastest</h2>'
+        '<table><thead><tr><th>Metro</th><th>ZIPs</th><th>Warning</th>'
+        '<th>\u0394 pts</th></tr></thead>'
+        f'<tbody>{metro_rows(rep["metros_deteriorating"])}</tbody></table></div>'
+        '<div><h2>Metros improving fastest</h2>'
+        '<table><thead><tr><th>Metro</th><th>ZIPs</th><th>Warning</th>'
+        '<th>\u0394 pts</th></tr></thead>'
+        f'<tbody>{metro_rows(rep["metros_improving"])}</tbody></table></div>'
+        '</div>'
+        '<p class="note">Metro league tables cover Metropolitan Statistical '
+        'Areas with at least 15 scored ZIPs, so small-sample noise cannot top '
+        'the table.</p>')
+
+
 def three_bullets(rep):
     out = []
+    if not RS.publishes_figures():
+        # Narrative survives; figures do not. Every state and metro share here
+        # is computed from a prior-vendor month — history.json's sources map is
+        # 99 tracker-v1 + 74 hub-v2 across all 173 months — so the shares go
+        # with the index rather than outliving it on this page.
+        return [RS.figures_withheld_line()]
     sm = rep["state_moves"]
     if sm:
         worst = max(sm, key=lambda r: r["delta"])
@@ -1173,6 +1202,11 @@ def _licence_series_note():
     if RS.cutoff_month():
         return f"\n{RS.series_break_note()} See SERIES-BREAK.txt.\n"
     if not RS.publishes_index():
+        if not RS.publishes_figures():
+            # Was "the aggregate files in this folder are unaffected". They
+            # are not: they were computed on the same prior-vendor months and
+            # are withheld too.
+            return f"\n{RS.PAUSED_FILE_NOTICE} {RS.figures_withheld_line()}\n"
         return (f"\n{RS.PAUSED_FILE_NOTICE} The aggregate files in this "
                 f"folder are\nunaffected.\n")
     return ""
@@ -1225,6 +1259,8 @@ before that date are not part of this distribution. Rows are labelled in the
 computed on the current basis, not a continuation of the earlier series.
 """)
 
+    if not RS.publishes_figures():
+        return          # prior-vendor basis — see research.publishes_figures()
     with (outdir / f"state-aggregates-{month}.csv").open("w", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(["state", "scored_zips", "hold", "watch", "act", "strong",
@@ -1392,8 +1428,9 @@ at the current pace.</p>"""
     downloads = []
     if RS.publishes_history_file():
         downloads.append(("wsi-history.csv", "WSI history"))
-    downloads += [(f"state-aggregates-{month}.csv", "State aggregates"),
-                  (f"metro-aggregates-{month}.csv", "Metro movers")]
+    if RS.publishes_figures():
+        downloads += [(f"state-aggregates-{month}.csv", "State aggregates"),
+                      (f"metro-aggregates-{month}.csv", "Metro movers")]
     if RS.cutoff_month():
         downloads.append(("SERIES-BREAK.txt", "Series break"))
     downloads.append(("LICENSE.txt", "License"))
@@ -1439,18 +1476,12 @@ instead</a> — one plain answer for your market, free.</p>
 <p class="note">{esc(series_text)}</p>
 <img class="chart" src="state-map.png" alt="Warning share by state, {esc(pretty(month))}" width="1200" height="675">
 
-<div class="cols">
-<div><h2>Metros deteriorating fastest</h2>
-<table><thead><tr><th>Metro</th><th>ZIPs</th><th>Warning</th><th>Δ pts</th></tr></thead>
-<tbody>{metro_rows(rep['metros_deteriorating'])}</tbody></table></div>
-<div><h2>Metros improving fastest</h2>
-<table><thead><tr><th>Metro</th><th>ZIPs</th><th>Warning</th><th>Δ pts</th></tr></thead>
-<tbody>{metro_rows(rep['metros_improving'])}</tbody></table></div>
-</div>
-<p class="note">Metro league tables cover Metropolitan Statistical Areas with at least 15 scored ZIPs, so small-sample noise cannot top the table.</p>
+{metro_tables(rep, metro_rows) if RS.publishes_figures() else f'<p class="note">{esc(RS.figures_withheld_line())}</p>'}
 
 <h2>Crossed the danger line this month</h2>
-<p class="lede" style="font-size:1rem">{flips:,} ZIP markets moved from a reading with no danger line crossed into WATCH or ACT.</p>
+{f'<p class="lede" style="font-size:1rem">{flips:,} ZIP markets moved from a reading with no danger line crossed into WATCH or ACT.</p>'
+  if RS.publishes_figures() else
+  f'<p class="note">{esc(RS.figures_withheld_line())}</p>'}
 <p class="note">We do not publish the list. Naming individual markets and their
 ratings is the same distribution the CSV was withdrawn for — 47 of the 55 ZIPs
 this table used to show were ones the site itself was declining to rate.
@@ -1459,8 +1490,9 @@ Per-ZIP data is available on request for specific stories:
 {gathering_html}
 
 <h2>Your state, in one paragraph</h2>
-<p class="note">Written for reuse — every paragraph is quotable as-is with citation.</p>
-<div class="stategrid">{state_cards}</div>
+{f'<p class="note">Written for reuse — every paragraph is quotable as-is with citation.</p><div class="stategrid">{state_cards}</div>'
+  if RS.publishes_figures() else
+  f'<p class="note">{esc(RS.figures_withheld_line())}</p>'}
 
 <h2>Download the data</h2>
 <p>{csv_links}</p>
@@ -1664,8 +1696,16 @@ def main():
         else:
             # The image URL stays, carrying the reason. See withheld_chart.
             withheld_chart(outdir / "wsi-chart.png", index_notice(month), month)
-        state_map({st: e for st, e in rep["states"].items()}, month,
+        if RS.publishes_figures():
+            state_map({st: e for st, e in rep["states"].items()}, month,
                   outdir / "state-map.png")
+        else:
+            # Same reasoning as withheld_chart: the URL stays and carries the
+            # reason. This map is a share-by-state picture computed from a
+            # prior-vendor month, so it is withheld with the other figures —
+            # but a missing image reads as breakage, and the social-card
+            # composer opens this file unconditionally.
+            withheld_chart(outdir / "state-map.png", index_notice(month), month)
         write_csvs(rep, upto, outdir, v2=v2)
         if not RS.publishes_history_file():
             gone.append(f"/research/{month}/wsi-history.csv")

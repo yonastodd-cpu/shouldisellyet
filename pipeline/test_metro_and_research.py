@@ -174,6 +174,14 @@ def test_a_streak_claim_never_reaches_across_the_seam():
     73-month continuous basis. The live page published "89 consecutive months"
     — a run starting sixteen months the wrong side of a seam disclosed two
     sections further down, on the page written to be cited."""
+    # three_bullets() returns only the withheld line under the default paused
+    # mode, so publish for this test. What it guards — that a streak claim is
+    # clamped to the continuous basis rather than reaching across the seam —
+    # is a live risk the moment publication resumes, and losing the guard while
+    # the section is dark is how it comes back wrong.
+    import research as _RS
+    _RS.INDEX_MODE = "full"
+    br.RS.INDEX_MODE = "full"
     basis = (REPORT.get("records") or {}).get("basis_months")
     raw = [s["months"] for s in REPORT["top_streaks"]]
     assert max(raw) > basis, "fixture no longer exercises the clamp"
@@ -186,11 +194,23 @@ def test_a_streak_claim_never_reaches_across_the_seam():
 
 
 @pytest.mark.skipif(not (RESEARCH / "2026-06").exists(), reason="not built")
-def test_the_release_page_has_narrative_prose_and_a_way_out_for_homeowners():
+def test_the_release_page_explains_itself_and_offers_a_way_out():
+    """The page must never become a bare table, in either mode.
+
+    narrative() interpolates the WSI share, the flip count and the scored
+    count, so it is figure-bearing prose and is withheld with everything else
+    while the index is paused. What must survive in BOTH modes is that the page
+    says something in sentences, and that a homeowner who lands on it is given
+    somewhere to go. That is the guard; the narrative div was only ever how it
+    was satisfied while publishing.
+    """
     h = (RESEARCH / "2026-06" / "index.html").read_text()
     nar = re.search(r'<div class="narrative">(.*?)</div>', h, re.S)
-    assert nar, "the release page lost its narrative"
-    assert len(re.findall(r"<p>", nar.group(1))) >= 3
+    if nar:
+        assert len(re.findall(r"<p>", nar.group(1))) >= 3
+    else:
+        assert "withheld while the index is under review" in h, (
+            "no narrative and no explanation of its absence — the page is bare")
     assert "Check your own ZIP code" in h
     assert "Check your own ZIP code" in (RESEARCH / "index.html").read_text()
 

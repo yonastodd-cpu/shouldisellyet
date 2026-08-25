@@ -118,7 +118,22 @@ def built(tmp_path_factory):
     write_csvs() writes the four CSVs AND LICENSE.txt, and needs neither
     Pillow nor the network — so this runs identically on a laptop and on a
     cold CI checkout, which is the whole point.
+
+    BUILT IN FULL MODE, deliberately. The default became "paused" on
+    2026-08-25 and paused writes no CSVs and no licence at all, because every
+    research month on record is on a prior vendor's basis. That makes these
+    tests vacuous by default — there is nothing to check the licence wording
+    of — which would quietly retire the guard rather than satisfy it.
+
+    So the fixture publishes. What these tests pin is the CONTRACT: when a
+    current-basis month closes and publication resumes, the licence must still
+    withhold dataset and competing use, and the exports must still be
+    aggregates that never enumerate a ZIP. Losing that while the section is
+    dark is exactly how it would come back wrong.
     """
+    import research as _RS
+    for mod in (_RS, BR.RS if hasattr(BR, "RS") else _RS):
+        mod.INDEX_MODE = "full"
     out = tmp_path_factory.mktemp("research")
     series = BR.national_series(BR.load_history())
     reports = sorted(BR.RESEARCH_DIR.glob("research-*.json"))

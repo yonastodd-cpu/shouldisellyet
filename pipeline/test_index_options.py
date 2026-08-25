@@ -79,22 +79,39 @@ def _fake_v2(mp, tmp_path, months=("2026-08", "2026-09")):
     return p
 
 
-# ————— 1. the default does not move —————
+# ————— 1. the default —————
+#
+# CHANGED 2026-08-25. The default was "full", on the reasoning that publication
+# should continue unchanged until counsel answered. That reasoning assumed the
+# published figures were separable from the prior vendor. They are not: every
+# month on record is prior-vendor (history.json's sources map is 99 tracker-v1
+# + 74 hub-v2 across all 173), so the chart, the state map, the state and metro
+# aggregates and the per-state paragraphs are all prior-vendor derived — not
+# just the index history file.
+#
+# "Truncated" cannot rescue it either: truncating at the first current-basis
+# month yields ZERO points, because there is no such month. So the default is
+# now "paused", and these tests pin that rather than the old behaviour. The
+# full-mode behaviour is still covered — see the tests below that set it
+# explicitly — because it is what returns when a clean month closes.
 
-def test_default_flags_are_todays_behaviour():
+def test_default_flags_withhold_every_figure():
     """Read from the module as imported, with no environment set in CI."""
-    assert RS.INDEX_MODES[0] == "full" and RS.INDEX_LICENSES[0] == "current"
-    assert RS.publishes_index() and RS.publishes_history_file()
-    assert RS.cutoff_month() is None, (
-        "a cutoff in the default mode would truncate the published history "
-        "before anyone decided to")
+    assert RS.INDEX_MODE == "paused" and RS.INDEX_LICENSE == "current"
+    assert not RS.publishes_index() and not RS.publishes_history_file()
+    assert not RS.publishes_figures(), (
+        "the default must withhold aggregates and per-state figures too, not "
+        "only the index — they share the prior-vendor basis")
 
 
-def test_default_publishes_the_whole_series(series):
+def test_full_mode_still_publishes_the_whole_series(monkeypatch, series):
+    """What returns when a current-basis month closes."""
+    _mode(monkeypatch, "full")
     assert RS.published_series(series) == list(series)
 
 
-def test_default_licence_is_the_wording_that_ships_today(rep, series, tmp_path):
+def test_full_mode_licence_is_the_wording_that_ships(monkeypatch, rep, series, tmp_path):
+    _mode(monkeypatch, "full")
     BR.write_csvs(rep, series, tmp_path)
     text = (tmp_path / "LICENSE.txt").read_text(encoding="utf-8")
     assert BR.GRANT_CURRENT.strip() in text
@@ -164,26 +181,36 @@ def test_a_pre_cutoff_release_withholds_its_value_on_every_surface(
 
 # ————— 3. paused: aggregates and charts, minus the index —————
 
-def test_paused_withholds_every_index_value_but_keeps_the_aggregates(
+def test_paused_withholds_every_figure_not_only_the_index(
         monkeypatch, rep, series, tmp_path):
     _mode(monkeypatch, "paused")
     BR.release_page(rep, series, tmp_path, f"/research/{rep['month']}/")
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert f"{rep['records']['wsi']:.1f}%" not in html
     assert "under review" in html
-    assert "Metros deteriorating fastest" in html and "statecard" in html
+    # The league tables and per-state cards go WITH the index now. They were
+    # kept when "paused" meant index-only; they carry the same prior-vendor
+    # basis, so keeping them would have left ~70 figures on the page.
+    assert "Metros deteriorating fastest" not in html
+    # NOT `"statecard" not in html` — that is a CSS class name and lives in the
+    # stylesheet whether or not a card renders. Assert on the grid the cards are
+    # written into, and on the absence of any share figure.
+    assert '<div class="stategrid">' not in html
+    assert not re.search(r"\d{1,3}\.\d%", html), "a share figure survived"
+    assert "withheld while the index is under review" in html
     # The JSON-LD must not advertise a dataset the site is no longer serving.
     ld = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)
     assert ld and "wsi-history.csv" not in ld.group(1)
 
 
-def test_paused_does_not_write_the_history_file_but_still_writes_aggregates(
+def test_paused_writes_neither_the_history_file_nor_the_aggregates(
         monkeypatch, rep, series, tmp_path):
     _mode(monkeypatch, "paused")
     BR.write_csvs(rep, series, tmp_path)
     assert not (tmp_path / "wsi-history.csv").exists()
-    assert (tmp_path / f"state-aggregates-{rep['month']}.csv").exists()
-    assert (tmp_path / f"metro-aggregates-{rep['month']}.csv").exists()
+    # Aggregates go too — same prior-vendor months as the index.
+    assert not (tmp_path / f"state-aggregates-{rep['month']}.csv").exists()
+    assert not (tmp_path / f"metro-aggregates-{rep['month']}.csv").exists()
 
 
 def test_paused_hub_keeps_every_release_link(monkeypatch, series, tmp_path):
@@ -224,6 +251,9 @@ def test_v2_is_absent_until_its_file_exists(monkeypatch, tmp_path):
 
 def test_v2_rows_carry_their_own_series_name_and_never_join_v1(
         monkeypatch, rep, series, tmp_path):
+    # Paused withholds the v2 series too, by design. This test is about
+    # the series' SHAPE when it is published, so publish it.
+    _mode(monkeypatch, "full")
     _fake_v2(monkeypatch, tmp_path)
     # A release from the v2 era: the first one will be, and a release cannot
     # carry months published after it (see the cap test below).
@@ -247,6 +277,9 @@ def test_v2_rows_carry_their_own_series_name_and_never_join_v1(
 def test_v2_is_capped_at_the_release_month(monkeypatch, tmp_path):
     """A release page is a snapshot; it must not chart months published after
     it. The v1 series is already sliced this way — v2 has to match."""
+    # Paused withholds the v2 series too, by design. This test is about
+    # the series' SHAPE when it is published, so publish it.
+    _mode(monkeypatch, "full")
     _fake_v2(monkeypatch, tmp_path, months=("2026-08", "2026-09"))
     assert [m for m, _ in RS.published_v2_series(upto="2026-08")] == ["2026-08"]
 
@@ -323,10 +356,26 @@ def test_current_licence_surfaces_are_left_exactly_alone(monkeypatch):
 
 # ————— 6. the attribution stays while the data does —————
 
-def test_no_mode_strips_the_redfin_credit_from_published_history(monkeypatch):
-    """LEGAL HOLD. While a value computed from a vendor's data is published,
-    that vendor is credited. These modes stop publishing; they never quietly
-    keep publishing without the credit, which would be the worse fault."""
+def test_a_published_figure_is_never_uncredited(monkeypatch):
+    """The principle is unchanged; its premise moved.
+
+    This asserted the vendor was credited in EVERY mode, because revision 7's
+    position was that stripping attribution from data we still publish is the
+    worse fault. That was right while we published prior-vendor values. We no
+    longer do: paused withholds the index, the chart, the map, the aggregates
+    and the per-state figures, so the citation has nothing left to attach to.
+
+    So the guard becomes conditional rather than absolute — publish a figure
+    and you must credit its source; publish none and the name comes off. What
+    must never happen is the middle case this test was written to prevent:
+    still publishing, quietly uncredited.
+    """
     for mode in RS.INDEX_MODES:
         _mode(monkeypatch, mode)
-        assert "Redfin" in BR.CITE
+        if RS.publishes_figures():
+            assert BR.CITE.strip(), (
+                f"mode {mode!r} publishes figures with an empty citation — "
+                "that is the failure this test exists for")
+        else:
+            assert "Redfin" not in BR.CITE, (
+                f"mode {mode!r} publishes nothing yet still names the vendor")

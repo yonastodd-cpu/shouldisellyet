@@ -109,7 +109,7 @@ INDEX_LICENSES = ("current", "restricted")
 
 # The default is TODAY'S BEHAVIOUR, deliberately. Publication continues
 # unchanged until counsel answers; a deploy of this change must be invisible.
-INDEX_MODE = (os.environ.get("INDEX_MODE") or "full").strip().lower()
+INDEX_MODE = (os.environ.get("INDEX_MODE") or "paused").strip().lower()
 INDEX_LICENSE = (os.environ.get("INDEX_LICENSE") or "current").strip().lower()
 
 # The truncation cutoff: the first month computed on the CURRENT vendor's
@@ -161,6 +161,39 @@ def index_mode():
 
 def publishes_index():
     """May any index value be published at all?"""
+    return INDEX_MODE != "paused"
+
+
+FIGURES_WITHHELD = (
+    "Warning-share figures are withheld while the index is under review: every "
+    "month on record was computed on a prior data vendor's basis, and the "
+    "series resumes when the first month on the current basis closes.")
+
+
+def figures_withheld_line():
+    """One sentence, used wherever a withheld figure leaves a gap."""
+    return FIGURES_WITHHELD
+
+
+def publishes_figures():
+    """May ANY research figure be published?
+
+    Answered no while INDEX_MODE is "paused", and that is currently the whole
+    research programme — not just the index.
+
+    Every research month on record is on a prior vendor's basis: history.json's
+    `sources` map is 99 tracker-v1 + 74 hub-v2 across all 173 months, and both
+    published release months (2026-06, 2026-07) are hub-v2. So the chart, the
+    state map and the state/metro aggregate CSVs are all prior-vendor derived,
+    not only the index history file.
+
+    "Truncated" cannot help: truncating at the first current-basis month yields
+    a series of ZERO points, because there is no such month yet. And an index
+    recomputed over today's 5,000 live readings would inherit that lineage three
+    ways — the page universe, the release ordering, and the thresholds — while
+    looking clean. Decided 2026-08-25: the research section publishes no figures
+    until a current-basis month closes. Narrative pages stay.
+    """
     return INDEX_MODE != "paused"
 
 
