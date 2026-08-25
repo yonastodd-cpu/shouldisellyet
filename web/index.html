@@ -976,7 +976,17 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
   <p class="body-p m-hide">That matters in real estate, where many of the people involved in a decision also have a financial interest in it. An agent gets paid when a home sells. A lender gets paid when someone borrows. Their advice may be valuable — but their role is different from ours.</p>
   <p class="body-p m-hide">ShouldISellYet doesn't decide whether you should sell. It gives you an independent reading of your market before you make that decision.</p>
   <p class="body-p">No analyst changes the rating. No advertiser can move it. Every ZIP gets the same math.</p>
-  <p class="body-p">And the methodology is public. So are the thresholds and backtests — including the times a warning appeared and the market recovered.</p>
+  <!-- The claim used to be that the backtests are public. They are not, and
+       cannot be: every published backtest figure was computed from a prior
+       vendor's measurements on the signal side, so the whole ladder is
+       withdrawn rather than restated. What survives is the narrative — the
+       lines WERE tested, the misses ARE part of the record — plus a plain
+       statement of which data that test ran on and that the v2 test is not
+       finished. Do not put a number back in this sentence; the figures come
+       back when the v2 validation does, not before.
+       The clause "including the times a warning appeared and the market
+       recovered" is mandatory copy (test_homepage_voice) — keep it verbatim. -->
+  <p class="body-p">And the methodology is public. So are the thresholds. The lines were validated on historical data from a prior vendor — including the times a warning appeared and the market recovered; that validation is being rebuilt on a new data source, and the v2 results will be published when they are ready.</p>
   <!-- The month is rendered from web/data/validation.json, the same file the
        methodology page states it from, so the two can never disagree. It
        currently renders exactly "May 2027". -->
@@ -1078,26 +1088,59 @@ async function saveSignup(rec) {
 }
 
 // ————— Data layer —————
+// THE FALLBACK KEEPS THE WORD AND HAS LOST THE FIGURES.
+//
+// These two records shipped with full v1 metric blocks — {mos, spy, dom, domy,
+// pd} — hardcoded in the source of the most-visited page on the site, and
+// `mos` and `pd` are fields the current source cannot produce, so they were
+// closed-sale measurements from the prior vendor. They were invisible to every
+// gate we had: the crawl gate reads innerText and these are JS constants, so
+// nothing rendered them until data/index.json failed, and then they rendered
+// as a real reading. They were also served in cleartext to anything that
+// fetched the HTML rather than ran it.
+//
+// Blanked rather than deleted, because deleting the records would take the
+// reading word with them and lookup()'s null branch tells a visitor from a
+// covered ZIP that we do not cover them. `m:{}` is the shape ~17,874 ZIPs
+// already have; renderMetrics writes nothing for it, which is the documented
+// degradation a few hundred lines down — "the word is the product, the figures
+// are the evidence behind it". `r` loses its reason VALUES for the same reason
+// figures_switch.strip() drops them: the reason CODE is the name of our rule,
+// the number beside it is the vendor's measurement of this market.
 const DEMO = {
-  "20874": {l:"green", st:"MD", s:0, m:{mos:2.6, spy:0.02, dom:47, domy:12, pd:0.25}, r:[]},
-  "20906": {l:"yellow", st:"MD", s:3, m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
+  "20874": {l:"green", st:"MD", s:0, m:{}, r:[]},
+  "20906": {l:"yellow", st:"MD", s:3, m:{}, r:[["price_falling_fast"]]}
 };
 let INDEX = null, META = null, live = false;
 // Per-ZIP memo. Replaces stateCache, which held whole-state blobs.
 const zipCache = {};   // SPONSORS removed: agent program paused — see decision log (2026-08-05)
 const stateCache = {};
 
-// Warning-Sign Index for the preview's macro row — FEATURE-DETECTED, never
-// hardcoded. /research/wsi.json is emitted by pipeline/build_research.py at a
-// stable URL; if it is absent (research build not run) the row renders the
-// verdict mix + percentile only and hides the research link. The fetch starts
-// at page load and the macro row reads whatever has resolved by expand time —
-// expansion is a user action after reveal, so this can never shift layout.
-let PV_WSI = null, PV_RESEARCH = false;
-// Track-record case for the macro row — rotates one recomputed case into
-// row 08's expansion. Shipped ON by operator decision (2026-08-09) after
-// reviewing the computed cards; ?case=1 forces it for preview regardless.
-const SHOW_CASE_ROW = true;   // flipped on 2026-08-09 by operator decision
+// PV_WSI held the Warning-Sign Index level for the preview's macro row and is
+// gone: nothing fetched it, nothing assigned it and nothing rendered it after
+// the lineage review, and a variable left declared for a value we have decided
+// not to publish is an invitation to fill it again. What the row says instead
+// is a few hundred lines down, in the macro-row expansion.
+//
+// PV_RESEARCH stays. It is feature detection for a LINK, not for a figure.
+let PV_RESEARCH = false;
+// Track-record case for the macro row — rotated one recomputed case into
+// row 08's expansion. Shipped ON by operator decision (2026-08-09); OFF since
+// the lineage review, and it does not come back on this data.
+//
+// WHY OFF. Every field the panel printed — the crossing month, the lead in
+// months, the peak-to-trough percentage — was computed from the prior vendor's
+// hub exports, so the panel is a prior-vendor figure with no prior-vendor
+// string in it. Four display audits cleared it for exactly that reason.
+//
+// THE ?case=1 OVERRIDE IS GONE TOO. A flag anyone can set from a query string
+// is not a flag that is off: a preview switch and a withdrawal are different
+// things, and the second one may not have a bypass.
+//
+// This does not come back by flipping the boolean. It comes back when a case
+// study exists that was computed end to end on the current source — which
+// needs case files this repository does not have.
+const SHOW_CASE_ROW = false;   // withdrawn: prior-vendor lineage, see above
 
 // ————— REDFIN SUNSET, PHASE 0 —————
 // Mirrors pipeline/data_pause.PAUSED. This page is committed, not generated,
@@ -1128,24 +1171,28 @@ const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine
 // The reading, the headline, the stamp and the danger-line copy are ours and
 // stay. It is NOT the pause: a page under this switch has a reading.
 const FIGURES_OFF = false;
-let PV_CASE = null;
-if (SHOW_CASE_ROW || /[?&]case=1/.test(location.search)) {
-  // The index carries every field this panel renders — name, first signal,
-  // lead months, peak-to-trough — so the second fetch is gone. It pulled the
-  // full case file: 48-54 months of a vendor's measurements plus their peak
-  // and trough prices, downloaded into every visitor's browser to display four
-  // derived numbers. Withdrawn 2026-08-19; those files no longer ship at all.
-  fetch("data/cases/index.json").then(r => r.ok ? r.json() : null).then(j => {
-    const hits = (j && j.published || []).filter(p => p.kind !== "miss");
-    if (!hits.length) return;
-    // Rotate by day so repeat visitors don't always meet the same market.
-    PV_CASE = hits[Math.floor(Date.now() / 86400000) % hits.length];
-  }).catch(() => {});
-}
-fetch("research/wsi.json").then(r => r.ok ? r.json() : null).then(j => {
-  if (j && typeof j.wsi === "number") { PV_WSI = j; PV_RESEARCH = true; }
-  else return fetch("research/", { method: "HEAD" }).then(r => { PV_RESEARCH = r.ok; });
-}).catch(() => {});
+// The fetch, the daily rotation and the renderer that consumed them are gone
+// rather than left behind an if. Keeping the code under a false flag would
+// have made SHOW_CASE_ROW = true a one-character route back to publishing the
+// figures, which is the opposite of what the flag now says.
+//
+// NOTE FOR WHOEVER REBUILDS THIS: data/cases/index.json is still committed and
+// still world-readable, and every row in it is prior-vendor derived (see
+// DERIVED_USE_INVENTORY B18). Repointing a new panel at that file is not a
+// rebuild. The file itself is outside this page's remit.
+// THE WARNING-SIGN INDEX VALUE IS NOT FETCHED ANY MORE, ONLY THE LINK.
+//
+// research/wsi.json carries the index level, the month-over-month delta and
+// the run length. All 173 monthly values behind them were computed from the
+// prior vendor's measurements (LEGAL_HOLD.md names the series explicitly), so
+// the level is a prior-vendor figure however few vendor strings it contains —
+// and this fetch downloaded it into every visitor's browser whether or not
+// anybody expanded row 08.
+//
+// PV_RESEARCH survives on its own HEAD request: the research section exists,
+// the link to it is not a figure, and what those pages publish about
+// themselves is their own build's problem, not this page's.
+fetch("research/", { method: "HEAD" }).then(r => { PV_RESEARCH = r.ok; }).catch(() => {});
 
 // The whole chain is held as DATA_READY so lookup() can AWAIT it instead of
 // racing it. Before this, a /?zip= landing (every generated ZIP page's
@@ -1592,13 +1639,21 @@ function renderPreview(d) {
   // country right now: 15,471 ZIPs read HOLD…" — which is neither current nor
   // ours to republish. Withheld until a national picture exists on the new
   // basis; 1,000 released ZIPs is not one.
-  const nc = (d && d.b === "active listings") ? null
-           : (META && META.national && META.national.counts);
+  // WITHHELD OUTRIGHT NOW, NOT GATED ON THE RECORD'S BASIS.
+  //
+  // The basis test above was the old gate: withhold the counts beside an
+  // active-listing reading, pass them through for anything else. Two records
+  // still reach "anything else" — the committed DEMO fallback, which carries
+  // no basis at all and renders when data/index.json fails, and any legacy
+  // record. The counts are computed from the prior vendor's measurements
+  // whatever record they happen to sit beside, so the answer never depended
+  // on the record and the gate was answering the wrong question.
+  const nc = null;
   row("08", "Your market vs. the nation",
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
-       : '<span>The national rating mix is being rebuilt on the new data source and is not shown yet.</span>',
+       : '<span>The national rating mix is being rebuilt on a new data source and is not shown yet.</span>',
     { open: true });
 
   // 09 — velocity tease. veil() gets the REAL months-to-line phrase computed
@@ -1649,24 +1704,55 @@ function renderPreview(d) {
     }));
 
   // Macro row expansion — content is built here, at expand time, from
-  // whatever has resolved: percentile always (META is loaded before any
-  // verdict can render), WSI + research link only if feature-detection found
-  // them. Everything in it is real, dated, and free — no mask, no gate.
+  // whatever has resolved. Everything in it is real, dated, and free — no
+  // mask, no gate.
   // FIGURES_KILL_SWITCH. pvPercentile turns this ZIP's asking-price change
   // into "prices here are rising faster than about 62% of U.S. ZIP codes" —
   // a sentence with no vendor figure in it that cannot be produced without
-  // one. Withholding spy drops that paragraph and leaves the rest of the
-  // macro panel (the Warning-Sign Index and the case study, different lineage
-  // and a different question) exactly as it was.
+  // one. Withholding spy drops that paragraph.
+  //
+  // TWO SEPARATE REASONS NOW STOP THAT SENTENCE, and they are not the same
+  // question. This switch is about the CURRENT vendor's measurements and is
+  // off. pvPercentile is separately refusing because the deciles it ranks
+  // against are the PRIOR vendor's. Turning this switch off again must not
+  // bring the percentile back, which is why the second refusal lives in the
+  // function rather than here.
   const spy = FIGURES_OFF ? null : (d.m && d.m.spy);
   const xBtn = document.getElementById("pv-x");
   if (xBtn) xBtn.addEventListener("click", () => {
     const box = document.getElementById("pv-macro");
     const opening = box.hidden;
-    // Rebuilt on EVERY open (no innerHTML cache): if the visitor expands
-    // before the wsi.json fetch resolves, the next open picks it up.
+    // Rebuilt on EVERY open (no innerHTML cache).
+    //
+    // ————— THE MACRO PANEL IS A REBUILD NOTICE, NOT A PANEL WITH GAPS —————
+    //
+    // All three things this panel used to say were prior-vendor figures, and
+    // they came out together on purpose:
+    //
+    //   * the national price percentile — this ZIP's asking-price change
+    //     interpolated against a table of the prior vendor's SOLD-price
+    //     deciles. See pvPercentile, which now refuses to compute it. Note
+    //     that the generated ZIP pages withheld this same sentence months ago
+    //     (build_pages.py: "Withheld until the deciles are rebuilt on the
+    //     active-listing basis") and this expansion was simply missed by that
+    //     change — the leak a gate can walk straight past.
+    //   * the Warning-Sign Index level — 173 monthly values, every one
+    //     computed from the prior vendor's measurements.
+    //   * the rotating case study — crossing month, lead months and
+    //     peak-to-trough, all computed from the prior vendor's hub exports.
+    //
+    // A panel that dropped one of the three and kept the other two would read
+    // as working and would still be publishing the thing we said we had
+    // stopped publishing, so the whole box states its own condition instead.
+    // The notice does not name a vendor, and does not say the number is late:
+    // it is being rebuilt on a different source and it will be back.
+    //
+    // The research LINK is not a figure and stays when the section exists.
     if (opening) {
       const parts = [];
+      // pvPercentile returns null unconditionally today; the call and the spy
+      // binding above are kept so the FIGURES_OFF path stays wired and so a
+      // rebuild on current-source deciles has one line to change, not five.
       const pct = pvPercentile(spy);
       if (pct != null) {
         const pack = pct >= 85 ? "near the top of the pack" : pct >= 60 ? "ahead of most markets"
@@ -1674,27 +1760,16 @@ function renderPreview(d) {
         parts.push("<p>Prices here are rising faster than about <b>" + pct +
                    "%</b> of U.S. ZIP codes — " + pack + ".</p>");
       }
-      if (PV_WSI) {
-        const mo = ym => PV_MONTHS_LONG[Number(ym.split("-")[1]) - 1] + " " + ym.split("-")[0];
-        const dir = PV_WSI.delta > 0 ? "up" : "down";
-        parts.push('<p class="pv-wsi">Warning-Sign Index: <b>' + PV_WSI.wsi.toFixed(1) +
-                   "%</b> of scored ZIP markets showed warning signs in " + mo(PV_WSI.month) +
-                   (PV_WSI.delta ? " — " + dir + " " + Math.abs(PV_WSI.delta).toFixed(1) +
-                   " points from the month before." : ".") + "</p>");
-      }
-      // One recomputed case, when the flag is on. Free-tier content like the
-      // rest of row 08 — it is evidence about the method, not paid analysis.
-      if (PV_CASE && PV_CASE.lead_months != null) {
-        const ce = s => String(s).replace(/[&<>"]/g, c =>
-          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-        parts.push('<p class="pv-case"><b>' + ce(PV_CASE.name) + '</b> — our dials crossed in ' +
-          ce(PV_CASE.first_signal) + '; prices first fell ' + PV_CASE.lead_months +
-          ' months later, then ' + (PV_CASE.peak_to_trough * 100).toFixed(1) +
-          '% peak to trough. <a class="pv-rlink" href="research/methodology.html#track">' +
-          'See how this was computed →</a></p>');
+      if (!parts.length) {
+        // Worded to avoid echoing the row's own line, which already says the
+        // rebuild sentence — two identical notices one above the other read as
+        // a rendering bug and get "fixed" by deleting one of them.
+        parts.push("<p>How your ZIP ranks against the rest of the country, and how " +
+                   "the country is reading month to month, " +
+                   "are part of the same rebuild. Both come back here when it lands.</p>");
       }
       if (PV_RESEARCH) parts.push('<p><a class="pv-rlink" href="research/">See the full monthly research →</a></p>');
-      box.innerHTML = parts.join("") || "<p>More national context is published monthly.</p>";
+      box.innerHTML = parts.join("");
     }
     box.hidden = !opening;
     xBtn.setAttribute("aria-expanded", String(opening));
@@ -1705,7 +1780,29 @@ function renderPreview(d) {
 
 // Percentile of this ZIP's price trend vs. the nation, from the same decile
 // interpolation market-render.js contextBoxes uses (spy_deciles in meta.json).
+//
+// WITHDRAWN — PRIOR-VENDOR LINEAGE IN THE COMPARISON, NOT IN THE INPUT.
+//
+// The input is ours-and-current: this ZIP's asking-price change from the
+// current source. The eleven cut points it is ranked against are the prior
+// vendor's sold-price deciles, frozen at the last run before ingestion
+// stopped. So the output — "rising faster than about 63% of U.S. ZIP codes" —
+// has the prior vendor in its computation even though every string in the
+// sentence is ours, and it also compares asking prices against sold prices,
+// which are two different quantities.
+//
+// The refusal is HERE rather than at the call site because there is exactly
+// one call site today and there will be two the moment somebody adds the same
+// context box to another surface — as already happened between this page and
+// market-render.js. A function that cannot produce the number is the only
+// version of this that a later edit cannot undo by accident.
+//
+// TO REBUILD: drop this constant once meta.json carries deciles computed on
+// the current source. Nothing else in this function needs to change.
+const NATIONAL_DECILES_WITHDRAWN = true;
+
 function pvPercentile(spy) {
+  if (NATIONAL_DECILES_WITHDRAWN) return null;
   const nat = META && META.national;
   if (!nat || !nat.spy_deciles || nat.spy_deciles.length !== 11 || spy == null) return null;
   const dec = nat.spy_deciles;
@@ -1831,7 +1928,23 @@ async function renderScorecardLine() {
   } catch (e) { /* absent → the line stays hidden */ }
 }
 
+// WITHDRAWN, AND DELIBERATELY NOT LEFT TO STAY DARK BY ITSELF.
+//
+// This renders a case study's lead-in-months and peak-to-trough drop into the
+// homepage. Both are computed from the prior vendor's hub exports. Today it
+// draws nothing for two accidental reasons — there is no id="story" element in
+// the markup, and data/stories.json is {"stories": []} because the story
+// builder is paused — and neither of those is a decision anybody made about
+// lineage. Restoring the markup or unpausing the builder would put the figures
+// straight back on the front door with no code change and no review.
+//
+// So the refusal is stated here, in the renderer, where a reader of this file
+// can see it. Remove it when a case exists that was computed end to end on the
+// current source.
+const STORY_FIGURES_WITHDRAWN = true;
+
 async function renderStory() {
+  if (STORY_FIGURES_WITHDRAWN) return;
   const sec = $("story");
   if (!sec) return;
   try {

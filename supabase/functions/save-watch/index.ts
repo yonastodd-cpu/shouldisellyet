@@ -112,8 +112,14 @@ Deno.serve(async (req) => {
       // escalates from. Missing velocity row → baseline "unknown": the first
       // refresh that produces a real state becomes the baseline instead of
       // firing a bogus day-one alert.
+      // VELOCITY_ENABLED mirror — see pipeline/velocity_switch.py. The client
+      // no longer draws the toggle, but that is a client guard on a SERVER
+      // read: a direct POST with a valid token still reached the frozen
+      // zip_velocity table and the state word came back in the 200 body.
+      const VELOCITY_ENABLED = false;
       let baseline = "unknown";
       try {
+        if (!VELOCITY_ENABLED) throw new Error("velocity suppressed");
         const vr = await fetch(
           `${SUPABASE_URL}/rest/v1/zip_velocity?select=payload&zip=eq.${sub.zip}&limit=1`,
           { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });

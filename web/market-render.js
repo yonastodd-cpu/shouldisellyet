@@ -329,7 +329,16 @@ const MARKET = (function () {
     // exists only because we hold this ZIP's asking-price change; the second
     // is mortgage rates, which are nobody's proprietary statistic. One goes,
     // one stays — the same line drawn on the homepage's macro panel.
-    if (!FIGURES_OFF && nat.spy_deciles && nat.spy_deciles.length === 11 && m.spy != null) {
+    // WITHHELD UNCONDITIONALLY — not gated on FIGURES_OFF.
+    //
+    // FIGURES_OFF is the CURRENT vendor's switch and is false. These deciles
+    // and the national counts beside them are PRIOR-vendor sold-price
+    // statistics, and interpolating a current-vendor asking-price change
+    // against them compares two different measurements. web/index.html:1804
+    // refuses the byte-identical interpolation outright; this copy was left
+    // behind, so the figure was withheld on the free page and served on the
+    // PAID one. Restore only when meta.json carries current-basis deciles.
+    if (false && nat.spy_deciles && nat.spy_deciles.length === 11 && m.spy != null) {
       const dec = nat.spy_deciles;
       let k = 0; while (k < 10 && m.spy > dec[k+1]) k++;
       const frac = k*10 + (dec[k+1] > dec[k] ? (m.spy-dec[k])/(dec[k+1]-dec[k])*10 : 5);

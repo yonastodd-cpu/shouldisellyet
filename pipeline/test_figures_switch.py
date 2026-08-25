@@ -271,8 +271,13 @@ def test_every_client_figure_renderer_is_behind_the_switch():
         "market-render.js draws its dials without asking the switch"
     assert re.search(r"function lineSVG[^{]*\{\s*if \(FIGURES_OFF\) return \"\";", mr), \
         "market-render.js still plots the twelve-month series"
-    assert "!FIGURES_OFF && nat.spy_deciles" in mr, \
-        "market-render.js still states the national price percentile"
+    # STRONGER THAN FIGURES_OFF, deliberately. These deciles are the PRIOR
+    # vendor's sold-price distribution; FIGURES_OFF is the CURRENT vendor's
+    # switch and is false, so gating on it served the figure to paying
+    # customers while index.html refused the identical interpolation outright.
+    assert "false && nat.spy_deciles" in mr, \
+        "market-render.js must refuse the national percentile unconditionally — "\
+        "it interpolates a current-vendor change against prior-vendor deciles"
     assert "showsFigures()" in mr, \
         "the report pages have no way to ask, so they will type their own copy"
 

@@ -302,7 +302,7 @@ details.how .how-body b{color:#3a4450}
       <div class="f" style="grid-column:1/-1">
         <label>2 · YOUR ESTIMATE OF THE HOME'S VALUE TODAY ($)</label>
         <input id="in-val" inputmode="numeric" placeholder="e.g. 550000">
-        <div class="hint">Not sure? Use the Zillow or Redfin estimate as a starting point &mdash; you can adjust anytime.</div>
+        <div class="hint">Not sure? Use an online home-value estimate as a starting point &mdash; you can adjust anytime.</div>
       </div>
     </div>
     <div class="frow">
@@ -397,7 +397,15 @@ details.how .how-body b{color:#3a4450}
          v20), which requires a valid purchase token: there is no public file
          to fetch and nothing to un-hide client-side. The traces are drawn
          from the ZIP's public h series — the same data the free gauges use —
-         but every NUMBER (months-to-line, state, score) is server-gated. -->
+         but every NUMBER (months-to-line, state, score) is server-gated.
+
+         CURRENTLY SUPPRESSED by VELOCITY_ENABLED (see the const near the top
+         of the script). While it is false this markup still ships and the
+         section still renders — with the rebuild notice standing in for the
+         rows, the state sentence, the low-volume caveat, the alert toggle and
+         the method footnote. The subheading below is prose about what the
+         section measures, not a figure, so it stays: it is what tells a reader
+         which thing is being rebuilt. -->
     <div class="sec" id="velocity" data-nav="velocity" style="display:none">
       <div class="k">HOW FAST IS YOUR MARKET MOVING?</div>
       <div class="title">Approach velocity — the distance to each danger line</div>
@@ -410,7 +418,7 @@ details.how .how-body b{color:#3a4450}
         Heads up: this ZIP reports fewer than 12 sales a month, so these velocities are computed
         from thin data — treat the direction as more reliable than the month count.</p>
       <div id="vel-watch" style="margin-top:16px;border-top:1px dashed var(--hairline);padding-top:12px"></div>
-      <p style="margin-top:10px;font-size:12px;color:var(--fainter)">Pace is measured over the last
+      <p id="vel-foot" style="margin-top:10px;font-size:12px;color:var(--fainter)">Pace is measured over the last
         3 months on 3-month-smoothed data, so one odd month can't swing it. Signals without enough
         history yet say so — a missing number is shown as missing, never estimated.</p>
     </div>
@@ -845,12 +853,40 @@ const $ = id => document.getElementById(id);
 // path, and a `const` referenced before its declaration line has run throws
 // rather than reading undefined.
 const AGENT_INTRO_ENABLED = false;
+
+// ————— the velocity switch —————
+// Mirrors pipeline/velocity_switch.VELOCITY_ENABLED and the constant of the
+// same name in supabase/functions/verify-access/index.ts. Read that module for
+// why: zip_velocity is frozen vendor-derived output that this page has been
+// selling to paying customers, and the fix is a posture, not a source filter.
+//
+// While false the section KEEPS ITS PLACE — heading, section number, nav entry
+// — and renders VEL_REBUILD_* where every number used to be. Collapsing it
+// would silently delete a section the report advertises and the customer paid
+// for; a section that says what happened is the honest shape. The alert toggle
+// goes with the numbers, because an alert is a standing promise to email a
+// state change computed from the same suppressed rows.
+//
+// Nothing here is deleted: renderVelocity, velTrace, velPhrase and the watch
+// path are all still wired, so re-enabling is this line plus the two mirrors.
+//
+// Declared at the top of the script for AGENT_INTRO_ENABLED's reason — it is
+// read inside the render path, and a `const` referenced before its declaration
+// has run throws rather than reading undefined.
+const VELOCITY_ENABLED = false;
+
+// The standing notice. Says the panel is being rebuilt on a new data source
+// and that it will return; it never names a vendor, and it deliberately avoids
+// "check back"/"shortly" — that is the copy in renderVelocity's unseeded-ZIP
+// branch below, and it is the wrong thing to tell someone here, because this
+// is a rebuild rather than a job that ran late.
+const VEL_REBUILD_TITLE = "This section is being rebuilt";
+const VEL_REBUILD_BODY = "Approach velocity is being rebuilt on a new data source and will return to your report. Everything else here is unaffected.";
+
 // Links the brand name inside the pipeline's plain-text citation. The exact
 // wording lives in the data (meta.attribution); this only adds the required
 // redfin.com link. See docs/ATTRIBUTION.md.
-function citeHTML(t){
-  return (t || "").replace("Redfin", '<a href="https://www.redfin.com" target="_blank" rel="noopener">Redfin</a>');
-}
+function citeHTML(t){ return t || ""; }  /* was: hyperlinked the prior vendor's name into meta.attribution. No prior-vendor value is published, so there is nothing to cite. */
 
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
 const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
@@ -1098,6 +1134,27 @@ function velPhrase(kind, row){
 }
 
 function renderVelocity(v){
+  if (!VELOCITY_ENABLED){
+    // The section keeps its heading, its number and its nav entry; everything
+    // computed from zip_velocity is replaced by the rebuild notice. Written as
+    // an early return ahead of every other branch so there is exactly one way
+    // in: a guard further down would have to be re-argued each time a branch
+    // is added, and the empty-row branch immediately below would otherwise
+    // catch the suppressed case and tell a paying customer to check back
+    // shortly for a number that is not coming.
+    $("vel-rows").innerHTML =
+      '<div role="status" style="padding:14px 16px;border:1px solid var(--hairline);' +
+      'border-left:3px solid var(--navy);border-radius:8px;background:var(--hairline2);' +
+      'font-size:14px;line-height:1.6;color:var(--muted)">' +
+      '<b style="color:var(--ink)">' + VEL_REBUILD_TITLE + '.</b> ' + VEL_REBUILD_BODY + '</div>';
+    $("vel-state").textContent = "";
+    $("vel-lowvol").style.display = "none";
+    $("vel-watch").innerHTML = "";          // no toggle: see the switch comment
+    if ($("vel-foot")) $("vel-foot").style.display = "none";
+    $("velocity").style.display = "block";
+    renumberSections();
+    return;
+  }
   if (!v){
     // No row yet (table unseeded or unscored ZIP): say so — never estimate.
     $("vel-rows").innerHTML = '<p style="font-size:14px;color:var(--muted)">Velocity for this ZIP is computed on the next data refresh — check back shortly.</p>';
@@ -1149,6 +1206,12 @@ function renderVelWatch(v){
 }
 
 async function toggleVelWatch(on){
+  // Belt and braces. renderVelocity never draws the toggle while the switch is
+  // off, but this function is a global and save-watch still accepts the
+  // "velocity" metric, so the only thing stopping a saved watch from arriving
+  // by hand is a guard here. A watch saved now would be honoured later by
+  // check_watches against the frozen rows.
+  if (!VELOCITY_ENABLED) return;
   const msg = $("vel-watch-msg");
   const show = (t, bad) => { msg.textContent = t; msg.style.display = "block";
                             msg.style.color = bad ? "var(--red)" : "var(--green-ink, #1e7a42)"; };

@@ -5,6 +5,8 @@
 //
 // GET /market-reading?zip=NNNNN
 //   200 { zip, state, reading, asOf, lastUpdated, metrics, priceHistory, dataStatus }
+//   200 { …, metrics: {}, priceHistory: [], figuresWithheld: true, notice }
+//        when FIGURES_OFF — see the kill-switch block below
 //
 // WHY THIS EXISTS. The browser used to fetch web/data/zips/{ST}.json — a whole
 // state's records — to display one ZIP. While the site is paused those files
@@ -20,6 +22,10 @@
 // alone returned. If a value is not in the SELECT list on line ~90 it cannot
 // reach a reader, which is the property that makes this file the one place to
 // audit when someone asks what we republish.
+//
+// The boundary decides WHICH fields may be served. FIGURES_OFF below decides
+// WHETHER the market figures among them may be served at all. Two questions,
+// two mechanisms; neither is a substitute for the other.
 //
 // dataStatus tells the page what kind of nothing it is looking at:
 //   "ok"                 a released ZIP with a reading
@@ -95,6 +101,48 @@ const CORS = {
 // stale-while-revalidate keeps a tranche release from stampeding the origin.
 const CACHE = "public, max-age=86400, stale-while-revalidate=604800";
 
+// ═══ FIGURES_KILL_SWITCH — THE COPY THAT LIVES ON THE SERVER ═══
+//
+// Mirrors FIGURES_OFF in pipeline/figures_switch.py. Read that module for what
+// counts as a figure and why the reading word is not one; this comment is only
+// about why the value is duplicated here and what that obliges.
+//
+// THE TWO MUST MOVE TOGETHER. Deno cannot import Python, and a build-time
+// literal cannot reach a running server, so the flag cannot be SHARED — it can
+// only be MIRRORED. Four copies now carry one decision:
+//
+//   pipeline/figures_switch.py   the builders (static ZIP pages, stubs, cards)
+//   web/index.html               the homepage checker
+//   web/market-render.js         both report surfaces
+//   this file                    the live per-ZIP endpoint
+//
+// pipeline/test_figures_switch.py pins the first three to each other and
+// pipeline/test_figures_switch_endpoint.py pins this one to the Python flag,
+// because four copies of a decision is fine and four copies that can DIVERGE
+// is not. Flipping the switch means editing all four AND DEPLOYING THIS
+// FUNCTION: the other three take effect on the next build, this one takes
+// effect only when the function itself ships. That asymmetry is the whole
+// reason the gap existed — the static pages stopped drawing dials while this
+// endpoint went on serving the same numbers as named columns to any browser.
+//
+//   false  current behaviour, unchanged. The default, so nothing moves until
+//          somebody moves it.
+//   true   the response keeps zip, reading, asOf, lastUpdated and dataStatus
+//          and carries no market figure at all: no metrics block, no price
+//          history, and nothing fetched to build either.
+export const FIGURES_OFF = false;
+
+// Verbatim figures_switch.WITHHELD_LINE. Vendor-neutral for the reason the
+// pause notice is: a surface that has stopped showing a source is not the
+// place to name it.
+//
+// It is a SEPARATE field rather than a dataStatus value. dataStatus stays "ok"
+// because the reading is ok — a client that cannot tell "withheld" from
+// "insufficient_data" paints the rebuilding notice over a perfectly good
+// reading, and overloading one status would make every consumer's switch mean
+// two different things at once.
+const WITHHELD_LINE = "Market figures are not being shown for this reading.";
+
 // cors is PASSED IN, never read from module scope. One isolate serves
 // concurrent requests from different origins, and a shared mutable header
 // object is how one caller's origin ends up on another caller's response.
@@ -130,6 +178,33 @@ function yoy(hist: Record<string, unknown>[], s: Record<string, unknown>) {
   set("inv", num(s.total_listings));
   set("invy", ratio(num(s.total_listings), first ? num(first.total_listings) : null));
   return out;
+}
+
+// figures_switch.metrics() and .history(), in TypeScript. The withheld value
+// is the EMPTY value the two no-reading paths below already return, not a new
+// shape: every consumer renders {} metrics and an empty series today, because
+// ~17,874 provisioned ZIPs have carried exactly that since the pause. Routing
+// the figures through here means the switched-on path is one the clients
+// exercise constantly, rather than a branch first executed by a stranger's
+// browser on the day somebody flips the flag.
+function metricsFor(hist: Record<string, unknown>[], s: Record<string, unknown>) {
+  // Guarded here even though the history is empty by then, and that is not
+  // belt-and-braces: two of the five figures — dom and inv — are read off the
+  // CURRENT row and never touch the series at all. Delete this line and an
+  // empty history still yields {"dom":57,"inv":105}, measured and served.
+  // Withholding the history is not withholding the metrics.
+  return FIGURES_OFF ? {} : yoy(hist, s);
+}
+
+function series(hist: Record<string, unknown>[]) {
+  // A chart is the figure people forget. Twelve points show no digits on
+  // screen and still publish twelve monthly vendor values — and they sit in
+  // the network tab whether or not anything draws them.
+  return FIGURES_OFF ? [] : hist.map((h: Record<string, unknown>) => ({
+    month: h.as_of_month,
+    medianListPrice: h.median_list_price,
+    daysOnMarket: h.active_dom,
+  }));
 }
 
 async function rest(path: string) {
@@ -201,7 +276,12 @@ Deno.serve(async (req) => {
     //    This returned exactly ONE point before v37, because market_stats
     //    holds one row per month and only the current month had been loaded.
     //    The contract promised twelve; the sparkline would have been a dot.
-    const hist = await rest(
+    //
+    //    NOT FETCHED AT ALL when figures are withheld. The series exists only
+    //    to become figures, so the query is skipped rather than the result
+    //    dropped on the way out: the values never leave the database, and a
+    //    logged query string is not evidence of a request that served them.
+    const hist = FIGURES_OFF ? [] : await rest(
       `market_history?zip=eq.${zip}&select=as_of_month,median_list_price,` +
         `active_dom,total_listings&order=as_of_month.asc&limit=12`,
     );
@@ -221,14 +301,19 @@ Deno.serve(async (req) => {
       // deliberately absent: no page displays them, and they were shipping in
       // the static files purely because the record shape happened to include
       // them.
-      metrics: yoy(hist, s),
-      priceHistory: hist.map((h: Record<string, unknown>) => ({
-        month: h.as_of_month,
-        medianListPrice: h.median_list_price,
-        daysOnMarket: h.active_dom,
-      })),
+      metrics: metricsFor(hist, s),
+      priceHistory: series(hist),
       dataStatus: "ok",
-    }, cors, 200, true);
+      // Appended, never interleaved: with the switch off this spreads nothing
+      // and the response is byte-for-byte what it was before the switch
+      // existed, which is the property that lets the default stay untouched.
+      ...(FIGURES_OFF ? { figuresWithheld: true, notice: WITHHELD_LINE } : {}),
+      // Cache only what may be cached. A withheld response stored for a week
+      // would outlive turning the switch back OFF; and note the reverse, which
+      // no code here can fix — responses cached BEFORE a flip still carry
+      // their figures for up to max-age plus the stale window, so throwing
+      // this switch means purging the CDN, not only deploying the function.
+    }, cors, 200, !FIGURES_OFF);
   } catch (_e) {
     // Never echo the error: a REST failure message can carry column names and
     // row fragments. A page that cannot reach us should render the notice, not

@@ -11,6 +11,17 @@ A subscriber can watch up to three metrics at once (one toggle per number on
 the report), stored as a jsonb array in `subscribers.watches` — this module
 evaluates every entry in that array independently.
 
+BASIS. Every dollar metric here is the subscriber's own saved home value
+carried forward by how the ZIP median has moved since they saved it. That
+ratio only means something while numerator and denominator measure the same
+quantity, and on 2026-08-14 they stopped: the old median is a closed-sale
+figure, the new one an asking price (schema-v35 spells this out on
+`market_stats.list_median_price`). So a watch now records the basis its
+baseline was taken on, `scale_value()` REFUSES to divide across two bases
+instead of returning a meaningless number, and a watch whose basis no longer
+matches the reading is re-based onto the current one and the subscriber is
+told — see `rebaseline_watch()` and `render_rebaseline_email()`.
+
 Runs in the GitHub Action right after fetch_data.py, using the freshly
 published web/data/. If Supabase/Resend secrets aren't configured, dry-runs
 and never fails the pipeline — same convention as notify_changes.py.
@@ -25,11 +36,14 @@ Optional:
 """
 
 import argparse
+import data_pause as PAUSE
+import velocity_switch as VELOCITY
 from shard_layout import require_shards
 import json
 import os
 import sys
 import urllib.request
+from pathlib import Path
 
 SITE = "https://shouldisellyet.com"
 METRIC_LABEL = {
@@ -45,6 +59,14 @@ METRIC_LABEL = {
 # "1.5 points"; everything else is dollars.
 PERCENT_METRICS = {"rate"}
 POINT_METRICS = {"rategap"}
+
+# The metrics whose value rides on the ZIP median — and so on which quantity
+# that median IS. `rate` and `rategap` are pure market numbers; `lockin` is
+# payment arithmetic on the saved balance and rate. None of those three touch
+# a median, so none of them has a basis question, none can produce a
+# cross-basis ratio, and none may be sent a "recalculated on a new data
+# source" notice for a number that did not change how it is computed.
+MEDIAN_METRICS = {"walkaway", "equity", "gain"}
 
 
 # ——— Pure calculation logic (mirrors web/my-report.html's client JS) ———
@@ -69,18 +91,198 @@ def latest_price(entry):
     return None
 
 
-def scale_value(baseline_value, baseline_median, current_median):
+# ——— Basis: which quantity a median IS ———
+#
+# `data_pause.LEGACY_BASIS` ("" — absence is the marker) is the closed-sale
+# median of the retired provider. `data_pause.RELEASED_BASIS` ("active
+# listings") is the median ASKING price of the current one. They track the
+# same market and are not the same number, so a ratio built from one of each
+# is not an approximation — it is arithmetic on two different quantities.
+#
+# The failure this guards against, concretely: every subscriber watching a
+# dollar number "below" a threshold has a baseline denominator from the old
+# basis. Swap in an asking-price numerator and their value steps up for
+# reasons that have nothing to do with their market, and the whole book of
+# "above" alerts fires in one batch. The 2026-08-14 guard suppressed that
+# first batch by rewriting the watch's `basis` — but it carried the baseline
+# median through untouched, so the mismatched ratio simply kept running
+# afterwards, quietly, for as long as the watch lived.
+#
+# A basis this module has never recorded is NOT read off the reading in front
+# of it. See baseline_basis() for what absence is taken to mean and why that
+# is a statement of fact rather than a guess.
+#
+# HOW MANY WATCHES THIS AFFECTS IS NOT KNOWN HERE. Nothing in the schema
+# records when a watch, or the calc_inputs baseline behind it, was written —
+# save-watch refreshes calc_inputs in place on every save and stamps no
+# timestamp — so the database cannot answer it exactly either. The closest it
+# gets, and the query to run with the service key (read-only, no writes):
+#
+#   select
+#     count(*) filter (where w->>'baselineBasis' is null)   as basis_unrecorded,
+#     count(*) filter (where w->>'baselineBasis' = '')      as basis_legacy,
+#     count(*) filter (where w->>'baselineBasis' = 'active listings')
+#                                                           as basis_current,
+#     count(*) filter (where w->>'baselineBasis' is null
+#                       and coalesce(w->>'baselineMedian',
+#                                    s.calc_inputs->>'baselineMedian') is not null)
+#                                                           as would_scale,
+#     count(*) filter (where s.created_at
+#                             < timestamptz '2026-08-14 13:53:43+00')
+#                                                           as row_predates_cutover,
+#     count(distinct s.id)                                  as subscribers
+#   from public.subscribers s
+#   cross join lateral jsonb_array_elements(s.watches) as w
+#   where s.status in ('active','report')
+#     and w->>'metric' in ('walkaway','equity','gain');
+#
+# `would_scale` is the figure that matters: watches with an unrecorded
+# baseline basis AND a median to divide by, i.e. the ones that would have
+# formed a cross-basis ratio the moment a tranche was released.
+# `row_predates_cutover` is a proxy on the SUBSCRIBER row's creation, not on
+# the watch — treat it as an upper bound on age, not as the answer.
+
+
+class CrossBasisError(ValueError):
+    """A scale was asked for across two different bases.
+
+    Deliberately not catchable-into-a-number: the only valid responses are to
+    re-base the watch onto the current basis and tell the subscriber
+    (`rebaseline_watch`), or to leave it alone. Never to shrug and divide.
+    """
+
+    def __init__(self, baseline_basis, current_basis):
+        self.baseline_basis = baseline_basis
+        self.current_basis = current_basis
+        super().__init__(
+            f"refusing to scale a baseline taken on basis "
+            f"{baseline_basis!r} by a median on basis {current_basis!r}"
+        )
+
+
+def scale_value(baseline_value, baseline_median, current_median,
+                baseline_basis=PAUSE.LEGACY_BASIS,
+                current_basis=PAUSE.LEGACY_BASIS):
     """Home value carried forward by the ZIP median's move since the watch
-    was saved. Falls back to the unscaled baseline when either median is
-    unavailable (e.g., the ZIP has no price history)."""
+    was saved.
+
+    Falls back to the unscaled baseline when either median is unavailable
+    (e.g., the ZIP has no price history) — no ratio is formed there, so no
+    basis question arises and the subscriber's own saved figure comes back
+    untouched. When a ratio WOULD be formed and the two medians were taken on
+    different bases, raises CrossBasisError rather than returning a number.
+
+    Both bases default to LEGACY_BASIS so that pre-migration callers, whose
+    medians really were both closed-sale figures, keep their meaning.
+    """
+    if baseline_value is None:
+        return None
     if not baseline_median or not current_median:
         return baseline_value
+    if baseline_basis != current_basis:
+        raise CrossBasisError(baseline_basis, current_basis)
     return baseline_value * (current_median / baseline_median)
 
 
-def compute_metric(metric, inputs, current_median, market_rate):
+def baseline_basis(w):
+    """The basis one watch's baseline median was taken on.
+
+    Absence means LEGACY_BASIS, and that is a fact about when these rows were
+    written rather than an optimistic default: every watch on the book was
+    saved while the legacy reading was the only one published — ingestion has
+    been stopped since 2026-08-14 and no tranche has been released — and the
+    one case that could be otherwise, a watch saved after a release and never
+    yet processed, is stamped by record_baseline_basis() before this is
+    consulted.
+
+    The watch's own `basis` key is emphatically NOT a stand-in. `basis`
+    describes the last READING processed, and the 2026-08-14 migration arm
+    rewrote it while leaving the baseline median untouched — trusting it is
+    precisely how the cross-basis ratio survived that guard.
+    """
+    return w["baselineBasis"] if "baselineBasis" in w else PAUSE.LEGACY_BASIS
+
+
+def watch_baseline(w, inputs):
+    """(value, median) this watch scales from.
+
+    The subscriber-level calc_inputs snapshot, overridden by the per-watch
+    figures a rebaseline writes. Per-watch on purpose: calc_inputs is shared
+    by all three of a subscriber's watches and set_watches() only ever writes
+    the `watches` column, so re-basing one watch must not silently move
+    another's baseline or reach for a write path this module does not have.
+    """
+    value = w["baselineValue"] if "baselineValue" in w else inputs.get("value")
+    median = w["baselineMedian"] if "baselineMedian" in w else inputs.get("baselineMedian")
+    return value, median
+
+
+def watch_inputs(w, inputs):
+    """calc_inputs with this watch's own baseline spliced in, for compute_metric."""
+    value, median = watch_baseline(w, inputs)
+    return {**inputs, "value": value, "baselineMedian": median}
+
+
+def record_baseline_basis(w, entry_basis):
+    """Write `baselineBasis` onto a watch that has never carried one.
+
+    Requirement one of the fix: the baseline stores the basis it was taken
+    on, in the row, rather than being inferred every run from a global
+    assumption that quietly expires the day a tranche is released.
+
+    Two cases, and they resolve differently.
+
+      * No `basis` key either — this module has never processed the watch, so
+        my-report.html read its baselineMedian out of the same published data
+        this run is reading. That reading's basis IS its basis, and recording
+        it moves no number.
+
+      * `basis` present but no `baselineBasis` — processed before this
+        function existed, so the baseline is legacy (see baseline_basis).
+        It is recorded as legacy, NOT as whatever `basis` says: `basis` was
+        rewritten by the 2026-08-14 arm while the baseline median was carried
+        through untouched, and copying it here would bless exactly the
+        cross-basis ratio this module now refuses.
+
+    (The durable fix belongs upstream — save-watch/index.ts should write
+    `baselineBasis` alongside calcInputs, which would close the one-run window
+    either side of a release where a freshly saved watch is processed against
+    a reading its baseline did not come from. Until it does, that window is
+    handled by rebaseline_watch(), which re-bases rather than scales.)
+    """
+    if "baselineBasis" in w:
+        return w
+    # ABSENCE OF `basis` IS THE UNIVERSAL STATE, NOT THE SIGNATURE OF A FRESH
+    # WATCH. An earlier version of this line read the other way round and
+    # adopted `entry_basis` when `basis` was missing. That inference is
+    # backwards: `basis` is written in exactly two places, both of which fire
+    # only on a basis CHANGE, and no tranche has been released — so it has
+    # never been written at all. save-watch/index.ts writes
+    # {metric, direction, threshold, crossed} and no basis. Every live watch
+    # therefore lands in the "absent" case, and adopting the current basis
+    # would stamp a closed-sale baseline as an asking-price one, let
+    # scale_value through, and mail the cross-basis figure to the entire book
+    # on the first run after a release. Verified: that version emitted a
+    # $350,000 equity crossing where the honest unscaled figure was $200,000,
+    # and HEAD emitted nothing.
+    #
+    # Default to LEGACY_BASIS unconditionally — the same default baseline_basis()
+    # uses — so an unstamped watch routes to rebaseline_watch() rather than to
+    # scale_value(). The entry_basis adoption arm becomes safe only once
+    # save-watch stamps baselineBasis at write time, which it does not.
+    return {**w, "baselineBasis": PAUSE.LEGACY_BASIS}
+
+
+def compute_metric(metric, inputs, current_median, market_rate,
+                   baseline_basis=PAUSE.LEGACY_BASIS,
+                   current_basis=PAUSE.LEGACY_BASIS):
     """Current value of the requested metric, or None if the saved inputs
-    are insufficient to compute it (e.g., lock-in needs a rate)."""
+    are insufficient to compute it (e.g., lock-in needs a rate).
+
+    Raises CrossBasisError for the dollar metrics when the saved baseline and
+    the current median were taken on different bases. Callers must re-base
+    (see rebaseline_watch) rather than swallow it.
+    """
     if metric == "rate":
         # Pure market number — needs no personal inputs at all.
         return market_rate
@@ -88,20 +290,11 @@ def compute_metric(metric, inputs, current_median, market_rate):
         # Points between today's market rate and theirs — no dollar inputs.
         my_rate = inputs.get("rate")
         return None if my_rate is None else market_rate - my_rate
-    value = scale_value(inputs.get("value"), inputs.get("baselineMedian"), current_median)
-    if value is None:
-        return None
     bal = inputs.get("bal") or 0
-    if metric == "equity":
-        return value - bal
-    if metric == "walkaway":
-        cost_pct = inputs.get("costPct", 8)
-        return value * (1 - cost_pct / 100) - bal
-    if metric == "gain":
-        pp = inputs.get("pp")
-        if pp is None:
-            return None
-        return value - pp
+    # Lock-in is evaluated BEFORE the scaled value exists, because it never
+    # used one: it compares two payments off the saved balance and rate.
+    # Computing a scaled value first would have made it raise CrossBasisError
+    # over a median its answer does not contain.
     if metric == "lockin":
         rate = inputs.get("rate")
         if rate is None or bal <= 0:
@@ -109,7 +302,19 @@ def compute_metric(metric, inputs, current_median, market_rate):
         now_pi = pmt(inputs.get("origAmt") or bal, rate)
         mkt_pi = pmt(bal, market_rate)
         return mkt_pi - now_pi
-    return None
+    if metric not in MEDIAN_METRICS:
+        return None
+    value = scale_value(inputs.get("value"), inputs.get("baselineMedian"), current_median,
+                        baseline_basis, current_basis)
+    if value is None:
+        return None
+    if metric == "equity":
+        return value - bal
+    if metric == "walkaway":
+        cost_pct = inputs.get("costPct", 8)
+        return value * (1 - cost_pct / 100) - bal
+    pp = inputs.get("pp")           # metric == "gain"
+    return None if pp is None else value - pp
 
 
 def is_crossed(value, direction, threshold):
@@ -166,6 +371,38 @@ def render_watch_email(metric, direction, threshold, current_value, zip_code, to
     return subject, html
 
 
+def render_rebaseline_email(metric, direction, threshold, current_value, zip_code, token):
+    """The disclosure that goes out when a watch is moved onto a new basis.
+
+    Required because the alternative — re-anchoring someone's alert under
+    them and saying nothing — changes what their own number means without
+    telling them. Says plainly that the figure was recalculated on a new data
+    source, that their setting is unchanged, and what it reads now. Names no
+    provider: the outgoing one is not the subscriber's business and naming
+    the incoming one is barred by its licence.
+    """
+    label = METRIC_LABEL.get(metric, metric)
+    whose = "The" if metric in PERCENT_METRICS else "Your"
+    verb = "drops below" if direction == "below" else "rises above"
+    past = current_value < threshold if direction == "below" else current_value > threshold
+    standing = ("It is already past the line you set, so the next alert will come "
+                "when it moves back and crosses again."
+                if past else
+                "It has not reached the line you set, so your alert is armed as before.")
+    subject = f"{whose} {label} alert was recalculated on a new data source"
+    report_url = f"{SITE}/my-report.html?token={token}&zip={zip_code}" if token else f"{SITE}/?zip={zip_code}"
+    html = f"""{preheader(f"Same alert, new market data. {whose} {label} now reads {fmt_metric(metric, current_value)} in {zip_code}.")}
+<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#101828">
+  <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#0b6e64;font-weight:bold">MyMarketCheckup — a note about your alert</p>
+  <h1 style="font-size:24px;margin:6px 0 4px">{whose} {label} was recalculated on a new data source</h1>
+  <p style="font-size:15px;line-height:1.6;color:#344054">The market statistics behind {zip_code} are being rebuilt on a new data source. It measures the market in a different way, so we re-anchored your alert to today's reading rather than carrying the old comparison forward — carrying it forward would have compared two figures that don't mean the same thing.</p>
+  <p style="font-size:15px;line-height:1.6;color:#344054">Nothing you chose has changed. You are still watching your {label} for when it {verb} <b>{fmt_metric(metric, threshold)}</b>. On the new data it reads <b>{fmt_metric(metric, current_value)}</b> today. {standing}</p>
+  <p style="margin:24px 0"><a href="{report_url}" style="background:#1f3a5f;color:#fff;padding:13px 24px;border-radius:10px;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">Open your report →</a></p>
+  <p style="font-size:12px;color:#98a2b3;line-height:1.5">This is your own number, computed from the inputs you saved and the latest licensed market statistics — not an appraisal. Not financial advice. Turn this alert off anytime from your report page.</p>
+</div>"""
+    return subject, html
+
+
 # ——— The velocity alert (metric "velocity") ———
 # Stateful, not threshold-based: fires when the market's gathering STATE
 # escalates past the baseline recorded at save time, then re-baselines so one
@@ -198,6 +435,41 @@ manage or turn it off there. <a href="https://kfbjooteazwvdsonthba.supabase.co/f
     return subject, html
 
 
+def rebaseline_watch(w, inputs, current_median, entry_basis, market_rate):
+    """Move one dollar-metric watch onto the reading's current basis.
+
+    Returns (new_watch, current_value). A non-None value means the
+    subscriber must be told: the number their alert watches is now computed
+    from a different kind of market statistic. None means nothing they have
+    ever seen moved — the old baseline was not scaling anything, because one
+    of the two medians is missing — so the basis is recorded quietly and no
+    mail goes out. Without that second case every legacy watch on the book
+    would receive a "we recalculated it" notice announcing an identical
+    figure, on a run where no recalculation happened.
+
+    The saved value is anchored AS IT STANDS against today's median. There is
+    deliberately no carry-forward of the movement since the watch was saved:
+    computing one needs exactly the ratio scale_value refuses, so the honest
+    move is to drop the cross-basis adjustment, not to invent a substitute
+    for it and present it as the subscriber's equity.
+    """
+    b_value, b_median = watch_baseline(w, inputs)
+    if not b_median or not current_median:
+        return {**w, "basis": entry_basis, "baselineBasis": entry_basis}, None
+    new_w = {**w, "basis": entry_basis, "baselineBasis": entry_basis,
+             "baselineValue": b_value, "baselineMedian": current_median}
+    value = compute_metric(new_w["metric"], watch_inputs(new_w, inputs),
+                           current_median, market_rate,
+                           baseline_basis=entry_basis, current_basis=entry_basis)
+    crossed = is_crossed(value, new_w["direction"], new_w["threshold"])
+    # Re-latch on the re-based figure so the NEXT genuine move sends the
+    # ordinary crossing email. The notice below already reports where the
+    # number stands relative to their line, so a second mail this run would
+    # say the same thing twice.
+    new_w["crossed"] = bool(crossed) if crossed is not None else bool(w.get("crossed"))
+    return new_w, value
+
+
 def process_subscriber(sub, data_dir, market_rate):
     """Evaluate every watch entry for one subscriber against fresh ZIP data.
 
@@ -213,34 +485,24 @@ def process_subscriber(sub, data_dir, market_rate):
     entry = load_zip_data(data_dir, sub.get("zip", ""))
     current_median = latest_price(entry) if entry else None
 
-    # The reading's basis. Legacy entries carry no `b` at all, so an existing
-    # watch (no `basis` key) matches a legacy entry and nothing changes today.
-    entry_basis = (entry or {}).get("b", "")
+    # The reading's basis. Legacy entries carry no `b` at all — absence IS
+    # the marker (see data_pause.LEGACY_BASIS).
+    entry_basis = (entry or {}).get("b", PAUSE.LEGACY_BASIS)
 
+    zip_code = sub.get("zip", "")
+    token = sub.get("access_token", "")
     updated, emails = [], []
     vel_state = sub.get("_vel_state")   # attached by main() from zip_velocity
     for w in watches:
-        # ——— the migration guard ———
-        # A watch scales the subscriber's own baseline by the current median.
-        # When that median stops being a closed-sale figure and becomes a
-        # list-price figure it steps UP for reasons that have nothing to do
-        # with this market, and every threshold above it would cross at once.
-        # So the first run on a new basis re-baselines silently and sends
-        # nothing — exactly what the velocity branch below already does for a
-        # first real read. Per-watch and automatic: once a watch has been
-        # re-baselined its alerts resume by themselves, with no global switch
-        # left switched off.
-        if w.get("basis", "") != entry_basis:
-            if w.get("metric") == "velocity":
+        if w.get("metric") == "velocity":
+            # Velocity compares a STATE word, not a median: no baseline
+            # median, no ratio, nothing to refuse. So it keeps the original
+            # migration guard exactly — a basis flip re-reads the state and
+            # sends nothing, the same thing a first real read does.
+            if w.get("basis", PAUSE.LEGACY_BASIS) != entry_basis:
                 fresh = vel_state if vel_state in VEL_RANK else w.get("baseline", "unknown")
                 updated.append({**w, "basis": entry_basis, "baseline": fresh})
-            else:
-                v = compute_metric(w["metric"], inputs, current_median, market_rate)
-                c = is_crossed(v, w["direction"], w["threshold"])
-                updated.append({**w, "basis": entry_basis,
-                                "crossed": bool(c) if c is not None else bool(w.get("crossed"))})
-            continue
-        if w.get("metric") == "velocity":
+                continue
             base = w.get("baseline", "unknown")
             cur = vel_state
             if cur is None or cur == "unknown" or cur not in VEL_RANK:
@@ -256,7 +518,28 @@ def process_subscriber(sub, data_dir, market_rate):
             else:
                 updated.append(w)
             continue
-        value = compute_metric(w["metric"], inputs, current_median, market_rate)
+        # ——— median-backed metrics: basis before arithmetic ———
+        # These get their baseline's basis written down first. A watch whose
+        # recorded baseline basis no longer matches the reading is then
+        # re-based onto the current one and the subscriber is told; it is
+        # never scaled across the two, and it is never re-based in silence.
+        # Everything else (rate, rategap, lockin) carries no median and so
+        # falls straight through to the ordinary crossing check.
+        if w.get("metric") in MEDIAN_METRICS:
+            w = record_baseline_basis(w, entry_basis)
+            if baseline_basis(w) != entry_basis:
+                new_w, value = rebaseline_watch(w, inputs, current_median,
+                                                entry_basis, market_rate)
+                if value is not None:
+                    emails.append(render_rebaseline_email(
+                        new_w["metric"], new_w["direction"], new_w["threshold"],
+                        value, zip_code, token,
+                    ))
+                updated.append(new_w)
+                continue
+        value = compute_metric(w["metric"], watch_inputs(w, inputs), current_median,
+                               market_rate, baseline_basis=baseline_basis(w),
+                               current_basis=entry_basis)
         crossed = is_crossed(value, w["direction"], w["threshold"])
         if crossed is None:
             updated.append(w)  # can't evaluate yet (e.g., lock-in needs a rate) — leave as-is
@@ -265,7 +548,7 @@ def process_subscriber(sub, data_dir, market_rate):
         if crossed and not was_crossed:
             emails.append(render_watch_email(
                 w["metric"], w["direction"], w["threshold"], value,
-                sub.get("zip", ""), sub.get("access_token", ""),
+                zip_code, token,
             ))
             updated.append({**w, "crossed": True})
         elif not crossed and was_crossed:
@@ -374,7 +657,10 @@ def main():
                               for w in (s.get("watches") or []))
                        and s.get("zip")})
     vel_states = {}
-    if vel_zips:
+    # VELOCITY_ENABLED reaches the email surface too. Without this the flag
+    # covered the report and the endpoint but not the thing that actually
+    # arrives in an inbox.
+    if vel_zips and VELOCITY.shows_velocity():
         try:
             rows = _req(f"{sb_url}/rest/v1/zip_velocity?select=zip,payload"
                         f"&zip=in.({','.join(vel_zips)})",

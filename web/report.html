@@ -11,7 +11,14 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://shouldisellyet.com/report.html">
 <meta property="og:title" content="MyMarketCheckup sample report — see exactly what you get">
-<meta property="og:description" content="A full sample property report: the four market dials with their methodology, your equity, walk-away number, lock-in cost and stress test. Real market data, one made-up home.">
+<!-- THE SOCIAL UNFURL IS A SURFACE AND WAS SAYING TWO THINGS THAT ARE NOT TRUE.
+     "the four market dials" is the v1 gauge count; a current reading has three.
+     "Real market data" promised the very figures this page has withdrawn — and
+     an unfurl is precisely the surface nobody rechecks, because it renders in
+     someone else's feed and never in a browser tab of ours. The <meta
+     name="description"> below was updated when the sample was withdrawn; this
+     one was missed, which is the whole shape of the problem. -->
+<meta property="og:description" content="A sample MyMarketCheckup property report: the market dials with their methodology, your equity, walk-away number, lock-in cost and stress test. This sample's own market figures are being rebuilt on a new data source.">
 <meta property="og:image" content="https://shouldisellyet.com/og/default.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -268,11 +275,24 @@ details.how .how-body b{color:#3a4450}
        is the design; this is the document title. -->
   <h1 class="sample-h1">MyMarketCheckup sample report</h1>
 
+  <!-- ————— THE PAID CTAs ARE PAUSED ON THIS PAGE —————
+       This page's whole job is to show a buyer what they get before they pay.
+       It cannot do that today: the sample it was built around is withdrawn,
+       and what replaced it is a notice. Asking for money beside a notice is
+       selling something nobody has been shown, so the two purchase buttons
+       here and in the action row below are stood down until the sample can be
+       rebuilt on the current source.
+       The free check stays — it costs the reader nothing and it works.
+       NOT A STYLE CHANGE: the <a> elements are gone, not greyed. A disabled
+       look with a live href is still a live href to anything that reads the
+       markup rather than renders it, which is the same mistake the withdrawn
+       figures made in this page's <head>.
+       The rest of the funnel (/pricing/, /subscribe.html) is untouched and is
+       outside this page's remit — see the handover note. -->
   <div class="samplebar">
-    <b>This is a sample.</b> It shows the shape of a full report — your reading, the market dials behind it, and what they mean for your equity and timeline. Live readings are running for a first set of ZIP codes; the ZIP this sample was built around is not one of them yet, so its market figures are not shown. Your report is built from your own numbers, and only the address is required.
+    <b>This is a sample.</b> It shows the shape of a full report — your reading, the market dials behind it, and what they mean for your equity and timeline. The sample&rsquo;s own market figures are being rebuilt on a new data source and will be back here once they are, so this page is not selling the report today. Your report is built from your own numbers, and only the address is required.
     <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn" href="index.html#check">Check your ZIP free →</a>
-      <a class="btn-outline" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor">Subscribe — report + alerts · <span data-price="mode-cta">$3.99/mo</span></a>
     </div>
   </div>
 
@@ -287,15 +307,32 @@ details.how .how-body b{color:#3a4450}
       <div class="k">SAMPLE REPORT</div>
       <div class="title">This reading is being refreshed</div>
       <p class="subt">Readings are live on the new data engine for a first set of ZIP codes, and more are being added. This sample previously showed a real ZIP&rsquo;s figures from our previous data source; it returns once that ZIP is rebuilt from the new source, rather than being restored from the old one.</p>
-      <p class="subt">Nothing has been deleted, and no report you have purchased is affected.</p>
+      <!-- THE SECOND HALF OF THIS SENTENCE WAS NOT TRUE AND IS GONE.
+           It asserted that a purchased report was unaffected. (The sentence is
+           paraphrased here rather than quoted: an HTML comment ships to
+           anything that reads the file instead of rendering it, and a
+           withdrawn claim repeated verbatim in the markup is still in the
+           markup — the mistake this page's own withdrawn figures made.)
+           A purchased report is not insulated from this: parts of it are computed from the
+           same withdrawn measurements — the stored approach-velocity rows it
+           draws its timing section from, the danger-line validation sentence,
+           and the source credit printed at the foot of it. Telling a paying
+           customer their copy is unaffected, on the page that exists to
+           explain what they are buying, is the one place that claim does the
+           most damage.
+           What replaces it says only what we can stand behind: nothing was
+           deleted, some of a purchased report is being rebuilt too, and here
+           is the page that says what to do about it. Do not restore the old
+           sentence without a purchased-report audit to support it. -->
+      <p class="subt">Nothing has been deleted. Some sections of a purchased report are computed from the same figures and are being rebuilt on the new source alongside this sample — if that affects a report you bought, see <a href="refunds.html">Refunds &amp; cancellation</a>.</p>
     </div>
   </div>
 
+  <!-- Same stand-down as the sample bar above. See the note there. -->
   <div class="actions" style="display:flex">
     <a class="btn" href="index.html#check">Check your ZIP free →</a>
-    <a class="btn-outline" data-track="purchase_click_monitor" href="subscribe.html?plan=monitor" style="text-decoration:none;display:inline-block">Subscribe — report + alerts · <span data-price="mode-cta">$3.99/mo</span></a>
-    <a class="btn-outline" data-track="purchase_click_report" href="subscribe.html?plan=report" style="text-decoration:none;display:inline-block">Unlock the full report · <span data-price="report-once">$5.99 once</span></a>
   </div>
+  <p style="margin-top:12px;font-size:13px;color:var(--fainter)">The report and alert plans are not on sale from this page while the sample is being rebuilt. Checking your ZIP is free and unaffected.</p>
 
   <div id="site-foot" style="margin-top:36px;border-top:1px solid var(--hairline);padding-top:16px;font-size:12px;color:var(--fainter)">
     © 2026 ShouldISellYet.com · operated by Yayday LLC ·
@@ -358,12 +395,58 @@ const SAMPLE = { zip: "20906", state: "MD", val: 415000, bal: 268000 };
 
   MARKET.setMeta(meta);
   d = MARKET.applyStrong(d);
-  const m = d.m, h = d.h, strong = d.l === "strong";
+
+  // ————— FIGURES_KILL_SWITCH — the third page, now wired —————
+  //
+  // pipeline/figures_switch.py named this page as one of the two surfaces the
+  // switch could NOT reach: "web/report.html and web/my-report.html compute
+  // `val / (1 + m.spy)` and print a dollar figure. Neither file references
+  // this switch." That was an honest note about a real gap and this closes
+  // this half of it.
+  //
+  // NO FOURTH COPY OF THE FLAG. The other renderers keep a `FIGURES_OFF`
+  // literal because a build-time Python constant cannot reach client code and
+  // the sync test pins the three together. This page is not a fourth renderer
+  // — it loads market-render.js, which already carries a pinned copy, so it
+  // ASKS. A hand-typed literal here would be the copy that gets forgotten on
+  // the day somebody flips the switch, which is precisely the failure the
+  // three-way pin exists to prevent.
+  //
+  // WITHHOLDING AT THE RECORD, NOT AT EACH SINK. `m` and `h` are the two
+  // vendor-owned halves of a record, and every block below is already written
+  // to handle their absence: ~17,874 ZIPs have no metrics and ~9% have no
+  // history, so the withheld path is the path that runs on most of the
+  // country every day rather than a branch nobody has executed. Gating each
+  // sink separately would mean gating the peak callout, the from-peak
+  // percentage, the 12- and 3-month changes, the days-on-market chart, the
+  // "cleared fastest in March" line, the year-ago dollar figure and the
+  // stress-test row one at a time — eight chances to miss one, and the
+  // seasonality line has no numeral in it at all, so it is exactly the one
+  // that would be missed.
+  //
+  // The reading word, the headline and the danger-line disclosures are not
+  // touched here. They are ours, and the whole point of the switch is that
+  // they survive it.
+  const SHOWS_FIGURES = MARKET.showsFigures();
+  const m = SHOWS_FIGURES ? d.m : {}, h = SHOWS_FIGURES ? d.h : null,
+        strong = d.l === "strong";
+  if (!SHOWS_FIGURES) d = Object.assign({}, d, {m: m, h: h});
   let y12v = null;   // 12-months-ago point on the INDEXED series — the stress row reuses it
   const $ = id => document.getElementById(id);
 
-  // 01 · the four dials, with their methodology disclosures
-  $("metrics").innerHTML = MARKET.renderMetrics(MARKET.buildMetricRows(d, strong), SAMPLE.zip);
+  // 01 · the market dials, with their methodology disclosures. ("four" was the
+  // v1 gauge count; a current reading has three, and renderMetrics decides how
+  // many there are — this comment does not.)
+  //
+  // WITH FIGURES WITHHELD, renderMetrics returns an empty string and this
+  // section would silently become a heading over nothing. A reader is owed the
+  // reason, so the section states its own condition instead. The wording is
+  // figures_switch.WITHHELD_LINE verbatim — one sentence, defined in the
+  // module that owns the decision, so the Python surfaces and this page cannot
+  // say two different things about the same withholding.
+  $("metrics").innerHTML = SHOWS_FIGURES
+    ? MARKET.renderMetrics(MARKET.buildMetricRows(d, strong), SAMPLE.zip)
+    : '<p class="subt">Market figures are not being shown for this reading.</p>';
 
   // 01b · independent listing-feed cross-check
   MARKET.renderCrossCheck(d);   // writes into #xcheck itself

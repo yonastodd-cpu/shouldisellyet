@@ -28,6 +28,23 @@ import { rateAllowed } from "../_shared/ratelimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+// ————— the velocity switch —————
+// Mirrors pipeline/velocity_switch.VELOCITY_ENABLED; read that module for why
+// this is a flag and not a `source=eq.…` predicate on the query below. Short
+// version: zip_velocity is frozen vendor-derived output, upsert_velocity.py
+// writes no `source` so rebuilt rows would inherit the column default and a
+// source filter would look fixed while serving nothing.
+//
+// A literal, not Deno.env: an env read makes the deployed posture invisible in
+// the repo, and this is the one file where "is it off in production?" has to
+// be answerable from the source. Flipping it means flipping the mirrors in the
+// same change — pipeline/test_velocity_switch.py fails until they agree.
+//
+// While false the query below is NOT deleted, only skipped: the table, its
+// index and this whole path stay intact for the rebuild, and nothing stored is
+// read, written or removed (LEGAL_HOLD.md).
+const VELOCITY_ENABLED = false;
+
 // CORS restricted to the site origin (2026-08-08): the wildcard predated the
 // hardening pass. STATIC on purpose — a per-request reflected origin would
 // need request-scoped headers, and mutating a module-level object is racy
@@ -81,17 +98,26 @@ Deno.serve(async (req) => {
       // velocity fields. Absent rows (table not yet seeded, or an unscored
       // ZIP) yield null and the report renders its "computed on the next data
       // refresh" note — a missing number is shown as missing, never invented.
+      //
+      // The whole read sits behind VELOCITY_ENABLED. Guarding the FETCH rather
+      // than the response field is the point: a filter applied after the read
+      // still pulls the rows across the wire and into this isolate's memory,
+      // and "we fetched it but didn't return it" is not a thing worth having
+      // to explain. `velocity` stays in the response as null, which is a shape
+      // the report already handles for every unscored ZIP.
       let velocity = null;
-      try {
-        const vr = await fetch(
-          `${SUPABASE_URL}/rest/v1/zip_velocity?select=period,payload&zip=eq.${s.zip}&limit=1`,
-          { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
-        );
-        const vrows = vr.ok ? await vr.json() : [];
-        if (Array.isArray(vrows) && vrows.length) {
-          velocity = { period: vrows[0].period, ...vrows[0].payload };
-        }
-      } catch (_e) { /* velocity is additive; the report must not fail on it */ }
+      if (VELOCITY_ENABLED) {
+        try {
+          const vr = await fetch(
+            `${SUPABASE_URL}/rest/v1/zip_velocity?select=period,payload&zip=eq.${s.zip}&limit=1`,
+            { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
+          );
+          const vrows = vr.ok ? await vr.json() : [];
+          if (Array.isArray(vrows) && vrows.length) {
+            velocity = { period: vrows[0].period, ...vrows[0].payload };
+          }
+        } catch (_e) { /* velocity is additive; the report must not fail on it */ }
+      }
 
       // purchased_at powers the report page's 30-day upgrade-credit countdown
       return json({ ok: true, plan: s.plan, zip: s.zip, status: s.status,
