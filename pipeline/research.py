@@ -175,6 +175,26 @@ def figures_withheld_line():
     return FIGURES_WITHHELD
 
 
+RESEARCH_INDEXABLE = True
+
+
+def research_indexable():
+    """May the research pages be offered to crawlers?
+
+    Separate from PAUSED, which governs the per-ZIP pages, and separate from
+    publishes_figures(), which governs numbers. These pages carry real
+    narrative — how the index is built, what the seam is, why figures are
+    withheld — and that content is honest whether or not a figure sits beside
+    it.
+
+    Set true 2026-08-25 after the clearance gates passed. Worth knowing when
+    reviewing it: with figures dark the research HUB is about 200 words, which
+    is thin for a page competing in search. Turning it off again is this
+    constant, not an edit.
+    """
+    return RESEARCH_INDEXABLE
+
+
 def publishes_figures():
     """May ANY research figure be published?
 

@@ -843,7 +843,7 @@ def page(title, desc, canonical, body, og_image="", jsonld=""):
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="/track.js" defer></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-{PAUSE.robots_meta()}
+{"" if RS.research_indexable() else PAUSE.robots_meta()}
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(desc)}">
 <link rel="canonical" href="{canonical}">
