@@ -13,6 +13,7 @@ Batched: ~26k rows at 500/request ≈ 54 requests. `resolution=merge-duplicates`
 makes each batch an upsert on the zip primary key.
 """
 
+import velocity_switch as VELOCITY
 import argparse
 import json
 import os
@@ -38,6 +39,24 @@ def main() -> int:
     src = Path(args.src)
     if not src.exists():
         print(f"velocity upsert: {src} missing (velocity.py not run?) — nothing to do")
+        return 0
+
+    # VELOCITY_ENABLED gates the WRITER too, not only the readers. Two reasons.
+    #
+    # The obvious one: while the panel is suppressed there is nothing for fresh
+    # rows to feed, so writing them is work that only creates exposure.
+    #
+    # The one that would have bitten: this function writes NO `source` key, and
+    # schema-v34 declares `source text not null default 'redfin'`. Every row it
+    # writes therefore inherits the OUTGOING vendor's tag — so a later filter of
+    # `source=eq.rentcast` would serve nothing forever while looking, in review
+    # and in diff, exactly like a fix. Re-enabling this must set the source
+    # explicitly; the flag holds the door until it does.
+    if not VELOCITY.shows_velocity():
+        print("velocity upsert: skipped — VELOCITY_ENABLED is off pending a "
+              "rebuild on the current vendor's basis. Set an explicit `source` "
+              "on these rows before re-enabling (schema-v34 defaults to the "
+              "prior vendor).")
         return 0
 
     data = json.loads(src.read_text())
