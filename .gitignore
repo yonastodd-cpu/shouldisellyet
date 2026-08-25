@@ -131,3 +131,9 @@ docs/vendor-terms
 # from the store alone, with the files unreachable.
 pipeline/research/levels-*.json
 pipeline/research/streaks.json
+
+# Counsel drafts and the dated verification behind them. Same reason as
+# LICENSE_AUDIT.md and DERIVED_USE_INVENTORY.md: this repository is public and
+# these describe open questions, not settled ones.
+SUPPLEMENT_2_DRAFT.md
+ARCHIVE_VERIFICATION_*.md

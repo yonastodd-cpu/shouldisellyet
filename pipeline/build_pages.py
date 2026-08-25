@@ -297,8 +297,7 @@ NAVBAR = """<nav class="top">
 # published RentCast-derived readings under "Data provided by Redfin", two
 # weeks after Redfin ingestion stopped — a false attribution to a vendor whose
 # data the site had just withdrawn, on the one line a reader would check.
-CITE_V1 = ('Data provided by <a href="https://www.redfin.com" target="_blank" '
-           'rel="noopener">Redfin</a>, a national real estate brokerage')
+CITE_V1 = ''   # withdrawn 2026-08-25: no prior-vendor value is published, so the citation has nothing to attach to
 # THE VENDOR IS NOT NAMED HERE. The licence bars use of the mark "in
 # advertising, publicity or any other commercial manner" without written
 # consent, and asks for no attribution in return — so naming it on 22,874 ZIP
@@ -1406,7 +1405,7 @@ def main():
         live = sorted(live_zips)
         urls += [f"{SITE}/zip/{z}/" for z in live]
         held = len(eligible) - len(live) + len(by_state)
-        print(f"redfin sunset: {held:,} ZIP/state URLs held out of the "
+        print(f"prior-vendor sunset: {held:,} ZIP/state URLs held out of the "
               f"sitemap (pages stay live and noindexed)")
         if live:
             print(f"phase 4: {len(live):,} released ZIP URLs re-added to the sitemap")

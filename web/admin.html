@@ -1941,7 +1941,7 @@ RENDER.health = async function () {
 
   const rows = [
     // [name, latest, staleDays, warnAt, detail]
-    ["Redfin hub (verdict data)", meta.period, daysSince(monthEnd(meta.period)), 45,
+    ["Prior vendor hub (retired)", meta.period, daysSince(monthEnd(meta.period)), 45,
      "monthly release; the 45-day line is the stall alarm"],
     ["Realtor.com cross-check", rdcP || "—", rdcP ? daysSince(monthEnd(rdcP)) : null, 45,
      "sampled from one covered ZIP's x.p"],
