@@ -1892,7 +1892,10 @@ def insert_burst_task(now_rate, prior_rate, rate_period,
         "caption": (f"Mortgage rates just moved {delta:+.2f} points in a week "
                     f"({prior_rate:.2f}% → {now_rate:.2f}%). A move that size "
                     f"changes the monthly math for buyers — which changes the "
-                    f"market sellers are selling into. Free monthly checkup "
+                    # Option (a) of the free-alerts reconciliation: free is a
+                    # one-time reading, so no marketing copy may promise a
+                    # free recurring product.
+                    f"market sellers are selling into. Free reading "
                     f"for any ZIP: {{utm_url}}"),
     }
     tripped = guard(cand)

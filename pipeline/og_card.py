@@ -128,7 +128,10 @@ def render_card(zip_code, city, state, level, stat_line, data_month, out_path):
     d.line([(pad, 512), (W - pad, 512)], fill=HAIRLINE, width=2)
     f_foot = _font("IBMPlexMono-Bold.ttf", 26)
     f_foot_r = _font("IBMPlexMono-Regular.ttf", 24)
-    explain = "A free monthly market checkup for any ZIP"
+    # Free-alerts reconciliation, option (a), 2026-08-26: free = a one-time
+    # reading. "A free MONTHLY market checkup" promised a recurring free
+    # product the site sells at $3.99/mo, on every share card.
+    explain = "A free market reading for any U.S. ZIP"
     d.text((pad, 542), explain, font=f_foot, fill=NAVY)
     d.text((pad, 578), "shouldisellyet.com", font=f_foot_r, fill=MUTED)
     if data_month and data_month.strip():

@@ -970,10 +970,13 @@ def markets_index(states, meta, live=None, total=None, as_of=""):
     unpaused = PAUSE.shows_data()
     title = ("Browse housing markets by state — ShouldISellYet" if not unpaused
              else "Browse housing market readings by state — ShouldISellYet")
-    desc = (f"Per-ZIP housing market pages for {total:,} U.S. ZIP codes. "
-            f"{PAUSE.NOTICE_TITLE}." if not unpaused else
-            f"HOLD / WATCH / ACT readings for {live:,} of {total:,} U.S. ZIP "
-            f"codes, computed from licensed market statistics.")
+    # Count-free by decision (2026-08-26): exact coverage counts live on
+    # /methodology.html only, and the crawl gate flags a figure here — it
+    # caught this very line's "{total:,}" on the first run after the change.
+    desc = (f"Per-ZIP housing market pages for every U.S. ZIP with a standing "
+            f"page. {PAUSE.NOTICE_TITLE}." if not unpaused else
+            "HOLD / WATCH / ACT readings across thousands of U.S. ZIP codes, "
+            "computed from licensed market statistics.")
     url = f"{SITE}/zip/"
     ld = json.dumps({"@context":"https://schema.org","@graph":[
         {"@type":"WebPage","@id":url,"url":url,"name":title,"description":desc,"inLanguage":"en-US",
