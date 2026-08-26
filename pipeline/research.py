@@ -175,7 +175,7 @@ def figures_withheld_line():
     return FIGURES_WITHHELD
 
 
-RESEARCH_INDEXABLE = True
+RESEARCH_INDEXABLE = False
 
 
 def research_indexable():
