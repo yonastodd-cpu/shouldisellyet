@@ -297,9 +297,17 @@ Deno.serve(async (req) => {
     //    Reason VALUES are figures — the vendor's measurement our rule fired
     //    on — so the kill switch strips them to bare codes, exactly as
     //    figures_switch.strip() does for the static records.
-    const reads = await rest(
-      `zip_readings?zip=eq.${zip}&select=level,score,reasons,basis&limit=1`,
-    );
+    //
+    //    Guarded in its own try: this table is the NEWEST dependency
+    //    (schema-v41), and an optional field must degrade to absent — a
+    //    function deployed ahead of its migration must not take the whole
+    //    reading down with it. It did, for a few minutes, on 2026-08-26.
+    let reads: Record<string, unknown>[] = [];
+    try {
+      reads = await rest(
+        `zip_readings?zip=eq.${zip}&select=level,score,reasons,basis&limit=1`,
+      );
+    } catch (_e) { /* pre-v41 database — no on-demand readings yet */ }
     const reading = reads.length
       ? {
         l: reads[0].level,
