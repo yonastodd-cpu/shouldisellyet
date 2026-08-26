@@ -482,6 +482,11 @@ jobs:
           python3 pipeline/provision_readings.py --no-readings
           ./scripts/smoke-released.sh
 
+      # GATE C — static, no network, no credentials. Runs before the crawl
+      # because it needs nothing served and a failure here is cheap to read.
+      - name: Gate C — no unguarded read of a prior-vendor table
+        run: python3 scripts/gate-db-tripwire.py
+
       - name: Crawl gate — every published URL
         run: |
           # Scope is derived from the built tree and the sitemaps, so this
@@ -494,6 +499,22 @@ jobs:
           python3 -m http.server 5177 --directory web >/dev/null 2>&1 &
           sleep 2
           node scripts/crawl-gate.mjs http://localhost:5177 --sample 60
+
+      # GATE B — the paid and authenticated surfaces, which the crawl gate
+      # structurally cannot reach: /my-report.html is session-gated and never
+      # crawled, and the figures at issue enter the DOM only when a renderer
+      # runs. Both blocking defects of 2026-08-25 lived exactly there.
+      - name: Gate B — no prior-vendor value on a paid surface
+        run: |
+          # Starts its own server rather than reusing the one the crawl step
+          # backgrounded. Backgrounded processes usually survive between steps
+          # on this runner, but "usually" is not a property to hang a gate on —
+          # and the failure mode would be this gate reporting unreachable
+          # rather than clean, which is at least loud, but still a gate that
+          # stopped checking.
+          python3 -m http.server 5178 --directory web >/dev/null 2>&1 &
+          sleep 2
+          python3 scripts/gate-paid-surfaces.py http://localhost:5178
 
   deploy:
     needs: refresh

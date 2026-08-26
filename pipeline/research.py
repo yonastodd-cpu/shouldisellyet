@@ -175,6 +175,20 @@ def figures_withheld_line():
     return FIGURES_WITHHELD
 
 
+# FLIPS TRUE THE DAY THE FIRST CURRENT-BASIS RESEARCH MONTH PUBLISHES.
+# See Prompt T / the RESEARCH_RELAUNCH plan.
+#
+# Held false 2026-08-26. Not a judgement about the pages: their narrative is
+# honest and was never the problem. With figures dark the research hub is about
+# 200 words, which is thin for a page competing in search, and the earlier
+# decision to index assumed a truncated v2 series rather than a
+# withheld-figures notice.
+#
+# The condition for flipping it is specific, so nobody has to re-litigate it:
+# a research month computed on the CURRENT vendor's basis exists and publishes.
+# Until then every month on record is prior-vendor (history.json's sources map
+# is 99 tracker-v1 + 74 hub-v2 across all 173), which is why publishes_figures()
+# is false and why there is nothing for a crawler to find here worth finding.
 RESEARCH_INDEXABLE = False
 
 
