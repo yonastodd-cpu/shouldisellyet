@@ -670,6 +670,19 @@ for (const url of toCrawl) {
       offsite.push({ url, landed });
       continue;
     }
+    // A SAME-ORIGIN client-side redirect (the /go/ marketing stubs, the
+    // /methodology/ directory alias) means the document on screen lives at
+    // the LANDED path, and the location-scoped allowances — vendor naming on
+    // /methodology.html, historical phrasing on /research/ — must be judged
+    // there. Judged at the stub's URL, a production run flagged five /go/
+    // stubs for the research page's own sanctioned provenance note and
+    // /methodology/ for naming the vendor on the methodology page
+    // (2026-08-26). The stub itself is 806 bytes of noindex redirect; the
+    // content belongs to where it landed.
+    var judgedUrl = landed.slice(BASE.length).split(/[?#]/)[0] || "/";
+    if (judgedUrl !== url && !judgedUrl.endsWith("/") && !judgedUrl.includes(".")) {
+      judgedUrl += "/";
+    }
   } catch (e) {
     flag(url, "did not load", String(e).slice(0, 80));
     continue;
@@ -682,8 +695,22 @@ for (const url of toCrawl) {
       .map((m) => `${m.getAttribute("name") || m.getAttribute("property")}=${m.content}`),
     robots: (document.querySelector('meta[name="robots"]') || {}).content || "",
   }));
-  checkDoc(url, { ...doc, status });
+  checkDoc(judgedUrl, { ...doc, status });
   crawled++;
+}
+
+// A page reachable both directly and through redirect stubs is checked once
+// per route; identical findings from the same document are one finding.
+{
+  const seen = new Set();
+  const unique = FINDINGS.filter((f) => {
+    const k = `${f.url} ${f.what} ${f.detail}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  FINDINGS.length = 0;
+  FINDINGS.push(...unique);
 }
 await browser.close();
 
