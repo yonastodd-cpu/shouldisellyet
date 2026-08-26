@@ -203,6 +203,7 @@ table.grid tr:hover td{background:#faf9f5}
     </div>
     <nav class="side" id="nav">
       <a href="#overview">Overview</a>
+      <a href="#demand">Demand</a>
       <a href="#funnel">Funnel</a>
       <a href="#customers">Customers</a>
       <a href="#map">Map</a>
@@ -241,6 +242,15 @@ table.grid tr:hover td{background:#faf9f5}
         <table class="grid"><thead><tr><th>ZIP</th><th>State</th><th class="num">Checks</th><th>Verdict</th></tr></thead>
         <tbody id="ov-topzips"><tr><td colspan="4" style="color:var(--fainter)">Loading…</td></tr></tbody></table>
         <div class="note">Demand signal: which markets people are actually worried about. Verdicts join client-side from the site's own published data.</div>
+      </div>
+    </section>
+    <section id="sec-demand">
+      <div class="cards" id="dm-cards"></div>
+      <div class="panel">
+        <h2>Top looked-up notice ZIPs</h2>
+        <table class="grid"><thead><tr><th>ZIP</th><th>State</th><th class="num">Lookups</th><th class="num">→ Purchase</th><th class="num">→ Notify</th></tr></thead>
+        <tbody id="dm-zips"><tr><td colspan="5" style="color:var(--fainter)">Loading…</td></tr></tbody></table>
+        <div class="note">Lookups on ZIPs that showed the rebuilding notice — the demand the on-demand pull path exists to serve. "→ Purchase" and "→ Notify" count lookups the same tab followed with a purchase click or a notify-me capture (zip_lookups, schema-v41; DNT-suppressed like all counting, so treat as floors). Pull failures land here too as coverage-gap data points.</div>
       </div>
     </section>
     <section id="sec-funnel">
@@ -624,7 +634,7 @@ let DAYS = 30;
 // Sections the toggle applies to. Marketing is deliberately absent: its
 // windows are structural — this marketing week, this month, a fixed 30-day
 // leaderboard — so a 7/30 switch there would be a control that does nothing.
-const RANGE_SECTIONS = new Set(["overview", "funnel"]);
+const RANGE_SECTIONS = new Set(["overview", "demand", "funnel"]);
 document.querySelectorAll("#range button").forEach((b) =>
   b.addEventListener("click", () => {
     DAYS = +b.dataset.days;
@@ -634,11 +644,12 @@ document.querySelectorAll("#range button").forEach((b) =>
 
 // Filled in by each section's task; falsy entries render their placeholder.
 const RENDER = {
-  overview: null, funnel: null, customers: null, map: null,
+  overview: null, demand: null, funnel: null, customers: null, map: null,
   requests: null, agents: null, markets: null, marketing: null, health: null,
 };
 const TITLES = {
-  overview: "Overview", funnel: "Funnel", customers: "Customers", map: "Map",
+  overview: "Overview", demand: "Demand", funnel: "Funnel",
+  customers: "Customers", map: "Map",
   requests: "Requests", agents: "Agents", markets: "Markets to Market",
   marketing: "Marketing", health: "Data Health",
 };
@@ -751,6 +762,43 @@ RENDER.overview = async function () {
       const stEl = $("tz-st-" + r.zip), vEl = $("tz-v-" + r.zip);
       if (stEl) stEl.textContent = v?.st || "—";
       if (vEl) vEl.innerHTML = (v && VTAG[v.level]) || '<span class="tag">no page</span>';
+    });
+  }
+};
+
+// ————— Demand (schema-v41: zip_lookups + ondemand_pulls) —————
+RENDER.demand = async function () {
+  const d = await rpc("admin_demand", { days: DAYS });
+  const t = d.totals || {};
+  const lookups = (t.reading_shown || 0) + (t.notice_shown || 0) + (t.invalid_zip || 0);
+  const pct = (n, base) => base ? (100 * n / base).toFixed(1) + "%" : "—";
+  const cards = [
+    ["Lookups", fmt(lookups),
+      fmt(t.reading_shown) + " reading · " + fmt(t.notice_shown) + " notice · " + fmt(t.invalid_zip) + " uncovered"],
+    ["Lookup → purchase", pct(d.followed_purchase || 0, lookups),
+      fmt(d.followed_purchase) + " followed in-session"],
+    ["Lookup → notify", pct(d.followed_notify || 0, lookups),
+      fmt(d.followed_notify) + " captures in-session"],
+    ["Pull failures", fmt(t.pull_failed), "coverage gaps — vendor can't score these yet"],
+    ["At-capacity turnaways", fmt(t.pull_capacity), "raise ONDEMAND_MONTHLY_CEILING if >0"],
+    ["Vendor pulls this month", fmt(d.pulls_this_month),
+      fmt(d.pulls_ok_this_month) + " succeeded · every row is one paid call"],
+  ];
+  $("dm-cards").innerHTML = cards.map(([k, v, s]) =>
+    `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+  const zips = d.top_notice_zips || [];
+  if (!zips.length) {
+    $("dm-zips").innerHTML = '<tr><td colspan="5" style="color:var(--fainter)">No notice-page lookups in this window.</td></tr>';
+  } else {
+    $("dm-zips").innerHTML = zips.map((r) =>
+      `<tr><td class="mono"><a href="/zip/${r.zip}/" target="_blank" rel="noopener">${r.zip}</a></td>
+       <td class="mono" id="dm-st-${r.zip}">…</td><td class="num">${fmt(r.lookups)}</td>
+       <td class="num">${fmt(r.purchases)}</td><td class="num">${fmt(r.notifies)}</td></tr>`).join("");
+    zips.forEach(async (r) => {
+      const v = await verdictFor(r.zip);
+      const el = $("dm-st-" + r.zip);
+      if (el) el.textContent = v?.st || "—";
     });
   }
 };
