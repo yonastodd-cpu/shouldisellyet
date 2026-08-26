@@ -66,6 +66,10 @@ FIXTURES = {
     "zip": "20601",
     "release": [{"zip": "20601", "basis": "active listings",
                  "released_at": "2026-08-20T00:00:00Z"}],
+    # No on-demand reading for this ZIP — the tranche case, where the word
+    # lives in the static record and the endpoint's `reading` stays null.
+    # test_ondemand_pull_fn.py owns the pulled-ZIP behaviour.
+    "readings": [],
     "stats": [{"zip": "20601", "as_of_month": "2026-08",
                "retrieved_at": "2026-08-22T11:04:09Z",
                "list_median_price": 449900, "list_median_ppsf": 210.5,
@@ -163,6 +167,7 @@ try {
     queried.push(u);
     const body =
       u.includes("rate_limit_hit") ? true :
+      u.includes("zip_readings") ? (FX.readings || []) :
       u.includes("zip_release") ? FX.release :
       u.includes("market_history") ? FX.history :
       u.includes("market_stats") ? FX.stats :

@@ -286,10 +286,35 @@ Deno.serve(async (req) => {
         `active_dom,total_listings&order=as_of_month.asc&limit=12`,
     );
 
+    // 4. The reading word, for ZIPs scored at purchase time. Tranche ZIPs
+    //    carry their word in the static record and have no row here — for
+    //    them `reading` stays null and nothing changes. An on-demand ZIP's
+    //    word lives in zip_readings (schema-v41, named columns: our own
+    //    level/score/reason codes from verdict-methodology-v2, never the
+    //    payload), which is what lets a pulled ZIP render before the next
+    //    deploy provisions its static record.
+    //
+    //    Reason VALUES are figures — the vendor's measurement our rule fired
+    //    on — so the kill switch strips them to bare codes, exactly as
+    //    figures_switch.strip() does for the static records.
+    const reads = await rest(
+      `zip_readings?zip=eq.${zip}&select=level,score,reasons,basis&limit=1`,
+    );
+    const reading = reads.length
+      ? {
+        l: reads[0].level,
+        s: reads[0].score,
+        r: FIGURES_OFF
+          ? (reads[0].reasons ?? []).map((x: unknown[]) => [x[0]])
+          : reads[0].reasons ?? [],
+        b: reads[0].basis,
+      }
+      : null;
+
     return json({
       zip: s.zip,
       state: null,
-      reading: null,          // filled by the reading engine once wired
+      reading,
       asOf: s.as_of_month,
       lastUpdated: s.retrieved_at,
       // EXACTLY WHAT A PAGE RENDERS, AND NOTHING ELSE.

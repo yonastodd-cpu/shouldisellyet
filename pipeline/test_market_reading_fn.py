@@ -67,6 +67,11 @@ def test_every_selected_field_is_one_we_intend_to_publish():
         "list_median_price", "list_median_ppsf", "active_dom",
         "total_listings", "new_listings", "history_months",
         "median_list_price",   # market_history's column name for the same idea
+        # zip_readings (schema-v41): our OWN engine output for on-demand ZIPs
+        # — level/score/reason codes from verdict-methodology-v2, not vendor
+        # measurements. Deliberately published: it is the reading word the
+        # page exists to show.
+        "level", "score", "reasons",
     }
     for s in SELECTS:
         for field in s.split(","):
