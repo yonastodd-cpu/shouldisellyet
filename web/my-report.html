@@ -1037,12 +1037,24 @@ async function lookup(zip){
     // carries our reading and no vendor measurement — see index.html's
     // lookup() and the endpoint's own header for why the serving model is the
     // thing that matters here rather than the data.
-    if (rec && rec.l) {
+    // Also asked when the record has NO reading word: an on-demand pull may
+    // have scored this ZIP since the last deploy (a buyer's checkout pulls
+    // data before payment — see ondemand-pull's header), in which case the
+    // endpoint carries the word itself and the merge makes the record whole.
+    // Without this, the buyer the pull just happened FOR would land here and
+    // be told there is no reading.
+    if (rec) {
       try {
         const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip));
         if (f.ok) {
           const d = await f.json();
           if (d && d.dataStatus === "ok") {
+            if (!rec.l && d.reading && d.reading.l) {
+              rec.l = d.reading.l;
+              rec.s = d.reading.s;
+              rec.r = d.reading.r || [];
+              rec.b = d.reading.b;
+            }
             // The reading's own vintage — the endpoint returns both. Every
             // date this page prints comes from here, never from meta.json's
             // site-wide "period" (frozen at the last v1 release).
@@ -1477,7 +1489,10 @@ async function generate(noScroll){
   }
   $("zip-mismatch").style.display = "none";
   const d = applyStrong(await lookup(zip));
-  if (!d) { err.textContent = "There's no live reading for " + zip + " yet — that page is still being rebuilt. Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
+  // No record, OR a record with no reading word (a notice ZIP whose
+  // on-demand reading hasn't landed): both mean nothing renderable. The
+  // second case used to fall through into KINDS[undefined].
+  if (!d || !d.l || !KINDS[d.l]) { err.textContent = "There's no live reading for " + zip + " yet — that page is still being rebuilt. Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
 
   // Home value: the user's number or nothing. The ZIP median is real market
   // data and still powers the market sections (02's base line, buyer math),

@@ -128,6 +128,28 @@ Deno.serve(async (req) => {
       } catch (_e) { /* baseline stays unknown */ }
       entry = { metric, direction: "escalates", threshold: 0, crossed: false, baseline };
     }
+
+    // ————— baselineBasis, stamped at write time —————
+    // The durable fix check_watches.py's record_baseline_basis() asks for:
+    // the baseline median this watch scales from was read off the ZIP's
+    // CURRENT published reading, so the basis it was taken on is knowable
+    // exactly once — now. Stamp it from zip_release (the server-side release
+    // allowlist, schema-v36), which for both tranche and on-demand ZIPs says
+    // 'active listings' — the asking-price basis every RentCast-derived
+    // number carries. An unreleased ZIP (or a lookup failure) stamps
+    // nothing: an unstamped watch routes to check_watches' rebaseline path,
+    // which is the safe default, never to a cross-basis scale.
+    if (!clearing) {
+      try {
+        const br = await fetch(
+          `${SUPABASE_URL}/rest/v1/zip_release?select=basis&zip=eq.${sub.zip}&limit=1`,
+          { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+        const brows = br.ok ? await br.json() : [];
+        if (Array.isArray(brows) && brows.length && brows[0].basis) {
+          entry.baselineBasis = brows[0].basis;
+        }
+      } catch (_e) { /* unstamped → rebaseline path; never guess a basis */ }
+    }
     const watches = clearing ? others : [...others, entry];
 
     const patch: Record<string, unknown> = { watches };

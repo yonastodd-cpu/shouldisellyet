@@ -464,6 +464,44 @@ async function go(){
     return fail("We don't cover " + a.zip + " yet, so we can't build a report for it. " +
                 "Please check the ZIP — or email support@shouldisellyet.com and we'll tell you when it's covered.", "pf-zip");
 
+  // ————— On-demand pull, BEFORE payment —————
+  // Mirrors pipeline/ondemand_switch.ONDEMAND_ENABLED (see that module);
+  // pipeline/test_ondemand_switch.py pins the copies together.
+  //
+  // The coverage check above only proves we HOLD a record for the ZIP, not
+  // that we hold DATA. This call proves the data: a ZIP already in the
+  // private store answers instantly at no cost; a notice ZIP triggers one
+  // fresh vendor pull, validated against the same quality floor the live
+  // pages use. Only ok:true lets the Stripe redirect below happen — which is
+  // the whole "FAIL never creates a charge" guarantee, because the charge IS
+  // the redirect.
+  //
+  // A NETWORK failure to reach the function fails OPEN, same philosophy as
+  // the coverage check: a fetch blip must never block a paying customer with
+  // a live ZIP. An explicit ok:false is a real answer and fails CLOSED.
+  const ONDEMAND_ENABLED = true;
+  if (ONDEMAND_ENABLED) {
+    cta.disabled = true; cta.textContent = "Checking market data for " + a.zip + "…";
+    let pull = null;
+    try {
+      const pr = await fetch(SUPABASE_URL + "/functions/v1/ondemand-pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zip: a.zip })
+      });
+      if (pr.ok) pull = await pr.json();
+    } catch (e) { /* unreachable → fail open; the store-backed ZIPs still work */ }
+    if (pull && pull.ok === false && pull.reason !== "disabled") {
+      cta.disabled = false; cta.textContent = "Continue to secure payment →";
+      if (pull.reason === "no_data")
+        return fail("Our data provider doesn't yet have enough listing data to score " + a.zip +
+                    " responsibly, so we can't sell you this report — and you haven't been charged. " +
+                    "Check the ZIP, or use the notify option on the homepage and we'll email you when it's ready.", "pf-zip");
+      return fail("We're temporarily at capacity for pulling new ZIPs, so we can't start this report right now. " +
+                  "You haven't been charged. Please try again soon — or use the notify option on the homepage.", "pf-zip");
+    }
+  }
+
   hint.style.color = "";
   cta.disabled = true; cta.textContent = "Saving…";
   ADDRESS.save(a);   // mirror, so the report can prefill before the row syncs
@@ -509,6 +547,9 @@ async function go(){
   if (window.SISY) {
     SISY.track(plan === "report" ? "purchase_click_report" : "purchase_click_monitor",
                { zip: pfZip, plan: plan === "report" ? "report" : billing });
+    // Demand log: if this tab looked the ZIP up on the homepage first, mark
+    // that lookup as followed by a purchase click.
+    if (SISY.follow) SISY.follow(pfZip, "purchase");
   }
 
   // Warm the function success.html will poll the moment they come back. An

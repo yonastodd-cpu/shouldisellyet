@@ -34,11 +34,12 @@
             navigator.globalPrivacyControl === true;
 
   if (DNT) {
-    window.SISY = { track: function () {} };
+    window.SISY = { track: function () {}, demand: function () {}, follow: function () {} };
     return;
   }
 
   var FN = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/track";
+  var DEMAND_FN = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/demand";
 
   // First page_view of this browser session? sessionStorage can throw in
   // some private-browsing modes; treat that as "not new" rather than failing.
@@ -108,7 +109,52 @@
     } catch (e) {}
   }
 
-  window.SISY = { track: function (event, extra) { send(event, extra || {}); } };
+  // ————— Search-demand logging (which ZIPs people look up, and what came
+  // of it). Same rails and same posture as track(): fire-and-forget,
+  // DNT-suppressed above, no identifiers. The per-lookup UUID is random,
+  // lives in sessionStorage keyed by ZIP, and exists only so THIS tab can
+  // later mark its own lookup as followed by a purchase click or a
+  // notify-me capture — it names a lookup, never a person, and dies with
+  // the tab. See supabase/functions/demand/index.ts.
+  function demandIds() {
+    try { return JSON.parse(sessionStorage.getItem("sisy_dm") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function demandSend(payload) {
+    try {
+      fetch(DEMAND_FN, {
+        method: "POST",
+        keepalive: true,
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload),
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function demand(zip, outcome) {
+    if (!/^\d{5}$/.test(zip || "")) return;
+    var id;
+    try { id = crypto.randomUUID(); }
+    catch (e) {
+      id = "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, function () {
+        return (Math.random() * 16 | 0).toString(16);
+      });
+    }
+    try {
+      var ids = demandIds(); ids[zip] = id;
+      sessionStorage.setItem("sisy_dm", JSON.stringify(ids));
+    } catch (e) {}
+    demandSend({ op: "lookup", id: id, zip: zip, outcome: outcome });
+  }
+  function follow(zip, kind) {
+    var id = demandIds()[zip];
+    if (id) demandSend({ op: "follow", id: id, kind: kind });
+  }
+
+  window.SISY = {
+    track: function (event, extra) { send(event, extra || {}); },
+    demand: demand,
+    follow: follow,
+  };
 
   send("page_view", { ns: newSession });
 

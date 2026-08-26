@@ -814,6 +814,23 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
         <p id="v-sub"></p>
         <div id="v-metrics" style="display:flex;flex-direction:column;gap:14px"></div>
 
+        <!-- On-demand purchase path, notice branch only. A notice ZIP has no
+             reading YET — but the paid report can be built the moment someone
+             orders: subscribe.html calls the ondemand-pull function BEFORE
+             the Stripe handoff, and a buyer is only charged after fresh data
+             for their ZIP passes the same quality floor the live pages use.
+             Filled and shown by run()'s notice branch when ONDEMAND_ENABLED;
+             everywhere else it stays display:none and empty. -->
+        <div id="v-ondemand" style="display:none;margin:6px 0 2px;padding:16px 18px;border:1px solid var(--hairline,#e7e2d8);border-radius:10px;background:#fbfaf6">
+          <div style="font-weight:700;margin-bottom:4px">Don't want to wait?</div>
+          <p style="margin:0 0 12px;font-size:.95em;line-height:1.55;color:#5c6673">
+            Your full report is available now — we'll pull fresh market data
+            for <span id="od-zip" class="mono"></span> the moment you order.
+            If there isn't enough listing data to score it responsibly, you
+            won't be charged.</p>
+          <a class="vbtn vbtn-primary" id="cta-ondemand-report" data-track="purchase_click_report" href="subscribe.html?plan=report" style="display:inline-flex"><span>Get your full report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
+        </div>
+
         <!-- Masked report preview — rendered by renderPreview() in the same
              synchronous pass as the gauges, BEFORE the block is revealed, so
              it can never shift the verdict after paint. -->
@@ -877,12 +894,19 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </div>
 
 <div class="card waitcard" id="waitcard">
-      <div class="t">We don't cover <span id="wl-zip"></span> yet</div>
+      <div class="t" id="wl-title">We don't cover <span id="wl-zip"></span> yet</div>
       <!-- "Smaller markets report too few sales for a reliable reading" was
            false on the current engine: it reads statistics on homes currently
            LISTED, and never sees a closed sale. What is true is that some ZIPs
-           carry too little listing activity to measure. -->
-      <p>Some ZIPs carry too few active listings to measure reliably. Leave your email and we'll tell you the moment yours goes live.</p>
+           carry too little listing activity to measure.
+
+           TWO CONTEXTS, ONE CARD. The waitlist branch (no record at all)
+           keeps this default copy; the NOTICE branch reuses the card as its
+           notify-me capture with its own title/body, set by run(). Both go
+           through the same joinWaitlist() → signup path (plan=waitlist,
+           double-opt-in, honeypot, timing, Turnstile); only `source`
+           distinguishes them, which is what the demand report reads. -->
+      <p id="wl-body">Some ZIPs carry too few active listings to measure reliably. Leave your email and we'll tell you the moment yours goes live.</p>
       <form onsubmit="return joinWaitlist(event)">
         <input type="email" id="wl-email" placeholder="you@email.com" required>
         <!-- Honeypot: no human sees or fills this. Off-screen (not
@@ -1155,6 +1179,14 @@ const PAUSE_NOTICE_TITLE = "This reading is being refreshed";
 const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine. " +
   "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
 
+// ————— ON-DEMAND PULLS —————
+// Mirrors pipeline/ondemand_switch.ONDEMAND_ENABLED (the authoritative copy);
+// pipeline/test_ondemand_switch.py fails when the copies disagree. ON: the
+// notice branch shows a purchase CTA and the notice notify-me capture —
+// checkout pulls fresh data for the ZIP before any charge. OFF: notice ZIPs
+// are notice-only, exactly as before the switch existed.
+const ONDEMAND_ENABLED = true;
+
 // ————— FIGURES_KILL_SWITCH —————
 // Mirrors pipeline/figures_switch.FIGURES_OFF. Read that module for what the
 // switch is for; this is one of its three copies, and pipeline/
@@ -1279,12 +1311,25 @@ async function lookup(zip) {
     // A failure here is not a failure of the page: the reading still renders,
     // and the dials simply do not. That is the right degradation — the word is
     // the product, the figures are the evidence behind it.
-    if (rec && rec.l) {
+    // A record WITHOUT a reading word is also asked, because an on-demand
+    // pull may have scored this ZIP since the last deploy: the endpoint then
+    // carries the word itself (`reading`, from zip_readings) and the merge
+    // below makes the record whole. For a plain notice ZIP the endpoint
+    // answers pending_migration/insufficient_data, nothing merges, and the
+    // notice renders exactly as before.
+    if (rec) {
       try {
         const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip));
         if (f.ok) {
           const d = await f.json();
           if (d && d.dataStatus === "ok") {
+            if (!rec.l && d.reading && d.reading.l) {
+              rec.l = d.reading.l;
+              rec.s = d.reading.s;
+              rec.r = d.reading.r || [];
+              rec.b = d.reading.b;
+              if (d.asOf) rec.p = d.asOf;
+            }
             rec.m = apiMetrics(d.metrics);
             rec.h = apiHistory(d.priceHistory);
           }
@@ -2040,6 +2085,10 @@ let lastVerdict = null, reqSeq = 0;
 // server's <2s bot-timing check. A human reads the card before typing an
 // email; a bot that fires the moment the card exists does not.
 let waitcardShownAt = 0;
+// Which branch showed the capture card: "waitlist" (no record at all) or
+// "notice" (record, no published reading). Rides into subscribers.source so
+// the demand report can tell the two apart.
+let wlSource = "waitlist";
 
 // "20874 — Germantown, MD", degrading to "20874 — MD" then "20874".
 function setLocationLine(zip, st, city) {
@@ -2070,7 +2119,13 @@ async function run() {
   setTimeout(() => {
     show($("crunch"), false);
     if (!d) {
+      // Demand log: a ZIP we hold no record for at all.
+      if (window.SISY && SISY.demand) SISY.demand(zip, "invalid_zip");
       $("wl-zip").textContent = zip;
+      $("wl-title").innerHTML = 'We don’t cover <span class="mono">' + zip + "</span> yet";
+      $("wl-body").textContent = "Some ZIPs carry too few active listings to measure reliably. " +
+        "Leave your email and we'll tell you the moment yours goes live.";
+      wlSource = "waitlist";
       $("wl-ok").style.display = "none";
       $("waitcard").querySelector("form").style.display = "flex";
       $("waitcard").style.display = "block";
@@ -2108,6 +2163,9 @@ async function run() {
     // text use. KIND.tag is a fallback only: "strong" was tagged ACT here, so
     // the badge said ACT while the sentence beside it said STRONG.
     if (!hasReading) {
+      // Demand log: a real ZIP whose reading is not published yet — the
+      // population the on-demand funnel exists to measure and serve.
+      if (window.SISY && SISY.demand) SISY.demand(zip, "notice_shown");
       // Emptied, not covered: the badge, the gauges, the masked preview and
       // the unlock bar each carry a vendor-derived value of their own, and a
       // banner laid over them would leave every one of them in the DOM.
@@ -2119,11 +2177,40 @@ async function run() {
       $("v-head").style.background = "#f3f1ea";
       const pv = $("preview"); if (pv) pv.hidden = true;
       const su = $("sticky-unlock"); if (su) su.style.display = "none";
+      // The on-demand purchase path: full report now, data pulled at order
+      // time, validated before any charge. Behind the mirrored switch.
+      const od = $("v-ondemand");
+      if (od) {
+        if (ONDEMAND_ENABLED) {
+          $("od-zip").textContent = zip;
+          const a = $("cta-ondemand-report");
+          if (a) { a.href = "subscribe.html?plan=report&zip=" + zip; a.setAttribute("data-track-zip", zip); }
+          od.style.display = "block";
+        } else {
+          od.style.display = "none";
+        }
+      }
+      // Notify-me capture, same card and same guarded signup path as the
+      // waitlist — only the copy and the `source` tag differ.
+      $("wl-zip").textContent = zip;
+      $("wl-title").innerHTML = 'Want ' + '<span class="mono">' + zip + "</span>'s free reading?";
+      $("wl-body").textContent = "We'll email you when " + zip + "'s reading goes live. No spam — one email, when it's ready.";
+      wlSource = "notice";
+      $("wl-ok").style.display = "none";
+      $("waitcard").querySelector("form").style.display = "flex";
+      $("waitcard").style.display = "block";
+      waitcardShownAt = Date.now();
+      if (window.SISY_TS) SISY_TS.render();
       setLocationLine(zip, d.st || "", cachedCity(zip));
       show($("verdict"), true);
       $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    // Demand log: a live reading rendered.
+    if (window.SISY && SISY.demand) SISY.demand(zip, "reading_shown");
+    // A reading served means the on-demand block (a notice-branch surface)
+    // must not linger from a previous check in this tab.
+    const odOff = $("v-ondemand"); if (odOff) odOff.style.display = "none";
     // The word still comes from VERDICT_COPY — the same map the prose, the OG
     // card and the share text use — with ONE documented exception: "strong".
     // The map's word for it is STRONG, a fourth rating the methodology does
@@ -2218,11 +2305,13 @@ async function subMonitor(e) {
 async function joinWaitlist(e) {
   e.preventDefault();
   const email = $("wl-email").value, zip = $("zip").value;
-  const ok = await saveSignup({ email, zip, plan: "waitlist", source: "waitlist",
+  const ok = await saveSignup({ email, zip, plan: "waitlist", source: wlSource,
     website: $("wl-website").value,          // honeypot — humans send ""
     rendered_at: waitcardShownAt,            // stamped when the card appeared
     cf_token: window.SISY_TS ? SISY_TS.token(document.querySelector("#waitcard .ts-slot")) : "" });
   if (ok === true) {
+    // Demand log: this tab's lookup led to a notify-me capture.
+    if (window.SISY && SISY.follow) SISY.follow(zip, "notify");
     e.target.style.display = "none";
     $("wl-ok").style.display = "block";
   } else {
