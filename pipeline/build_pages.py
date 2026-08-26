@@ -467,7 +467,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         og_title = cand
         if len(cand) <= 70:
             break
-    og_desc = f"{stat}. Free monthly reading for any U.S. ZIP."
+    og_desc = f"{stat}. Free reading for any U.S. ZIP."  # option (a): free = one-time, never "monthly"
     og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
     # "Verdict" is gone from everything a visitor reads: it promised a ruling
     # this site does not issue. The internal level names, JSON keys and
@@ -809,7 +809,7 @@ def share_stub(z, e, place, meta, has_card):
             og_title = cand
             if len(cand) <= 70:
                 break
-        og_desc = f"{stat}. Free monthly reading for any U.S. ZIP."
+        og_desc = f"{stat}. Free reading for any U.S. ZIP."  # option (a): free = one-time, never "monthly"
         og_alt = f"{city}, {st} {z}: {vc['word']} — {vc['translation']}. {stat}"
     dest = f"/?from={z}&amp;utm_source=share"
     dest_js = f"/?from={z}&utm_source=share"
