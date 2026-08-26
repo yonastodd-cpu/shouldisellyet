@@ -1,0 +1,57 @@
+name: On-demand ZIP promotion (weekly sweep)
+
+# Folds ZIPs that were pulled at purchase time (public.zip_release rows with
+# tranche='ondemand', written by the ondemand-pull edge function) into
+# pipeline/tranches.json, so the next deploy builds their live pages, drops
+# noindex and adds them to the sitemap — through the same gates every tranche
+# page passes. See pipeline/promote_ondemand.py's header for why this is
+# weekly and batched rather than per sale (sitemap churn, one gated deploy).
+#
+# The commit deliberately does NOT carry [skip ci]: pipeline/** is in
+# update.yml's push paths, so pushing the ledger IS what triggers the rebuild
+# that publishes the pages. That is the point of the sweep, not a side effect.
+#
+# Spends no vendor quota: this only reads back what purchase-time pulls
+# already bought and stored.
+
+on:
+  schedule:
+    - cron: "0 11 * * 1"   # Mondays 11:00 UTC — before update.yml's 13:00 check
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ondemand-promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sweep pulled ZIPs into tranches.json
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 pipeline/promote_ondemand.py
+
+      - name: Commit the release ledger
+        run: |
+          git config user.name "sisy-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add pipeline/tranches.json || true
+          git diff --cached --quiet && { echo "no promotion this week"; exit 0; }
+          git commit -m "Promote on-demand ZIPs to live pages (weekly sweep)"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; exit 0; fi
+            echo "push rejected — rebasing onto latest main (attempt $i)"
+            git pull --rebase --autostash origin main || true
+            sleep $((RANDOM % 5 + 2))
+          done
+          echo "::error::could not push tranches.json after 5 attempts — the \
+          pulled ZIPs stay API-served but their static pages remain notices \
+          until this lands. Re-run the workflow."
+          exit 1

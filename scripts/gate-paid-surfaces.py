@@ -73,6 +73,48 @@ def main():
         print(f"  {'PASS' if not hits else 'FAIL'}  {path}" + (f"  {hits}" if hits else ""))
         findings += [f"{path}: {h}" for h in hits]
 
+    # ————— Notice pages render NO figures —————
+    # The on-demand path (schema-v41) made notice ZIPs purchasable, and the
+    # invariant that keeps that honest is structural: a page still showing
+    # the rebuilding notice must carry no market figure, because figures
+    # render only on pages whose ZIP has validated stored data behind it —
+    # a page has its reading, or it has its notice, never both. Checked on
+    # the BUILT pages, all of them: the notice title in the body must never
+    # co-occur with the metric-row markup or a rendered dollar amount.
+    # (Thousands-grouped amounts only — the $5.99 price CTA is not a market
+    # figure.) The marker is data_pause.NOTICE_TITLE, imported so a copy
+    # edit cannot silently reduce this check to scanning nothing.
+    # Skipped when web/zip has not been built; in CI it always has.
+    sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+    from data_pause import NOTICE_TITLE
+    zroot = os.path.join(ROOT, "web", "zip")
+    if os.path.isdir(zroot):
+        money = re.compile(r"\$\s?\d{1,3},\d{3}")
+        scanned = bad = 0
+        for name in sorted(os.listdir(zroot)):
+            page = os.path.join(zroot, name, "index.html")
+            if not os.path.isfile(page):
+                continue
+            html = open(page, encoding="utf-8", errors="replace").read()
+            if NOTICE_TITLE not in html:
+                continue
+            scanned += 1
+            if 'class="metric"' in html:
+                bad += 1
+                findings.append(f"/zip/{name}/: notice page carries metric markup")
+            else:
+                text = re.sub(r"\s+", " ", re.sub(
+                    r"<[^>]+>", " ", re.sub(
+                        r"<!--.*?-->|<script[^>]*>.*?</script>|<style[^>]*>.*?</style>",
+                        "", html, flags=re.S)))
+                if money.search(text):
+                    bad += 1
+                    findings.append(f"/zip/{name}/: notice page renders a dollar figure")
+        print(f"  {'PASS' if not bad else 'FAIL'}  notice pages figure-free "
+              f"({scanned:,} scanned)")
+    else:
+        print("  SKIP  web/zip not built — notice-page check runs post-build in CI")
+
     # The client renderers: the refusal must be unconditional, not flag-gated.
     mr = os.path.join(ROOT, "web", "market-render.js")
     if os.path.exists(mr):
