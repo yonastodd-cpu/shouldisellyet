@@ -140,13 +140,18 @@ const isMetro = (u) => /^\/metro\/[^/]+\//.test(u);
 // crawl set — they narrow an allowance to the surface that earned it.
 const METHODOLOGY = "/methodology.html";
 const isResearch = (u) => u.startsWith("/research/");
-// The three surfaces that state how much of the country is live. Named, not
-// derived: the assertion is that these specific pages agree with the build,
-// and a page dropping its coverage sentence is itself a finding.
-// /methodology.html hardcodes 5,000 / 22,874 the same way the other three do,
-// so it drifts the moment a tranche releases. Added 2026-08-22 after an audit
-// found it outside this list.
-const COVERAGE_PAGES = ["/", "/zip/", "/press.html", "/methodology.html"];
+// The one surface that may state exact site-wide coverage counts, and the
+// three that must NOT (2026-08-26 conversion decision: "5,000 of 22,874"
+// under the primary CTA told four of five visitors their ZIP was in the
+// unlucky pile before they typed it; those pages now say "thousands" and the
+// full-report-any-ZIP line instead). Both directions are asserted: the
+// methodology pair must agree with the build, and a pair REAPPEARING on the
+// count-free pages is itself a finding — otherwise the next hand edit quietly
+// resurrects the number this decision removed.
+// /methodology.html hardcodes 5,000 / 22,874, so it drifts the moment a
+// tranche releases — that drift landing as a finding is the point.
+const COVERAGE_PAGES = ["/methodology.html"];
+const COUNT_FREE_PAGES = ["/", "/zip/", "/press.html"];
 
 // Everything static, every non-templated URL, and a sample of the rest.
 const staticUrls = discovered.filter((u) => statics.has(u));
@@ -454,6 +459,12 @@ const COVERAGE_PAIR = /([\d][\d,]*)\s+of\s+(?:the\s+)?([\d][\d,]*)\s+(?:U\.S\.\s
 // Any ZIP figure at all on those pages, so a stray fourth number cannot ride
 // along beside a correct pair.
 const ANY_ZIP_COUNT = /\b([\d][\d,]{2,})\s*\+?\s+(?:U\.S\.\s+)?ZIP\s+(?:codes|markets)\b/gi;
+
+// 9. "home equity" is a report concept, not a marketing hook — see the
+// checkCopySweep entry. Allowed only on the two report surfaces, where the
+// number is genuinely computed from what the reader typed.
+const HOME_EQUITY = /\bhome equity\b/i;
+const HOME_EQUITY_ALLOWED = ["/my-report.html", "/report.html"];
 const num = (s) => Number(String(s).replace(/,/g, ""));
 
 function checkDoc(url, { html, text, title, metas, robots, status }) {
@@ -499,6 +510,21 @@ function checkDoc(url, { html, text, title, metas, robots, status }) {
 
   checkCopySweep(url, all);
   if (COVERAGE_PAGES.includes(url)) checkCoverage(url, all);
+  if (COUNT_FREE_PAGES.includes(url)) checkCountFree(url, all);
+}
+
+// The count-free pages: a live/total pair or any ZIP-count figure here is the
+// hand edit this decision removed, coming back.
+function checkCountFree(url, all) {
+  for (const p of all.matchAll(COVERAGE_PAIR)) {
+    flag(url, "states exact coverage counts off /methodology.html",
+         `"${p[0].trim()}" — the coverage pair lives on /methodology.html only`);
+    break;
+  }
+  for (const m of all.matchAll(ANY_ZIP_COUNT)) {
+    flag(url, "states a ZIP-count figure on a count-free page", m[0].trim());
+    break;
+  }
 }
 
 // The seven wordings, asserted on the rendered document. Split out of checkDoc
@@ -553,6 +579,18 @@ function checkCopySweep(url, all) {
   if (sales) flag(url, "gates coverage on reported sales the engine cannot see",
                   near(all, all.indexOf(sales[0]), 70));
 
+  // 9. "HOME EQUITY" ON A MARKETING SURFACE (2026-08-26). The homepage led
+  // with "Know before your home equity is at risk" — a fear frame the site
+  // reframed off, onto market signals. The phrase stays legitimate exactly
+  // where the paid report COMPUTES equity from the reader's own entered
+  // numbers; everywhere else it is the old frame coming back.
+  if (!HOME_EQUITY_ALLOWED.includes(url)) {
+    const he = all.match(HOME_EQUITY);
+    if (he) flag(url, "markets on \"home equity\" — the frame is market signals; " +
+                 "the phrase belongs only where the report computes with user numbers",
+                 near(all, all.indexOf(he[0]), 80));
+  }
+
   // (b) the shape on the page…
   let vocab = false;
   for (const m of all.matchAll(RATING_SLOT)) {
@@ -577,8 +615,9 @@ function checkCopySweep(url, all) {
   }
 }
 
-// Cross-page consistency. Every ZIP figure on the homepage, /zip/ and
-// press.html must equal §1b — not merely equal each other.
+// Cross-page consistency, /methodology.html only since 2026-08-26 (the other
+// coverage surfaces are count-free — see checkCountFree). The figures stated
+// must equal §1b, not merely read plausibly.
 function checkCoverage(url, all) {
   const pairs = [...all.matchAll(COVERAGE_PAIR)];
   // A build with no provisioned readings legitimately renders prose instead of

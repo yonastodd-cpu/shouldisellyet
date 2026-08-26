@@ -870,6 +870,27 @@ def coverage_line(live, total, noun, as_of=""):
     return f"{line} Data through {pretty_month(as_of)}." if as_of else line
 
 
+def hub_coverage_prose(live, as_of=""):
+    """The /zip/ hub's coverage sentence, count-free by decision (2026-08-26).
+
+    Exact site-wide coverage counts live on /methodology.html ONLY — the
+    crawl gate asserts both the presence there and the absence here. The
+    conversion problem the counts caused: "5,000 of 22,874" told four out of
+    five visitors their ZIP was in the unlucky pile before they looked.
+    coverage_line() (above) still serves the per-state hubs, whose counts are
+    local facts rather than the site-wide pair.
+
+    Degrades the same way coverage_line does: a build with no provisioned
+    readings (CI's verify job) must not claim readings are live.
+    """
+    if not live:
+        return "Housing-market pages for every U.S. ZIP with a standing page. Readings are being rebuilt."
+    line = ("Free readings are live in thousands of U.S. ZIP codes, computed "
+            "from licensed active-listing statistics; the rest are being "
+            "rebuilt.")
+    return f"{line} Data through {pretty_month(as_of)}." if as_of else line
+
+
 def state_hub(st, entries, meta, live=None, total=None, as_of=""):
     """entries: sorted [(zip, city, county, tag, hex)]"""
     name = STATE_NAMES.get(st, st)
@@ -980,7 +1001,7 @@ def markets_index(states, meta, live=None, total=None, as_of=""):
 <div class="wrap">
 <div class="crumb"><a href="/">Home</a> › Markets</div>
 <h1>Browse markets by state</h1>
-<p class="method">{esc(coverage_line(live, total, "U.S. ZIP codes", as_of))}</p>
+<p class="method">{esc(hub_coverage_prose(live, as_of))}</p>
 <ul class="statecols">{items}</ul>
 {FOOTER.format(cite=hub_cite() + ". ")}
 </div></body></html>"""

@@ -5,10 +5,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://kfbjooteazwvdsonthba.supabase.co https://api.zippopotam.us; frame-src https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Should I Sell Yet? — Know before your home equity is at risk</title>
-<meta name="description" content="Enter your ZIP code. Get a plain-English reading on whether your home equity is at risk — free, with email updates the moment it changes.">
+<title>Should I Sell Yet? — We watch your local housing market for signs of change</title>
+<meta name="description" content="Enter your ZIP code. Homes sitting longer, inventory building, sellers cutting prices — we turn your local housing market's signals into one plain-English reading. Free, no account.">
 <meta property="og:title" content="Should I Sell Yet?">
-<meta property="og:description" content="The home equity early-warning system. Check your ZIP in 15 seconds — free, with email updates the moment it changes.">
+<meta property="og:description" content="We watch your local housing market for signs of change. Check your ZIP in 15 seconds — free, no account.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://shouldisellyet.com/og/default.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -23,12 +23,12 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
 {"@type":"WebSite","@id":"https://shouldisellyet.com/#website","url":"https://shouldisellyet.com/","name":"ShouldISellYet","description":"A free HOLD/WATCH/ACT reading on whether your local housing market is turning against you, for any U.S. ZIP code.","publisher":{"@id":"https://shouldisellyet.com/#org"},"inLanguage":"en-US"},
 {"@type":"Organization","@id":"https://shouldisellyet.com/#org","name":"ShouldISellYet","url":"https://shouldisellyet.com/","legalName":"Yayday LLC","description":"Housing-market early-warning reports for homeowners. Not a brokerage.","logo":{"@type":"ImageObject","url":"https://shouldisellyet.com/apple-touch-icon.png"}},
-{"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — Know before your home equity is at risk","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
+{"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — We watch your local housing market for signs of change","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
 {"@type":"FAQPage","@id":"https://shouldisellyet.com/#faq","mainEntity":[
 {"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three market signals for your ZIP code, all computed from licensed statistics on homes currently listed for sale: the year-over-year asking-price trend, how long listed homes have been on the market, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are live for 5,000 ZIP codes today; the remaining standing pages are being rebuilt."}},
 {"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means it is worth doing something now: usually because enough danger lines are crossed to reach the top band — one line alone can be enough when prices are falling fast — and occasionally for the opposite reason, when buyers are competing hard and conditions favor a seller. The reading always says which. Most ZIP codes read HOLD — the reading often says don't sell."}},
 {"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all three market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
-{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. Readings have been live on this basis since 20 August 2026 for 5,000 of the 22,874 U.S. ZIP codes with a standing page; the rest are being rebuilt."}}]}]}</script>
+{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. Readings have been live on this basis since 20 August 2026 in thousands of U.S. ZIP codes, with the rest being rebuilt."}}]}]}</script>
 
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -787,10 +787,17 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
          Typed here because nothing ships these counts to the browser yet.
          When a generator emits them (pipeline/coverage.py is the proposed
          home), render them instead of typing them. -->
-    <p class="scale-line"><b>Live readings for 5,000 of 22,874 U.S. ZIP codes.</b> The rest are being rebuilt.</p>
+    <!-- Count-free by decision (2026-08-26): exact coverage counts live on
+         /methodology.html ONLY, and the crawl gate now asserts their absence
+         here. "5,000 of 22,874" under the primary CTA told four out of five
+         visitors their ZIP was in the unlucky pile before they typed it. -->
+    <p class="scale-line"><b>Free readings live in thousands of ZIP codes</b> — and a full report available for every U.S. ZIP, pulled fresh the moment you order.</p>
 
     <div class="card crunch hidden" id="crunch">
-      <div class="crunch-head">CRUNCHING <span id="crunch-zip"></span> AGAINST THE LATEST DATA</div>
+      <!-- Every interpolation span ships a ZIP-free default so no state can
+           ever render with a hole in the sentence ("CRUNCHING  AGAINST…").
+           run() overwrites with the validated ZIP before the state shows. -->
+      <div class="crunch-head">CRUNCHING <span id="crunch-zip">YOUR ZIP</span> AGAINST THE LATEST DATA</div>
       <div class="crunch-row"><span class="crunch-dot"></span><span>Pulling the latest inventory</span><span class="crunch-bar"></span></div>
       <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.25s"></span><span>Checking how the pool of homes for sale is moving</span><span class="crunch-bar"></span></div>
       <div class="crunch-row"><span class="crunch-dot" style="animation-delay:.5s"></span><span>Measuring days on market</span><span class="crunch-bar"></span></div>
@@ -825,7 +832,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
           <div style="font-weight:700;margin-bottom:4px">Don't want to wait?</div>
           <p style="margin:0 0 12px;font-size:.95em;line-height:1.55;color:#5c6673">
             Your full report is available now — we'll pull fresh market data
-            for <span id="od-zip" class="mono"></span> the moment you order.
+            for <span id="od-zip" class="mono">your ZIP</span> the moment you order.
             If there isn't enough listing data to score it responsibly, you
             won't be charged.</p>
           <a class="vbtn vbtn-primary" id="cta-ondemand-report" data-track="purchase_click_report" href="subscribe.html?plan=report" style="display:inline-flex"><span>Get your full report</span><span class="vbtn-price" data-price="report-once">$5.99 once</span></a>
@@ -894,7 +901,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
 </div>
 
 <div class="card waitcard" id="waitcard">
-      <div class="t" id="wl-title">We don't cover <span id="wl-zip"></span> yet</div>
+      <div class="t" id="wl-title">We don't cover <span id="wl-zip">your ZIP</span> yet</div>
       <!-- "Smaller markets report too few sales for a reliable reading" was
            false on the current engine: it reads statistics on homes currently
            LISTED, and never sees a closed sale. What is true is that some ZIPs
@@ -913,7 +920,11 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
              display:none — some bots skip those), out of the tab order,
              hidden from AT. A value here means a bot; the server drops the
              submission silently. -->
-        <label style="position:absolute;left:-9999px;top:auto" aria-hidden="true">Website
+        <!-- Full visually-hidden pattern (clip + 1px box), not display:none —
+             some bots skip display:none fields, and the clip pattern keeps
+             the field "real" to them while nothing of it can ever paint,
+             overflow, or reach reader mode. -->
+        <label style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap" aria-hidden="true">Website
           <input type="text" id="wl-website" name="website" tabindex="-1" autocomplete="off"></label>
         <div class="ts-slot"></div>
         <button class="btn" type="submit">Notify me</button>
@@ -2121,8 +2132,11 @@ async function run() {
     if (!d) {
       // Demand log: a ZIP we hold no record for at all.
       if (window.SISY && SISY.demand) SISY.demand(zip, "invalid_zip");
-      $("wl-zip").textContent = zip;
-      $("wl-title").innerHTML = 'We don’t cover <span class="mono">' + zip + "</span> yet";
+      // The rewrite must KEEP the #wl-zip span: the first version replaced it
+      // with an id-less span, so the next check's $("wl-zip") was null and
+      // the reveal died in the timeout — spinner gone, nothing shown. zip is
+      // /^\d{5}$/-validated above, so the interpolation is safe.
+      $("wl-title").innerHTML = 'We don’t cover <span id="wl-zip" class="mono">' + zip + "</span> yet";
       $("wl-body").textContent = "Some ZIPs carry too few active listings to measure reliably. " +
         "Leave your email and we'll tell you the moment yours goes live.";
       wlSource = "waitlist";
@@ -2192,8 +2206,8 @@ async function run() {
       }
       // Notify-me capture, same card and same guarded signup path as the
       // waitlist — only the copy and the `source` tag differ.
-      $("wl-zip").textContent = zip;
-      $("wl-title").innerHTML = 'Want ' + '<span class="mono">' + zip + "</span>'s free reading?";
+      // Same #wl-zip-preserving rewrite as the waitlist branch above.
+      $("wl-title").innerHTML = 'Want <span id="wl-zip" class="mono">' + zip + "</span>’s free reading?";
       $("wl-body").textContent = "We'll email you when " + zip + "'s reading goes live. No spam — one email, when it's ready.";
       wlSource = "notice";
       $("wl-ok").style.display = "none";
