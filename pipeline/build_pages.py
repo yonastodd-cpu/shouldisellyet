@@ -25,6 +25,7 @@ import csv
 import html
 import json
 import os
+import re
 import shutil
 import sys
 import textwrap
@@ -1140,6 +1141,38 @@ ZIP-level house price index (benchmark, public domain) · Freddie Mac PMMS
 """, encoding="utf-8")
 
 
+def stamp_methodology(web, live, pages):
+    """Stamp the coverage pair into methodology.html's marked spans.
+
+    The pair was hand-kept and went stale the first time an on-demand
+    promotion moved the released count (5,000 → 5,001; the crawl gate caught
+    it on 2026-08-27 AFTER the parallel deploy had already shipped the stale
+    figure). Same rule as llms.txt: a figure the build knows is a figure the
+    build writes.
+
+    `live` here is the RELEASE CONTRACT — released tranches ∩ manifest —
+    NOT len(live_zips): the crawl gate checks the pair against the contract
+    (its §1b), and the verify-released job builds with --no-readings, where
+    the rendered count is zero by construction. A contract/render gap is
+    data_pause.wrongly_promoted()'s finding to raise, not this sentence's
+    to hide. With nothing released the pair is left alone — the gate
+    degrades to prose on that path too.
+    """
+    if not live:
+        return
+    p = web / "methodology.html"
+    src = p.read_text(encoding="utf-8")
+    out, n_live = re.subn(r'(<b data-count="live">)[^<]*(</b>)',
+                          rf'\g<1>{live:,}\g<2>', src)
+    out, n_pages = re.subn(r'(<b data-count="pages">)[^<]*(</b>)',
+                           rf'\g<1>{pages:,}\g<2>', out)
+    if n_live != 1 or n_pages != 1:
+        sys.exit('methodology.html: data-count="live"/"pages" markers missing '
+                 "— the crawl gate checks this pair against the build")
+    if out != src:
+        p.write_text(out, encoding="utf-8")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--web", default=str(ROOT / "web"))
@@ -1370,6 +1403,8 @@ def main():
         markets_index([(st, len(v)) for st, v in by_state.items()], meta,
                       live=len(live_zips), total=len(eligible), as_of=as_of),
         encoding="utf-8")
+    stamp_methodology(web, live=len(PAUSE.released_zips() & {z for z, _ in eligible}),
+                      pages=len(eligible))
 
     if final.exists():
         shutil.rmtree(final)
