@@ -158,6 +158,19 @@
 
   send("page_view", { ns: newSession });
 
+  // Direct ZIP-page landings join the demand funnel (zip_lookups) the same
+  // way a homepage lookup does — organic search lands people on /zip/ pages
+  // directly, and a demand dashboard that only saw homepage checks was blind
+  // to exactly the notice-ZIP demand it exists to measure (go-live review,
+  // 2026-08-27). The outcome is baked at build time by build_pages.zip_page();
+  // during the on-demand gap a page built as a notice may already have an
+  // API-served reading — the sweep's rebuild corrects the stamp.
+  try {
+    var dz = document.body.getAttribute("data-demand-zip");
+    var dout = document.body.getAttribute("data-demand-outcome");
+    if (dz && dout) demand(dz, dout);
+  } catch (e) {}
+
   // Declarative click events. One delegated listener; keepalive above means
   // the following navigation can't cancel the send.
   document.addEventListener("click", function (e) {

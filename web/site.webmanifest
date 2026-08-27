@@ -1,7 +1,7 @@
 {
   "name": "ShouldISellYet",
   "short_name": "SellYet?",
-  "description": "A free HOLD, WATCH or ACT verdict for your ZIP code's housing market, from public data.",
+  "description": "A free HOLD, WATCH or ACT reading for your ZIP code's housing market.",
   "start_url": "/",
   "scope": "/",
   "display": "browser",

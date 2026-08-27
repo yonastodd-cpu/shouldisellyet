@@ -57,7 +57,7 @@ const PRICES = {
   ANNUAL: 29,
   MONTHLY: 3.99,
   REPORT: 5.99,
-  UPGRADE: 23,
+  UPGRADE: 23.01,
   UPGRADE_WINDOW_DAYS: 30,
 };
 const usd = (n: number) => "$" + (Number.isInteger(n) ? n : n.toFixed(2));

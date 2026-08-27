@@ -50,11 +50,15 @@ def test_constants_are_the_expected_shape():
     (e.g. a missing key parsing as 0 and matching nothing)."""
     assert set(P) == {"ANNUAL", "MONTHLY", "REPORT", "UPGRADE", "UPGRADE_WINDOW_DAYS"}
     assert all(v > 0 for v in P.values())
-    # The upgrade credit is the annual price less the report price, rounded to
-    # a whole dollar. If someone changes one without the other, say so here
+    # The upgrade credit is EXACTLY the annual price less the report price —
+    # the Stripe path is the $29 link plus a $5.99-off coupon, so the card is
+    # charged the unrounded difference ($23.01). The old rule rounded to a
+    # whole dollar, which made every surface advertise $23 while Stripe
+    # charged $23.01 — a one-cent overcharge the 2026-08-27 go-live review
+    # caught. If someone changes one price without the other, say so here
     # rather than letting the checkout quote an arithmetic that doesn't work.
-    assert P["UPGRADE"] == round(P["ANNUAL"] - P["REPORT"]), (
-        f"upgrade {UPGRADE} should be {ANNUAL} − {REPORT} rounded"
+    assert P["UPGRADE"] == round(P["ANNUAL"] - P["REPORT"], 2), (
+        f"upgrade {UPGRADE} should be exactly {ANNUAL} − {REPORT}"
     )
 
 

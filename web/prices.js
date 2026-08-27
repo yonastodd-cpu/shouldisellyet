@@ -26,7 +26,10 @@ const PRICES = {
   ANNUAL: 29,      // MyMarketCheckup, billed annually ($/yr) — the highlighted default
   MONTHLY: 3.99,   // MyMarketCheckup, billed monthly ($/mo)
   REPORT: 5.99,    // one-time full report
-  UPGRADE: 23,     // annual price for a report buyer upgrading within 30 days
+  UPGRADE: 23.01,  // annual price for a report buyer upgrading within 30 days
+                   // — 23.01, not 23: the Stripe path is the $29 link plus a
+                   // $5.99-off coupon, so $23.01 is what the card is charged;
+                   // advertising $23 was a one-cent overcharge (docs/STRIPE.md)
   UPGRADE_WINDOW_DAYS: 30,
 };
 // Which price LEADS every pricing surface. "monthly_led" | "annual_led".

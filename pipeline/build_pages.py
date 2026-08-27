@@ -674,7 +674,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#faf8f4">
 <script type="application/ld+json">{ld}</script>
-</head><body>
+</head><body data-demand-zip="{z}" data-demand-outcome="{'reading_shown' if PAUSE.shows_data(z, e.get('b', PAUSE.LEGACY_BASIS)) else 'notice_shown'}">
 {NAVBAR}
 <div class="wrap">
 <div id="share-banner" hidden>Someone shared this ZIP's market checkup with you.
