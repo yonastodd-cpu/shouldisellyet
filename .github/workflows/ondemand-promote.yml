@@ -12,9 +12,11 @@ name: On-demand ZIP promotion (manual sweep)
 # In the gap, pulled ZIPs are fully served from the API; only their static
 # pages lag as notices.
 #
-# The commit deliberately does NOT carry [skip ci]: pipeline/** is in
-# update.yml's push paths, so pushing the ledger IS what triggers the rebuild
-# that publishes the pages. That is the point of the sweep, not a side effect.
+# The ledger push CANNOT trigger update.yml by itself: GitHub never starts
+# workflows from pushes made with the default GITHUB_TOKEN (loop prevention;
+# observed live 2026-08-27 — run 33030464373 pushed fe019f3 and no build
+# followed). workflow_dispatch via the API is the documented exception to
+# that rule, so the last step dispatches the rebuild explicitly.
 #
 # Spends no vendor quota: this only reads back what purchase-time pulls
 # already bought and stored.
@@ -24,6 +26,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # to dispatch update.yml after the ledger lands
 
 concurrency:
   group: ondemand-promote
@@ -42,14 +45,23 @@ jobs:
         run: python3 pipeline/promote_ondemand.py
 
       - name: Commit the release ledger
+        id: ledger
         run: |
           git config user.name "sisy-bot"
           git config user.email "bot@users.noreply.github.com"
           git add pipeline/tranches.json || true
-          git diff --cached --quiet && { echo "no promotion this week"; exit 0; }
-          git commit -m "Promote on-demand ZIPs to live pages (weekly sweep)"
+          if git diff --cached --quiet; then
+            echo "no promotion this sweep"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Promote on-demand ZIPs to live pages (manual sweep)"
           for i in 1 2 3 4 5; do
-            if git push; then echo "pushed"; exit 0; fi
+            if git push; then
+              echo "pushed"
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "push rejected — rebasing onto latest main (attempt $i)"
             git pull --rebase --autostash origin main || true
             sleep $((RANDOM % 5 + 2))
@@ -58,3 +70,9 @@ jobs:
           pulled ZIPs stay API-served but their static pages remain notices \
           until this lands. Re-run the workflow."
           exit 1
+
+      - name: Dispatch the rebuild that publishes the pages
+        if: steps.ledger.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update.yml --ref main
