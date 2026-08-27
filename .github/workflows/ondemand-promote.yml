@@ -1,11 +1,16 @@
-name: On-demand ZIP promotion (weekly sweep)
+name: On-demand ZIP promotion (manual sweep)
 
 # Folds ZIPs that were pulled at purchase time (public.zip_release rows with
 # tranche='ondemand', written by the ondemand-pull edge function) into
 # pipeline/tranches.json, so the next deploy builds their live pages, drops
 # noindex and adds them to the sitemap — through the same gates every tranche
 # page passes. See pipeline/promote_ondemand.py's header for why this is
-# weekly and batched rather than per sale (sitemap churn, one gated deploy).
+# batched rather than per sale (sitemap churn, one gated deploy).
+#
+# MANUAL DISPATCH ONLY — operator decision 2026-08-26. The sweep publishes
+# static pages and touches the sitemap, so the operator picks the moment.
+# In the gap, pulled ZIPs are fully served from the API; only their static
+# pages lag as notices.
 #
 # The commit deliberately does NOT carry [skip ci]: pipeline/** is in
 # update.yml's push paths, so pushing the ledger IS what triggers the rebuild
@@ -15,8 +20,6 @@ name: On-demand ZIP promotion (weekly sweep)
 # already bought and stored.
 
 on:
-  schedule:
-    - cron: "0 11 * * 1"   # Mondays 11:00 UTC — before update.yml's 13:00 check
   workflow_dispatch: {}
 
 permissions:

@@ -32,7 +32,7 @@ source='rentcast'), `market_history`, `zip_readings` (the v2 reading, named
 columns) and a `zip_release` row (tranche='ondemand') — so the API serves the
 ZIP immediately (homepage + paid report read the word from
 `market-reading`'s `reading` field). The static page stays a notice until the
-weekly sweep.
+operator dispatches the promotion sweep.
 
 ## The pieces
 
@@ -43,7 +43,7 @@ weekly sweep.
 | Pull + validate + store | `supabase/functions/ondemand-pull/index.ts` (SPEC mirror of `verdict_v2.py`, pinned by `test_ondemand_pull_fn.py`) |
 | Reading served pre-deploy | `market-reading/index.ts` fills `reading` from `public.zip_readings` |
 | Admin report | `/admin.html#demand` → `admin_demand(days)` RPC |
-| Weekly promotion | `.github/workflows/ondemand-promote.yml` → `pipeline/promote_ondemand.py` → tranches.json → normal gated deploy |
+| Promotion sweep (manual dispatch only — operator decision 2026-08-26, no cron) | `.github/workflows/ondemand-promote.yml` → `pipeline/promote_ondemand.py` → tranches.json → normal gated deploy |
 | Gate | Gate B (`scripts/gate-paid-surfaces.py`) now also asserts no built notice page renders a figure |
 
 ## Cost & abuse controls
@@ -80,7 +80,7 @@ weekly sweep.
   trip `CrossBasisError` against every current surface.
 * The monthly refresh: `market-refresh.yml` is manual-dispatch by design
   (no cron yet — Phase 5 picks the cadence). On-demand ZIPs join the same
-  roster as tranche ZIPs once the weekly sweep lands them in tranches.json;
+  roster as tranche ZIPs once the promotion sweep lands them in tranches.json;
   until a scheduled refresh exists, their refresh is the same manual
   dispatch every other ZIP gets.
 * Failure copy says "our data provider", not the vendor's name — the

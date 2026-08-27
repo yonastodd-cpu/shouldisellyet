@@ -1,4 +1,4 @@
-"""The weekly sweep is append-only and never rewrites release history.
+"""The promotion sweep is append-only and never rewrites release history.
 
 promote_ondemand.merge() is the only function that touches tranches.json for
 on-demand ZIPs. Pinned: append-only, idempotent, preserves an existing

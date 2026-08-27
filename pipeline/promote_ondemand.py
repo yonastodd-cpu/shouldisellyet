@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Weekly sweep: fold on-demand-pulled ZIPs into the build's release ledger.
+"""Promotion sweep: fold on-demand-pulled ZIPs into the build's release ledger.
+
+Run by .github/workflows/ondemand-promote.yml on MANUAL DISPATCH only
+(operator decision 2026-08-26 — no cron; the operator picks when static
+pages publish).
 
 THE TWO-WRITER PROBLEM, IN THE OTHER DIRECTION. promote_tranche.py writes
 tranches.json first and mirrors it into public.zip_release. The on-demand
@@ -14,7 +18,7 @@ On the next deploy those ZIPs get provisioned readings, render live pages,
 drop noindex and join the sitemap — through exactly the gates every tranche
 page passes, because after this sweep they ARE tranche pages.
 
-WHY WEEKLY, NOT PER SALE. Each promotion is a commit, a rebuild and a
+WHY BATCHED, NOT PER SALE. Each promotion is a commit, a rebuild and a
 sitemap change. Batching keeps sitemap churn low and keeps the promotion on
 the same gated deploy path as everything else. In the gap, the ZIP is fully
 served: the homepage and the buyer's report read the word from the API
