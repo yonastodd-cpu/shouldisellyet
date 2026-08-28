@@ -122,16 +122,28 @@ def main():
     else:
         print("  SKIP  web/zip not built — notice-page check runs post-build in CI")
 
-    # ————— No waitlist copy on a paid surface (2026-08-28) —————
-    # A paying customer whose ZIP lacked a reading was told to "join the
-    # waitlist" — free-path copy served to someone who had already paid. The
-    # honest paid answers are the pull-in-progress note and the partial
-    # report; the waitlist is for people who haven't paid. Checked on
-    # COMMENT-STRIPPED SOURCE, not rendered text: the copy lives in script
+    # ————— Forbidden copy on report surfaces (2026-08-28) —————
+    # Two families, one mechanism. WAITLIST: a paying customer whose ZIP
+    # lacked a reading was told to "join the waitlist" — free-path copy
+    # served to someone who had already paid; the honest paid answers are the
+    # pull-in-progress note and the partial report. URGENCY: the bottom line
+    # translates the data, it does not prescribe — "act on a plan now",
+    # "sooner beats later" and kin are sales cadence, not translation, and
+    # they were shipping in the ACT/WATCH meanings. Checked on
+    # COMMENT-STRIPPED SOURCE, not rendered text: this copy lives in script
     # string literals the rendered-text scan structurally cannot see (that is
-    # how it shipped). Comments may still say the word — they explain the
+    # how both shipped). Comments may still say the words — they explain the
     # rule, and a gate that fired on its own rulebook would be deleted rather
     # than obeyed (test_prior_vendor_serving_surfaces tells that story).
+    REPORT_FORBIDDEN = [
+        (r"waitlist", "waitlist copy on a paid surface"),
+        (r"act on a plan now", "prescriptive urgency"),
+        (r"\bact now\b", "prescriptive urgency"),
+        (r"not next spring", "prescriptive urgency"),
+        (r"sooner beats later", "prescriptive urgency"),
+        (r"this week", "prescriptive urgency"),
+        (r"move early and price right", "prescriptive urgency"),
+    ]
     for name in ("report.html", "my-report.html"):
         p = os.path.join(ROOT, "web", name)
         if not os.path.isfile(p):
@@ -139,22 +151,23 @@ def main():
         src = open(p, encoding="utf-8", errors="replace").read()
         src = re.sub(r"<!--.*?-->", " ", src, flags=re.S)
         src = re.sub(r"/\*.*?\*/", " ", src, flags=re.S)
-        src = re.sub(r"//[^\n]*", " ", src)
-        ok = not re.search(r"waitlist", src, re.I)
-        print(f"  {'PASS' if ok else 'FAIL'}  /{name} carries no waitlist copy")
-        if not ok:
-            findings.append(f"/{name}: waitlist copy on a paid surface")
+        src = re.sub(r"(?<!:)//[^\n]*", " ", src)
+        hits = [(rx, why) for rx, why in REPORT_FORBIDDEN if re.search(rx, src, re.I)]
+        print(f"  {'PASS' if not hits else 'FAIL'}  /{name} carries no waitlist/urgency copy"
+              + (f"  {[w for _, w in hits]}" if hits else ""))
+        findings += [f"/{name}: {why} ({rx})" for rx, why in hits]
 
-    # The client renderers: the refusal must be unconditional, not flag-gated.
+    # The client renderers: the prior-vendor decile interpolation was deleted
+    # outright on 2026-08-28 (the percentile now comes from the live
+    # current-basis distribution). The check is absence, not a disabled gate.
     mr = os.path.join(ROOT, "web", "market-render.js")
     if os.path.exists(mr):
         src = open(mr, encoding="utf-8", errors="replace").read()
-        ok = "false && nat.spy_deciles" in src
-        print(f"  {'PASS' if ok else 'FAIL'}  market-render.js percentile refused unconditionally")
+        ok = "spy_deciles" not in src
+        print(f"  {'PASS' if ok else 'FAIL'}  market-render.js free of prior-vendor deciles")
         if not ok:
-            findings.append("market-render.js: percentile is gated rather than refused — "
-                            "FIGURES_OFF is the CURRENT vendor's switch and does not "
-                            "govern prior-vendor deciles")
+            findings.append("market-render.js: references the prior vendor's deciles — "
+                            "the percentile must come from the live distribution only")
 
     if checked == 0:
         print("\ngate B: FAIL — no paid surface was reachable; this proves nothing")

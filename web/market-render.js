@@ -96,7 +96,11 @@ const MARKET = (function () {
              yours:"Yours: "+(m.spy>=0?"+":"−")+Math.abs(m.spy*100).toFixed(1)+"%"}}); }
     if (m.dom != null && m.domy != null){ const prior=m.dom-m.domy, p=prior>0?m.domy/prior:0;
       const t = strong ? (p<=-0.20?"s":"g") : (p>0.10?"a":"g");  // SPEC dom_shrink/dom_stretch
-      rows.push({name:"TIME ON MARKET", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?23.3:60,
+      // th must sit where the fill formula puts the danger value, so the dot
+      // crosses the tick exactly when the color flips (axis audit 2026-08-28):
+      // fill(p) = (p·100+50)/150 → +10% ⇒ 40, −20% ⇒ 20. The old 60/23.3
+      // drew the tick at +40%/−15% — a dial could run amber left of its line.
+      rows.push({name:"TIME ON MARKET", val:Math.round(m.dom)+" days", t, fill:clampPct((p*100+50)/150*100), th:strong?20:40,
         note:strong?(t==="s"?Math.round(-m.domy)+" days faster y/y":"strong line: −20% y/y"):(m.domy>0?"+"+Math.round(m.domy)+" days y/y":"as fast as last yr"),
         how:{what:"How long the homes currently for sale have been listed. This is time ON MARKET across unsold listings — not time-to-contract, and it runs longer.",
              goesin:(m.inv!=null) ? "days on market across the "+m.inv.toLocaleString()+" homes currently listed, and the same measure a year ago"
@@ -114,7 +118,9 @@ const MARKET = (function () {
              why:strong?"Under 20%, few sellers are having to negotiate down — pricing power sits with sellers.":"Past 35%, more than a third of sellers aimed too high and had to come down — that's competition building for the day you list.",
              yours:"Yours: "+Math.round(m.pd*100)+"%"}}); }
     if (m.invy != null){ const t=m.invy>0.30?"a":"g";
-      rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:58.3, note:t==="g"?"line: +30% y/y":"surging",
+      // Same audit: fill(+30%) = (30+20)/120 = 41.7 — the tick goes there,
+      // not at 58.3 (which was +50% y/y, past where the color flips).
+      rows.push({name:"NEW SUPPLY VS. LAST YR", val:(m.invy>=0?"+":"−")+Math.abs(m.invy*100).toFixed(0)+"%", t, fill:clampPct((m.invy*100+20)/120*100), th:41.7, note:t==="g"?"line: +30% y/y":"surging",
         how:{what:"How many homes are coming up for sale, compared with a year ago.",
              goesin:(m.inv!=null) ? m.inv.toLocaleString()+" homes for sale now vs. about "+Math.round(m.inv/(1+m.invy)).toLocaleString()+" a year ago"
                    : "the count of homes for sale now, against the same month last year",
@@ -156,10 +162,15 @@ const MARKET = (function () {
           '<div><b>Why the line is there:</b> '+r.how.why+backtestNote(r.how.bt)+'</div>'+
           '<div><b>'+r.how.yours+'</b> — '+stateWord(r.t)+'.</div>'+
         '</div></details>') : '';
+      // .pf is the print/PDF fallback: browsers drop background-colored spans
+      // by default when printing, so the pass/fail state and the line each
+      // dial is judged against must also exist as TEXT. Hidden on screen
+      // (the gauge says it), shown by the @media print rules.
       return '<div class="metric-block"><div class="metric"><span class="name">'+r.name+'</span>'+
       '<span class="val" style="color:'+tcol(r.t)+'">'+r.val+'</span>'+
       '<span class="track"><span class="fill" style="width:'+r.fill+'%;background:'+tcol(r.t)+'"></span><span class="th" style="left:'+r.th+'%"></span></span>'+
-      '<span class="note">'+r.note+'</span></div>'+how+'</div>';
+      '<span class="note">'+r.note+'</span>'+
+      '<span class="pf">'+r.val+' — '+stateWord(r.t)+' ('+r.note+')</span></div>'+how+'</div>';
     }).join("");
   }
 
@@ -180,44 +191,35 @@ const MARKET = (function () {
     // showing a source should not still be naming it.
     if (!x){
       if (el) { el.style.display = ""; el.innerHTML =
-        '<div class="xk">INDEPENDENT CROSS-CHECK</div>' +
-        '<div>Independent cross-check temporarily unavailable.</div>'; }
+        '<span class="xk">INDEPENDENT CROSS-CHECK</span> · temporarily unavailable.'; }
       return;
     }
     const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const label = x.p ? MON[+x.p.slice(5,7)-1] + " " + x.p.slice(0,4) : "";
-    const newer = x.p && META && META.period && x.p > META.period;
-    const pf = v => (v>=0?"+":"−") + Math.abs(v*100).toFixed(0) + "%";
-    const bits = [];
-    if (x.inv != null) bits.push("<b>" + x.inv.toLocaleString() + "</b> homes listed" + (x.invy != null ? " (" + pf(x.invy) + " vs. last year)" : ""));
-    if (x.dom != null) bits.push("typical listing <b>" + x.dom + " days</b> on the market" + (x.domy != null ? " (" + pf(x.domy) + ")" : ""));
-    if (x.pdn != null) bits.push("<b>" + x.pdn.toLocaleString() + "</b> price cuts" + (x.pd != null ? " (" + (x.pd*100).toFixed(0) + "% of listings it tracks)" : ""));
+    // ONE LINE (2026-08-28). The strip used to itemize the other feed's
+    // counts; what a reader needs from a cross-check is only the agreement
+    // verdict and the vintage. The detail rows crowded the dials above them.
     // Direction agreement — only judged on signals both feeds carry.
     const dir = (v, dead) => v == null ? null : v > dead ? 1 : v < -dead ? -1 : 0;
     const checks = [];
     // FIGURES_KILL_SWITCH. The cross-check's own numbers are the other
     // vendor's and are not this switch's business. This comparison is: it
     // reports whether OUR figures point the same way as theirs, which is a
-    // statement about our figures and cannot be made without them. With the
-    // switch on the strip still lists what the other feed sees and simply
-    // draws no conclusion about agreement.
+    // statement about our figures and cannot be made without them.
     if (!FIGURES_OFF) {
       const rd = dir(m.domy, 1), xd = dir(x.domy, 0.03);      // our domy is DAYS; RDC's is a fraction
       if (rd != null && xd != null) checks.push(rd === xd);
       const ri = dir(m.invy, 0.03), xi = dir(x.invy, 0.03);
       if (ri != null && xi != null) checks.push(ri === xi);
     }
-    let verdictLine = "";
-    if (x.q){
-      verdictLine = '<div style="margin-top:6px;color:var(--fainter);font-size:12px">Year-over-year comparisons withheld this month — the feed flags this ZIP\'s comparability.</div>';
-    } else if (checks.length){
-      verdictLine = checks.every(Boolean)
-        ? '<div class="agree" style="margin-top:6px">✓ Both feeds read this market the same direction.</div>'
-        : '<div class="differ" style="margin-top:6px">◆ The two feeds read direction differently right now — often a timing gap between listings and closings; worth watching next month.</div>';
-    }
-    el.innerHTML = '<div class="xk">INDEPENDENT CROSS-CHECK · REALTOR.COM® LISTING FEED · ' +
-      (label ? label.toUpperCase() : "") + (newer ? " (ONE MONTH NEWER THAN THE SALES DATA ABOVE)" : "") + '</div>' +
-      (bits.length ? bits.join(" · ") + "." : "") + verdictLine;
+    let verdict;
+    if (x.q) verdict = "year-over-year comparisons withheld this month (the feed flags this ZIP's comparability).";
+    else if (!checks.length) verdict = "no overlapping signals to compare this month.";
+    else verdict = checks.every(Boolean)
+      ? "✓ both feeds read this market the same direction."
+      : "◆ the two feeds read direction differently right now — often a timing gap between listings and closings.";
+    el.innerHTML = '<span class="xk">INDEPENDENT CROSS-CHECK</span> · Realtor.com® listing feed' +
+      (label ? " (" + label + ")" : "") + ": " + verdict;
     el.style.display = "block";
   }
 
@@ -321,31 +323,45 @@ const MARKET = (function () {
   // Where this ZIP's price trend sits nationally, and what rates are doing to
   // the buyer pool. Pure function of the ZIP's metrics + meta, so the sample
   // and the real report cannot disagree about the national picture.
+  // The live current-basis distribution (web/data/distribution.json) — rating
+  // shares and per-signal quantiles across every ZIP with a live reading,
+  // computed by provision_readings.py from the same records this page serves.
+  // Set by the report page after it fetches the file; null until then, and
+  // contextBoxes degrades to the financing backdrop alone.
+  let DIST = null;
+  function setDistribution(d) { DIST = d && d.n >= 20 ? d : null; }
+  // Percentile of v within a 101-point quantile array: the share of live
+  // markets whose value sits below v.
+  function pctileIn(q, v) {
+    if (!q || v == null) return null;
+    let lo = 0; while (lo < 101 && q[lo] < v) lo++;
+    return Math.max(1, Math.min(99, lo === 0 ? 1 : lo - 1));
+  }
+
   function contextBoxes(m) {
     const nat = META && META.national;
     if (!nat) return "";
     const boxes = [];
-    // FIGURES_KILL_SWITCH. The first box states a national percentile that
-    // exists only because we hold this ZIP's asking-price change; the second
-    // is mortgage rates, which are nobody's proprietary statistic. One goes,
-    // one stays — the same line drawn on the homepage's macro panel.
-    // WITHHELD UNCONDITIONALLY — not gated on FIGURES_OFF.
-    //
-    // FIGURES_OFF is the CURRENT vendor's switch and is false. These deciles
-    // and the national counts beside them are PRIOR-vendor sold-price
-    // statistics, and interpolating a current-vendor asking-price change
-    // against them compares two different measurements. web/index.html:1804
-    // refuses the byte-identical interpolation outright; this copy was left
-    // behind, so the figure was withheld on the free page and served on the
-    // PAID one. Restore only when meta.json carries current-basis deciles.
-    if (false && nat.spy_deciles && nat.spy_deciles.length === 11 && m.spy != null) {
-      const dec = nat.spy_deciles;
-      let k = 0; while (k < 10 && m.spy > dec[k+1]) k++;
-      const frac = k*10 + (dec[k+1] > dec[k] ? (m.spy-dec[k])/(dec[k+1]-dec[k])*10 : 5);
-      const pctile = Math.max(1, Math.min(99, Math.round(frac)));
-      const pack = pctile>=85 ? "near the top of the pack" : pctile>=60 ? "ahead of most markets"
-                 : pctile>40 ? "squarely mid-pack" : pctile>15 ? "behind most markets" : "near the bottom of the pack";
-      boxes.push('<div class="ctx"><div class="ch">Your ZIP vs. the nation</div><p>Prices here are rising faster than about <b>'+pctile+'%</b> of U.S. ZIP codes — '+pack+'. Across the country right now: '+nat.counts.green.toLocaleString()+' ZIPs read HOLD · '+nat.counts.yellow.toLocaleString()+' WATCH · '+nat.counts.red.toLocaleString()+' ACT.</p></div>');
+    // The prior vendor's national sold-price deciles were withheld here from
+    // the sunset (2026-08) until 2026-08-28 — interpolating a current-vendor
+    // asking-price change against them compared two different measurements.
+    // This box is the CLEAN-lineage replacement: every number in it comes
+    // from the live current-basis readings, published by this same build.
+    if (DIST && DIST.counts) {
+      const c = DIST.counts, n = DIST.n;
+      const pc = k => Math.round((c[k] || 0) / n * 100);
+      const share = "Of the " + n.toLocaleString() + " ZIPs with a live reading" +
+        (DIST.period ? " (data through " + DIST.period + ")" : "") + ": <b>" +
+        pc("green") + "% read HOLD · " + pc("yellow") + "% WATCH · " + pc("red") + "% ACT</b>.";
+      const bits = [];
+      const pSpy = pctileIn(DIST.q && DIST.q.spy, m.spy);
+      if (pSpy != null) bits.push("asking prices here are rising faster than about <b>" + pSpy + "%</b> of them");
+      const stretch = (m.dom != null && m.domy != null && m.dom - m.domy > 0)
+        ? m.domy / (m.dom - m.domy) : null;
+      const pDom = pctileIn(DIST.q && DIST.q.domstretch, stretch);
+      if (pDom != null) bits.push("time-on-market is stretching more than in about <b>" + pDom + "%</b>");
+      boxes.push('<div class="ctx"><div class="ch">Your ZIP among the markets we score today</div><p>' +
+        share + (bits.length ? " In this ZIP, " + bits.join("; ") + "." : "") + '</p></div>');
     }
     if (nat.mortgage) {
       const pay = r => { const i=r/100/12; return i*Math.pow(1+i,360)/(Math.pow(1+i,360)-1); };
@@ -366,6 +382,6 @@ const MARKET = (function () {
     clampPct, tcol, strongSignals, applyStrong,
     buildMetricRows, backtestNote, stateWord, renderMetrics, renderCrossCheck,
     MONTHS, MONTHS_LONG, monthLabel, lastIdx, atOrNear, lineSVG, pctf, fmt,
-    contextBoxes,
+    contextBoxes, setDistribution,
   };
 })();

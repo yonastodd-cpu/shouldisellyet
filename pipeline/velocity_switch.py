@@ -95,14 +95,19 @@ Run: python3 -m pytest pipeline/test_velocity_switch.py -q
 # than importing the name, so a monkeypatch reaches every caller.
 VELOCITY_ENABLED = False
 
-# The identifier the two mirrors declare. Named once here so the sync test
+# The identifier the mirrors declare. Named once here so the sync test
 # looks for one string instead of two hand-typed ones.
 JS_CONST = "VELOCITY_ENABLED"
 
-# The mirrors, repo-relative. Both are client/edge files that cannot import
-# this module: one runs in a browser, one in Deno.
+# The mirrors, repo-relative — client/edge files that cannot import this
+# module. web/my-report.html LEFT this list on 2026-08-28: the report's
+# approach-velocity panel was rebuilt to compute client-side from the
+# record's own current-basis history (velFromHistory), so the page no longer
+# has a zip_velocity renderer to guard — it never reads the verify-access
+# velocity payload at all, which test_velocity_switch now pins directly.
+# verify-access keeps the guard: the frozen table stays unread on the paid
+# endpoint until a genuine zip_velocity rebuild flips this switch.
 MIRRORS = (
-    "web/my-report.html",
     "supabase/functions/verify-access/index.ts",
 )
 

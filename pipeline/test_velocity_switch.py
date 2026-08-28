@@ -161,25 +161,24 @@ def test_the_sync_check_would_actually_catch_a_split():
     """A test of the test. An agreement check that cannot fail is worse than
     none, because it is evidence of a property nobody verified."""
     flipped = "false" if VEL.VELOCITY_ENABLED else "true"
-    split = LITERAL.sub(f"const VELOCITY_ENABLED = {flipped};", REPORT_SRC, count=1)
+    split = LITERAL.sub(f"const VELOCITY_ENABLED = {flipped};", VERIFY_SRC, count=1)
     m = LITERAL.search(split)
     assert m and m.group(1) == flipped, "the literal did not flip"
     assert (m.group(1) == "true") is not VEL.VELOCITY_ENABLED, \
         "the mirror check cannot distinguish the two states"
 
 
-def test_both_mirrors_declare_the_flag_before_they_use_it():
-    """A `const` read before its declaration line has run throws — which on
-    the report page would take out the render path rather than suppressing a
-    section. The file already learned this once, in AGENT_INTRO_ENABLED's
-    comment."""
-    for rel, src in ((VEL.MIRRORS[0], code(REPORT_SRC)),
-                     (VEL.MIRRORS[1], code(VERIFY_SRC))):
-        decl = LITERAL.search(src)
-        first_use = re.search(r"\(!?VELOCITY_ENABLED\)", src)
-        assert decl and first_use, rel
-        assert decl.start() < first_use.start(), \
-            f"{rel} reads {VEL.JS_CONST} before declaring it"
+def test_the_mirror_declares_the_flag_before_it_uses_it():
+    """A `const` read before its declaration line has run throws. Since
+    2026-08-28 verify-access is the only mirror — the report page computes
+    velocity from its own record history and declares no switch at all
+    (asserted separately below)."""
+    src = code(VERIFY_SRC)
+    decl = LITERAL.search(src)
+    first_use = re.search(r"\(!?VELOCITY_ENABLED\)", src)
+    assert decl and first_use
+    assert decl.start() < first_use.start(), \
+        f"{VEL.MIRRORS[0]} reads {VEL.JS_CONST} before declaring it"
 
 
 # ————— verify-access: the read itself is guarded —————
@@ -224,100 +223,74 @@ def test_nothing_in_the_serving_layer_writes_to_the_stored_rows():
     """LEGAL_HOLD.md: this is a serving-layer change. Neither file may delete,
     patch or update a stored row — the suppression is what renders, never what
     is held."""
-    for rel, src in ((VEL.MIRRORS[0], code(REPORT_SRC)),
-                     (VEL.MIRRORS[1], code(VERIFY_SRC))):
+    for rel, src in (("web/my-report.html", code(REPORT_SRC)),
+                     ("supabase/functions/verify-access/index.ts", code(VERIFY_SRC))):
         for verb in ('"DELETE"', '"PATCH"', '"PUT"'):
             assert not re.search(verb + r"[^\n]*zip_velocity", src), rel
         assert "zip_velocity" not in src or "method: \"DELETE\"" not in src, rel
 
 
 # ————— my-report.html: the panel does not render —————
+#
+# REWRITTEN 2026-08-28. The panel was rebuilt: my-report computes approach
+# velocity CLIENT-SIDE from the record's own current-basis history
+# (velFromHistory), so the page no longer declares the switch, reads the
+# verify-access velocity payload, or renders anything derived from
+# zip_velocity. The property counsel cares about got stronger — there is no
+# renderer for the frozen table left to guard — and these pins keep it true.
 
-@pytest.mark.skipif(VEL.VELOCITY_ENABLED,
-                    reason="only meaningful while velocity is suppressed")
-def test_the_report_returns_before_it_renders_any_velocity_number():
-    """The guard is the first thing in renderVelocity, and it returns.
-
-    Ordering is the whole property: every number in the section — the rows,
-    the months-to-line phrases, the traces, the state sentence — is produced
-    below this point, and a guard placed anywhere else has to be re-argued
-    every time a branch is added.
-    """
+def test_the_report_page_never_reads_the_velocity_payload():
+    """No __velocity global, no access.velocity read, no v.sig consumer: the
+    zip_velocity payload has NO consumer on this page. The rebuild notice and
+    its constants went with the renderer they explained."""
     src = code(REPORT_SRC)
-    body = block_after(src, "function renderVelocity(v)")
-    guard = body.index("if (!VELOCITY_ENABLED)")
-    guarded = block_after(body, "if (!VELOCITY_ENABLED)")
-    assert "return;" in guarded, "the suppressed branch falls through"
-    assert body[:guard].strip() == "", \
-        "something runs in renderVelocity before the switch is consulted"
-    for token in ("velPhrase(", "v.sig", "velTrace(", "renderVelWatch("):
+    for needle in ("__velocity", "access.velocity", "VEL_REBUILD"):
+        assert needle not in src, \
+            f"my-report consumes the zip_velocity payload again ({needle!r})"
+    # renderVelocity's `v` must be the page's own computation, not an argument
+    # something could feed the server payload through.
+    body = block_after(src, "function renderVelocity(d)")
+    assert "velFromHistory(d)" in body, \
+        "renderVelocity no longer derives its rows from the record's history"
+    assert not LITERAL.search(src), \
+        "my-report declares VELOCITY_ENABLED again — it left the mirror list " \
+        "when the panel stopped rendering zip_velocity (velocity_switch.MIRRORS)"
+
+
+def test_the_rebuilt_panel_asserts_its_lineage_before_computing():
+    """velFromHistory refuses anything that is not the released current
+    basis: the basis literal is checked before a single number is computed,
+    which is what makes 'computed from the pull's history' an assertion
+    rather than an assumption."""
+    body = block_after(code(REPORT_SRC), "function velFromHistory(d)")
+    guard = body.index('d.b !== "active listings"')
+    for token in ("velCalc(", "d.h.p", "d.h.d"):
         assert body.index(token) > guard, \
-            f"{token} is reachable before the VELOCITY_ENABLED guard"
+            f"{token} runs before the basis assertion in velFromHistory"
 
 
-@pytest.mark.skipif(VEL.VELOCITY_ENABLED,
-                    reason="only meaningful while velocity is suppressed")
-def test_the_suppressed_branch_keeps_the_section_instead_of_collapsing_it():
-    """A paid report that silently loses an advertised section answers the
-    customer worse than one that says what happened — and a hidden section
-    also drops out of the report's numbering and its jump nav, which is how a
-    reader discovers something is missing without being told."""
-    guarded = block_after(code(REPORT_SRC), "if (!VELOCITY_ENABLED)")
-    assert '$("velocity").style.display = "block"' in guarded, \
-        "the suppressed branch hides the section"
-    assert "renumberSections()" in guarded, \
-        "the suppressed section is not counted in the report's numbering"
-    assert 'VEL_REBUILD_TITLE' in guarded and 'VEL_REBUILD_BODY' in guarded, \
-        "the suppressed branch renders no rebuild notice"
+def test_the_rebuilt_panel_estimates_nothing_it_cannot_compute():
+    """Inventory has no monthly series in the record, so its row must be the
+    pending one — a missing number is shown as missing, never estimated —
+    and a thin series must yield pending, not a confident month count."""
+    src = code(REPORT_SRC)
+    assert "invy: { pending: true }" in src, \
+        "the inventory row invents a velocity it has no history for"
+    body = block_after(src, "function velCalc(levels, currentYoy, line, dangerDown)")
+    assert "pending: true" in body, "velCalc lost its thin-series refusal"
 
 
-@pytest.mark.skipif(VEL.VELOCITY_ENABLED,
-                    reason="only meaningful while velocity is suppressed")
-def test_the_suppressed_branch_blanks_every_other_number_in_the_panel():
-    """vel-rows is not the only place a figure lands. The state sentence, the
-    low-volume caveat and the method footnote all describe a computation that
-    is not being shown, and a notice sitting above a live state sentence is a
-    half-suppression that reads as done."""
-    guarded = block_after(code(REPORT_SRC), "if (!VELOCITY_ENABLED)")
-    for el in ("vel-state", "vel-lowvol", "vel-watch", "vel-foot"):
-        assert el in guarded, f"{el} is left as it was in the suppressed branch"
+def test_the_months_to_line_display_is_capped():
+    """Past two years a straight-line pace is a guess wearing a number —
+    the display says '>24 mo' rather than printing it."""
+    assert ">24 mo" in REPORT_SRC
 
 
-def test_the_rebuild_copy_matches_the_module_word_for_word():
-    """Three copies again, this time of the sentence. The Python constant is
-    the one counsel reviews; the browser renders the JS one."""
-    for name, want in (("VEL_REBUILD_TITLE", VEL.NOTICE_TITLE),
-                       ("VEL_REBUILD_BODY", VEL.NOTICE_BODY)):
-        m = re.search(r"const\s+" + name + r'\s*=\s*"([^"]*)"', REPORT_SRC)
-        assert m, f"{name} is not declared in my-report.html"
-        assert m.group(1) == want, (
-            f"{name} in my-report.html has drifted from "
-            f"velocity_switch.py:\n  page: {m.group(1)}\n  module: {want}")
-
-
-@pytest.mark.skipif(VEL.VELOCITY_ENABLED,
-                    reason="only meaningful while velocity is suppressed")
-def test_the_late_job_copy_is_not_what_a_suppressed_panel_says():
-    """The pre-existing unseeded-ZIP branch stays — it is correct for an
-    unscored ZIP — but it must not be the branch a suppressed panel falls
-    into. That is the concrete confusion this ordering prevents."""
-    guarded = block_after(code(REPORT_SRC), "if (!VELOCITY_ENABLED)")
-    for bad in ("check back", "next data refresh"):
-        assert bad not in guarded.lower(), \
-            f"the suppressed branch tells the customer to {bad!r}"
-    assert "check back shortly" in REPORT_SRC, \
-        "the unseeded-ZIP copy was removed; it is still correct for that case"
-
-
-@pytest.mark.skipif(VEL.VELOCITY_ENABLED,
-                    reason="only meaningful while velocity is suppressed")
-def test_the_velocity_alert_cannot_be_saved_while_the_panel_is_suppressed():
-    """The toggle is never drawn, but toggleVelWatch is a global and
-    save-watch still accepts the "velocity" metric, so the handler needs its
-    own guard. A watch saved now is a standing promise that check_watches
-    would later honour against the frozen rows."""
-    body = block_after(code(REPORT_SRC), "async function toggleVelWatch(on)")
-    guard = body.index("if (!VELOCITY_ENABLED) return;")
-    assert body[:guard].strip() == "", \
-        "toggleVelWatch does work before consulting the switch"
-    assert body.index("SAVE_WATCH_FN") > guard
+def test_the_velocity_watch_toggle_is_not_offered():
+    """The escalation alert compared server-side states from the frozen
+    rows; until a server-side recompute exists on the current basis there is
+    nothing honest for the toggle to promise. save-watch still accepts the
+    metric, so the page must simply not offer it."""
+    src = code(REPORT_SRC)
+    assert "toggleVelWatch" not in src, \
+        "the velocity watch toggle is back without a current-basis recompute behind it"

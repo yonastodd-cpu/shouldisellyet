@@ -114,6 +114,9 @@ details.how .how-body b{color:#3a4450}
 .metric .fill{position:absolute;inset:0 auto 0 0;border-radius:3px}
 .metric .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#9a9384;border-radius:1px}
 .metric .note{font-size:11px;color:var(--fainter)}
+/* Print/PDF fallback: the dial restated as text — value, pass/fail, line.
+   Hidden on screen (the gauge says it); @media print reveals it. */
+.metric .pf{display:none;grid-column:1/-1;font-size:11.5px;color:#333}
 .eqgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .eqcard{border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfbf7)}
 .eqcard .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--faint)}
@@ -221,6 +224,14 @@ details.how .how-body b{color:#3a4450}
   body{background:#fff}
   .report{margin-top:0}
   .card{border-color:#ddd}
+  /* The dials must survive on paper (item 3, 2026-08-28): force the gauge
+     colors through print's background-stripping, and reveal the per-dial
+     text restatement so value + danger line + pass/fail exist even in a
+     grayscale printout. */
+  .metric .fill,.metric .th,.metric .track,.v-dot,.dotk,.thk{
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .metric .pf{display:block!important}
+  .metric .note{display:revert}
 }
 
 /* Brand lockup — the delivered artboard's ratios, driven by --lockup so the
@@ -272,7 +283,9 @@ details.how .how-body b{color:#3a4450}
          three toggles don't need three widgets. -->
     <div class="ts-slot" id="ts-watch"></div>
   <div class="paidband" id="paidband">✓ You're all set — thank you. Build your report below, and bookmark this page: your private link brings you right back.</div>
-  <div id="upgrade-band" style="display:none;background:#fbf8f1;border:1px solid #e6dcc3;border-radius:8px;padding:12px 16px;font-size:14px;margin:14px 0 0;line-height:1.55"></div>
+  <!-- First mention gets the definition (item 9, 2026-08-28): the brand name
+       appears in the nav chip and the upsell with no explanation anywhere. -->
+  <p style="font-size:12.5px;color:var(--fainter);margin:10px 0 0;line-height:1.5"><b>MyMarketCheckup</b> is our monitoring service: it re-checks your ZIP's reading whenever new data lands and emails you the moment it changes. This report is part of it.</p>
 
   <div class="card setup" id="setup">
     <h1>Your report, from your own numbers</h1>
@@ -371,13 +384,17 @@ details.how .how-body b{color:#3a4450}
       <span class="v-title" id="v-title"></span>
       <span class="r-addr" id="r-addr"></span>
     </div>
+    <!-- The upsell sits BELOW the verdict block (item 9, 2026-08-28): a
+         banner above the reading sold before it informed. renderUpgradeBand
+         still owns its content and visibility. -->
+    <div id="upgrade-band" style="display:none;background:#fbf8f1;border:1px solid #e6dcc3;border-radius:8px;padding:12px 16px;font-size:14px;margin:14px 0 0;line-height:1.55"></div>
     <nav class="jumpnav" id="jumpnav" aria-label="Report sections"></nav>
 
     <div class="sec" id="signals" data-nav="signals">
       <div class="k">MARKET SIGNALS IN YOUR ZIP</div>
-      <div class="title">The four dials that predict price moves</div>
+      <div class="title">The dials that predict price moves</div>
       <p class="subt">Each dot shows where your market sits today; the tick mark is the danger line from past downturns. Dots left of the line are healthy — watch anything approaching or past it.</p>
-      <p class="dials-intro">Four numbers, all from licensed market statistics, all shown with the exact line we watch. Open any dial to see how it's computed.</p>
+      <p class="dials-intro">Every number comes from licensed market statistics and is shown with the exact line we watch. Open any dial to see how it's computed.</p>
       <div id="metrics"></div>
       <div class="gauge-legend"><span><i class="dotk"></i>your market today</span><span><i class="thk"></i>danger line</span><span>colored by health: green · amber · red</span></div>
       <p id="v-sub" style="margin-top:6px"></p>
@@ -395,20 +412,15 @@ details.how .how-body b{color:#3a4450}
       <div id="trend-locked" style="display:none;margin-top:12px"></div>
     </div>
 
-    <!-- Approach velocity — PAID-ONLY DATA PATH. The numbers here come
-         exclusively from the verify-access response (zip_velocity, schema
-         v20), which requires a valid purchase token: there is no public file
-         to fetch and nothing to un-hide client-side. The traces are drawn
-         from the ZIP's public h series — the same data the free gauges use —
-         but every NUMBER (months-to-line, state, score) is server-gated.
-
-         CURRENTLY SUPPRESSED by VELOCITY_ENABLED (see the const near the top
-         of the script). While it is false this markup still ships and the
-         section still renders — with the rebuild notice standing in for the
-         rows, the state sentence, the low-volume caveat, the alert toggle and
-         the method footnote. The subheading below is prose about what the
-         section measures, not a figure, so it stays: it is what tells a reader
-         which thing is being rebuilt. -->
+    <!-- Approach velocity — REBUILT ON THE CURRENT BASIS (2026-08-28).
+         Every number here is computed client-side by velFromHistory from the
+         record's own 12-month history and metrics — the same purchase-time
+         pull / released-store data the dials use, behind the same paid gate.
+         The old zip_velocity server payload (frozen prior-vendor rows,
+         suppressed behind a rebuild notice since the sunset) is not read
+         anywhere on this page; velocity_switch.py still guards the endpoint
+         side. Inventory carries no monthly series in the record yet, so its
+         row says so rather than estimating. -->
     <div class="sec" id="velocity" data-nav="velocity" style="display:none">
       <div class="k">HOW FAST IS YOUR MARKET MOVING?</div>
       <div class="title">Approach velocity — the distance to each danger line</div>
@@ -640,9 +652,13 @@ details.how .how-body b{color:#3a4450}
       <div class="k">STRESS TEST — WHERE YOUR NET GOES FROM HERE</div>
       <div class="title">Three futures for your walk-away number</div>
       <p class="subt">Not predictions — arithmetic. What your value, equity, and net proceeds look like six months out under three clearly-labeled assumptions.</p>
+      <!-- Rendered only when the market reading and the personal cushion point
+           different ways — the one sentence that keeps them from being read as
+           the same number (item 2, 2026-08-28). -->
+      <div class="say" id="reconcile" style="display:none;margin-bottom:12px"></div>
       <div class="prtable" id="stress-table"></div>
       <div id="stress-note" style="display:none;margin-top:10px"></div>
-      <p style="margin-top:8px;font-size:12px;color:var(--fainter)">Scenarios, not predictions: "trend continues" extends your ZIP's last-12-month price trend for six more months; "stress" assumes a 5% decline. Costs held constant.</p>
+      <p style="margin-top:8px;font-size:12px;color:var(--fainter)" id="stress-foot"></p>
       <div class="say" id="margin-say" style="margin-top:14px"></div>
     </div>
 
@@ -657,7 +673,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="bigger-picture" data-nav="big picture" style="display:none">
       <div class="k">THE BIGGER PICTURE</div>
       <div class="title">Your market in national context</div>
-      <p class="subt" id="ctx-subt">How your area compares to U.S. ZIP markets, and what mortgage rates are doing to the buyers who would purchase your home.</p>
+      <p class="subt" id="ctx-subt">Where your ZIP sits among the markets we score today, and what mortgage rates are doing to the buyers who would purchase your home.</p>
       <div class="ctxgrid" id="ctxgrid"></div>
     </div>
 
@@ -729,7 +745,7 @@ details.how .how-body b{color:#3a4450}
     <div class="sec" id="bottom-line" data-nav="bottom line">
       <div class="k">WHAT THIS MEANS</div>
       <div class="title">The plain-English bottom line</div>
-      <p class="subt">One paragraph, no hedging.</p>
+      <p class="subt">One paragraph, plain English.</p>
       <div class="say" id="meaning"></div>
     </div>
 
@@ -857,34 +873,16 @@ const $ = id => document.getElementById(id);
 // rather than reading undefined.
 const AGENT_INTRO_ENABLED = false;
 
-// ————— the velocity switch —————
-// Mirrors pipeline/velocity_switch.VELOCITY_ENABLED and the constant of the
-// same name in supabase/functions/verify-access/index.ts. Read that module for
-// why: zip_velocity is frozen vendor-derived output that this page has been
-// selling to paying customers, and the fix is a posture, not a source filter.
-//
-// While false the section KEEPS ITS PLACE — heading, section number, nav entry
-// — and renders VEL_REBUILD_* where every number used to be. Collapsing it
-// would silently delete a section the report advertises and the customer paid
-// for; a section that says what happened is the honest shape. The alert toggle
-// goes with the numbers, because an alert is a standing promise to email a
-// state change computed from the same suppressed rows.
-//
-// Nothing here is deleted: renderVelocity, velTrace, velPhrase and the watch
-// path are all still wired, so re-enabling is this line plus the two mirrors.
-//
-// Declared at the top of the script for AGENT_INTRO_ENABLED's reason — it is
-// read inside the render path, and a `const` referenced before its declaration
-// has run throws rather than reading undefined.
-const VELOCITY_ENABLED = false;
-
-// The standing notice. Says the panel is being rebuilt on a new data source
-// and that it will return; it never names a vendor, and it deliberately avoids
-// "check back"/"shortly" — that is the copy in renderVelocity's unseeded-ZIP
-// branch below, and it is the wrong thing to tell someone here, because this
-// is a rebuild rather than a job that ran late.
-const VEL_REBUILD_TITLE = "This section is being rebuilt";
-const VEL_REBUILD_BODY = "Approach velocity is being rebuilt on a new data source and will return to your report. Everything else here is unaffected.";
+// ————— the velocity switch, RETIRED FROM THIS PAGE (2026-08-28) —————
+// This page no longer declares VELOCITY_ENABLED because it no longer has a
+// zip_velocity renderer to guard: the approach-velocity panel is rebuilt
+// client-side from the record's own current-basis history (see velFromHistory
+// and its lineage assertion). The switch — and the guarantee that the frozen
+// prior-vendor table is never read on a paid path — lives on in
+// pipeline/velocity_switch.py and verify-access, which still returns
+// `velocity: null` and this page never reads. pipeline/test_velocity_switch.py
+// pins both halves: the endpoint stays guarded, and this page stays free of
+// any zip_velocity payload consumer.
 
 // Links the brand name inside the pipeline's plain-text citation. The exact
 // wording lives in the data (meta.attribution); this only adds the required
@@ -893,6 +891,15 @@ function citeHTML(t){ return t || ""; }  /* was: hyperlinked the prior vendor's 
 
 const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
 const fmtK = n => "$" + (Math.round(n/1000)*1000).toLocaleString("en-US");  // rounded to $1,000 for ranges
+// ————— Estimate rounding (item 8, 2026-08-28) —————
+// Computed estimates render ROUNDED — dollar-exact estimates read as more
+// precise than the arithmetic behind them is. User-entered figures stay
+// exact (their number, their precision). Stocks (equity, net, values) go to
+// the nearest $1K, K-notation from $100K ($116K); flows (per month/year) go
+// to the nearest $10 with a ≈ (≈$4,450/yr).
+const fmtEst = n => { const r = Math.round(n/1000)*1000;
+  return r >= 100000 ? "$" + Math.round(r/1000) + "K" : "$" + r.toLocaleString("en-US"); };
+const fmtFlow = n => "≈$" + (Math.round(n/10)*10).toLocaleString("en-US");
 
 // ————— Data vintage, per reading —————
 // Rendered ONLY from the record in hand (p = as-of month, u = retrieved_at).
@@ -1012,6 +1019,11 @@ const DEMO = {
   "20906": {l:"yellow", st:"MD", m:{mos:2.8, spy:-0.072, dom:43, domy:12, pd:0.22}, r:[["price_falling_fast",-0.072]]}
 };
 fetch("data/index.json").then(r=>r.ok?r.json():null).then(j=>{ if(j&&Object.keys(j).length) INDEX=j; });
+// The live current-basis distribution (rating shares + signal quantiles across
+// every ZIP with a reading) — feeds the "bigger picture" position box. Absent
+// or thin, the box simply doesn't render; nothing else depends on it.
+fetch("data/distribution.json").then(r=>r.ok?r.json():null)
+  .then(d=>{ MARKET.setDistribution(d); }).catch(()=>{});
 fetch("data/meta.json").then(r=>r.ok?r.json():null).then(m=>{
   META = m;
   MARKET.setMeta(m);   // the shared renderer reads meta for the backtest lines
@@ -1125,15 +1137,20 @@ async function paidRecoverReading(zip){
 }
 
 const KINDS = {
+  // MEANINGS TRANSLATE, THEY DO NOT PRESCRIBE (item 1, 2026-08-28). Each
+  // paragraph says what the data shows and what markets like this did in the
+  // past; what the reader should DO is theirs — their cushion and timeline
+  // live in the sections above this paragraph, and the gate now forbids the
+  // urgency phrasing the old copy used ("act on a plan now" and kin).
   green:{tag:"HOLD",hex:"#2e9e5b",soft:"#e9f4ee",line:"#bcdcc9",title:"No warning signs in {zip}",
     sub:"Nothing in the current data says this market is turning. Your equity isn't under pressure from market conditions right now.",
-    meaning:"The market is not a reason to sell today. If you're considering selling, it should be about your plans — a move, an upgrade, a life change — not about beating a downturn. Set up an alert and you'll hear the moment that changes."},
+    meaning:"The market is not a reason to sell today: nothing in the current data suggests this ZIP is turning. Translated, if a sale happens this year it would be driven by your plans — a move, an upgrade, a life change — not by the market. Readings update with every data release, and most HOLD markets stay HOLD for a long time."},
   yellow:{tag:"WATCH",hex:"#c8891f",soft:"#faf1dd",line:"#e8d5a8",title:"Early signals moving in {zip}",
     sub:"A warning signal has tripped. Not a crisis — but this is how turns start, months before prices move.",
-    meaning:"This is the moment to know your numbers — which is exactly what this report gives you. If selling within the next 12–18 months was already on your mind, the data says sooner beats later, and pricing correctly on day one matters more than any year in recent memory. If you're staying put, no action needed — just stay alert."},
+    meaning:"A warning signal has tripped. In past downturns this is what the early months looked like — and plenty of WATCH markets never became downturns at all. Translated: conditions here currently favor sellers a little less each month, so a sale planned for the next 12–18 months faces a market that may be softer at the end of that window than at the start. Your cushion and timeline, in the sections above, decide how much that matters to you."},
   red:{tag:"ACT",hex:"#d64545",soft:"#fbe9e9",line:"#ecc3c3",title:"Danger lines crossed in {zip}",
     sub:"At least one signal is past the thresholds that preceded past downturns. Sellers here are losing pricing power.",
-    meaning:"If selling was already on your mind, the data says act on a plan now — not next spring. Markets like this reward sellers who move early and price right the first time. Talk to a local professional this week, get real comparable sales for your street, and decide with numbers instead of nerves."},
+    meaning:"At least one signal here is past the level that preceded past downturns. Translated: buyers in this ZIP currently hold more leverage than sellers, and markets that looked like this were often softer six to twelve months later than they were at the warning. In those past episodes, sellers who listed earlier kept more pricing power than sellers who listed later — a description of how such markets behaved, not a prediction about this one. What it means for you depends on the cushion and timeline shown above."},
   // The paid-coverage-gap state (2026-08-28): a paying customer whose ZIP
   // failed the on-demand pull's quality floor. Never the waitlist copy — they
   // already paid. The report still builds: their numbers and the national
@@ -1145,7 +1162,7 @@ const KINDS = {
     meaning:"Nothing to do on your end: your numbers below are complete, and the local market section switches on by itself when this ZIP's listing data clears our quality floor. We've flagged your ZIP and we're watching for it."},
   strong:{tag:"ACT",hex:"#1f3a5f",soft:"#e8eef7",line:"#c3d2e8",title:"Strong seller's market in {zip}",
     sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now.",
-    meaning:"This is the opposite of a warning: multiple strength signals are past their thresholds at once — homes here sell fast, prices are rising, and supply is thin. If a sale was already in your plans, conditions like these favor sellers; a local professional can tell you what your exact home would command this month. If you're staying put, no action needed — your equity has a tailwind."}
+    meaning:"This is the opposite of a warning: multiple strength signals are past their thresholds at once — homes here sell fast, prices are rising, and supply is thin. Translated: while these conditions hold, the market is on the seller's side, and if you stay put the same conditions are a tailwind for your equity. Conditions like these don't announce their end — the reading above updates with every data release."}
 };
 // ————— Market rendering (shared with report.html) —————
 // These all live in web/market-render.js so the public sample renders the
@@ -1155,10 +1172,22 @@ const { clampPct, tcol, strongSignals, applyStrong, buildMetricRows, backtestNot
         stateWord, renderMetrics, renderCrossCheck, MONTHS, monthLabel, lastIdx,
         atOrNear, lineSVG, pctf } = MARKET;
 
-// ————— Approach velocity (paid-only — see the section comment) —————
+// ————— Approach velocity — REBUILT on the current basis (2026-08-28) —————
+// This panel used to render zip_velocity rows served through verify-access —
+// frozen prior-vendor output, suppressed behind a rebuild notice since the
+// sunset. The rebuild computes everything CLIENT-SIDE from the record's own
+// 12-month current-basis history (the purchase-time pull / released store):
+// per-signal 3-month pace, direction, and months-to-line against the same
+// published danger lines the dials use. No server velocity payload is read
+// anywhere on this page any more — see velFromHistory's lineage assertion.
+// The signal set is the current basis's: price trend and time on market carry
+// monthly history in the record; inventory does not yet, so its row says so.
 const VEL_LABEL = { spy: "Price trend", dom: "Time on market",
-                    mos: "Months of supply", pd: "Price cuts" };
-const VEL_STATE_RANK = { improving: 0, stable: 1, drifting: 2, "deteriorating fast": 3 };
+                    invy: "Homes for sale" };
+// Danger lines in y/y space — SPEC price_slow / dom_stretch (the amber
+// lines, same as the dials). dangerDown: the direction that is the danger.
+const VEL_LINES = { spy: { line: -0.02, dangerDown: true },
+                    dom: { line: 0.10, dangerDown: false } };
 
 // Oriented 6-point traces from the public h series (rising = approaching the
 // line) — the drawing is public data; the NUMBERS beside it are server-gated.
@@ -1195,42 +1224,95 @@ function velPhrase(kind, row){
     text: label + " is already past its danger line." };
   if (row.dir === "away") return { arrow: "←", cls: "var(--green-ink, #1e7a42)",
     text: label + " is moving away from its danger line." };
+  if (row.dir === "steady") return { arrow: "–", cls: "var(--fainter)",
+    text: label + " is holding steady — not moving toward its danger line at a measurable pace." };
   const mtl = row.mtl;
-  const when = mtl <= 1 ? "within a month" : mtl > 24 ? "in over two years at this pace"
+  // Display capped at ">24 mo": beyond two years a straight-line pace is a
+  // guess wearing a number.
+  const when = mtl == null || mtl > 24 ? "in >24 mo at this pace"
+             : mtl <= 1 ? "within a month"
              : "in ~" + Math.round(mtl) + " months at the current pace";
   return { arrow: "→", cls: "var(--amber-ink, #96650c)",
     text: label + " crosses the danger line " + when + "." };
 }
 
-function renderVelocity(v){
-  if (!VELOCITY_ENABLED){
-    // The section keeps its heading, its number and its nav entry; everything
-    // computed from zip_velocity is replaced by the rebuild notice. Written as
-    // an early return ahead of every other branch so there is exactly one way
-    // in: a guard further down would have to be re-argued each time a branch
-    // is added, and the empty-row branch immediately below would otherwise
-    // catch the suppressed case and tell a paying customer to check back
-    // shortly for a number that is not coming.
-    $("vel-rows").innerHTML =
-      '<div role="status" style="padding:14px 16px;border:1px solid var(--hairline);' +
-      'border-left:3px solid var(--navy);border-radius:8px;background:var(--hairline2);' +
-      'font-size:14px;line-height:1.6;color:var(--muted)">' +
-      '<b style="color:var(--ink)">' + VEL_REBUILD_TITLE + '.</b> ' + VEL_REBUILD_BODY + '</div>';
+// One signal's velocity from its monthly level series. Pace is the last three
+// months on 3-month-smoothed data (the footnote's promise); months-to-line
+// projects the level forward at that pace and re-derives the y/y metric
+// against the KNOWN year-ago baselines for the first twelve months, then
+// against the projection itself. Returns {pending} when the series is too
+// thin — a missing number is shown as missing, never estimated.
+function velCalc(levels, currentYoy, line, dangerDown){
+  if (!levels || currentYoy == null) return { pending: true };
+  const n = levels.length - 1;
+  const nonNull = levels.filter(x => x != null).length;
+  const sm = i => { const w = [levels[i], levels[i-1], levels[i-2]].filter(x => x != null);
+                    return w.length ? w.reduce((a,b) => a+b, 0)/w.length : null; };
+  const now = sm(n), then = sm(n-3);
+  if (nonNull < 8 || now == null || then == null || now <= 0) return { pending: true };
+  if (dangerDown ? currentYoy < line : currentYoy > line) return { dir: "crossed" };
+  const pace = (now - then) / 3;
+  const L = levels[n] != null ? levels[n] : now;
+  const projYoy = k => {
+    const base = k <= 12 ? atOrNear(levels, k-1) : (L + pace*(k-12));
+    return base && base > 0 ? (L + pace*k)/base - 1 : null;
+  };
+  let mtl = null;
+  for (let k = 1; k <= 24; k++){
+    const yk = projYoy(k);
+    if (yk == null) continue;
+    if (dangerDown ? yk < line : yk > line){ mtl = k; break; }
+  }
+  if (mtl != null) return { dir: "toward", mtl };
+  const y3 = projYoy(3);
+  if (y3 == null) return { dir: "steady" };
+  const d0 = Math.abs(currentYoy - line), d3 = Math.abs(y3 - line);
+  if (Math.abs(d3 - d0) < 0.005) return { dir: "steady" };
+  return d3 < d0 ? { dir: "toward", mtl: null } : { dir: "away" };
+}
+
+// The whole panel from one record. CLEAN LINEAGE, ASSERTED NOT ASSUMED: the
+// only inputs are the record's own current-basis history and metrics — the
+// basis literal is checked before a single number is computed, so nothing
+// here can ever be derived from a frozen prior-vendor row. There is no
+// server velocity payload left to read on this page.
+function velFromHistory(d){
+  if (!d || d.b !== "active listings" || !d.h) return null;
+  const m = d.m || {};
+  const domStretch = (m.dom != null && m.domy != null && m.dom - m.domy > 0)
+    ? m.domy / (m.dom - m.domy) : null;
+  const sig = {
+    spy: velCalc(d.h.p, m.spy, VEL_LINES.spy.line, VEL_LINES.spy.dangerDown),
+    dom: velCalc(d.h.d, domStretch, VEL_LINES.dom.line, VEL_LINES.dom.dangerDown),
+    invy: { pending: true },   // no monthly inventory series in the record yet
+  };
+  const known = Object.values(sig).filter(r => !r.pending);
+  let state = "unknown";
+  if (known.length){
+    if (known.some(r => r.dir === "crossed" || (r.dir === "toward" && r.mtl != null && r.mtl <= 3))) state = "deteriorating fast";
+    else if (known.some(r => r.dir === "toward" && r.mtl != null && r.mtl <= 12)) state = "drifting";
+    else if (known.every(r => r.dir === "away")) state = "improving";
+    else state = "stable";
+  }
+  return { sig, state, period: d.p || null };
+}
+
+function renderVelocity(d){
+  const v = velFromHistory(d);
+  if (!v){
+    // No current-basis history to compute from (a paid-gap ZIP, or a record
+    // still carrying only its notice). Honest and specific: the number
+    // arrives when the data does, not on a schedule.
+    $("vel-rows").innerHTML = '<p style="font-size:14px;color:var(--muted)">Approach velocity needs this ZIP\'s market history — it appears automatically once the ZIP has a live reading behind it.</p>';
     $("vel-state").textContent = "";
     $("vel-lowvol").style.display = "none";
-    $("vel-watch").innerHTML = "";          // no toggle: see the switch comment
+    $("vel-watch").innerHTML = "";
     if ($("vel-foot")) $("vel-foot").style.display = "none";
     $("velocity").style.display = "block";
     renumberSections();
     return;
   }
-  if (!v){
-    // No row yet (table unseeded or unscored ZIP): say so — never estimate.
-    $("vel-rows").innerHTML = '<p style="font-size:14px;color:var(--muted)">Velocity for this ZIP is computed on the next data refresh — check back shortly.</p>';
-    $("velocity").style.display = "block";
-    return;
-  }
-  const h = (window.__zipEntry || {}).h;
+  const h = d.h;
   $("vel-rows").innerHTML = Object.keys(VEL_LABEL).map(k => {
     const row = v.sig[k] || { pending: true };
     const p = velPhrase(k, row);
@@ -1247,65 +1329,16 @@ function renderVelocity(v){
     "improving": "This market is <b>improving</b> — its signals are moving away from the warning lines.",
     "unknown": "Not enough history in this ZIP to read a direction yet.",
   }[v.state] || "";
-  // period is pipeline-stamped YYYY-MM; strip to that charset rather than
+  // period is record-stamped YYYY-MM; strip to that charset rather than
   // relying on an escaper that isn't in scope here.
   $("vel-state").innerHTML = stateLine +
     ' <span style="color:var(--fainter);font-size:12px">(data through ' +
     String(v.period || "").replace(/[^0-9-]/g, "") + ")</span>";
-  $("vel-lowvol").style.display = v.low_volume ? "block" : "none";
-  renderVelWatch(v);
+  $("vel-lowvol").style.display = "none";
+  $("vel-watch").innerHTML = "";   // the escalation alert returns with a server-side recompute
+  if ($("vel-foot")) $("vel-foot").style.display = "";
   $("velocity").style.display = "block";
   renumberSections();
-}
-
-// The velocity alert — fires when the gathering state ESCALATES (e.g. stable →
-// drifting). One toggle, no threshold: the baseline is recorded server-side at
-// save time and each refresh compares against it.
-function renderVelWatch(v){
-  const saved = (window.__savedWatches || []).some(w => w.metric === "velocity");
-  $("vel-watch").innerHTML =
-    '<label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13.5px;line-height:1.5">' +
-    '<input type="checkbox" id="vel-watch-toggle" ' + (saved ? "checked" : "") +
-    ' onchange="toggleVelWatch(this.checked)" style="margin-top:2px;accent-color:var(--navy)">' +
-    '<span><b>' + (window.ALERT_COPY ? ALERT_COPY.toggle_label : "Alert me") + '</b> · ' +
-    (window.ALERT_COPY && ALERT_COPY.rows["09"] ? ALERT_COPY.rows["09"] :
-     "if my market starts moving toward a warning line") +
-    '<br><span style="color:var(--fainter);font-size:12px">Uses the same alert address as your other watches; the privacy terms are identical.</span></span></label>' +
-    '<div id="vel-watch-msg" style="display:none;font-size:13px;margin-top:6px"></div>';
-}
-
-async function toggleVelWatch(on){
-  // Belt and braces. renderVelocity never draws the toggle while the switch is
-  // off, but this function is a global and save-watch still accepts the
-  // "velocity" metric, so the only thing stopping a saved watch from arriving
-  // by hand is a guard here. A watch saved now would be honoured later by
-  // check_watches against the frozen rows.
-  if (!VELOCITY_ENABLED) return;
-  const msg = $("vel-watch-msg");
-  const show = (t, bad) => { msg.textContent = t; msg.style.display = "block";
-                            msg.style.color = bad ? "var(--red)" : "var(--green-ink, #1e7a42)"; };
-  if (!TOKEN || !SAVE_WATCH_FN) { show("Alerts need an active report link.", true); return; }
-  try {
-    const r = await fetch(SAVE_WATCH_FN, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(on
-        ? { token: TOKEN, metric: "velocity", direction: "escalates", threshold: 0,
-            calcInputs: window.__calcInputs || {},
-            cf_token: window.SISY_TS ? SISY_TS.token($("ts-watch")) : "" }
-        : { token: TOKEN, metric: "velocity", clear: true,
-            cf_token: window.SISY_TS ? SISY_TS.token($("ts-watch")) : "" }),
-    });
-    const j = await r.json();
-    if (j && j.ok){
-      window.__savedWatches = (window.__savedWatches || []).filter(w => w.metric !== "velocity")
-        .concat(on ? [{ metric: "velocity" }] : []);
-      show(on ? "✓ We'll email you if this market's direction worsens." : "Alert off.");
-    } else {
-      $("vel-watch-toggle").checked = !on;
-      show(r.status === 429 ? "Too many attempts — try again later."
-                            : "Couldn't save — try again in a minute.", true);
-    }
-  } catch(e){ $("vel-watch-toggle").checked = !on; show("Couldn't save — try again in a minute.", true); }
 }
 
 function renderDeepDive(d, zip, val, bal){
@@ -1368,27 +1401,47 @@ function renderDeepDive(d, zip, val, bal){
     $("stress-note").innerHTML =
       lockedCard("stress-note", "Add your estimate of the home's value to see three futures for your value, equity, and walk-away number.", "in-val");
     $("margin-say").style.display = "none";
+    $("reconcile").style.display = "none";
+    $("stress-foot").textContent = "";
     $("stress-test").style.display = "block";
   } else {
     const netAt = V => V*(1 - costPct/100) - (bal || 0);
-    const mom12 = y12v ? val/y12v-1 : null;
+    // The ZIP's stored 12-month trend, straight from the record's history —
+    // NOT the y12v side-effect of the trend chart above, which only exists
+    // when that section rendered. The two ratios are identical when both
+    // exist; this one exists whenever the data does (item 5, 2026-08-28).
+    let mom12 = null;
+    if (h && h.p){
+      const sli = lastIdx(h.p);
+      const cur = sli >= 0 ? h.p[sli] : null;
+      const ago = sli >= 0 ? atOrNear(h.p, sli - 12) : null;
+      if (cur && ago) mom12 = cur/ago - 1;
+    }
     const full = hasBal;
     const rows = [full
       ? '<div class="strow head"><span>SCENARIO</span><span>HOME VALUE</span><span>YOUR EQUITY</span><span>NET IF SOLD</span></div>'
       : '<div class="strow head slim"><span>SCENARIO</span><span>HOME VALUE</span></div>'];
     const scen = (name, V, cls) => rows.push(full
-      ? '<div class="strow '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span><span>'+fmt(Math.max(0,V-bal))+'</span><span class="net">'+(netAt(V)>=0?fmt(netAt(V)):"− "+fmt(-netAt(V)))+'</span></div>'
+      ? '<div class="strow '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span><span>'+fmtEst(Math.max(0,V-bal))+'</span><span class="net">'+(netAt(V)>=0?fmtEst(netAt(V)):"− "+fmtEst(-netAt(V)))+'</span></div>'
       : '<div class="strow slim '+(cls||"")+'"><span>'+name+'</span><span>'+fmt(V)+'</span></div>');
     scen("Today", val, "today");
     if (mom12!=null) scen("6 mo · 12-mo trend continues ("+pctf(mom12/2)+")", val*(1+mom12/2));
     scen("6 mo · prices go flat", val);
     scen("6 mo · stress: prices fall 5%", val*0.95, "stress");
     $("stress-table").innerHTML = rows.join("");
+    // The footnote describes the rows that actually rendered — a footnote
+    // explaining a "trend continues" row the table doesn't have was the bug.
+    $("stress-foot").textContent = "Scenarios, not predictions: " +
+      (mom12 != null ? '"trend continues" extends your ZIP\'s last-12-month price trend for six more months; ' : "") +
+      '"stress" assumes a 5% decline' +
+      (mom12 == null ? ' (no "trend continues" row — this ZIP doesn\'t yet have the 12 months of history it needs)' : "") +
+      ". Costs held constant. Home values shown exact from your input; equity and net are estimates, rounded.";
     if (!full){
       $("stress-note").style.display = "block";
       $("stress-note").innerHTML =
         lockedCard("stress-note", "These are the home-value scenarios only. Add your mortgage balance to see your equity and net-if-sold under each one.", "in-bal");
       $("margin-say").style.display = "none";
+      $("reconcile").style.display = "none";
     } else {
       $("stress-note").style.display = "none";
       $("margin-say").style.display = "block";
@@ -1396,7 +1449,22 @@ function renderDeepDive(d, zip, val, bal){
       const margin = 1 - V0/val;
       $("margin-say").innerHTML = margin > 0
         ? "<b>Your safety margin is about " + Math.round(margin*100) + "%.</b> Prices in your area would have to fall roughly that far before selling would no longer cover your mortgage payoff and costs. " + (margin > 0.25 ? "That's a comfortable cushion." : margin > 0.1 ? "A real but not unlimited cushion — one more reason to stay alert." : "That's thin — small market moves matter a lot to you right now.")
-        : "<b>Heads up: at your numbers, selling today would not fully cover your payoff and costs.</b> This is exactly the situation to review with a professional before the market moves further.";
+        : "<b>Heads up: at your numbers, selling today would not fully cover your payoff and costs.</b> Translated: market moves matter more to you than to most sellers — a further decline shows up directly in what you would owe at closing.";
+      // The reconciliation sentence (item 2): rendered only when the market
+      // reading and the personal cushion point different ways, because that
+      // is when a reader mistakes one for the other.
+      const lvl = d.l, rec = $("reconcile");
+      const severe = lvl === "red" || lvl === "yellow";
+      const calm = lvl === "green" || lvl === "strong";
+      if (severe && margin > 0.25){
+        rec.innerHTML = "<b>Two different things are true at once:</b> the reading above describes the market's direction (deteriorating), while your safety margin below describes your personal cushion (large) — a serious market warning and a comfortable position at your numbers can coexist.";
+        rec.style.display = "block";
+      } else if (calm && margin < 0.10 && margin !== null){
+        rec.innerHTML = "<b>Two different things are true at once:</b> the reading above describes the market's direction (calm), while your safety margin below describes your personal cushion (thin) — a quiet market and a tight position at your numbers can coexist, and the cushion is the one that's yours to change.";
+        rec.style.display = "block";
+      } else {
+        rec.style.display = "none";
+      }
     }
     $("stress-test").style.display = "block";
   }
@@ -1438,7 +1506,7 @@ function renderMoreAnswers(o){
     if (gap > 0.05){
       if (hasBal && bal > 0){
         const save = pmt(bal, mktRate) - pmt(origAmt || bal, rate);
-        if (save > 0) html += '<p>That gap is an asset worth about <b>' + fmt(save) + ' a month</b> on your loan — replacing it at today\'s rate would cost that much more.</p>';
+        if (save > 0) html += '<p>That gap is an asset worth about <b>' + fmtFlow(save) + ' a month</b> on your loan — replacing it at today\'s rate would cost that much more.</p>';
       } else {
         html += '<p>That gap is an asset — a loan this cheap can\'t be replaced right now. Add your balance (section above) to see it in dollars.</p>';
       }
@@ -1654,10 +1722,10 @@ async function generate(noScroll){
     if (m.spy != null) {
       const yearAgo = val / (1 + m.spy);
       const dir = m.spy >= 0 ? "up" : "down";
-      $("eq-trend").textContent = "If your home tracked the ZIP's median asking price, it's " + dir + " ≈ " + fmt(Math.abs(val - yearAgo)) + " vs. a year ago.";
+      $("eq-trend").textContent = "If your home tracked the ZIP's median asking price, it's " + dir + " about " + fmtEst(Math.abs(val - yearAgo)) + " vs. a year ago.";
     } else $("eq-trend").textContent = "";
-    $("eq-eq").textContent = fmt(equity);
-    $("eq-balline").innerHTML = "Mortgage balance: " + fmt(bal) +
+    $("eq-eq").textContent = fmtEst(equity);
+    $("eq-balline").innerHTML = "Mortgage balance: " + (prov.balEstimated ? fmtEst(bal) : fmt(bal)) +
       (prov.balEstimated ? " <i style=\"color:var(--fainter)\">(estimated from your original loan — standard amortization)</i>"
        : " <i style=\"color:var(--fainter)\">(your input)</i>") +
       " · <a href=\"#\" onclick=\"return adjustNums()\" style=\"text-decoration:underline\">adjust</a>";
@@ -1681,7 +1749,7 @@ async function generate(noScroll){
     const pctLabel = costPct % 1 ? costPct.toFixed(1) : String(costPct);
     const selling = val * costPct / 100;
     const net = val - selling - bal;
-    const fs = n => (n >= 0 ? fmtK(n) : "− " + fmtK(Math.abs(n)));
+    const fs = n => (n >= 0 ? fmtEst(n) : "− " + fmtEst(Math.abs(n)));
     $("wa-range").textContent = fs(net - val * 0.03) + " – " + fs(net + val * 0.03);
     $("wa-note").textContent = "Estimated, never a guarantee — the range is ±3% of your home's value around the midpoint. A local professional can tighten it for free.";
     $("cost-pct").textContent = pctLabel;
@@ -1689,9 +1757,9 @@ async function generate(noScroll){
     const balSrc = prov.balEstimated ? "estimated from your loan details" : "your input";
     $("prtable").innerHTML =
       '<div class="prrow"><span>Estimated sale price <i style="color:var(--fainter)">(your input)</i></span><span>'+fmt(val)+'</span></div>'+
-      '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmt(selling)+'</span></div>'+
-      '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+fmt(bal)+'</span></div>'+
-      '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmt(net) : "− "+fmt(Math.abs(net)))+'</span></div>';
+      '<div class="prrow minus"><span>Selling costs ('+pctLabel+'% — your setting)</span><span>− '+fmtEst(selling)+'</span></div>'+
+      '<div class="prrow minus"><span>Mortgage payoff <i style="color:var(--fainter)">('+balSrc+')</i></span><span>− '+(prov.balEstimated ? fmtEst(bal) : fmt(bal))+'</span></div>'+
+      '<div class="prrow total"><span>Estimated walk-away (midpoint)</span><span>'+(net >= 0 ? fmtEst(net) : "− "+fmtEst(Math.abs(net)))+'</span></div>';
     $("wa-asof").textContent = "As of " + today + " · computed entirely from the numbers you entered" +
       " · all figures estimated" + (timeline ? " · selling timeline: " + $("in-timeline").selectedOptions[0].textContent + " (your input)" : "");
   }
@@ -1714,14 +1782,14 @@ async function generate(noScroll){
     const nowPI = pmt(origAmt || bal, rate);
     const mktPI = pmt(bal, mktRate);
     const lock = mktPI - nowPI;
-    $("li-now").textContent = fmt(nowPI) + "/mo";
+    $("li-now").textContent = fmtFlow(nowPI) + "/mo";
     $("li-now-sub").textContent = "At your " + rate + "% rate" +
       (origAmt ? ", on the original " + fmt(origAmt) + " loan (your input)" : ", on your current balance (your input)") +
       (piti ? " · your full PITI: " + fmt(piti) + " — P&I excludes taxes & insurance" : "");
-    $("li-market").textContent = fmt(mktPI) + "/mo";
+    $("li-market").textContent = fmtFlow(mktPI) + "/mo";
     $("li-market-sub").textContent = "Borrowing " + fmt(bal) + " at ~" + (+mktRate).toFixed(2) + "% over 30 years";
     $("li-say").innerHTML = lock > 0
-      ? "<b>Your locked-in rate is worth about " + fmt(lock) + " a month</b> (≈ " + fmt(lock * 12) + " a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving."
+      ? "<b>Your locked-in rate is worth about " + fmtFlow(lock) + " a month</b> (" + fmtFlow(lock * 12) + " a year): financing the same loan at today's market rate would cost that much more in principal &amp; interest. Weigh this against your walk-away number when you think about moving."
       : "<b>Today's market rate is at or below yours.</b> Your mortgage isn't locking you in — the same loan at today's rate wouldn't cost more per month.";
     $("li-asof").textContent = "As of " + today + " · your rate & loan: your input · market rate: " + mktSrc + " · estimated — not a loan quote.";
   } else if (rateOnly) {
@@ -1762,9 +1830,9 @@ async function generate(noScroll){
     $("rb-buyer-label").textContent = hasVal ? "THE BUYER OF THIS HOME (AT YOUR VALUE)" : "THE BUYER HERE (AT THE ZIP'S MEDIAN ASKING PRICE)";
     $("rb-buyer").innerHTML =
       '<div class="prrow" style="padding:8px 0;border:none"><span>Buys at</span><span>' + fmt(buyV) + '</span></div>' +
-      '<div class="prrow" style="padding:8px 0;border:none"><span>Puts 20% down</span><span>' + fmt(buyV * 0.2) + '</span></div>' +
-      '<div class="prrow" style="padding:8px 0;border:none"><span>Pays monthly (loan part)</span><span><b>' + fmt(bpi) + '/mo</b></span></div>' +
-      '<div class="prrow" style="padding:8px 0;border:none"><span>Income that takes</span><span><b>≈ ' + fmt(incYr) + '/yr</b></span></div>';
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Puts 20% down</span><span>' + fmtEst(buyV * 0.2) + '</span></div>' +
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Pays monthly (loan part)</span><span><b>' + fmtFlow(bpi) + '/mo</b></span></div>' +
+      '<div class="prrow" style="padding:8px 0;border:none"><span>Income that takes</span><span><b>' + fmtEst(incYr) + '/yr</b></span></div>';
     $("rb-asof").textContent = "Rules of thumb: 20% down and a payment near 28% of income — real buyers vary. Market rate: " + mktSrc + ".";
   } else {
     $("rb-buyer-label").textContent = "THE BUYER OF THIS HOME";
@@ -1813,8 +1881,8 @@ async function generate(noScroll){
   setWatchAvail("lockin",   hasLockin, rate == null ? "ADD RATE" : "ADD BALANCE");
   syncWatchToggles();
 
-  // Re-render velocity now that __zipEntry.h exists, so the traces draw.
-  if (window.__velocity !== undefined && $("velocity")) renderVelocity(window.__velocity);
+  // Approach velocity from the record in hand (velFromHistory).
+  if ($("velocity")) renderVelocity(d);
 
   renumberSections();
 
@@ -2181,8 +2249,9 @@ function unlock(zip, justPaid, access){
   // Approach velocity rides the same verified response — the ONLY source for
   // these numbers. Stash + render now; renderDeepDive re-renders once the
   // public h series is loaded so the little traces can draw.
-  window.__velocity = (access && access.velocity) || null;
-  renderVelocity(window.__velocity);
+  // access.velocity (the zip_velocity payload, always null while the switch
+  // is off) is deliberately NOT read: approach velocity is computed from the
+  // record's own history at report-build time — see velFromHistory.
   REPORT_ZIP = String(zip || "").replace(/\D/g, "").slice(0, 5);
   if (REPORT_ZIP && !$("in-zip").value) {
     $("in-zip").value = REPORT_ZIP;
