@@ -867,8 +867,10 @@ def send_email(subject, html, recipients):
         return False
     body = json.dumps({"from": sender, "to": recipients, "subject": subject, "html": html}).encode()
     req = urllib.request.Request("https://api.resend.com/emails", data=body, method="POST",
+                                 # Cloudflare bot-blocks urllib's default UA — see alert_stale_data.py
                                  headers={"Authorization": f"Bearer {key}",
-                                          "Content-Type": "application/json"})
+                                          "Content-Type": "application/json",
+                                          "User-Agent": "shouldisellyet-ops/1.0 (+https://shouldisellyet.com)"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             r.read()

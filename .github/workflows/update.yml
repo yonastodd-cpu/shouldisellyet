@@ -310,7 +310,8 @@ jobs:
                                "to": to, "subject": "Refresh OK — Growth Ops digest failed",
                                "html": html}).encode(),
               method="POST",
-              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                       "User-Agent": "shouldisellyet-ops/1.0 (+https://shouldisellyet.com)"})
           urllib.request.urlopen(req, timeout=30).read()
           print("fallback notice sent")
           PY

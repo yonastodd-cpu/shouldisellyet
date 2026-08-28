@@ -127,7 +127,9 @@ def send(to, subject, html):
         "https://api.resend.com/emails",
         data=json.dumps({"from": sender, "to": [to], "subject": subject, "html": html}).encode(),
         method="POST",
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        # Cloudflare bot-blocks urllib's default UA — see alert_stale_data.py
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                 "User-Agent": "shouldisellyet-ops/1.0 (+https://shouldisellyet.com)"})
     urllib.request.urlopen(req, timeout=30).read()
 
 

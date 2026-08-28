@@ -83,7 +83,11 @@ def send(subject, html):
             "to": recipients(), "subject": subject, "html": html,
         }).encode(),
         method="POST",
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        # The UA matters: Cloudflare fronts api.resend.com and bot-blocks
+        # urllib's default signature (error 1010) — found when the first test
+        # send from a GitHub runner came back 403 with no Resend error at all.
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                 "User-Agent": "shouldisellyet-ops/1.0 (+https://shouldisellyet.com)"})
     try:
         urllib.request.urlopen(req, timeout=30).read()
         return True

@@ -597,7 +597,9 @@ def set_watches(supabase_url, service_key, sub_id, watches):
 
 def send_email(api_key, sender, to, subject, html):
     return _req("https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                # Cloudflare bot-blocks urllib's default UA — see alert_stale_data.py
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+                         "User-Agent": "shouldisellyet-ops/1.0 (+https://shouldisellyet.com)"},
                 data={"from": sender, "to": [to], "subject": subject, "html": html})
 
 
