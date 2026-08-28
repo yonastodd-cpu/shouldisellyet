@@ -115,6 +115,29 @@ def main():
     else:
         print("  SKIP  web/zip not built — notice-page check runs post-build in CI")
 
+    # ————— No waitlist copy on a paid surface (2026-08-28) —————
+    # A paying customer whose ZIP lacked a reading was told to "join the
+    # waitlist" — free-path copy served to someone who had already paid. The
+    # honest paid answers are the pull-in-progress note and the partial
+    # report; the waitlist is for people who haven't paid. Checked on
+    # COMMENT-STRIPPED SOURCE, not rendered text: the copy lives in script
+    # string literals the rendered-text scan structurally cannot see (that is
+    # how it shipped). Comments may still say the word — they explain the
+    # rule, and a gate that fired on its own rulebook would be deleted rather
+    # than obeyed (test_prior_vendor_serving_surfaces tells that story).
+    for name in ("report.html", "my-report.html"):
+        p = os.path.join(ROOT, "web", name)
+        if not os.path.isfile(p):
+            continue
+        src = open(p, encoding="utf-8", errors="replace").read()
+        src = re.sub(r"<!--.*?-->", " ", src, flags=re.S)
+        src = re.sub(r"/\*.*?\*/", " ", src, flags=re.S)
+        src = re.sub(r"//[^\n]*", " ", src)
+        ok = not re.search(r"waitlist", src, re.I)
+        print(f"  {'PASS' if ok else 'FAIL'}  /{name} carries no waitlist copy")
+        if not ok:
+            findings.append(f"/{name}: waitlist copy on a paid surface")
+
     # The client renderers: the refusal must be unconditional, not flag-gated.
     mr = os.path.join(ROOT, "web", "market-render.js")
     if os.path.exists(mr):

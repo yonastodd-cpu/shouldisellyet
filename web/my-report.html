@@ -276,7 +276,7 @@ details.how .how-body b{color:#3a4450}
 
   <div class="card setup" id="setup">
     <h1>Your report, from your own numbers</h1>
-    <p class="lede">Your numbers beat any purchased estimate. Only the address is required &mdash; everything else sharpens your walk-away number, and you can come back and adjust any of it anytime (this is also your profile). Nothing you type here leaves your browser: it's saved on this device only.</p>
+    <p class="lede">Your numbers beat any purchased estimate. Only the address is required &mdash; everything else sharpens your walk-away number, and you can come back and adjust any of it anytime (this is also your profile). Your property details stay on this device while your report is built &mdash; only your ZIP is sent, to fetch your local market reading. Two things sync to your account only when you use them: the address you save here, and any personal alert you turn on (an alert sends the numbers it watches, so we can check them against new data).</p>
     <!-- Structured, matching the capture on subscribe.html. Both write the
          same five fields through web/address.js, so a purchaser sees this
          already filled in and never types the address twice. The ZIP is its
@@ -359,6 +359,9 @@ details.how .how-body b{color:#3a4450}
     <input type="hidden" id="in-rent">
     <button class="btn" style="width:100%;margin-top:14px;font-size:16px;padding:14px" onclick="generate()">Build my report &rarr;</button>
     <div class="err" id="err"></div>
+    <!-- Not an error: the paid-path pull in progress (see paidRecoverReading).
+         Neutral styling on purpose — the customer did nothing wrong. -->
+    <div id="pull-note" style="display:none;margin:10px 0;padding:12px 14px;border:1px solid var(--hairline);border-radius:10px;background:var(--hairline2,#f0ebe0);font-size:14px"></div>
   </div>
 
   <div class="card report" id="report">
@@ -1033,47 +1036,92 @@ async function lookup(zip){
       if (r.ok) rec = await r.json();
     } catch (e) {}
 
-    // Figures from the endpoint, one ZIP per request. The static record
-    // carries our reading and no vendor measurement — see index.html's
-    // lookup() and the endpoint's own header for why the serving model is the
-    // thing that matters here rather than the data.
-    // Also asked when the record has NO reading word: an on-demand pull may
-    // have scored this ZIP since the last deploy (a buyer's checkout pulls
-    // data before payment — see ondemand-pull's header), in which case the
-    // endpoint carries the word itself and the merge makes the record whole.
-    // Without this, the buyer the pull just happened FOR would land here and
-    // be told there is no reading.
-    if (rec) {
-      try {
-        const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip));
-        if (f.ok) {
-          const d = await f.json();
-          if (d && d.dataStatus === "ok") {
-            if (!rec.l && d.reading && d.reading.l) {
-              rec.l = d.reading.l;
-              rec.s = d.reading.s;
-              rec.r = d.reading.r || [];
-              rec.b = d.reading.b;
-            }
-            // The reading's own vintage — the endpoint returns both. Every
-            // date this page prints comes from here, never from meta.json's
-            // site-wide "period" (frozen at the last v1 release).
-            if (d.asOf) rec.p = d.asOf;
-            if (d.lastUpdated) rec.u = d.lastUpdated;
-            rec.m = d.metrics || {};
-            rec.h = (Array.isArray(d.priceHistory) && d.priceHistory.length)
-              ? { s: d.priceHistory[0].month,
-                  p: d.priceHistory.map(r => r.medianListPrice),
-                  d: d.priceHistory.map(r => r.daysOnMarket == null ? null : r.daysOnMarket) }
-              : null;
-          }
-        }
-      } catch (e) { /* the report renders its reading; the dials stay empty */ }
-    }
+    // Figures from the endpoint, one ZIP per request — see mergeReading.
+    if (rec) rec = await mergeReading(rec, zip, false);
     stateCache[zip] = rec;
     return rec;
   }
   return DEMO[zip] || null;
+}
+
+// Merge the endpoint's reading and figures into a record. The static record
+// carries our reading and no vendor measurement — see index.html's lookup()
+// and the endpoint's own header for why the serving model is the thing that
+// matters here rather than the data. Also asked when the record has NO
+// reading word: an on-demand pull may have scored this ZIP since the last
+// deploy, in which case the endpoint carries the word itself and the merge
+// makes the record whole.
+//
+// `bust` forces a revalidated fetch (cache:"reload"). The endpoint's misses
+// are briefly cacheable, and an on-demand pull can turn "no reading" into a
+// reading between a homepage check and this page loading — the browser that
+// cached the miss at step one is exactly the browser that needs the reading
+// at step two (the 20005 dead end, 2026-08-28). The one moment we are about
+// to tell a PAID customer there is no reading is the one moment a possibly
+// stale answer is not acceptable.
+async function mergeReading(rec, zip, bust){
+  try {
+    const f = await fetch(MARKET_API + "?zip=" + encodeURIComponent(zip),
+                          bust ? { cache: "reload" } : undefined);
+    if (f.ok) {
+      const d = await f.json();
+      if (d && d.dataStatus === "ok") {
+        if (!rec.l && d.reading && d.reading.l) {
+          rec.l = d.reading.l;
+          rec.s = d.reading.s;
+          rec.r = d.reading.r || [];
+          rec.b = d.reading.b;
+        }
+        // The reading's own vintage — the endpoint returns both. Every
+        // date this page prints comes from here, never from meta.json's
+        // site-wide "period" (frozen at the last v1 release).
+        if (d.asOf) rec.p = d.asOf;
+        if (d.lastUpdated) rec.u = d.lastUpdated;
+        rec.m = d.metrics || {};
+        rec.h = (Array.isArray(d.priceHistory) && d.priceHistory.length)
+          ? { s: d.priceHistory[0].month,
+              p: d.priceHistory.map(r => r.medianListPrice),
+              d: d.priceHistory.map(r => r.daysOnMarket == null ? null : r.daysOnMarket) }
+          : null;
+      }
+    }
+  } catch (e) { /* the report renders its reading; the dials stay empty */ }
+  return rec;
+}
+
+// ————— Paid-path reading recovery (2026-08-28) —————
+// Every way a paid token can meet a ZIP with no stored data — a Stripe-direct
+// purchase, a webhook row holding the billing ZIP, a mismatch pick, a shared
+// link on a new device — converges HERE, at report-build time. So this is
+// where the pull fires: the same ondemand-pull the checkout page uses (same
+// quality floor, same ledger row, same store-first dedupe), with the access
+// token making it a paid pull. The customer has already paid — no outcome
+// here can charge them anything.
+// Hardcoded like MARKET_API above: SUPABASE_URL is declared further down in
+// this script, and a const read before its declaration throws.
+const ONDEMAND_FN = "https://kfbjooteazwvdsonthba.supabase.co/functions/v1/ondemand-pull";
+const pullTried = {};   // one vendor attempt per ZIP per page load
+async function paidRecoverReading(zip){
+  // 1. Re-ask the endpoint PAST the browser cache first: the store may
+  //    already hold this ZIP (the checkout's own pull, or another buyer's)
+  //    behind a cached miss — that alone resolves the 20005 class.
+  let rec = stateCache[zip] || { st: null };
+  rec = await mergeReading(rec, zip, true);
+  if (!rec.l && !pullTried[zip]) {
+    pullTried[zip] = true;
+    try {
+      const pr = await fetch(ONDEMAND_FN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // ZIP and token only — the report's other inputs never ride along.
+        body: JSON.stringify({ zip: zip, token: TOKEN }),
+      });
+      const j = pr.ok ? await pr.json() : null;
+      if (j && j.ok) rec = await mergeReading(rec, zip, true);
+    } catch (e) { /* network blip — the partial report below is the fallback */ }
+  }
+  stateCache[zip] = rec;
+  return rec;
 }
 
 const KINDS = {
@@ -1086,6 +1134,15 @@ const KINDS = {
   red:{tag:"ACT",hex:"#d64545",soft:"#fbe9e9",line:"#ecc3c3",title:"Danger lines crossed in {zip}",
     sub:"At least one signal is past the thresholds that preceded past downturns. Sellers here are losing pricing power.",
     meaning:"If selling was already on your mind, the data says act on a plan now — not next spring. Markets like this reward sellers who move early and price right the first time. Talk to a local professional this week, get real comparable sales for your street, and decide with numbers instead of nerves."},
+  // The paid-coverage-gap state (2026-08-28): a paying customer whose ZIP
+  // failed the on-demand pull's quality floor. Never the waitlist copy — they
+  // already paid. The report still builds: their numbers and the national
+  // context render in full; only the local dials wait for data. The vendor is
+  // deliberately unnamed here (named on /methodology.html only — same rule as
+  // every other customer surface; test_pause_leaks pins it).
+  gap:{tag:"PENDING",hex:"#5c6673",soft:"#f0ebe0",line:"#e7e2d8",title:"Your report for {zip} — local reading pending",
+    sub:"Our data provider doesn't yet have enough listing data to score {zip} responsibly. Your report includes your equity numbers and national context now, and we'll add the local reading automatically the moment the data supports it — or reply to your receipt email for a full refund.",
+    meaning:"Nothing to do on your end: your numbers below are complete, and the local market section switches on by itself when this ZIP's listing data clears our quality floor. We've flagged your ZIP and we're watching for it."},
   strong:{tag:"ACT",hex:"#1f3a5f",soft:"#e8eef7",line:"#c3d2e8",title:"Strong seller's market in {zip}",
     sub:"Buyers are competing for homes in {zip}. If selling was already on your mind, conditions favor you right now.",
     meaning:"This is the opposite of a warning: multiple strength signals are past their thresholds at once — homes here sell fast, prices are rising, and supply is thin. If a sale was already in your plans, conditions like these favor sellers; a local professional can tell you what your exact home would command this month. If you're staying put, no action needed — your equity has a tailwind."}
@@ -1488,11 +1545,33 @@ async function generate(noScroll){
     else { showZipMismatch(addr.zip, zipPaid); return; }
   }
   $("zip-mismatch").style.display = "none";
-  const d = applyStrong(await lookup(zip));
-  // No record, OR a record with no reading word (a notice ZIP whose
-  // on-demand reading hasn't landed): both mean nothing renderable. The
-  // second case used to fall through into KINDS[undefined].
-  if (!d || !d.l || !KINDS[d.l]) { err.textContent = "There's no live reading for " + zip + " yet — that page is still being rebuilt. Try the free checker on the homepage to join the waitlist."; err.style.display = "block"; return; }
+  let d = applyStrong(await lookup(zip));
+  // No record, OR a record with no reading word: nothing renderable — yet.
+  // For a PAID visitor that is never the end of the story: fire the same
+  // on-demand pull the checkout uses (the customer is already paid, so no
+  // outcome can charge them), and if the ZIP still can't be scored, build
+  // the partial report rather than refuse. The waitlist is for people who
+  // haven't paid; it must never be the answer to someone who has.
+  const isPaid = !!(TOKEN && SUB_PLAN) || justPaid;
+  let paidGap = false;
+  if (!d || !d.l || !KINDS[d.l]) {
+    if (isPaid) {
+      const note = $("pull-note");
+      note.textContent = "Pulling fresh market data for " + zip + " — about ten seconds…";
+      note.style.display = "block";
+      try { d = applyStrong(await paidRecoverReading(zip)); }
+      finally { note.style.display = "none"; }
+    }
+    if (!d || !d.l || !KINDS[d.l]) {
+      if (!isPaid) {
+        err.textContent = "There's no live reading for " + zip + " yet. Run the free check on the homepage to see this ZIP's current status.";
+        err.style.display = "block";
+        return;
+      }
+      paidGap = true;
+      d = Object.assign({ st: null }, d || {}, { l: "gap", m: {}, r: [] });
+    }
+  }
 
   // Home value: the user's number or nothing. The ZIP median is real market
   // data and still powers the market sections (02's base line, buyer math),
@@ -1545,9 +1624,18 @@ async function generate(noScroll){
   $("v-tag").textContent = k.tag; $("v-tag").style.color = k.hex;
   $("v-title").textContent = k.title.replace("{zip}", zip);
   renderAddrLine(addr, zip, d.st);
-  $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
-  renderCrossCheck(d);
-  $("v-sub").textContent = k.sub.replace("{zip}", zip);
+  if (paidGap) {
+    // No dials to draw and no cross-check to run — the header copy already
+    // says why. Everything personal below still renders in full. Both
+    // containers are CLEARED, not skipped: a slider-driven re-generate after
+    // a ZIP change must not leave another ZIP's dials on screen.
+    $("metrics").innerHTML = "";
+    if ($("xcheck")) $("xcheck").innerHTML = "";
+  } else {
+    $("metrics").innerHTML = renderMetrics(buildMetricRows(d, d.l === "strong"), zip);
+    renderCrossCheck(d);
+  }
+  $("v-sub").textContent = k.sub.replace(/\{zip\}/g, zip);
 
   // 03 · equity — needs value AND balance; otherwise a locked card naming
   // the one missing input (value first: it's the gateway number).
