@@ -1500,7 +1500,7 @@ Per-ZIP data is available on request for specific stories:
 
 {appendix}
 <h2>Methodology, briefly</h2>
-<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose reading is WATCH or ACT. This index is computed on a frozen four-signal basis (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%) so the series stays comparable month to month; the site's current per-ZIP readings use three signals over active-listing data with recalibrated lines, backtested against FHFA outcomes. Pre-2026 history is restated from Redfin's archived tracker with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
+<p class="note">A ZIP is scored when at least two of its market signals are known; the Warning-Sign Index is the share of scored ZIPs whose reading is WATCH or ACT. This index is computed on a frozen four-signal basis (months of supply&nbsp;&gt;4, prices falling&nbsp;&gt;2%&nbsp;y/y, time-to-sell up&nbsp;&gt;40%, inventory up&nbsp;&gt;50%) so the series stays comparable month to month; the site's current per-ZIP readings use three signals over active-listing data with recalibrated lines, backtested against FHFA outcomes. Pre-2026 history is computed from a prior data vendor's sold-home statistics with identical thresholds. Full detail, definitions, and the versioned changelog: <a href="/research/methodology.html">methodology</a>.</p>
 """
     # Article + Dataset markup for answer engines.
     #

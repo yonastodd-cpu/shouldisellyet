@@ -5,8 +5,14 @@ is easy to strip the sentence with it — at which point the site silently stops
 telling readers that everything before August 2026 was measured a different way.
 That would be a worse outcome than the credit line, not a better one.
 
-So: zero occurrences of the name on any reachable surface, AND the methodology
-page must still say the basis changed, in prose, without naming or linking.
+So: the name is permitted NOWHERE in rendered output except the methodology
+changelog (web/research/methodology.html's versioned table) — zero other
+exceptions — AND the methodology page must still say the basis changed, in
+prose, without naming or linking.
+
+The sweep is recursive on purpose: the original globs stopped two levels deep,
+which is how the archived research releases (web/research/2026-06/,
+web/research/2026-07/) shipped the name for two months without a red gate.
 """
 import glob
 import re
@@ -15,8 +21,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NAME = re.compile(r"Redfin", re.I)
 
-SURFACES = ["web/*.html", "web/*/*.html", "web/*.js",
-            "pipeline/build_*.py", "supabase/functions/*/*.ts"]
+SURFACES = ["web/**/*.html", "web/**/*.js", "web/**/*.txt", "web/**/*.json",
+            "web/**/*.webmanifest", "web/**/*.xml",
+            "pipeline/build_*.py", "supabase/functions/**/*.ts"]
+
+# The one place policy permits the name: the versioned methodology changelog.
+# (It currently uses the unnamed form there too; this is permission, not
+# presence.) Nothing else — not the site methodology page, not archived
+# research releases, not paid surfaces.
+PERMITTED = {"web/research/methodology.html"}
 
 
 def _visible(path):
@@ -33,15 +46,18 @@ def _visible(path):
 def test_the_vendor_name_appears_on_no_reachable_surface():
     offenders = []
     for pat in SURFACES:
-        for f in glob.glob(str(ROOT / pat)):
+        for f in glob.glob(str(ROOT / pat), recursive=True):
             rel = str(Path(f).relative_to(ROOT))
+            if rel in PERMITTED:
+                continue                                   # the changelog, and only it
             if rel == "web/methodology.html":
                 continue                                   # checked below, must be clean too
             hits = NAME.findall(_visible(f))
             if hits:
                 offenders.append(f"{rel}: {len(hits)}")
     assert not offenders, (
-        "the prior vendor is named on a reachable surface:\n  " + "\n  ".join(offenders))
+        "the prior vendor is named outside the methodology changelog:\n  "
+        + "\n  ".join(offenders))
 
 
 def test_the_methodology_page_does_not_name_or_link_it_either():
