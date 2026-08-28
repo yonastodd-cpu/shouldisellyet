@@ -43,7 +43,19 @@
 // "at capacity", which sells nothing rather than something unfulfillable),
 // ONDEMAND_MONTHLY_CEILING (optional, default below).
 //
-// POST { zip }
+// TWO CALLERS since 2026-08-28 (the paid-report dead end):
+//   * subscribe.html, pre-payment — { zip }. Unchanged: ok:true gates the
+//     Stripe redirect, FAIL never creates a charge.
+//   * my-report.html, post-payment — { zip, token }. A PAID customer whose
+//     report ZIP has no stored data (Stripe-direct purchase, billing-ZIP
+//     fallback row, a mismatch pick, a shared link on a new device — every
+//     such path converges on the report builder). The token is verified
+//     against subscribers server-side; a valid one makes this a PAID pull:
+//     revenue-backed, so it runs even at the monthly ceiling, and its
+//     floor-failure is logged as paid_coverage_gap and emailed to the
+//     operator — a paid gap is a person, not a data point.
+//
+// POST { zip, token? }
 //   200 { ok: true,  served: "store" | "pull" }
 //   200 { ok: false, reason: "no_data" | "at_capacity" | "error" | "disabled" }
 
@@ -52,6 +64,10 @@ import { rateAllowed } from "../_shared/ratelimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RENTCAST_KEY = Deno.env.get("RENTCAST_API_KEY") ?? "";
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+// Same mailbox posture as stripe-webhook's alertOps: a real receiving inbox.
+const OPS_TO = Deno.env.get("OPS_ALERT_TO") ?? "hello@shouldisellyet.com";
+const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
 
 // ═══ ONDEMAND_ENABLED — mirror of pipeline/ondemand_switch.py ═══
 // A module literal, not an env read, for the reason velocity_switch.py gives:
@@ -63,6 +79,15 @@ export const ONDEMAND_ENABLED = true;
 // paid call, any status). The default is deliberately conservative — set
 // ONDEMAND_MONTHLY_CEILING in the function's secrets to raise it, sized as
 // (remaining included quota − the scheduled refresh budget) for the month.
+//
+// THE CEILING GOVERNS THE FREE/PRE-PAYMENT PATH ONLY (2026-08-28). A
+// token-verified PAID pull runs even at the ceiling: the customer's money is
+// already in hand, so refusing the pull saves pennies of quota by breaking a
+// $5.99 promise. Priority falls out of the ledger arithmetic — paid pulls
+// still write ondemand_pulls rows, so they consume the shared count and the
+// free-path CTAs degrade to "at capacity" first. What still stops a paid
+// pull: a missing RENTCAST_API_KEY (nothing can pull), and the per-IP
+// farm-guard (a real customer needs one pull, not thirty).
 const DEFAULT_CEILING = 150;
 function ceiling(): number {
   const v = parseInt(Deno.env.get("ONDEMAND_MONTHLY_CEILING") ?? "", 10);
@@ -130,9 +155,33 @@ async function rest(path: string, init?: RequestInit) {
   return r;
 }
 
+// A paid pull that fails the floor is a customer who paid and got a partial
+// report. Email the operator (best-effort — the customer's answer never
+// waits on Resend). schema-v42 adds the matching demand outcome.
+async function alertPaidGap(zip: string, reason: string) {
+  if (!RESEND_KEY) return;
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM, to: [OPS_TO],
+        subject: `Paid coverage gap — ${zip} (${reason})`,
+        html: `<p><b>A paying customer's report ZIP failed the on-demand pull.</b></p>` +
+          `<p>ZIP <b>${zip}</b>, reason <code>${reason}</code>. They were shown the ` +
+          `honest partial-report message (their numbers + national context now, ` +
+          `local reading added automatically when the data supports it, refund on ` +
+          `reply). At this scale a paid gap is a personal follow-up: check ` +
+          `subscribers for the matching row and reach out.</p>`,
+      }),
+    });
+  } catch { /* alerting is best-effort; the response is not */ }
+}
+
 // Best-effort demand-table row for pull failures — coverage-gap data points.
 // The id is server-random here (no tab to correlate with).
-async function logDemand(zip: string, outcome: "pull_failed" | "pull_capacity") {
+async function logDemand(zip: string,
+                         outcome: "pull_failed" | "pull_capacity" | "paid_coverage_gap") {
   try {
     await rest("zip_lookups", {
       method: "POST",
@@ -253,6 +302,21 @@ Deno.serve(async (req) => {
     return json({ ok: false, reason: "error" }, cors, 429);
   }
 
+  // ————— paid caller? — verified against the row, never trusted from the
+  // body. An invalid or revoked token silently downgrades to the free path
+  // rather than erroring: the pull may still succeed under the ceiling, and
+  // a forged token learns nothing it couldn't learn without one.
+  const token = String(body.token ?? "");
+  let paid = false;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
+    try {
+      const sub = await rest(
+        `subscribers?select=id&access_token=eq.${token}&status=in.(active,report)&limit=1`)
+        .then((r) => r.ok ? r.json() : []);
+      paid = Array.isArray(sub) && sub.length > 0;
+    } catch { /* verification failure = free path, same as no token */ }
+  }
+
   try {
     // ————— 2. STORE FIRST — the checkout path checks the private store
     // BEFORE any vendor call. A released ZIP, or one pulled within the
@@ -280,27 +344,44 @@ Deno.serve(async (req) => {
     }
 
     // ————— 3. ceiling — counted in the database, never assumed. Every row
-    // is one paid vendor call regardless of status.
-    const month = new Date().toISOString().slice(0, 7);
-    const cr = await rest(`ondemand_pulls?month=eq.${month}&select=id`, {
-      headers: { Prefer: "count=exact", Range: "0-0" },
-    });
-    const range = cr.headers.get("content-range") ?? "";
-    const used = parseInt(range.split("/")[1] ?? "", 10);
-    if (!Number.isFinite(used)) {
-      // Can't prove we're under the ceiling → don't spend. "At capacity" is
-      // the honest degrade; a silent overage is the one forbidden outcome.
-      await logDemand(zip, "pull_capacity");
+    // is one paid vendor call regardless of status. The ceiling stops the
+    // FREE path only (see the DEFAULT_CEILING comment): a verified paid
+    // caller proceeds, because their purchase already funds the call. A
+    // missing vendor key stops everyone — there is nothing to run.
+    if (!RENTCAST_KEY) {
+      await logDemand(zip, paid ? "paid_coverage_gap" : "pull_capacity");
+      if (paid) await alertPaidGap(zip, "no_vendor_key");
       return json({ ok: false, reason: "at_capacity" }, cors);
     }
-    if (used >= ceiling() || !RENTCAST_KEY) {
-      await logDemand(zip, "pull_capacity");
-      return json({ ok: false, reason: "at_capacity" }, cors);
+    if (!paid) {
+      const month = new Date().toISOString().slice(0, 7);
+      const cr = await rest(`ondemand_pulls?month=eq.${month}&select=id`, {
+        headers: { Prefer: "count=exact", Range: "0-0" },
+      });
+      const range = cr.headers.get("content-range") ?? "";
+      const used = parseInt(range.split("/")[1] ?? "", 10);
+      if (!Number.isFinite(used)) {
+        // Can't prove we're under the ceiling → don't spend. "At capacity" is
+        // the honest degrade; a silent overage is the one forbidden outcome.
+        await logDemand(zip, "pull_capacity");
+        return json({ ok: false, reason: "at_capacity" }, cors);
+      }
+      if (used >= ceiling()) {
+        await logDemand(zip, "pull_capacity");
+        return json({ ok: false, reason: "at_capacity" }, cors);
+      }
     }
 
-    // Tighter farm-guard on the path that actually spends money: 3 vendor
-    // pulls per IP per hour. A buyer needs exactly one.
-    if (!await rateAllowed(req, "ondemand-pull", 3, 3600)) {
+    // Tighter farm-guard on the path that actually spends money. A
+    // token-verified customer gets a slightly wider, SEPARATE bucket: a
+    // stale-cache retry and a mismatch re-pick are both legitimate second
+    // attempts, and earlier anonymous attempts from the same address must
+    // not lock a real customer out. A buyer still needs one pull, not thirty.
+    if (paid) {
+      if (!await rateAllowed(req, "ondemand-paid", 5, 3600)) {
+        return json({ ok: false, reason: "error" }, cors, 429);
+      }
+    } else if (!await rateAllowed(req, "ondemand-pull", 3, 3600)) {
       return json({ ok: false, reason: "error" }, cors, 429);
     }
 
@@ -312,7 +393,8 @@ Deno.serve(async (req) => {
     if (vr.status === 404) {
       // A real answer: the vendor has no market data for this ZIP.
       await recordPull(zip, "no_data");
-      await logDemand(zip, "pull_failed");
+      await logDemand(zip, paid ? "paid_coverage_gap" : "pull_failed");
+      if (paid) await alertPaidGap(zip, "vendor_404");
       return json({ ok: false, reason: "no_data" }, cors);
     }
     if (!vr.ok) {
@@ -329,7 +411,8 @@ Deno.serve(async (req) => {
     const verdict = evaluate(m);
     if (!asOf || verdict.known < SPEC.min_known) {
       await recordPull(zip, "no_data");
-      await logDemand(zip, "pull_failed");
+      await logDemand(zip, paid ? "paid_coverage_gap" : "pull_failed");
+      if (paid) await alertPaidGap(zip, "below_floor");
       return json({ ok: false, reason: "no_data" }, cors);
     }
 

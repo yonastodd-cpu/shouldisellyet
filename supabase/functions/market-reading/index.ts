@@ -101,6 +101,16 @@ const CORS = {
 // stale-while-revalidate keeps a tranche release from stampeding the origin.
 const CACHE = "public, max-age=86400, stale-while-revalidate=604800";
 
+// A MISS may not be cached hard (2026-08-28, the 20005 dead end). An
+// on-demand pull can turn "no reading" into a reading in the ~50 seconds
+// between a buyer's homepage check and their report page loading — and the
+// browser that cached the day-long miss at step one is exactly the browser
+// that needs the reading at step two. The paying customer for ZIP 20005 hit
+// precisely this: data pulled and stored at 21:50:56Z, purchase at 21:51:34Z,
+// report page refused by the 21:00 cached miss. Five minutes keeps the
+// hot-loop protection; a day turned a working pull into a dead end.
+const CACHE_MISS = "public, max-age=300";
+
 // ═══ FIGURES_KILL_SWITCH — THE COPY THAT LIVES ON THE SERVER ═══
 //
 // Mirrors FIGURES_OFF in pipeline/figures_switch.py. Read that module for what
@@ -146,13 +156,16 @@ const WITHHELD_LINE = "Market figures are not being shown for this reading.";
 // cors is PASSED IN, never read from module scope. One isolate serves
 // concurrent requests from different origins, and a shared mutable header
 // object is how one caller's origin ends up on another caller's response.
+// `cache`: false → no-store; true → the hard reading cache; "miss" → the
+// short negative cache (see CACHE_MISS above for why the two differ).
 function json(body: unknown, cors: Record<string, string>,
-              status = 200, cache = false) {
+              status = 200, cache: boolean | "miss" = false) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      ...(cache ? { "Cache-Control": CACHE } : { "Cache-Control": "no-store" }),
+      ...(cache === "miss" ? { "Cache-Control": CACHE_MISS }
+        : cache ? { "Cache-Control": CACHE } : { "Cache-Control": "no-store" }),
       ...cors,
     },
   });
@@ -247,7 +260,7 @@ Deno.serve(async (req) => {
       return json(
         { zip, state: null, reading: null, asOf: null, lastUpdated: null,
           metrics: {}, priceHistory: [], dataStatus: "pending_migration" },
-        cors, 200, true,
+        cors, 200, "miss",
       );
     }
 
@@ -262,7 +275,7 @@ Deno.serve(async (req) => {
       return json(
         { zip, state: null, reading: null, asOf: null, lastUpdated: null,
           metrics: {}, priceHistory: [], dataStatus: "insufficient_data" },
-        cors, 200, true,
+        cors, 200, "miss",
       );
     }
     const s = rows[0];

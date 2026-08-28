@@ -21,13 +21,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FN = (ROOT / "supabase" / "functions" / "demand" / "index.ts").read_text()
 PULL = (ROOT / "supabase" / "functions" / "ondemand-pull" / "index.ts").read_text()
-SQL = (ROOT / "supabase" / "schema-v41.sql").read_text()
+# v42 re-states the outcome CHECK (adding paid_coverage_gap) and is what is
+# applied to production — the authority for what may be written.
+SQL = (ROOT / "supabase" / "schema-v42.sql").read_text()
 
 
 def _schema_outcomes():
-    m = re.search(r"outcome\s+text not null check \(outcome in\s*\(([^)]+)\)",
+    m = re.search(r"zip_lookups_outcome_check check \(outcome in\s*\(([^)]+)\)",
                   SQL, re.S)
-    assert m, "zip_lookups outcome CHECK not found in schema-v41"
+    assert m, "zip_lookups outcome CHECK not found in schema-v42"
     return set(re.findall(r"'([a-z_]+)'", m.group(1)))
 
 
@@ -45,7 +47,7 @@ def test_browser_outcomes_are_the_three_lookup_ones_only():
 def test_every_outcome_written_anywhere_is_in_the_schema():
     schema = _schema_outcomes()
     assert _fn_outcomes() <= schema
-    for server_only in ("pull_failed", "pull_capacity"):
+    for server_only in ("pull_failed", "pull_capacity", "paid_coverage_gap"):
         assert server_only in schema
         assert f'"{server_only}"' in PULL, \
             f"{server_only} is in the schema but nothing writes it"
@@ -70,9 +72,12 @@ def test_origins_are_allowlisted_not_reflected():
 
 def test_the_table_stores_no_identifier():
     """The columns ARE the privacy policy. No email, no IP, no user agent —
-    and the id is a client-random UUID, constrained to name a lookup."""
-    block = SQL[SQL.index("create table if not exists public.zip_lookups"):
-                SQL.index("alter table public.zip_lookups")]
+    and the id is a client-random UUID, constrained to name a lookup.
+    The column list lives in v41's CREATE TABLE (v42 only restates the
+    outcome CHECK), so this reads v41."""
+    v41 = (ROOT / "supabase" / "schema-v41.sql").read_text()
+    block = v41[v41.index("create table if not exists public.zip_lookups"):
+                v41.index("alter table public.zip_lookups")]
     for pii in (r"\bemail\b", r"\bip\b", r"\buser_agent\b",
                 r"\breferrer\b", r"\bsession\b"):
         assert not re.search(pii, block), f"zip_lookups grew a {pii} column"

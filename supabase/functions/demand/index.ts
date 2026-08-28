@@ -34,11 +34,11 @@ import { rateAllowed } from "../_shared/ratelimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-// Keep in sync with the zip_lookups outcome CHECK in schema-v41.sql —
-// pipeline/test_demand_fn.py fails the build when the lists drift. The two
-// pull_* outcomes are written server-side by ondemand-pull, never accepted
-// from a browser: a caller who could log pull failures could fabricate
-// coverage-gap data.
+// Keep in sync with the zip_lookups outcome CHECK in schema-v42.sql —
+// pipeline/test_demand_fn.py fails the build when the lists drift. The
+// pull_* and paid_coverage_gap outcomes are written server-side by
+// ondemand-pull, never accepted from a browser: a caller who could log pull
+// failures could fabricate coverage-gap data.
 const OUTCOMES = new Set(["reading_shown", "notice_shown", "invalid_zip"]);
 
 const ORIGINS = new Set([

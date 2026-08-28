@@ -164,3 +164,80 @@ def test_the_schema_side_is_private():
     for table in ("ondemand_pulls", "zip_readings", "zip_lookups"):
         assert f"create table if not exists public.{table}" in sql
         assert f"revoke all on table public.{table} from anon, authenticated" in sql
+
+
+# ————— the paid path (2026-08-28, the paid-report dead end) —————
+# A verified access token makes the pull revenue-backed: it runs even at the
+# monthly ceiling, and its floor-failure is a paid_coverage_gap — a person to
+# follow up with, not an anonymous data point.
+
+def test_the_token_is_verified_against_the_row_never_trusted():
+    """paid=true only after a subscribers lookup by access_token with an
+    active status filter — a body field alone must never buy priority."""
+    assert re.search(r"access_token=eq\.\$\{token\}&status=in\.\(active,report\)", BODY), \
+        "the paid flag is not grounded in a server-side subscriber lookup"
+    assert "paid = Array.isArray(sub) && sub.length > 0" in BODY, \
+        "paid must be derived from the lookup result"
+
+
+def test_the_token_is_shape_checked_before_the_lookup():
+    """Same uuid discipline as verify-access: garbage never reaches a query."""
+    assert re.search(r"\[0-9a-f\]\{8\}.*test\(token\)", BODY), \
+        "token must be shape-checked before any subscriber query"
+
+
+def test_the_store_still_answers_first_for_paid_callers():
+    """Dedupe precedes everything, including payment status: buyer #2 in the
+    freshness window costs $0 whether or not they carry a token. Pinned by
+    order — the store check sits before the token has any effect (the
+    ceiling block)."""
+    assert BODY.index("market_stats") < BODY.index("if (!paid)"), \
+        "the store-first dedupe must not depend on payment status"
+
+
+def test_the_ceiling_gates_only_the_free_path():
+    """The monthly ceiling count sits inside the !paid branch: a paid pull
+    proceeds at the ceiling (the purchase already funds the call), and free
+    CTAs degrade first because paid pulls still consume the shared count."""
+    gate = re.search(r"if \(!paid\) \{(.*?)\n    \}", BODY, re.S)
+    assert gate, "the free-path ceiling branch is gone"
+    assert "ondemand_pulls?month=" in gate.group(1), \
+        "the ceiling count must live inside the free-path branch"
+    assert "used >= ceiling()" in gate.group(1)
+
+
+def test_a_missing_vendor_key_stops_paid_pulls_too():
+    """Revenue-backed is not key-less: with no RENTCAST_KEY nothing can pull,
+    and the paid caller gets the same honest at_capacity — plus the operator
+    email, because a paid customer just hit a wall we built."""
+    key_gate = BODY.index("if (!RENTCAST_KEY)")
+    assert key_gate < BODY.index("if (!paid)"), \
+        "the key check must precede (and apply to) both paths"
+    blob = BODY[key_gate:key_gate + 400]
+    assert "paid_coverage_gap" in blob and "alertPaidGap" in blob
+
+
+def test_every_pull_still_writes_a_ledger_row():
+    """recordPull is called on pulled/no_data/error regardless of payment
+    status — the ledger is the cost model and paid calls cost the same."""
+    for status in ('"pulled"', '"no_data"', '"error"'):
+        assert f"recordPull(zip, {status}" in BODY.replace("await recordPull", "recordPull"), \
+            f"ledger row missing for {status}"
+
+
+def test_a_paid_floor_failure_is_a_paid_coverage_gap_and_an_email():
+    """Both vendor-404 and below-floor: the demand row says paid_coverage_gap
+    and the operator is emailed. The free path keeps pull_failed."""
+    assert BODY.count('paid ? "paid_coverage_gap" : "pull_failed"') == 2, \
+        "both no_data sites must branch the demand outcome on payment status"
+    assert BODY.count("alertPaidGap") >= 3, \
+        "the operator email must fire on no_vendor_key, vendor_404 and below_floor"
+
+
+def test_the_paid_gap_email_is_best_effort_and_unkeyed_is_silent():
+    """The customer's answer never waits on Resend, and a missing key is a
+    no-op rather than an error."""
+    fn = SRC[SRC.index("async function alertPaidGap"):]
+    fn = fn[:fn.index("\n}")]
+    assert "if (!RESEND_KEY) return;" in fn
+    assert "catch" in fn
