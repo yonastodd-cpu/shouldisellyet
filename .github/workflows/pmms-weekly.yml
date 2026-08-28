@@ -1,0 +1,54 @@
+name: PMMS weekly rate refresh
+
+# Freddie Mac publishes the 30-year survey rate every Thursday morning; every
+# financing section of the paid report renders it from meta.json, which was
+# frozen with the paused main refresh (item 7 of the paid-report fixes,
+# 2026-08-28). This fetches the public history CSV, rewrites just the
+# mortgage block, commits it, and dispatches the rebuild — same explicit
+# dispatch the promotion sweep uses, because GITHUB_TOKEN pushes never start
+# workflows on their own. Free data, no vendor quota, ~one commit a week.
+#
+# If this job breaks, the scheduled refresh's stale-data alert emails once
+# the rate's asof ages past 10 days (alert_stale_data.py).
+
+on:
+  schedule:
+    - cron: "0 17 * * 4"   # Thu 17:00 UTC — after PMMS posts, before US evening
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: write   # to dispatch update.yml after the commit lands
+
+concurrency:
+  group: pmms-weekly
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Fetch PMMS and update meta.json
+        run: python3 pipeline/refresh_pmms.py
+
+      - name: Commit the rate
+        id: commit
+        run: |
+          git config user.name "sisy-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add web/data/meta.json
+          git diff --cached --quiet && { echo "no rate change"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          git commit -m "PMMS 30-yr rate refresh [skip ci]"
+          for i in 1 2 3; do
+            git push && { echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; }
+            git pull --rebase --autostash origin main || true
+          done
+          echo "::error::could not push the PMMS refresh"; exit 1
+
+      - name: Dispatch the rebuild so the rate ships
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update.yml --ref main

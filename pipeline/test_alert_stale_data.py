@@ -10,10 +10,20 @@ Run: python3 -m pytest pipeline/test_alert_stale_data.py -q
 """
 from datetime import datetime, timezone
 
+import pytest
+
 import alert_stale_data as A
+import refresh_pmms
 
 
 NOW = datetime(2026, 8, 28, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def pmms_fresh(monkeypatch):
+    """The PMMS leg runs first inside main(); pin it fresh so the market-data
+    assertions below test one thing. Its own stale path has its own test."""
+    monkeypatch.setattr(refresh_pmms, "check", lambda: 0)
 
 
 def test_age_arithmetic_handles_both_iso_forms():
@@ -66,6 +76,17 @@ def test_recipient_fallback_is_a_real_mailbox(monkeypatch):
     assert A.recipients() == ["hello@shouldisellyet.com"]
     monkeypatch.setenv("OPS_DIGEST_RECIPIENTS", "a@x.com, b@y.com")
     assert A.recipients() == ["a@x.com", "b@y.com"]
+
+
+def test_a_stale_mortgage_rate_alerts_even_when_market_data_is_fresh(monkeypatch):
+    """Item 7: the weekly PMMS refresh gets the same courtesy as the market
+    store — a broken job emails, it doesn't wait to be noticed."""
+    sent = []
+    monkeypatch.setattr(refresh_pmms, "check", lambda: 1)
+    monkeypatch.setattr(A, "newest_retrieved_at", lambda: "2026-08-27T00:00:00Z")
+    monkeypatch.setattr(A, "send", lambda subj, html: sent.append(subj) or True)
+    assert A.main([]) == 0
+    assert len(sent) == 1 and "PMMS" in sent[0]
 
 
 def test_the_test_mode_is_unmistakably_a_test(monkeypatch):

@@ -183,6 +183,55 @@ def write(by_state, out=OUT, build_out=None):
     return n
 
 
+def write_distribution(readings, out_path):
+    """web/data/distribution.json — where a ZIP sits among today's LIVE ZIPs.
+
+    The paid report's "bigger picture" section used to interpolate against the
+    prior vendor's national sold-price deciles (withheld since the sunset —
+    see market-render.js contextBoxes). This is its clean replacement: rating
+    shares and per-signal quantiles computed from the CURRENT-basis readings
+    this very build is publishing — the same records, same lineage, nothing
+    fetched. Quantiles are 101 points (percentile lookup by binary search
+    client-side) so the file stays a few KB at any live count.
+
+    Generated output like everything else in web/data — never committed.
+    """
+    live = [r for r in readings.values() if r.get("l") and r.get("m")]
+    if not live:
+        # No release, no distribution — the client renders the financing
+        # backdrop alone. An empty file beats a stale one.
+        Path(out_path).write_text(json.dumps({"n": 0}))
+        return
+    def quantiles(vals):
+        vals = sorted(v for v in vals if v is not None)
+        if len(vals) < 20:      # too few live ZIPs for percentiles to mean much
+            return None
+        return [round(vals[min(len(vals) - 1, int(i / 100 * (len(vals) - 1)))], 4)
+                for i in range(101)]
+    def stretch(m):
+        # dom y/y as a fraction — m.domy is stored in DAYS (see compact()).
+        dom, domy = m.get("dom"), m.get("domy")
+        if dom is None or domy is None or dom - domy <= 0:
+            return None
+        return domy / (dom - domy)
+    counts = {}
+    for r in live:
+        counts[r["l"]] = counts.get(r["l"], 0) + 1
+    periods = sorted(p for p in (r.get("p") for r in live) if p)
+    dist = {
+        "n": len(live),
+        "period": periods[-1] if periods else None,
+        "counts": counts,
+        "q": {
+            "spy": quantiles([r["m"].get("spy") for r in live]),
+            "domstretch": quantiles([stretch(r["m"]) for r in live]),
+            "invy": quantiles([r["m"].get("invy") for r in live]),
+        },
+    }
+    Path(out_path).write_text(json.dumps(dist))
+    print(f"  distribution: {len(live):,} live ZIP(s) → {out_path}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Generate web/data/zips from the manifest")
     ap.add_argument("--manifest", default=None)
@@ -232,6 +281,7 @@ def main(argv=None):
 
     by_state = build(manifest, readings)
     written = write(by_state, args.out)
+    write_distribution(readings, Path(args.out).parent / "distribution.json")
 
     if written != len(manifest):
         raise SystemExit(f"wrote {written:,} records for {len(manifest):,} "

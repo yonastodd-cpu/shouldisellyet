@@ -127,6 +127,26 @@ def main(argv=None):
         print("test alert sent" if ok else "test alert FAILED")
         return 0 if ok else 1
 
+    rc = 0
+
+    # ————— the mortgage rate (weekly PMMS — paid-report item 7) —————
+    # Every financing section of the paid report renders this figure; a
+    # weekly series more than 10 days old means pmms-weekly.yml is broken.
+    try:
+        import refresh_pmms
+        if refresh_pmms.check() != 0:
+            ok = send("Mortgage rate is stale — the PMMS weekly refresh is broken",
+                      "<p><b>meta.json's 30-year rate is more than "
+                      f"{refresh_pmms.STALE_DAYS} days old.</b> PMMS publishes "
+                      "every Thursday; check .github/workflows/pmms-weekly.yml's "
+                      "recent runs, or run <code>python3 pipeline/refresh_pmms.py"
+                      "</code> and push.</p>")
+            print(f"PMMS stale — alert {'sent' if ok else 'FAILED'}")
+            rc = rc or (0 if ok else 1)
+    except Exception as e:  # noqa: BLE001 — the market check must still run
+        print(f"PMMS check failed: {e}")
+        rc = 1
+
     newest = newest_retrieved_at()
     if newest is None:
         # Cannot check is its own failure — silence is what this file replaces.
@@ -139,11 +159,11 @@ def main(argv=None):
     age = days_old(newest)
     if age <= threshold:
         print(f"fresh: newest market_stats row is {age} days old (line: {threshold})")
-        return 0
+        return rc
     ok = send(f"Market data is stale — newest reading is {age} days old",
               alert_html(age, newest, threshold))
     print(f"stale ({age}d > {threshold}d) — alert {'sent' if ok else 'FAILED'}")
-    return 0 if ok else 1
+    return rc or (0 if ok else 1)
 
 
 if __name__ == "__main__":
