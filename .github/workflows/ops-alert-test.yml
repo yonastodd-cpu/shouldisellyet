@@ -1,0 +1,61 @@
+name: Ops alert test (manual — sends real email)
+
+# Row 19 close-out (2026-08-28): the two alert paths added that day — the
+# stale-data alert in the refresh job and the Stripe webhook's error-path
+# alert — are only closed once each has landed in the operator's inbox. This
+# sends a clearly-marked [TEST] of each on demand, using the same Resend key,
+# sender and recipients the real alerts use. Nothing here rebuilds or deploys
+# anything.
+#
+# The stale test exercises the exact script the refresh job runs. The webhook
+# test verifies the delivery leg (key, sender, recipient) with the same
+# subject shape the function sends; the function's own error path is pinned in
+# code review rather than induced — forcing a real handler error on the live
+# payment webhook is not a test worth its risk.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Send the stale-data test alert
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+        run: python3 pipeline/alert_stale_data.py --test
+
+      - name: Send the webhook-failure test alert
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          key = os.environ["RESEND_API_KEY"]
+          to = [x.strip() for x in os.environ.get("OPS_DIGEST_RECIPIENTS", "").split(",")
+                if x.strip()] or ["hello@shouldisellyet.com"]
+          html = ("<p><b>Test only — no webhook error occurred.</b></p>"
+                  "<p>This is the shape of the alert stripe-webhook now sends from its "
+                  "error path (handler threw, or a paid checkout resolved no subscriber "
+                  "row). The real one carries the event id and the error, and means: "
+                  "Stripe was answered 200 and will not redeliver — read the Edge "
+                  "Function logs and repair by hand.</p>"
+                  "<p>FINAL_REVIEW row 19c delivery check.</p>")
+          req = urllib.request.Request(
+              "https://api.resend.com/emails",
+              data=json.dumps({"from": "ShouldISellYet <support@shouldisellyet.com>",
+                               "to": to,
+                               "subject": "[TEST] Stripe webhook needs attention — delivery check",
+                               "html": html}).encode(),
+              method="POST",
+              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+          urllib.request.urlopen(req, timeout=30).read()
+          print("webhook test alert sent to", to)
+          PY

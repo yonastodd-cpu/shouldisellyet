@@ -35,6 +35,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("ALERT_FROM") ?? "ShouldISellYet <support@shouldisellyet.com>";
+// Ops alerts go to a mailbox that RECEIVES — hello@ is a real Titan inbox;
+// alerts@ is a sending identity Resend once suppressed (match-request tells
+// that story). Override with OPS_ALERT_TO.
+const OPS_TO = Deno.env.get("OPS_ALERT_TO") ?? "hello@shouldisellyet.com";
 const SITE = "https://shouldisellyet.com";
 
 // ————— Postal address (CAN-SPAM) —————
@@ -118,6 +122,23 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     console.error("resend threw", e);
     return false;
   }
+}
+
+// Row 19c (close-out 2026-08-28): this function's error path answered Stripe
+// 200 and wrote to a log nobody reads — correct for Stripe's retry economics,
+// silent for the operator, on the one surface where "a customer paid and
+// nothing happened" is the failure. This emails the operator instead. It must
+// never throw (sendEmail already swallows), and it changes no response code:
+// Stripe still sees exactly what it saw before.
+async function alertOps(what: string, detail: string) {
+  await sendEmail(
+    OPS_TO,
+    `Stripe webhook needs attention — ${what}`,
+    `<p><b>The Stripe webhook hit its error path.</b></p>` +
+    `<p>${esc(what)}</p><pre>${esc(detail).slice(0, 2000)}</pre>` +
+    `<p>Stripe was answered 200, so it will NOT redeliver — read the Edge ` +
+    `Function logs and repair by hand. A paying customer may be waiting on ` +
+    `an activation or an email.</p>`);
 }
 
 // ————— Links —————
@@ -349,7 +370,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  if (!row) return console.error("could not resolve a subscriber row for", session.id);
+  if (!row) {
+    // A completed payment with no row behind it: the customer is charged and
+    // has nothing. The log line predates the alert; both stay.
+    console.error("could not resolve a subscriber row for", session.id);
+    await alertOps("paid checkout resolved no subscriber row",
+                   `session ${session.id}, email ${email}, zip ${zip || "?"}`);
+    return;
+  }
 
   // ——— 3. Claim the send, THEN send ———
   // A row existing doesn't mean its email went out (Resend could have been
@@ -509,7 +537,10 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     console.error("handler error:", e);
-    // Still 200: we log and fix rather than trigger endless Stripe retries.
+    // Still 200: we log and fix rather than trigger endless Stripe retries —
+    // but "we fix" needs "we know", so the operator is emailed (row 19c).
+    await alertOps(`handler threw on ${event.type}`,
+                   `event ${event.id}\n${String(e)}`);
   }
 
   // The one deliberate exception to the 200-always rule. A subscription event

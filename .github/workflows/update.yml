@@ -96,6 +96,22 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Row 19a (close-out 2026-08-28): staleness used to surface only in the
+      # admin health rows and run annotations — places someone has to go look.
+      # This emails instead. Schedule runs only (Mon/Thu), so a burst of pushes
+      # can't repeat the same alert; continue-on-error because an alerting
+      # problem must never cost a deploy, and the script exits nonzero on its
+      # own failures so the annotation still shows red.
+      - name: Alert if market data is stale past cadence
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPS_DIGEST_RECIPIENTS: ${{ secrets.OPS_DIGEST_RECIPIENTS }}
+        run: python3 pipeline/alert_stale_data.py
+
       - name: Snapshot previous verdicts
         if: steps.check.outputs.changed == 'true'
         run: cp -r web/data/zips /tmp/old_zips 2>/dev/null || mkdir -p /tmp/old_zips
@@ -516,8 +532,14 @@ jobs:
           sleep 2
           python3 scripts/gate-paid-surfaces.py http://localhost:5178
 
+  # SEQUENCED BEHIND THE GATES, deliberately (close-out 2026-08-28). This job
+  # originally ran parallel to verify-released, so a red gate emailed the
+  # operator AFTER the artifact was already live — the failure-email test of
+  # 2026-08-27 proved the mail arrives, and also that it arrives too late to
+  # stop anything. A gate must block the ship, not narrate it. The cost is
+  # ~3–4 minutes of gate wall-clock added before every deploy; accepted.
   deploy:
-    needs: refresh
+    needs: [refresh, verify-released]
     if: needs.refresh.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment:
