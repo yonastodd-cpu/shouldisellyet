@@ -28,6 +28,13 @@ import urllib.request
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:5177").rstrip("/")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Same TLS context the crawl tooling uses (audit-og.py) — a macOS Python with
+# no certifi otherwise fails CERTIFICATE_VERIFY_FAILED against production,
+# and "unreachable" is this gate's loudest failure mode.
+sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+from fetch_data import _ssl_context
+CTX = _ssl_context()
+
 PAID = ["/report.html", "/my-report.html"]
 
 FORBIDDEN = [
@@ -44,7 +51,7 @@ ALLOWED = re.compile(r"good time to sell", re.I)
 
 def rendered(url):
     req = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
-    with urllib.request.urlopen(req, timeout=45) as r:
+    with urllib.request.urlopen(req, timeout=45, context=CTX) as r:
         h = r.read().decode("utf-8", "replace")
     for pat in (r"<!--.*?-->", r"<script[^>]*>.*?</script>", r"<style[^>]*>.*?</style>"):
         h = re.sub(pat, "", h, flags=re.S)
