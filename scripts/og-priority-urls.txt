@@ -3,6 +3,8 @@
 # NOTE: ZIP order is pipeline/tier_interim.csv — a housing-supply proxy,
 # NOT a traffic ranking. Search Console has no impression data yet.
 https://shouldisellyet.com/
+https://shouldisellyet.com/methodology.html
+https://shouldisellyet.com/pricing/
 https://shouldisellyet.com/zip/MD/
 https://shouldisellyet.com/zip/VA/
 https://shouldisellyet.com/zip/DC/
