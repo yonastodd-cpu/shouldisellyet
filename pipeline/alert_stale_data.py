@@ -29,6 +29,7 @@ check or cannot send, so the failure is a red annotation rather than silence.
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -86,6 +87,11 @@ def send(subject, html):
     try:
         urllib.request.urlopen(req, timeout=30).read()
         return True
+    except urllib.error.HTTPError as e:
+        # Resend's body names the actual refusal (unverified domain, restricted
+        # key) — a bare status code sends whoever reads the log guessing.
+        print(f"resend send failed: {e} — {e.read().decode('utf-8', 'replace')[:300]}")
+        return False
     except Exception as e:  # noqa: BLE001
         print(f"resend send failed: {e}")
         return False
