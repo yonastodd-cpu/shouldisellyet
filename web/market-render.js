@@ -190,8 +190,10 @@ const MARKET = (function () {
     // instead — vendor-neutral on purpose, because a surface that has stopped
     // showing a source should not still be naming it.
     if (!x){
+      // The sentence is realtor_crosscheck.OFF_LINE verbatim — pinned by
+      // test_realtor_crosscheck; the module owns the reviewed copy.
       if (el) { el.style.display = ""; el.innerHTML =
-        '<span class="xk">INDEPENDENT CROSS-CHECK</span> · temporarily unavailable.'; }
+        '<span class="xk">Independent cross-check temporarily unavailable.</span>'; }
       return;
     }
     const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
