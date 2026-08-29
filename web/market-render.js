@@ -190,10 +190,14 @@ const MARKET = (function () {
     // instead — vendor-neutral on purpose, because a surface that has stopped
     // showing a source should not still be naming it.
     if (!x){
-      // The sentence is realtor_crosscheck.OFF_LINE verbatim — pinned by
-      // test_realtor_crosscheck; the module owns the reviewed copy.
-      if (el) { el.style.display = ""; el.innerHTML =
-        '<span class="xk">Independent cross-check temporarily unavailable.</span>'; }
+      // NOTHING RENDERS (operator decision 2026-08-29). While the cross-check
+      // is switched off, no record carries `x`, and a first-time visitor —
+      // the only kind this site has — should not be told about a feature
+      // they have never seen. The unavailable-line copy this replaces was
+      // written for readers who remembered the strip; that audience never
+      // existed. The x-present branch below stays intact for the day the
+      // licence review lets the feed back on.
+      if (el) { el.style.display = "none"; el.innerHTML = ""; }
       return;
     }
     const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];

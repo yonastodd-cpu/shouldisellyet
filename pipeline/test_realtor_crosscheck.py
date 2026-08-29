@@ -217,13 +217,28 @@ def test_every_shipped_credit_is_gated():
         "the llms.txt credit is not gated"
 
 
-def test_the_client_says_so_rather_than_vanishing():
-    """Hiding the strip reads as a rendering bug and changes the page's shape.
-    The switch is enforced server-side, so the client only ever sees absence."""
+def test_the_client_renders_nothing_while_the_crosscheck_is_off():
+    """REVERSED 2026-08-29, operator decision. The quiet unavailable-line was
+    written for readers who remembered the strip; the site never had outside
+    customers before the current engine, so a first-time visitor was being
+    told about a feature they had never seen. While no record carries `x`,
+    the strip renders NOTHING — no copy on the report, press or methodology
+    pages references a cross-check at all. The x-present renderer survives
+    intact for the day the licence review lets the feed back on."""
     js = (ROOT / "web" / "market-render.js").read_text()
-    assert RDC.OFF_LINE in js, "the client has no quiet line to render"
-    assert 'el.style.display = "none"; return;' not in js, \
-        "the cross-check strip still vanishes silently"
+    assert RDC.OFF_LINE not in js, \
+        "the client renders the off-notice again — nothing should mention " \
+        "the cross-check while it is switched off"
+    assert 'el.style.display = "none"; el.innerHTML = ""' in js, \
+        "the no-data branch no longer hides the strip"
+    assert "INDEPENDENT CROSS-CHECK" in js, \
+        "the x-present renderer was deleted rather than left for the rebuild"
+    for page in ("press.html", "methodology.html"):
+        html = (ROOT / "web" / page).read_text()
+        import re as _re
+        visible = _re.sub(r"<!--.*?-->", "", html, flags=_re.S)
+        assert "cross-check" not in visible.lower(), \
+            f"{page} still tells visitors about the switched-off cross-check"
 
 
 def test_no_public_artifact_carries_a_realtor_figure_today():
