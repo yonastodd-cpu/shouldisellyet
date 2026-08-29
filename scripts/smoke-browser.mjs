@@ -167,7 +167,7 @@ check("no console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2)
 // ————— 2. what the answer may contain, while paused —————
 if (state.verdict === "block") {
   check("paused card carries the notice",
-    /being refreshed|rebuilding/i.test(state.verdictText),
+    /not scored yet/i.test(state.verdictText),
     state.verdictText.slice(0, 80));
   check("paused card publishes no rating", !RATINGS.test(state.verdictText),
     (state.verdictText.match(RATINGS) || [])[0] || "");
@@ -192,7 +192,7 @@ const zipPage = await page.evaluate(() => ({
   robots: (document.querySelector('meta[name="robots"]') || {}).content || "",
   title: document.title,
 }));
-check("paused zip page shows the notice", /refresh|rebuil/i.test(zipPage.body));
+check("paused zip page shows the notice", /not scored yet/i.test(zipPage.body));
 check("paused zip page publishes no figure", !FIGURE.test(stripDisclosed(zipPage.body)),
   (stripDisclosed(zipPage.body).match(FIGURE) || [])[0] || "");
 check("paused zip page is noindexed", zipPage.robots.includes("noindex"), zipPage.robots);
@@ -291,7 +291,7 @@ if (RELEASED) {
     (stripDisclosed(r.body).match(FIGURE) || [])[0] || "none found");
   check("released page is NOT noindexed", !r.robots.includes("noindex"), r.robots || "(none)");
   check("released page does not show the pause notice",
-    !/being refreshed|rebuilding/i.test(r.body));
+    !/not scored yet/i.test(r.body));
 }
 
 // The twelve-month series is consumed by the HOMEPAGE preview (sparkSVG /
