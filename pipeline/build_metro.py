@@ -379,7 +379,7 @@ def page(cbsa, name, zips, entries, places, hist, vel_row, og):
             + ". Free per-ZIP readings, updated monthly."
             if share is not None else
             (f"Per-ZIP housing readings for {short} — live for {scored} of {total} "
-             f"ZIP codes; the rest are being rebuilt."
+             f"ZIP codes; the rest are not scored yet."
              if scored else
              f"Per-ZIP housing readings for {short} — {total} ZIP codes tracked. "
              f"{PAUSE.NOTICE_TITLE}."))
@@ -531,7 +531,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
     <div class="mfig">
       <div class="mlabel">Where they stand today</div>
       <div class="mhero">{f"{share:.0f}%" if share is not None else "—"}</div>
-      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if share is not None else (f"of the {total} ZIP codes we track here, {scored} {'has' if scored == 1 else 'have'} a live reading — too few to give the metro a share yet" if scored else f"readings for the {total} ZIP codes we track here are being rebuilt")}</div>
+      <div class="mcap">{f"of the {scored} ZIP codes we track here rate WATCH or ACT" if share is not None else (f"of the {total} ZIP codes we track here, {scored} {'has' if scored == 1 else 'have'} a live reading — too few to give the metro a share yet" if scored else f"readings for the {total} ZIP codes we track here are not live yet")}</div>
     </div>
     {det_block}
   </div>
@@ -541,7 +541,7 @@ table.zips td.past{{color:#a33;font-weight:600}}
   <div class="msub">{esc(spark_caption(series))}</div>
 
   <h2>Every ZIP code we track here</h2>
-  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if share is not None else (f"{holds} of the {scored} ZIP codes with a live reading rate HOLD or better; the rest are being rebuilt." if scored else PAUSE.NOTICE_BODY)} A row marked
+  <p class="note">{f"{holds} of {scored} rate HOLD or better today." if share is not None else (f"{holds} of the {scored} ZIP codes with a live reading rate HOLD or better; the rest are not scored yet." if scored else PAUSE.NOTICE_BODY)} A row marked
   <i>seller's market</i> crosses no danger line — conditions there favour a
   seller rather than turning against one. Tap a ZIP for its full reading.</p>
   <div style="overflow-x:auto">
@@ -554,8 +554,8 @@ table.zips td.past{{color:#a33;font-weight:600}}
       <p><b>What goes in.</b> Every ZIP code we track in this metro — {total} of
       them, {scored} with a live reading. A ZIP shows a reading when its licensed
       active-listing statistics are complete enough to score; the rest carry a
-      rebuild notice rather than a guess.</p>
-      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT. A row marked seller's market crosses no line and is not among them." if share is not None else (f"{scored} of the {total} ZIP codes here have a live reading, of which {warn} show at least one signal past its danger line. That is too few to state a share for the metro — the rest are being rebuilt." if scored else PAUSE.NOTICE_BODY)}</p>
+      note that the reading is not live yet, rather than a guess.</p>
+      <p><b>The maths.</b> {f"{warn} of those {scored} ZIP codes show at least one signal past its danger line, which is {share:.0f}%. You can count them in the table above: every row tagged WATCH or ACT. A row marked seller's market crosses no line and is not among them." if share is not None else (f"{scored} of the {total} ZIP codes here have a live reading, of which {warn} show at least one signal past its danger line. That is too few to state a share for the metro — the rest are not scored yet." if scored else PAUSE.NOTICE_BODY)}</p>
       <p><b>Why there is a line at all.</b> Each danger line is the level at which,
       in past downturns, that signal began leading price declines rather than
       following them. The lines are fixed, published, and identical for every ZIP

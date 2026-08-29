@@ -531,7 +531,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
                   + f"{city}, {st} ({z}) shows {vc['short']} — the reading is "
                   + f"{vc['word']}. {FIG.WITHHELD_LINE}")
     else:
-        answer = f"{PAUSE.NOTICE_TITLE} for {city}, {st} ({z}). {PAUSE.NOTICE_BODY}"
+        answer = f"{city}, {st} ({z}) is not scored yet. {PAUSE.NOTICE_BODY}"
     # The Q&A pair: question a person actually asks, two-sentence answer from
     # the canonical copy map (verdict_copy.json qa — never hand-written here,
     # so the FAQ can't drift from the card and the share text).
@@ -592,7 +592,7 @@ def zip_page(z, e, place, meta, neighbours, has_card=False):
         desc = og_desc = PAUSE.NOTICE_DESC
         og_alt = PAUSE.NOTICE_TITLE
         og_img = f"{SITE}/og/default.png"
-        answer = f"{PAUSE.NOTICE_TITLE} for {where}. {PAUSE.NOTICE_BODY}"
+        answer = f"{where} is not scored yet. {PAUSE.NOTICE_BODY}"
         stat = ""
         rows = ""
         faq_q = f"Why is the reading for {z} unavailable?"
@@ -865,9 +865,9 @@ def coverage_line(live, total, noun, as_of=""):
     count states coverage without a number instead.
     """
     if not live:
-        return f"Housing-market pages for {total:,} {noun}. Readings are being rebuilt."
+        return f"Housing-market pages for {total:,} {noun}. Readings are not shown right now."
     line = (f"Live readings for {live:,} of {total:,} {noun}, computed from "
-            f"licensed active-listing statistics; the rest are being rebuilt.")
+            f"licensed active-listing statistics; the rest are not scored yet.")
     return f"{line} Data through {pretty_month(as_of)}." if as_of else line
 
 
@@ -885,10 +885,10 @@ def hub_coverage_prose(live, as_of=""):
     readings (CI's verify job) must not claim readings are live.
     """
     if not live:
-        return "Housing-market pages for every U.S. ZIP with a standing page. Readings are being rebuilt."
+        return "Housing-market pages for every U.S. ZIP with a standing page. Readings are not shown right now."
     line = ("Free readings are live in thousands of U.S. ZIP codes, computed "
-            "from licensed active-listing statistics; the rest are being "
-            "rebuilt.")
+            "from licensed active-listing statistics; the rest are not "
+            "scored yet.")
     return f"{line} Data through {pretty_month(as_of)}." if as_of else line
 
 
@@ -1081,14 +1081,14 @@ def write_llms_txt(web, meta, pages, live=0, as_of=""):
         f"market statistics. Readings are live for {live:,} of the {pages:,} "
         f"ZIP codes with a standing page"
         + (f", current through {pretty}" if pretty else "")
-        + "; the rest are being rebuilt. Operated by Yayday LLC. Not a "
+        + "; the rest are not scored yet. Operated by Yayday LLC. Not a "
           "brokerage; readings are general information, not financial or "
           "real-estate advice."
         if live else
         f"ShouldISellYet.com computes a free plain-English housing-market "
         f"reading — HOLD, WATCH, or ACT — for U.S. ZIP codes from licensed "
-        f"market statistics. Readings are being rebuilt on a new data engine "
-        f"and are not shown right now; all {pages:,} ZIP pages stay live. "
+        f"market statistics. Readings are temporarily not shown; "
+        f"all {pages:,} ZIP pages stay live. "
         f"Operated by Yayday LLC. Not a brokerage; readings are general "
         f"information, not financial or real-estate advice.")
     # Wrapped here rather than typed as fixed lines: the numbers change the
@@ -1120,8 +1120,8 @@ market with unusual buyer competition reads as a strong seller's market.
 - [Markets by state](https://shouldisellyet.com/zip/): standing reading pages
   for {pages:,} ZIP markets, each with its signal gauges and danger lines.
 - [Sample report](https://shouldisellyet.com/report.html): the shape of the
-  paid full report. Its market figures are being rebuilt on a new data engine
-  and are not shown right now.
+  paid full report. A live-ZIP sample is being prepared; its market
+  figures are not shown right now.
 - [Press](https://shouldisellyet.com/press.html): coverage facts and contact.
 
 ## Citing this site

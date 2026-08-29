@@ -1962,7 +1962,7 @@ async function fillFromZip(){
     note.textContent = "✓ " + [r.city, r.state].filter(Boolean).join(", ");
   } else if (r.checked) {
     note.className = "zipnote warn";
-    note.textContent = "No live reading for " + z + " yet — that page is still being rebuilt.";
+    note.textContent = "No live reading for " + z + " yet — building your report will pull fresh data for it.";
   } else { note.textContent = ""; note.className = "zipnote"; }
 }
 $("in-zip").addEventListener("input", function(){

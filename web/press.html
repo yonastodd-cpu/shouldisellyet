@@ -98,13 +98,13 @@ footer a{color:var(--faint-ink)}
   <div class="counts">
     <!-- Count-free by decision (2026-08-26): exact coverage counts live on
          /methodology.html only, asserted by the crawl gate. -->
-    <p><b>Free readings are live in thousands of U.S. ZIP codes.</b> Every state and the District of Columbia has at least one. The rest are being rebuilt: those pages show a rebuild notice rather than a rating, because a page with no current reading shows no reading at all.</p>
-    <p>Readings returned on <b>20 August 2026</b>. Ingestion from our previous market-data vendor stopped on 14 August 2026, and the engine was rebuilt on a licensed market-statistics API before any reading went back up.</p>
+    <p><b>Free readings are live in thousands of U.S. ZIP codes.</b> Every state and the District of Columbia has at least one. The rest aren't scored yet: those pages say so rather than showing a rating, because a page with no current reading shows no reading at all.</p>
+    <p>Readings first went live on <b>20 August 2026</b>, computed from a licensed market-statistics API. Coverage grows ZIP by ZIP as each market's data clears the quality floor; the data sourcing is documented on the <a href="/methodology.html">methodology page</a>.</p>
     <p class="asof">Figures on this page were taken on 22 August 2026. The running count is on the <a href="/zip/">markets index</a>, which computes it on every build. Each ZIP page shows the month its own reading runs through; a page with no reading shows no date.</p>
   </div>
 
   <h2>How a reading is computed</h2>
-  <p>Three signals, each drawn from licensed market statistics about homes currently listed for sale, and each with a published danger line. The thresholds are disclosed, not proprietary — the point is that anyone can check our work. The full method, including the two signals the rebuilt engine lost, is on the <a href="/methodology.html">methodology page</a>.</p>
+  <p>Three signals, each drawn from licensed market statistics about homes currently listed for sale, and each with a published danger line. The thresholds are disclosed, not proprietary — the point is that anyone can check our work. The full method — including two commonly-quoted signals this engine deliberately does not use, and why — is on the <a href="/methodology.html">methodology page</a>.</p>
 
   <!-- THREE signals, not four. Months of supply and price-cut share both need
        a closed-sale count that active-listing statistics cannot see, so the
@@ -143,7 +143,7 @@ footer a{color:var(--faint-ink)}
 
   <h2>The reading often says don't sell — by design</h2>
   <div class="pull">
-    <p style="margin:0">A tool built to generate real-estate leads would find urgency everywhere. Ours doesn't: most live readings currently come back HOLD, which is the product working correctly. We are not publishing a national breakdown by rating on this page while coverage is still being rebuilt — a share computed over the first tranche of live ZIP codes is not a share of the country, and would be quoted as one.</p>
+    <p style="margin:0">A tool built to generate real-estate leads would find urgency everywhere. Ours doesn't: most live readings currently come back HOLD, which is the product working correctly. We are not publishing a national breakdown by rating on this page while coverage is still growing — a share computed over the first tranches of live ZIP codes is not a share of the country, and would be quoted as one.</p>
   </div>
 
   <!-- THE LADDER STAYS OFF THIS PAGE. It was hand-typed prose until 2026-08-09,
@@ -156,12 +156,12 @@ footer a{color:var(--faint-ink)}
        quoted, not even to disown them — this page is written to be crawled and
        cited, and a wrong number in the source is still a wrong number an answer
        engine can lift. -->
-  <p id="backtest-ladder">We test the danger lines rather than assert them, replaying year-end signal snapshots against the federal government's own annual house-price index for the following year. <b>The published ladder measured the previous five-signal engine, and it validates that engine — not the one now running.</b> Two of today's three lines were recalibrated in August 2026 for a different kind of measurement, so quoting the old results as evidence for a current reading would describe a formula the site does not run. The figures are therefore withdrawn from this page rather than restated. A backtest of the three-signal engine will be computed and published on the same basis, and it will be labelled as its own.</p>
+  <p id="backtest-ladder">We test the danger lines rather than assert them, replaying year-end signal snapshots against the federal government's own annual house-price index for the following year. <b>A backtest of the current three-signal engine is being computed on exactly that basis and will be published, clearly labelled.</b> Until it is, this page quotes no backtest figures — a number borrowed from any other formula would describe an engine the site does not run.</p>
 
   <h2>Where the data comes from</h2>
   <p>A reading is computed from <b>licensed market statistics</b> — ZIP-level data about homes currently listed for sale, bought under a commercial licence. It is not public data, and we would rather say that plainly than let a looser word imply a provenance we do not have. The provider is named plainly on the <a href="/methodology.html">methodology page</a>; we do not use its name as a marketing credential. This is the only source that feeds a reading.</p>
   <p>Three further sources support the product without feeding any reading: the <b>Federal Housing Finance Agency</b> house price index (U.S. Government, public domain), used to test our danger lines and as an independent price benchmark; <b>U.S. Census Bureau</b> ZCTA and CBSA files (public domain), used to map ZIP codes to metropolitan areas; and the <b>Freddie Mac</b> Primary Mortgage Market Survey, which supplies the mortgage-rate context on paid reports. Place names come from <b>GeoNames</b> (CC BY 4.0). Those four are genuinely public; the market statistics are not.</p>
-  <p>We previously showed an independent cross-check against Realtor.com listing data. <b>That cross-check is not currently running.</b> It compared against our former vendor's figures and has not been rebuilt for the new source. It is not displayed anywhere on the site, and nothing on the site should be read as one.</p>
+  <p>An independent cross-check against a second listing feed is <b>switched off pending a licence review</b>. It is not displayed anywhere on the site, and nothing on the site should be read as one.</p>
   <p>No source sponsors, endorses, or partners with this site, and no source has any influence over a reading.</p>
   <p>Freshness varies by ZIP code. Market data is licensed per ZIP and costs money to refresh, so the busiest ZIP codes refresh most often and the rest less often; the cadence on the new source is not settled yet, and we would rather not publish a schedule we cannot keep. Every page that shows a reading shows the month that reading's own data runs through.</p>
 

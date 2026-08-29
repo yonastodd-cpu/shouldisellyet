@@ -54,21 +54,25 @@ INGESTION_STOPPED_UTC = "2026-08-14T13:53:43Z"
 LAST_INGESTED_PERIOD = "2026-07"   # committed by 5d79b43, before the gate
 PAUSED_SOURCE = "redfin"
 
-# Reader-facing. Says what is true — the reading is being rebuilt on a new data
-# engine — without implying fault, outage, or that the page is broken. It never
-# names the outgoing vendor: a banner is not the place to litigate a data
-# licence, and naming one would date the copy the moment it changes.
-NOTICE_TITLE = "This reading is being refreshed"
-NOTICE_BODY = ("We're rebuilding this market reading on a new data engine. "
-               "The page will show its rating again shortly — nothing here has "
-               "been deleted, and your ZIP will be back with fresh numbers.")
+# Reader-facing. FIRST-LAUNCH FRAMING (2026-08-29): the earlier copy said the
+# reading was "being refreshed" and would be "back with fresh numbers" — words
+# for a returning visitor who had seen a rating here, and the site never had
+# outside customers before the current engine. A first-time visitor should
+# read a forward fact, not an apology for history they never saw. Still never
+# names any vendor, and still implies no fault or outage — a page without a
+# reading simply hasn't earned one yet.
+NOTICE_TITLE = "This ZIP is not scored yet"
+NOTICE_BODY = ("Readings go live ZIP by ZIP as each market clears our quality "
+               "floor, and this one is not there yet. A report purchase pulls "
+               "fresh data for this ZIP at checkout, or the free check on the "
+               "homepage can email you when its reading goes live.")
 
-# Neutral <title> and description for paused pages. The old ones carried the
-# verdict word and the metrics, which is exactly what must stop being served.
-NOTICE_TITLE_TMPL = "{place} housing market — reading being refreshed"
-NOTICE_DESC = ("This market reading is being rebuilt on a new data engine and "
-               "will return shortly. Free per-ZIP housing readings from "
-               "licensed market statistics.")
+# Neutral <title> and description for not-yet-scored pages. They carry no
+# verdict word and no metrics, which is exactly what must not be served.
+NOTICE_TITLE_TMPL = "{place} housing market — reading not yet live"
+NOTICE_DESC = ("This ZIP does not have a live market reading yet. Free per-ZIP "
+               "housing readings computed from licensed market statistics, "
+               "added ZIP by ZIP.")
 
 
 # ————— Phase 4: the tranche allowlist —————

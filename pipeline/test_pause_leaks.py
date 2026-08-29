@@ -115,7 +115,9 @@ def test_paused_zip_page_metadata_carries_no_verdict():
             assert figure not in value, f"{name} carries the figure {figure}: {value[:70]}"
 
     assert "og/default.png" in head, "per-ZIP card must fall back to the brand image"
-    assert PAUSE.NOTICE_TITLE.split()[0].lower() in title.lower() or "refresh" in title.lower()
+    notice_tail = PAUSE.NOTICE_TITLE_TMPL.split("\u2014")[-1].strip()
+    assert notice_tail.lower() in title.lower(), \
+        f"paused title does not carry the notice wording: {title!r}"
 
 
 def test_paused_zip_page_credits_no_vendor():
@@ -154,7 +156,9 @@ def test_paused_share_stub_has_no_verdict_or_metric():
     must honour the pause — it had no pause check at all."""
     html = BP.share_stub("20601", ENTRY, PLACE, META, has_card=True)
     title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
-    assert PAUSE.NOTICE_TITLE.split()[0].lower() in title.lower() or "refreshed" in title
+    notice_tail = PAUSE.NOTICE_TITLE_TMPL.split("\u2014")[-1].strip()
+    assert notice_tail.lower() in title.lower(), \
+        f"paused share-stub title does not carry the notice wording: {title!r}"
     for word in VERDICT_WORDS:
         assert word not in title
     assert "sell in" not in html and "61 days" not in html
@@ -339,7 +343,7 @@ def _released_page(zip_code="95608"):
     if not p.exists():
         pytest.skip("pages not built")
     src = p.read_text(encoding="utf-8")
-    if "being refreshed" in src:
+    if PAUSE.NOTICE_TITLE in src:
         pytest.skip(f"{zip_code} is not released in this build")
     return src
 

@@ -222,7 +222,9 @@ def test_the_methodology_page_does_not_claim_a_crosscheck_that_is_not_running():
     strip when the record carries no cross-check field, which is every record.
     Copy asserting it in the present tense described something dormant."""
     html = (ROOT / "web" / "methodology.html").read_text()
-    assert "That cross-check is not running." in html, \
+    # First-launch wording since 2026-08-29 — the claim is still "off, and
+    # nothing on the site renders one", stated forward rather than as history.
+    assert "switched off pending a licence review" in html, \
         "the methodology page no longer says the cross-check is off"
 
 

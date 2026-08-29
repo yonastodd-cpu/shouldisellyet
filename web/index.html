@@ -25,10 +25,10 @@
 {"@type":"Organization","@id":"https://shouldisellyet.com/#org","name":"ShouldISellYet","url":"https://shouldisellyet.com/","legalName":"Yayday LLC","description":"Housing-market early-warning reports for homeowners. Not a brokerage.","logo":{"@type":"ImageObject","url":"https://shouldisellyet.com/apple-touch-icon.png"}},
 {"@type":"WebPage","@id":"https://shouldisellyet.com/#webpage","url":"https://shouldisellyet.com/","name":"Should I Sell Yet? — We watch your local housing market for signs of change","isPartOf":{"@id":"https://shouldisellyet.com/#website"},"about":{"@id":"https://shouldisellyet.com/#org"}},
 {"@type":"FAQPage","@id":"https://shouldisellyet.com/#faq","mainEntity":[
-{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three market signals for your ZIP code, all computed from licensed statistics on homes currently listed for sale: the year-over-year asking-price trend, how long listed homes have been on the market, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are live for thousands of ZIP codes today; the remaining standing pages are being rebuilt."}},
+{"@type":"Question","name":"How do I know if I should sell my house now?","acceptedAnswer":{"@type":"Answer","text":"Check three market signals for your ZIP code, all computed from licensed statistics on homes currently listed for sale: the year-over-year asking-price trend, how long listed homes have been on the market, and how the pool of homes for sale is changing. Each has a published danger line. ShouldISellYet computes all three for any U.S. ZIP and returns one plain-English reading — HOLD, WATCH, or ACT — free and without an account. Readings are live for thousands of ZIP codes today; more are added ZIP by ZIP as each market's data clears our quality floor."}},
 {"@type":"Question","name":"What does a HOLD, WATCH, or ACT rating mean?","acceptedAnswer":{"@type":"Answer","text":"HOLD means no danger lines are crossed and there is no sign of a turn. WATCH means early warning signs are moving and the market is worth watching. ACT means it is worth doing something now: usually because enough danger lines are crossed to reach the top band — one line alone can be enough when prices are falling fast — and occasionally for the opposite reason, when buyers are competing hard and conditions favor a seller. The reading always says which. Most ZIP codes read HOLD — the reading often says don't sell."}},
 {"@type":"Question","name":"Is the housing market data free to check?","acceptedAnswer":{"@type":"Answer","text":"Yes. The ZIP-code reading and all three market signals are free, with no account required. Paid products add your own numbers — equity, walk-away proceeds, lock-in cost — and monthly alerts when your market shifts."}},
-{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. Readings have been live on this basis since 20 August 2026 in thousands of U.S. ZIP codes, with the rest being rebuilt."}}]}]}</script>
+{"@type":"Question","name":"Where does the housing market data come from?","acceptedAnswer":{"@type":"Answer","text":"Readings are computed from a licensed market-statistics API covering homes currently listed for sale. The Federal Housing Finance Agency house price index is used to test the danger lines against later outcomes, and Freddie Mac's survey supplies mortgage rates. The danger thresholds are published, not proprietary. Readings have been live on this basis since 20 August 2026 in thousands of U.S. ZIP codes, with more added ZIP by ZIP."}}]}]}</script>
 
 <link rel="icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -1021,7 +1021,7 @@ footer{padding:36px 56px 44px;border-top:1px solid var(--hairline)}
        back when the v2 validation does, not before.
        The clause "including the times a warning appeared and the market
        recovered" is mandatory copy (test_homepage_voice) — keep it verbatim. -->
-  <p class="body-p">And the methodology is public. So are the thresholds. The lines were validated on historical data from a prior vendor — including the times a warning appeared and the market recovered; that validation is being rebuilt on a new data source, and the v2 results will be published when they are ready.</p>
+  <p class="body-p">And the methodology is public. So are the thresholds. The danger lines are calibrated against past downturns — including the times a warning appeared and the market recovered — and a backtest of the current engine will be published as its own months accrue.</p>
   <!-- The month is rendered from web/data/validation.json, the same file the
        methodology page states it from, so the two can never disagree. It
        currently renders exactly "May 2027". -->
@@ -1186,9 +1186,12 @@ const SHOW_CASE_ROW = false;   // withdrawn: prior-vendor lineage, see above
 // be shown is now a property of the RECORD, decided per ZIP a few hundred
 // lines down. A single flag cannot express "these 1,000 ZIPs are released and
 // the other 21,900 are not", which is precisely what Phase 4 does.
-const PAUSE_NOTICE_TITLE = "This reading is being refreshed";
-const PAUSE_NOTICE_BODY = "We're rebuilding market readings on a new data engine. " +
-  "Your ZIP will be back with fresh numbers shortly — nothing has been deleted.";
+// Mirrors pipeline/data_pause.NOTICE_* — first-launch framing (2026-08-29):
+// forward facts for a first-time visitor, never a rebuild story.
+const PAUSE_NOTICE_TITLE = "This ZIP is not scored yet";
+const PAUSE_NOTICE_BODY = "Readings go live ZIP by ZIP as each market clears our quality " +
+  "floor, and this one is not there yet. A report purchase pulls fresh data for this ZIP " +
+  "at checkout, or leave your email below and we will tell you when its reading goes live.";
 
 // ————— ON-DEMAND PULLS —————
 // Mirrors pipeline/ondemand_switch.ONDEMAND_ENABLED (the authoritative copy);
@@ -1709,7 +1712,7 @@ function renderPreview(d) {
     nc ? '<span>Across the country right now: <b>' + nc.green.toLocaleString() +
          '</b> ZIPs read HOLD · <b>' + nc.yellow.toLocaleString() + '</b> WATCH · <b>' +
          nc.red.toLocaleString() + '</b> ACT.</span>'
-       : '<span>The national rating mix is being rebuilt on a new data source and is not shown yet.</span>',
+       : '<span>A national rating mix appears here once coverage is broad enough to be honest about — a share of the first tranches is not a share of the country.</span>',
     { open: true });
 
   // 09 — velocity tease. veil() gets the REAL months-to-line phrase computed
@@ -1820,9 +1823,10 @@ function renderPreview(d) {
         // Worded to avoid echoing the row's own line, which already says the
         // rebuild sentence — two identical notices one above the other read as
         // a rendering bug and get "fixed" by deleting one of them.
-        parts.push("<p>How your ZIP ranks against the rest of the country, and how " +
-                   "the country is reading month to month, " +
-                   "are part of the same rebuild. Both come back here when it lands.</p>");
+        parts.push("<p>How your ZIP ranks against the rest of the country appears " +
+                   "here once coverage is broad enough to support it — a share " +
+                   "computed from the first tranches would be quoted as a share " +
+                   "of the country, and it isn't one.</p>");
       }
       if (PV_RESEARCH) parts.push('<p><a class="pv-rlink" href="research/">See the full monthly research →</a></p>');
       box.innerHTML = parts.join("");

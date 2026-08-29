@@ -111,10 +111,14 @@ def test_the_macro_panel_states_its_condition_rather_than_half_filling():
     percentile, the index level and the case study. Dropping one and keeping
     two would read as a working panel while still publishing what we said we
     had stopped publishing, so the box says what happened to all three."""
-    assert "are part of the same rebuild" in INDEX_CODE, \
-        "the macro panel's expansion lost its rebuild notice"
-    assert "is being rebuilt on a new data source" in INDEX_CODE, \
-        "row 08 lost its rebuild notice"
+    # First-launch framing since 2026-08-29 (the site never had outside
+    # customers, so "rebuild" narrated history no visitor ever saw). The
+    # panel still STATES ITS CONDITION rather than half-filling — the copy is
+    # now forward-looking coverage honesty instead of a rebuild notice.
+    assert "once coverage is broad enough to support it" in INDEX_CODE, \
+        "the macro panel's expansion lost its condition statement"
+    assert "not a share of the country" in INDEX_CODE, \
+        "row 08 lost its condition statement"
     # And it does not blame lateness or name the vendor.
     assert "redfin" not in INDEX_CODE.lower(), \
         "the homepage names the prior vendor in code or markup"
@@ -141,8 +145,12 @@ def test_the_narrative_survives_and_says_what_it_rests_on():
     """The rule is figures out, narrative may stay — with the note. A trust
     claim that says the backtests are published, when they have been withdrawn,
     is worse than no claim at all."""
-    assert "validated on historical data from a prior vendor" in INDEX, \
-        "the neutrality section claims a validation without saying whose data"
+    # Reworded 2026-08-29 (first-launch framing): the paragraph now claims
+    # only a calibration and PROMISES the backtest, rather than citing a
+    # validation whose data belonged to the prior vendor — the property is
+    # still that no published-backtest claim exists for the current engine.
+    assert "a backtest of the current engine will be published" in INDEX, \
+        "the neutrality section stopped saying the backtest is future work"
     # The mandatory clause test_homepage_voice pins, kept verbatim through the
     # rewrite — it is the sentence that admits the misses.
     assert "including the times a warning appeared and the market recovered" in INDEX
@@ -248,8 +256,12 @@ def test_the_sample_report_makes_no_claim_about_purchased_reports():
     # note recording this removal paraphrases the claim rather than quoting it.
     assert "purchased is affected" not in REPORT, \
         "the withdrawn claim survives somewhere in the served markup"
-    assert "Nothing has been deleted" in REPORT, \
-        "the preservation statement went with it; that half was true"
+    # First-launch framing (2026-08-29): the preservation statement addressed
+    # customers who had seen the withdrawn sample — an audience that never
+    # existed. What stands in its place must still be true of purchased
+    # reports: they are built live from current data, not restored history.
+    assert "built live" in REPORT, \
+        "the sample page no longer says what a purchased report actually is"
 
 
 def test_the_sample_report_is_not_selling_while_the_sample_is_withdrawn():
