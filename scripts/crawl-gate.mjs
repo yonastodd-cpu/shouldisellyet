@@ -489,8 +489,12 @@ function checkDoc(url, { html, text, title, metas, robots, status }) {
   // ones, so it contains the notice AND ratings at the same time — treating
   // that as a contradiction flagged three healthy pages on the first run.
   const isSingleMarket = /^\/zip\/\d{5}\/$/.test(url) || /^\/s\/\d{5}\//.test(url);
+  // First-launch notice wording (data_pause.NOTICE_TITLE / NOTICE_TITLE_TMPL,
+  // 2026-08-29). The old "being refreshed" detector outlived the copy it
+  // matched and reclassified every notice page as "shows a reading" — the
+  // page's own product description says the words HOLD/WATCH/ACT.
   const withholds = isSingleMarket &&
-    /being refreshed|reading is being rebuilt/i.test(text);
+    /is not scored yet|reading not yet live/i.test(text);
   if (withholds) {
     const m = all.match(RATING_FOR_A_MARKET);
     if (m) flag(url, "states a rating while withholding its reading", m[0]);
